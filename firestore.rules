@@ -6,9 +6,8 @@ service cloud.firestore {
     match /usernames/{username} {
       allow read: if true; // Anyone can check if a username exists
       // Only the user associated with this username entry can create it initially.
-      // Assumes username is reserved during signup.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Generally, updates/deletes aren't needed or allowed for this structure.
+      // Disallow updates/deletes for simplicity.
       allow update, delete: if false;
     }
 
@@ -26,71 +25,68 @@ service cloud.firestore {
       }
     }
 
+    // User Course Progress Subcollection Rules
+    // Allows a user to read/write ANY document within their own userCourseProgress document path
+    match /userCourseProgress/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     // Feedback collection
     match /feedback/{feedbackId} {
        // Any authenticated user can create (submit) feedback
        allow create: if request.auth != null;
        // Only Admin can read/update feedback status/replies
-       allow read, update: if request.auth != null && request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1'; // Use actual ADMIN_UID
+       // Use your actual ADMIN_UID here
+       allow read, update: if request.auth != null && request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1';
        // Feedback deletion generally disallowed through rules
        allow delete: if false;
     }
 
-    // Courses collection - NEW RULES
+    // Courses collection - REVISED RULES
     match /courses/{courseId} {
 
       // --- READ ---
-      // Anyone authenticated can read 'approved' courses.
-      // Admin can read *any* course regardless of status.
+      // Logged-in users can read 'approved' courses. Admin can read all.
+      // Use your actual ADMIN_UID here
       allow read: if request.auth != null &&
-                    (resource.data.status == 'approved' || request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1'); // Use actual ADMIN_UID
+                    (resource.data.status == 'approved' || request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1');
 
-      // --- CREATE ---
-      // Any authenticated user can create a course document.
-      // Must set creatorUid to their own UID.
-      // Must set status correctly (pending for users, approved allowed for admin).
-      // Must include required fields (name, majorTag).
-      // Must initialize all expected fields.
-      allow create: if request.auth != null
-                    && request.resource.data.creatorUid == request.auth.uid
-                    && request.resource.data.name is string && request.resource.data.name.size() > 0
-                    && request.resource.data.majorTag is string && request.resource.data.majorTag.size() > 0
-                    && (
-                       (request.resource.data.status == 'pending' && request.auth.uid != '04amtH9UgfTWxPH0rqn2quaKiNf1') // User -> pending
-                       || (request.resource.data.status == 'approved' && request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1') // Admin -> approved
-                     )
-                    // Ensure all fields defined in ui_courses.js (addCourseToFirestore) are present
-                    && request.resource.data.keys().hasAll(['creatorUid', 'creatorName', 'createdAt', 'status', 'name', 'majorTag', 'subjectTag', 'lecturePlaylistUrl', 'textbookUrl', 'reportedBy', 'reportReason']);
-
-      // --- UPDATE ---
-      // Scenario 1: Admin Approval/Rejection
-      // Admin can change status (to 'approved' or 'rejected').
-      // If changing status, admin must also clear report fields.
-      allow update: if request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1' // Is Admin
-                    && request.resource.data.status != resource.data.status // Status is changing
-                    && request.resource.data.status in ['approved', 'rejected'] // New status is valid
-                    // Only these specific fields are allowed to change in this rule path
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reportReason', 'reportedBy'])
-                    // When approving/rejecting, report fields MUST be cleared/empty in the incoming data
-                    && request.resource.data.reportReason == null
-                    && request.resource.data.reportedBy == [];
-
-      // Scenario 2: User Reporting an 'approved' course
-      // Any authenticated user (not the creator) can change status to 'reported',
-      // add a reason, and add themselves to 'reportedBy'.
-      allow update: if request.auth != null // Is Authenticated
-                    && request.auth.uid != resource.data.creatorUid // Not the creator
-                    && resource.data.status == 'approved' // Can only report 'approved' courses
-                    && request.resource.data.status == 'reported' // Setting status to 'reported'
-                    && request.resource.data.reportReason is string && request.resource.data.reportReason.size() > 0 // Reason is required
-                    // Check ONLY these fields are changing compared to the existing document
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reportReason', 'reportedBy'])
-                    // Check that reportedBy is simply adding the current user's ID
-                    && request.resource.data.reportedBy == resource.data.reportedBy.concat([request.auth.uid]);
-
-      // --- DELETE ---
-      // Only Admin can delete courses.
-      allow delete: if request.auth != null && request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1'; // Use actual ADMIN_UID
+      // --- WRITE (Combined Create, Update, Delete) ---
+      allow write: if request.auth != null && (
+        // **ADMIN:** Full create, update, delete access
+        ( request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1' )
+        ||
+        // **USER CREATE (Pending Only):**
+        ( request.method == 'create'
+          && request.auth.uid != '04amtH9UgfTWxPH0rqn2quaKiNf1' // Must NOT be admin
+          && request.resource.data.creatorUid == request.auth.uid
+          && request.resource.data.status == 'pending' // Must be pending
+          && request.resource.data.name is string && request.resource.data.name.size() > 0
+          && request.resource.data.relatedSubjectId is string && request.resource.data.relatedSubjectId.size() > 0
+          && request.resource.data.totalChapters is number && request.resource.data.totalChapters > 0
+          // Ensure all necessary fields are present upon creation by user
+          && request.resource.data.keys().hasAll([
+               'creatorUid', 'creatorName', 'createdAt', 'status', 'name',
+               'description', 'majorTag', 'subjectTag', 'relatedSubjectId',
+               'totalChapters', 'youtubePlaylistUrl', 'pdfPathPattern',
+               'transcriptionPathPattern', 'chapters', 'chapterResources',
+               'reportedBy', 'reportReason'
+             ])
+        )
+        ||
+        // **USER UPDATE (Reporting Only):**
+        ( request.method == 'update'
+          && request.auth.uid != resource.data.creatorUid // Not the creator
+          && resource.data.status == 'approved' // Can only report 'approved' courses
+          && request.resource.data.status == 'reported' // Setting status to 'reported'
+          && request.resource.data.reportReason is string && request.resource.data.reportReason.size() > 0 // Reason is required
+          // Check ONLY these fields are changing compared to the existing document
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reportReason', 'reportedBy'])
+          // Check that reportedBy is simply adding the current user's ID
+          && request.resource.data.reportedBy == resource.data.reportedBy.concat([request.auth.uid])
+        )
+      );
+      // Note: Delete is implicitly covered by the admin write rule. Non-admins cannot delete.
     }
   }
 }

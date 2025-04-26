@@ -44,7 +44,7 @@ function setupMathJaxListeners() {
             }
         };
 
-        if (script.complete || document.readyState === 'complete' || (typeof MathJax !== 'undefined' && MathJax.startup?.promise)) {
+        if (script.readyState === 'complete' || script.readyState === 'loaded' || (typeof MathJax !== 'undefined' && MathJax.startup?.promise)) {
              // Already loaded or ready
              console.log("MathJax already loaded/ready on listener setup.");
              handleLoad();
@@ -84,6 +84,9 @@ export async function renderMathIn(element) {
         console.warn("renderMathIn: Called with null or undefined element.");
         return;
     }
+    // Add a delay to allow DOM updates, especially after complex innerHTML changes
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     console.log(`renderMathIn: Starting for element: ${element.id || element.tagName}`);
 
     try {
@@ -94,10 +97,11 @@ export async function renderMathIn(element) {
             throw new Error('MathJax or typesetPromise not available after promise resolution.');
         }
 
-        console.log("renderMathIn: Awaiting animation frame for DOM update...");
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        console.log("renderMathIn: DOM likely updated, proceeding with typesetPromise.");
+        // Clear previous typesetting results within the element to prevent conflicts
+        MathJax.startup.document.clearMathItemsWithin(element);
+        console.log(`renderMathIn: Cleared previous MathJax items in [${element.id || element.tagName}]`);
 
+        // Typeset the specific element
         console.log(`renderMathIn: Calling MathJax.typesetPromise specific to [${element.id || element.tagName}]`);
         await MathJax.typesetPromise([element]);
         console.log(`renderMathIn: MathJax typesetPromise finished for specific element: ${element.id || element.tagName}`);
@@ -108,7 +112,44 @@ export async function renderMathIn(element) {
             const errorMsg = document.createElement('p');
             errorMsg.className = 'text-red-500 text-xs mt-1 mathjax-error-msg';
             errorMsg.textContent = '[Math rendering failed: Check console]';
-            element.appendChild(errorMsg);
+             // Append safely
+             try {
+                 element.appendChild(errorMsg);
+             } catch (appendError) {
+                 console.error("Failed to append MathJax error message:", appendError);
+             }
          }
     }
+}
+
+// --- General Utilities ---
+
+// Helper to escape HTML entities
+export function escapeHtml(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+// Format date string (YYYY-MM-DD)
+export function getFormattedDate(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// Calculate days between two dates
+export function daysBetween(date1, date2) {
+    const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
+    const firstDate = new Date(date1);
+    const secondDate = new Date(date2);
+    // Set time to 0 to compare dates only
+    firstDate.setHours(0, 0, 0, 0);
+    secondDate.setHours(0, 0, 0, 0);
+    return Math.round(Math.abs((firstDate - secondDate) / oneDay));
 }

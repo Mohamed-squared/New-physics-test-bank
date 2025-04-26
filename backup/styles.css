@@ -41,21 +41,25 @@
     --color-black:     #000000;
 
     --color-success-100: #f0fdf4;
+    --color-success-200: #dcfce7; /* Added */
     --color-success-500: #22c55e;
     --color-success-600: #16a34a;
     --color-success-700: #15803d;
 
     --color-danger-100: #fef2f2;
+    --color-danger-200: #fee2e2; /* Added */
     --color-danger-500: #ef4444;
     --color-danger-600: #dc2626;
     --color-danger-700: #b91c1c;
 
     --color-warning-100: #fffbeb;
+    --color-warning-200: #fef3c7; /* Added */
     --color-warning-500: #f59e0b;
     --color-warning-600: #d97706;
     --color-warning-700: #b45309;
 
     --color-info-100: #eff6ff;
+    --color-info-400: #60a5fa; /* Added */
     --color-info-500: #3b82f6;
     --color-info-600: #2563eb;
     --color-info-700: #1d4ed8;
@@ -289,7 +293,7 @@ hr {
 .text-warning { color: var(--color-warning-600); }
 .dark .text-warning { color: var(--color-warning-500); }
 .text-info { color: var(--color-info-600); }
-.dark .text-info { color: var(--color-info-500); }
+.dark .text-info { color: var(--color-info-400); } /* Adjusted for dark bg */
 .text-muted { color: var(--color-gray-500); }
 .dark .text-muted { color: var(--color-gray-400); }
 
@@ -454,12 +458,27 @@ html.dark #theme-icon-dark { display: block; }
 }
 
 /* ==========================================================================
+   Admin Indicator Icon
+   ========================================================================== */
+.admin-icon {
+    display: inline-block;
+    margin-left: 0.3em;
+    color: #f59e0b; /* Amber-500 */
+    width: 0.8em; /* Adjust size as needed */
+    height: 0.8em;
+    vertical-align: middle; /* Align with text */
+}
+.dark .admin-icon {
+    color: #fcd34d; /* Amber-300 */
+}
+
+/* ==========================================================================
    Button Styles
    ========================================================================== */
 
 .btn, /* Base button class */
-.btn-primary, .btn-secondary, .btn-danger, .btn-success,
-.btn-primary-small, .btn-secondary-small, .btn-danger-small {
+.btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning, /* Added warning */
+.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small { /* Added warning small */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -479,87 +498,98 @@ html.dark #theme-icon-dark { display: block; }
 /* Focus visible state (using outline for accessibility) */
 .btn:focus-visible,
 .btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible,
-.btn-success:focus-visible, .btn-primary-small:focus-visible, .btn-secondary-small:focus-visible,
-.btn-danger-small:focus-visible {
+.btn-success:focus-visible, .btn-warning:focus-visible,
+.btn-primary-small:focus-visible, .btn-secondary-small:focus-visible, .btn-danger-small:focus-visible,
+.btn-success-small:focus-visible, .btn-warning-small:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
 }
 .dark .btn:focus-visible,
 .dark .btn-primary:focus-visible, .dark .btn-secondary:focus-visible, .dark .btn-danger:focus-visible,
-.dark .btn-success:focus-visible, .dark .btn-primary-small:focus-visible, .dark .btn-secondary-small:focus-visible,
-.dark .btn-danger-small:focus-visible {
+.dark .btn-success:focus-visible, .dark .btn-warning:focus-visible,
+.dark .btn-primary-small:focus-visible, .dark .btn-secondary-small:focus-visible, .dark .btn-danger-small:focus-visible,
+.dark .btn-success-small:focus-visible, .dark .btn-warning-small:focus-visible {
     outline-color: var(--color-primary-400);
 }
-.btn-danger:focus-visible { outline-color: var(--color-danger-500); }
-.dark .btn-danger:focus-visible { outline-color: var(--color-danger-400); }
-.btn-success:focus-visible { outline-color: var(--color-success-500); }
-.dark .btn-success:focus-visible { outline-color: var(--color-success-400); }
+.btn-danger:focus-visible, .btn-danger-small:focus-visible { outline-color: var(--color-danger-500); }
+.dark .btn-danger:focus-visible, .dark .btn-danger-small:focus-visible { outline-color: var(--color-danger-400); }
+.btn-success:focus-visible, .btn-success-small:focus-visible { outline-color: var(--color-success-500); }
+.dark .btn-success:focus-visible, .dark .btn-success-small:focus-visible { outline-color: var(--color-success-400); }
+.btn-warning:focus-visible, .btn-warning-small:focus-visible { outline-color: var(--color-warning-500); }
+.dark .btn-warning:focus-visible, .dark .btn-warning-small:focus-visible { outline-color: var(--color-warning-400); }
 
 
 /* Disabled state */
 button:disabled, .btn:disabled,
-.btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled, .btn-success:disabled,
-.btn-primary-small:disabled, .btn-secondary-small:disabled, .btn-danger-small:disabled {
+.btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled, .btn-success:disabled, .btn-warning:disabled,
+.btn-primary-small:disabled, .btn-secondary-small:disabled, .btn-danger-small:disabled, .btn-success-small:disabled, .btn-warning-small:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     box-shadow: none;
 }
 
 /* Primary Button */
-.btn-primary {
-    background-color: var(--color-primary-600);
-    color: var(--color-white);
-}
+.btn-primary { background-color: var(--color-primary-600); color: var(--color-white); }
 .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-700); box-shadow: var(--shadow); }
 .dark .btn-primary { background-color: var(--color-primary-500); }
 .dark .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-400); }
 
 /* Secondary Button */
-.btn-secondary {
-    background-color: var(--color-white);
-    color: var(--color-gray-700);
-    border-color: var(--color-gray-300);
-    box-shadow: var(--shadow-sm);
-}
+.btn-secondary { background-color: var(--color-white); color: var(--color-gray-700); border-color: var(--color-gray-300); box-shadow: var(--shadow-sm); }
 .btn-secondary:hover:not(:disabled) { background-color: var(--color-gray-50); border-color: var(--color-gray-400); box-shadow: var(--shadow); }
-.dark .btn-secondary {
-    background-color: var(--color-gray-700);
-    color: var(--color-gray-200);
-    border-color: var(--color-gray-600);
-}
+.dark .btn-secondary { background-color: var(--color-gray-700); color: var(--color-gray-200); border-color: var(--color-gray-600); }
 .dark .btn-secondary:hover:not(:disabled) { background-color: var(--color-gray-600); border-color: var(--color-gray-500); }
 
 /* Danger Button */
-.btn-danger {
-    background-color: var(--color-danger-600);
-    color: var(--color-white);
-}
+.btn-danger { background-color: var(--color-danger-600); color: var(--color-white); }
 .btn-danger:hover:not(:disabled) { background-color: var(--color-danger-700); box-shadow: var(--shadow); }
 .dark .btn-danger { background-color: var(--color-danger-500); }
 .dark .btn-danger:hover:not(:disabled) { background-color: var(--color-danger-400); }
 
 /* Success Button */
-.btn-success {
-    background-color: var(--color-success-600);
-    color: var(--color-white);
-}
+.btn-success { background-color: var(--color-success-600); color: var(--color-white); }
 .btn-success:hover:not(:disabled) { background-color: var(--color-success-700); box-shadow: var(--shadow); }
 .dark .btn-success { background-color: var(--color-success-500); }
 .dark .btn-success:hover:not(:disabled) { background-color: var(--color-success-400); }
 
+/* Warning Button */
+.btn-warning { background-color: var(--color-warning-500); color: var(--color-gray-900); }
+.btn-warning:hover:not(:disabled) { background-color: var(--color-warning-600); box-shadow: var(--shadow); }
+.dark .btn-warning { background-color: var(--color-warning-400); color: var(--color-gray-900); }
+.dark .btn-warning:hover:not(:disabled) { background-color: var(--color-warning-300); }
+
 /* Small Button Variants */
-.btn-primary-small, .btn-secondary-small, .btn-danger-small {
+.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small {
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem; /* text-xs */
     font-weight: 500; /* Medium */
 }
+.btn-success-small { background-color: var(--color-success-600); color: var(--color-white); }
+.btn-success-small:hover:not(:disabled) { background-color: var(--color-success-700); }
+.dark .btn-success-small { background-color: var(--color-success-500); }
+.dark .btn-success-small:hover:not(:disabled) { background-color: var(--color-success-400); }
+.btn-warning-small { background-color: var(--color-warning-500); color: var(--color-gray-900); }
+.btn-warning-small:hover:not(:disabled) { background-color: var(--color-warning-600); }
+.dark .btn-warning-small { background-color: var(--color-warning-400); color: var(--color-gray-900); }
+.dark .btn-warning-small:hover:not(:disabled) { background-color: var(--color-warning-300); }
+.btn-primary-small { background-color: var(--color-primary-600); color: var(--color-white); }
+.btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-700); }
+.dark .btn-primary-small { background-color: var(--color-primary-500); }
+.dark .btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-400); }
+.btn-secondary-small { background-color: var(--color-white); color: var(--color-gray-700); border-color: var(--color-gray-300); }
+.btn-secondary-small:hover:not(:disabled) { background-color: var(--color-gray-50); }
+.dark .btn-secondary-small { background-color: var(--color-gray-700); color: var(--color-gray-200); border-color: var(--color-gray-600); }
+.dark .btn-secondary-small:hover:not(:disabled) { background-color: var(--color-gray-600); }
+.btn-danger-small { background-color: var(--color-danger-600); color: var(--color-white); }
+.btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-700); }
+.dark .btn-danger-small { background-color: var(--color-danger-500); }
+.dark .btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-400); }
 
-/* Utility Buttons (Sidebar - removed old style) */
-/* Buttons within sidebar nav area will use .sidebar-link style if needed */
+
 
 /* Button Icons */
-.btn svg, .btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg,
-.btn-primary-small svg, .btn-secondary-small svg, .btn-danger-small svg {
+.btn svg, .btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg, .btn-warning svg,
+.btn-primary-small svg, .btn-secondary-small svg, .btn-danger-small svg, .btn-success-small svg, .btn-warning-small svg {
     width: 1.125em; /* Size relative to text */
     height: 1.125em;
     margin-right: 0.5em;
@@ -586,6 +616,7 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="url"],
+input[type="search"], /* Added */
 select,
 textarea {
     display: block;
@@ -627,6 +658,7 @@ input:focus, select:focus, textarea:focus {
 .dark input[type="password"],
 .dark input[type="number"],
 .dark input[type="url"],
+.dark input[type="search"], /* Added */
 .dark select,
 .dark textarea {
     color: var(--color-gray-100);
@@ -800,8 +832,10 @@ input[type="radio"]:checked::before {
 #content {
     margin-top: 1rem;
 }
-/* Specific Styling for list items in certain contexts */
-#content ul li, #content ol li { /* Target lists within #content */
+/* Specific Styling for list items in certain contexts (e.g., dashboards) */
+/* Apply this style more selectively if needed by adding a class to the parent */
+#content ul:not(.list-none) li,
+#content ol:not(.list-none) li { /* Target lists within #content, excluding utility lists */
     background-color: var(--color-gray-50);
     padding: 0.75rem 1rem;
     border-radius: var(--border-radius-md);
@@ -809,15 +843,30 @@ input[type="radio"]:checked::before {
     border: 1px solid var(--border-color);
     transition: background-color var(--transition-fast);
 }
-#content ul li:hover, #content ol li:hover {
+#content ul:not(.list-none) li:hover,
+#content ol:not(.list-none) li:hover {
     background-color: var(--color-gray-100);
 }
-.dark #content ul li, .dark #content ol li {
+.dark #content ul:not(.list-none) li,
+.dark #content ol:not(.list-none) li {
     background-color: var(--color-gray-700);
     border-color: var(--border-color-dark);
 }
-.dark #content ul li:hover, .dark #content ol li:hover {
+.dark #content ul:not(.list-none) li:hover,
+.dark #content ol:not(.list-none) li:hover {
     background-color: var(--color-gray-600);
+}
+/* Reset for nested lists inside prose, which have their own styling */
+.prose ul li, .prose ol li {
+    background-color: transparent;
+    padding: 0;
+    border-radius: 0;
+    margin-bottom: 0.4em; /* Default prose margin */
+    border: none;
+}
+/* Reset hover for prose lists */
+.prose ul li:hover, .prose ol li:hover {
+    background-color: transparent;
 }
 
 /* Dashboard Area */
@@ -908,7 +957,9 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-100);
     border-color: var(--color-gray-300);
 }
-#online-test-area input[type="radio"]:checked + .option-label {
+/* This might need adjustment if radio isn't directly followed by label */
+#online-test-area input[type="radio"]:checked + .option-label,
+#online-test-area input[type="radio"]:checked ~ label.option-label /* Fallback */ {
     border-color: var(--color-primary-500);
     background-color: var(--color-primary-50);
     box-shadow: 0 0 0 1px var(--color-primary-500);
@@ -921,7 +972,8 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-600);
     border-color: var(--color-gray-500);
 }
-.dark #online-test-area input[type="radio"]:checked + .option-label {
+.dark #online-test-area input[type="radio"]:checked + .option-label,
+.dark #online-test-area input[type="radio"]:checked ~ label.option-label {
     border-color: var(--color-primary-400);
     background-color: var(--color-primary-900);
     box-shadow: 0 0 0 1px var(--color-primary-400);
@@ -1013,38 +1065,17 @@ input[type="radio"]:checked::before {
 .toast-notification p { margin-bottom: 0; font-size: 0.9rem; }
 .toast-notification .toast-icon { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; }
 /* Success Toast */
-.toast-success {
-    background-color: var(--color-success-100);
-    color: var(--color-success-700);
-    border-color: var(--color-success-200); /* Added border */
-}
-.dark .toast-success {
-    background-color: var(--color-success-700); /* Darker bg */
-    color: var(--color-success-100);
-    border-color: var(--color-success-600);
-}
+.toast-success { background-color: var(--color-success-100); color: var(--color-success-700); border-color: var(--color-success-200); }
+.dark .toast-success { background-color: var(--color-success-700); color: var(--color-success-100); border-color: var(--color-success-600); }
 /* Error Toast */
-.toast-error {
-    background-color: var(--color-danger-100);
-    color: var(--color-danger-700);
-    border-color: var(--color-danger-200);
-}
-.dark .toast-error {
-    background-color: var(--color-danger-700);
-    color: var(--color-danger-100);
-    border-color: var(--color-danger-600);
-}
+.toast-error { background-color: var(--color-danger-100); color: var(--color-danger-700); border-color: var(--color-danger-200); }
+.dark .toast-error { background-color: var(--color-danger-700); color: var(--color-danger-100); border-color: var(--color-danger-600); }
 /* Warning/Info Toast */
-.toast-warning {
-    background-color: var(--color-warning-100);
-    color: var(--color-warning-700);
-    border-color: var(--color-warning-200);
-}
-.dark .toast-warning {
-    background-color: var(--color-warning-700);
-    color: var(--color-warning-100);
-    border-color: var(--color-warning-600);
-}
+.toast-warning { background-color: var(--color-warning-100); color: var(--color-warning-700); border-color: var(--color-warning-200); }
+.dark .toast-warning { background-color: var(--color-warning-700); color: var(--color-warning-100); border-color: var(--color-warning-600); }
+.toast-info { background-color: var(--color-info-100); color: var(--color-info-700); border-color: var(--color-info-200); } /* Added Info */
+.dark .toast-info { background-color: var(--color-info-700); color: var(--color-info-100); border-color: var(--color-info-600); }
+
 
 /* Chart Container */
 canvas { max-width: 100%; height: auto !important; display: block; }
@@ -1060,6 +1091,126 @@ body::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover, aside 
 /* Fade transition */
 .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   Profile Picture Cropper Modal
+   ========================================================================== */
+
+/* The modal container (#crop-modal) itself is primarily styled with Tailwind classes
+   in ui_profile_picture.js (fixed, inset-0, bg-opacity, flex, items-center, etc.).
+   These styles target the Cropper.js library's internal elements for visibility
+   and basic theme consistency. */
+
+   #crop-modal .cropper-container {
+    /* Ensure the container doesn't have unwanted background in dark mode */
+    background-color: transparent;
+}
+
+#crop-modal .cropper-bg {
+     /* The background behind the image */
+     background-color: #333; /* Darker background for contrast */
+     opacity: 0.7;
+}
+.dark #crop-modal .cropper-bg {
+    background-color: #111;
+    opacity: 0.8;
+}
+
+#crop-modal .cropper-view-box,
+#crop-modal .cropper-face {
+    /* The main cropping area outline and overlay */
+    outline: 1px solid #38bdf8; /* primary-400 */
+    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 with alpha */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* Dimming effect outside crop */
+}
+.dark #crop-modal .cropper-view-box,
+.dark #crop-modal .cropper-face {
+    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 still works well */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* Darker dimming */
+}
+
+#crop-modal .cropper-dashed {
+    /* The dashed lines inside the crop box */
+    border-color: rgba(255, 255, 255, 0.6);
+}
+.dark #crop-modal .cropper-dashed {
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+#crop-modal .cropper-point {
+    /* The resize handle points */
+    background-color: rgba(56, 189, 248, 0.75); /* primary-400 */
+    opacity: 0.85;
+    height: 8px;
+    width: 8px;
+}
+#crop-modal .cropper-point:hover {
+     opacity: 1;
+     background-color: rgba(14, 165, 233, 0.9); /* primary-500 */
+}
+
+
+#crop-modal .cropper-line {
+    /* The lines of the crop box */
+    background-color: rgba(56, 189, 248, 0.75); /* primary-400 */
+    opacity: 0.85;
+}
+
+#crop-modal .cropper-center {
+    /* The center indicator */
+     background-color: rgba(255, 255, 255, 0.6);
+     height: 4px;
+     width: 4px;
+     opacity: 0.75;
+}
+
+#crop-modal > div { /* Inner card */
+    /* Uses Tailwind classes */
+    overflow: visible; /* Allow Cropper UI to potentially overflow slightly */
+}
+#image-to-crop {
+    display: block;
+    max-width: 100%;
+    /* Cropper.js sets height automatically */
+}
+/* Ensure Cropper.js elements are visible in dark mode if needed */
+.dark .cropper-view-box,
+.dark .cropper-face {
+    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 */
+}
+.dark .cropper-dashed,
+.dark .cropper-point,
+.dark .cropper-line,
+.dark .cropper-center {
+    opacity: 0.75;
+}
+.dark .cropper-line {
+    background-color: #fff;
+}
+.dark .cropper-point {
+     background-color: #fff;
+}
+
+/* ==========================================================================
+   Course Card Styling
+   ========================================================================== */
+.course-card h3 {
+    margin-bottom: 0.25rem; /* Reduce bottom margin for tighter look */
+}
+.course-card h4 {
+    margin-bottom: 0.5rem; /* Slightly more margin for admin cards */
+}
+.course-card .link { /* Styling for external links */
+    color: var(--color-info-600);
+    font-weight: 500;
+    word-break: break-all; /* Prevent long URLs from breaking layout */
+}
+.dark .course-card .link {
+     color: var(--color-info-400);
+}
+.course-card .link:hover {
+     text-decoration: underline;
+}
 
 /* ==========================================================================
    Accessibility & Misc Fixes

@@ -1,8 +1,8 @@
 // --- Configuration ---
 
 // NEW: Admin User ID
-export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1";
-export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM";
+export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1"; // Replace with your actual Admin UID
+export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Replace with your actual Gemini API Key
 
 export const PDF_GENERATION_OPTIONS = {
     margin: 1.5, // Margin in cm
@@ -13,10 +13,7 @@ export const PDF_GENERATION_OPTIONS = {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'], before: '.question-item' } // Better page breaking, target class for breaks
 };
 
-// REMOVED: MARKDOWN_FILE_URL (Now determined dynamically)
-// export const MARKDOWN_FILE_URL = 'chapters.md';
-
-// UPDATED: Base LaTeX structure (used by generateTexSource)
+// Base LaTeX structure (used by generateTexSource)
 export const LATEX_DOCUMENT_CLASS = "\\documentclass[12pt]{article}";
 export const LATEX_PACKAGES = `\\usepackage{enumitem} % For customizing list labels
 \\usepackage[margin=1.5cm]{geometry}
@@ -40,9 +37,9 @@ export const initialSubjectData = {
         "1": {
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // NEW: Specify default filename
+            "fileName": "chapters.md", // Default filename
             "max_questions_per_test": 42,
-            "chapters": {}, // Will be populated by MD parse
+            "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
             "pending_exams": [],
             "exam_history": []
@@ -50,13 +47,17 @@ export const initialSubjectData = {
         "2": {
             "id": "2",
             "name": "ABC of Aviation",
-            "fileName": "ABC_of_Aviation.md", // NEW: Specify default filename
+            "fileName": "ABC_of_Aviation.md", // Example second subject filename
             "max_questions_per_test": 42,
-            "chapters": {}, // Will be populated by MD parse
+            "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
             "pending_exams": [],
             "exam_history": []
         }
         // Other subjects would need a 'fileName' property too
     }
+    // enrolledCourses: [] // Managed globally, not per-user in this structure
 };
+
+// Default profile picture URL (relative path assumed)
+export const DEFAULT_PROFILE_PIC_URL = 'default-avatar.png';

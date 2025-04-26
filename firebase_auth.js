@@ -1,11 +1,13 @@
 // firebase_auth.js
-import { auth, db, setCurrentUser, clearUserSession } from './state.js';
+import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
-import { initializeUserData, loadUserData } from './firebase_firestore.js';
-// MODIFIED: Import fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink
+// MODIFIED: Added loadGlobalCourseDefinitions
+import { initializeUserData, loadUserData, loadGlobalCourseDefinitions } from './firebase_firestore.js';
 import { showLoginUI, hideLoginUI, fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink, displayContent } from './ui_core.js';
 import { updateAdminPanelVisibility } from './script.js';
-import { showHomeDashboard } from './ui_home_dashboard.js'; // **** NEW: Import showHomeDashboard ****
+// MODIFIED: Import showMyCoursesDashboard (new file) or fallback
+import { showMyCoursesDashboard } from './ui_course_dashboard.js';
+import { showHomeDashboard } from './ui_home_dashboard.js';
 
 // --- Authentication Functions ---
 
@@ -153,12 +155,10 @@ export function signInWithGoogle() {
             // Initialize user data (or update if exists), passing the chosen username
             await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL);
              // onAuthStateChanged will handle subsequent UI updates and data loading
-             // hideLoading() will be called by onAuthStateChanged logic
         })
         .catch((error) => {
             console.error("Google sign in error:", error);
             if (error.code === 'auth/popup-closed-by-user') {
-                 // Don't show alert, just hide loading
                  console.log("Google Sign-in popup closed by user.");
             } else if (error.code === 'auth/account-exists-with-different-credential') {
                  alert("An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.");
@@ -196,35 +196,47 @@ export function setupAuthListener() {
 
         if (user) {
             console.log("User signed in: ", user.uid);
-            // Fetch and update UI early, don't wait for full data load
-            fetchAndUpdateUserInfo(user);
+            showLoading("Loading user data..."); // Show loading indicator early
 
-            console.log("Calling loadUserData...");
+            fetchAndUpdateUserInfo(user); // Fetch and update UI early
+
+            console.log("Loading global course definitions...");
+            await loadGlobalCourseDefinitions(); // Load course structures first
+
+            console.log("Calling loadUserData (includes course progress)...");
             try {
-                await loadUserData(user.uid); // Load data (includes onboarding check and MD sync per subject)
+                await loadUserData(user.uid); // Load user appData AND course progress
                 console.log("loadUserData (including onboarding check) finished.");
 
-                // Check if onboarding UI is displayed. If not, hide login and show HOME.
+                // Check if onboarding UI is displayed. If not, hide login and show appropriate dashboard.
                 if (!document.getElementById('onboarding-container')) {
-                     hideLoginUI();
-                     // **** MODIFIED: Show Home Dashboard instead of generic message ****
-                     showHomeDashboard();
+                    hideLoginUI();
+                    // Show My Courses Dashboard if enrolled, else Home
+                    if (userCourseProgressMap && userCourseProgressMap.size > 0) {
+                        showMyCoursesDashboard();
+                    } else {
+                        showHomeDashboard();
+                    }
                 }
-                // hideLoading is handled within loadUserData or its sub-functions (like checkOnboarding/showHomeDashboard)
+                hideLoading(); // Hide loading indicator AFTER everything is loaded
             } catch (loadError) {
-                 console.error("Error during loadUserData call:", loadError);
-                 alert("Critical error loading user data: " + loadError.message + ". Please try signing out and back in.");
-                 signOutUser(); // Attempt sign out
-                 hideLoading(); // Ensure loading is hidden on error
-                 showLoginUI(); // Show login UI after sign out attempt
+                console.error("Error during loadUserData call:", loadError);
+                // Check error message for permission issues
+                let alertMessage = `Critical error loading user data: ${loadError.message}. Please try signing out and back in.`;
+                if (loadError.message && (loadError.message.toLowerCase().includes('permission') || loadError.message.toLowerCase().includes('missing or insufficient permissions'))) {
+                    alertMessage = "Critical error loading user data: Permission denied. This often indicates a Firestore Security Rules issue. Please check the rules or contact support, then try signing out and back in.";
+                }
+                alert(alertMessage); // Display the specific or generic error
+                hideLoading(); // Ensure loading is hidden on error
+                signOutUser(); // Attempt sign out
+                // showLoginUI() will be called by sign out listener
             }
         } else {
             console.log("User signed out.");
             clearUserSession(); // Reset application state
             clearUserInfoUI(); // Clear header UI elements
             showLoginUI(); // Show login form
-            // Ensure Home link is not active when logged out
-            setActiveSidebarLink('');
+            setActiveSidebarLink(''); // Ensure no link is active
             hideLoading(); // Ensure loading is hidden
         }
     });

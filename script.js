@@ -2,15 +2,15 @@
 
 // script.js
 // --- Core State & Config Imports ---
-import { setAuth, setDb, auth, db, currentUser, currentSubject } from './state.js';
-import { ADMIN_UID } from './config.js';
+import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId } from './state.js';
+import { ADMIN_UID, FOP_COURSE_ID } from './config.js';
 
 // --- Utility Imports ---
-import { showLoading, hideLoading } from './utils.js';
+import { showLoading, hideLoading, escapeHtml } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead } from './firebase_firestore.js';
+import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions } from './firebase_firestore.js';
 
 // --- UI Imports ---
 import { importData, exportData, showImportExportDashboard } from './ui_import_export.js';
@@ -18,18 +18,11 @@ import { displayContent, clearContent, showLoginUI, hideLoginUI, updateSubjectIn
 import { showHomeDashboard } from './ui_home_dashboard.js';
 import { showTestGenerationDashboard, promptChapterSelectionForTest, getSelectedChaptersAndPromptTestType, promptTestType, startTestGeneration } from './ui_test_generation.js';
 import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js';
-import { launchOnlineTestUI, navigateQuestion, recordAnswer, confirmSubmitOnlineTest, confirmForceSubmit } from './ui_online_test.js';
+import { launchOnlineTestUI, navigateQuestion, recordAnswer, confirmSubmitOnlineTest, confirmForceSubmit, submitOnlineTest } from './ui_online_test.js';
 import {
-    showExamsDashboard,
-    enterResultsForm,
-    submitPendingResults,
-    showExamDetails, // showExamDetailsWrapper is defined below
-    confirmDeletePendingExam,
-    confirmDeleteCompletedExam,
-    overrideQuestionCorrectness,
-    promptFeedback,
-    triggerAIExplanationWrapper,
-    promptAdminEditAnswerPlaceholder
+    showExamsDashboard, enterResultsForm, submitPendingResults, showExamDetails,
+    confirmDeletePendingExam, confirmDeleteCompletedExam, overrideQuestionCorrectness,
+    promptFeedback, triggerAIExplanationWrapper, promptAdminEditAnswerPlaceholder
 } from './ui_exams_dashboard.js';
 import { showManageStudiedChapters, toggleStudiedChapter } from './ui_studied_chapters.js';
 import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubject, confirmDeleteSubject, deleteSubject } from './ui_subjects.js';
@@ -37,9 +30,15 @@ import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progre
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
 import { showAdminDashboard, promptAdminReply } from './ui_admin_dashboard.js';
-import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval } from './ui_courses.js'; // Added course functions
+import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
 import { showInbox, handleMarkRead } from './ui_inbox.js';
-import { handleProfilePictureSelect } from './ui_profile_picture.js'; // Added picture handler
+
+// --- NEW Course UI Imports ---
+import { showMyCoursesDashboard, showCurrentCourseDashboard, showCurrentStudyMaterial, showCurrentAssignmentsExams, showCurrentCourseProgress, navigateToCourseDashboard, handleCourseAction } from './ui_course_dashboard.js';
+import { showCourseEnrollment, handlePaceSelection } from './ui_course_enrollment.js';
+import { showCourseStudyMaterial, displayFormulaSheet, handleExplainSelection, navigateChapterMaterial } from './ui_course_study_material.js';
+import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_assignments_exams.js';
+import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js'; // Added renderCourseCharts
 
 
 // --- Initialization ---
@@ -50,18 +49,59 @@ async function initializeApp() {
 
     // Theme Init
     const themeToggle = document.getElementById('theme-toggle');
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const savedTheme = localStorage.getItem('theme');
+
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
         document.documentElement.classList.add('dark');
     } else {
         document.documentElement.classList.remove('dark');
     }
+
     if (themeToggle && !themeToggle.dataset.listenerAttached) {
         themeToggle.addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-             const dashboardElement = document.getElementById('dashboard');
-             if (dashboardElement && !dashboardElement.classList.contains('hidden')) {
-                renderCharts(); // Re-render charts only if dashboard is visible
+
+             // Re-render charts if dashboards are visible
+             const progressDash = document.getElementById('dashboard');
+             const courseDashArea = document.getElementById('course-dashboard-area');
+             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); // Check for a specific chart canvas
+
+             if (progressDash && !progressDash.classList.contains('hidden')) {
+                renderCharts(); // Re-render standard progress charts
+             }
+             if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseCharts === 'function') {
+                 // Re-render course charts - needs access to progress data
+                 // This requires the showCourseProgressDetails function to be called again or state management
+                 console.log("Theme changed, attempting to re-render course charts if visible.");
+                 // Find the active course progress data to pass to renderCourseCharts
+                 if(window.userCourseProgressMap && window.activeCourseId && window.userCourseProgressMap.has(window.activeCourseId)) {
+                     renderCourseCharts(window.userCourseProgressMap.get(window.activeCourseId));
+                 } else {
+                     console.warn("Could not re-render course charts: active course ID or progress data missing.");
+                 }
+             }
+
+            // Re-initialize Mermaid theme
+             if (typeof mermaid !== 'undefined') {
+                  try {
+                      mermaid.initialize({ theme: 'base', themeVariables: { darkMode: isDark } });
+                      // Attempt to re-render *visible* mermaid diagrams
+                      document.querySelectorAll('.mermaid').forEach(el => {
+                          // A simple check if the element or its parent is potentially visible
+                          if (el.offsetParent !== null) {
+                              try {
+                                  // Re-fetch the definition from data attribute if stored there
+                                  const definition = el.getAttribute('data-mermaid-def') || el.textContent;
+                                  el.removeAttribute('data-processed'); // Allow mermaid to process again
+                                  el.innerHTML = definition; // Reset content before rendering
+                                  mermaid.run({ nodes: [el] }); // Use mermaid.run for specific nodes
+                                  console.log(`Re-rendered Mermaid diagram: ${el.id || 'untitled'}`);
+                              } catch (e) { console.error("Error re-rendering mermaid:", e); }
+                          }
+                      });
+                  } catch (e) { console.error("Error re-initializing mermaid theme:", e); }
              }
         });
         themeToggle.dataset.listenerAttached = 'true';
@@ -113,9 +153,9 @@ async function initializeApp() {
         }
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        window.auth = firebase.auth(); // Ensure global access
-        window.db = firebase.firestore(); // Ensure global access
-        setupAuthListener();
+        window.auth = firebase.auth(); // Global access (use modules where possible)
+        window.db = firebase.firestore(); // Global access
+        setupAuthListener(); // This will trigger data loading and UI updates
     } catch (e) {
         console.error("Firebase Services Access Failed in script.js:", e);
         alert("Error accessing Firebase services: " + e.message);
@@ -123,28 +163,22 @@ async function initializeApp() {
         return;
     }
 
-     // *** NEW: Initialize Mermaid.js ***
-     // Ensure Mermaid object exists before trying to initialize
+    // Initialize Mermaid.js
      if (typeof mermaid !== 'undefined') {
          try {
-             mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
+             const isDark = document.documentElement.classList.contains('dark');
+             mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: isDark } });
              console.log("Mermaid initialized.");
-             // Add listener to re-theme Mermaid on theme toggle
-             themeToggle?.addEventListener('click', () => {
-                 mermaid.initialize({ theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
-                 // Potentially re-render any visible mermaid diagrams here if needed
-             });
          } catch (mermaidError) {
              console.error("Error initializing Mermaid:", mermaidError);
          }
      } else {
-         // Mermaid might not be loaded yet due to 'defer', handle this possibility
-         console.warn("Mermaid library not immediately available during initializeApp. Initialization might be delayed.");
-         // Optionally, retry initialization after a short delay or on window load
+         console.warn("Mermaid library not immediately available during initializeApp.");
          window.addEventListener('load', () => {
              if (typeof mermaid !== 'undefined') {
                  try {
-                     mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
+                      const isDark = document.documentElement.classList.contains('dark');
+                     mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: isDark } });
                      console.log("Mermaid initialized (on window load).");
                  } catch (mermaidError) {
                      console.error("Error initializing Mermaid (on window load):", mermaidError);
@@ -155,48 +189,75 @@ async function initializeApp() {
          });
      }
 
-    console.log("initializeApp finishing setup.");
+    console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
 
 // --- Global Function Assignments ---
-// (Keep all existing assignments)
-// Core UI / Navigation
+
+// Core UI / Navigation (Standard Test Gen)
 window.showHomeDashboard = showHomeDashboard;
 window.showTestGenerationDashboard = showTestGenerationDashboard;
 window.showManageStudiedChapters = showManageStudiedChapters;
 window.showExamsDashboard = showExamsDashboard;
-window.showProgressDashboard = showProgressDashboard;
+window.showProgressDashboard = showProgressDashboard; // Standard progress
 window.showManageSubjects = showManageSubjects;
 window.showUserProfileDashboard = showUserProfileDashboard;
-window.closeDashboard = closeDashboard;
+window.closeDashboard = closeDashboard; // Closes standard progress dashboard
 window.initializeApp = initializeApp;
 
 // Course UI Functions
+window.showMyCoursesDashboard = showMyCoursesDashboard; // List enrolled courses
 window.showBrowseCourses = showBrowseCourses;
-window.showAddCourseForm = showAddCourseForm;
-window.submitNewCourse = submitNewCourse;
+window.showAddCourseForm = showAddCourseForm; // Admin
+window.showEditCourseForm = showEditCourseForm; // Admin
+window.submitNewCourse = submitNewCourse; // Admin
+window.handleUpdateCourse = handleUpdateCourse; // Admin
 window.handleCourseSearch = handleCourseSearch;
 window.showCourseDetails = showCourseDetails;
 window.handleReportCourse = handleReportCourse;
-window.handleCourseApproval = handleCourseApproval; // Admin action
+window.handleCourseApproval = handleCourseApproval; // Admin
+window.showCourseEnrollment = showCourseEnrollment; // User action
+window.handlePaceSelection = handlePaceSelection; // User action from enrollment form
+window.navigateToCourseDashboard = navigateToCourseDashboard;
+window.handleCourseAction = handleCourseAction; // Handles buttons within course dash
 
-// Test Generation
+// Course-Specific Dashboard Navigation (called from sidebar)
+window.showCurrentCourseDashboard = showCurrentCourseDashboard;
+window.showCurrentStudyMaterial = showCurrentStudyMaterial;
+window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
+window.showCurrentCourseProgress = showCurrentCourseProgress;
+
+// Course Study Material Functions
+window.displayFormulaSheet = displayFormulaSheet;
+window.handleExplainSelection = handleExplainSelection;
+window.navigateChapterMaterial = navigateChapterMaterial;
+
+// Course Assignments/Exams Functions
+window.startAssignmentOrExam = startAssignmentOrExam;
+
+// Course Progress Functions
+window.showCourseProgressDetails = showCourseProgressDetails;
+window.renderCourseCharts = renderCourseCharts; // Make available for theme toggle
+
+
+// Test Generation (Standard)
 window.promptTestType = promptTestType;
 window.promptChapterSelectionForTest = promptChapterSelectionForTest;
 window.getSelectedChaptersAndPromptTestType = getSelectedChaptersAndPromptTestType;
 window.startTestGeneration = startTestGeneration;
 
-// PDF / TeX Generation
+// PDF / TeX Generation (Standard)
 window.downloadTexFileWrapper = downloadTexFile;
-// PDF generation attached dynamically
+// PDF generation attached dynamically via event listeners
 
-// Online Test
+// Online Test (Shared)
 window.navigateQuestion = navigateQuestion;
 window.recordAnswer = recordAnswer;
 window.confirmSubmitOnlineTest = confirmSubmitOnlineTest;
 window.confirmForceSubmit = confirmForceSubmit;
+window.submitOnlineTest = submitOnlineTest;
 
-// Exams Dashboard
+// Exams Dashboard (Standard Test Gen)
 window.enterResultsForm = enterResultsForm;
 window.submitPendingResults = submitPendingResults;
 window.showExamDetailsWrapper = async (index) => {
@@ -214,10 +275,10 @@ window.promptFeedback = promptFeedback;
 window.triggerAIExplanation = triggerAIExplanationWrapper;
 window.promptAdminEditAnswer = promptAdminEditAnswerPlaceholder;
 
-// Studied Chapters
+// Studied Chapters (Standard Test Gen)
 window.toggleStudiedChapter = toggleStudiedChapter;
 
-// Subject Management
+// Subject Management (Standard Test Gen)
 window.selectSubject = selectSubject;
 window.editSubject = editSubject;
 window.updateSubject = updateSubject;
@@ -229,12 +290,12 @@ window.deleteSubject = deleteSubject;
 window.updateUserProfile = updateUserProfile;
 window.signOutUserWrapper = signOutUser;
 
-// Import/Export
+// Import/Export (Standard Test Gen Data)
 window.importData = importData;
 window.exportData = exportData;
 window.showImportExportDashboard = showImportExportDashboard;
 
-// Onboarding
+// Onboarding (Initial Setup)
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
@@ -247,12 +308,11 @@ window.promptAdminReply = promptAdminReply;
 // --- Dynamic UI Updates ---
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
-    const currentUserFromState = currentUser; // Use state variable
+    const currentUserFromState = currentUser;
     if (adminPanelLink) {
         const isAdmin = currentUserFromState && currentUserFromState.uid === ADMIN_UID;
         adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
     }
-    // Update user info in header to potentially show/hide admin icon
     if (currentUserFromState) {
         fetchAndUpdateUserInfo(currentUserFromState);
     }
@@ -261,7 +321,6 @@ export function updateAdminPanelVisibility() {
 
 // --- Auth Form Handling ---
 function attachAuthListeners() {
-    // ... (function remains the same) ...
     console.log("Attempting to attach auth listeners...");
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');

@@ -1,12 +1,28 @@
 // ui_admin_dashboard.js
 
-import { db, currentUser} from './state.js'; // Added ADMIN_UID
+import { db, currentUser, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
 import { ADMIN_UID } from './config.js';
-import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
+import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading } from './utils.js';
 import { sendAdminReply } from './firebase_firestore.js';
+// Import course functions needed by admin buttons
+import { handleCourseApproval, showCourseDetails, showEditCourseForm } from './ui_courses.js';
+import { escapeHtml } from './utils.js'; // Import utility if available, otherwise define locally
 
 // --- Admin Dashboard UI ---
+
+// Helper (if not imported)
+function escapeHtmlLocal(unsafe) {
+    if (unsafe === null || unsafe === undefined) return '';
+    return String(unsafe)
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+const escape = typeof escapeHtml === 'function' ? escapeHtml : escapeHtmlLocal;
+
 
 export function showAdminDashboard() {
     if (currentUser?.uid !== ADMIN_UID) {
@@ -14,12 +30,13 @@ export function showAdminDashboard() {
         return;
     }
     clearContent();
+    setActiveSidebarLink('showAdminDashboard', 'sidebar-standard-nav'); // Target standard nav
     displayContent(`
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-8">
-            <h2 class="text-xl font-semibold text-indigo-600 dark:text-indigo-400">Admin Dashboard</h2>
+        <div class="animate-fade-in space-y-8">
+            <h2 class="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">Admin Dashboard</h2>
 
             <!-- Feedback Section -->
-            <div>
+            <div class="content-card">
                 <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Recent Feedback Messages</h3>
                 <div id="admin-feedback-area">
                     <p class="text-muted">Loading feedback...</p>
@@ -27,7 +44,7 @@ export function showAdminDashboard() {
             </div>
 
             <!-- Course Management Section -->
-            <div>
+            <div class="content-card">
                 <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Course Management (Pending/Reported)</h3>
                  <div id="admin-courses-area">
                     <p class="text-muted">Loading courses requiring attention...</p>
@@ -37,7 +54,7 @@ export function showAdminDashboard() {
     `);
     loadFeedbackForAdmin();
     loadCoursesForAdmin(); // New function call
-    setActiveSidebarLink('showAdminDashboard');
+    // No need to set active course ID here
 }
 
 // --- Feedback ---
@@ -62,27 +79,26 @@ async function loadFeedbackForAdmin() {
             const feedback = doc.data();
             const feedbackId = doc.id;
             const date = feedback.timestamp ? new Date(feedback.timestamp.toDate()).toLocaleString() : 'N/A';
-            const statusClass = feedback.status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80' : feedback.status === 'replied' ? 'bg-green-100 dark:bg-green-900/80' : 'bg-gray-100 dark:bg-gray-700/80';
-             const statusText = feedback.status === 'new' ? 'New' : feedback.status === 'replied' ? 'Replied' : (feedback.status || 'Unknown');
-             // *** ADDED Admin Icon if sender is admin (less likely for feedback, but for consistency) ***
-             const senderName = feedback.username || 'Unknown User';
-             const isAdminSender = feedback.userId === ADMIN_UID;
-             const adminIconHtml = isAdminSender ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
+            const statusClass = feedback.status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : feedback.status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
+            const statusText = feedback.status === 'new' ? 'New' : feedback.status === 'replied' ? 'Replied' : (feedback.status || 'Unknown');
+            const senderName = escape(feedback.username || 'Unknown User');
+            const isAdminSender = feedback.userId === ADMIN_UID;
+            const adminIconHtml = isAdminSender ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
+            const feedbackTextEscaped = escape(feedback.feedbackText || 'No text');
+            const replyTextEscaped = escape(feedback.replyText || '');
 
             feedbackHtml += `
-                <div class="${statusClass} p-3 rounded-lg border dark:border-gray-600 shadow-sm text-sm">
+                <div class="${statusClass} p-3 rounded-lg border shadow-sm text-sm">
                     <div class="flex justify-between items-center mb-1">
                          <span class="text-xs font-mono text-gray-500 dark:text-gray-400 break-all">${feedbackId}</span>
-                         <span class="text-xs font-semibold px-2 py-0.5 rounded ${
-                            statusText === 'New' ? 'bg-yellow-500 text-white' : statusText === 'Replied' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'
-                        }">${statusText}</span>
+                         <span class="text-xs font-semibold px-2 py-0.5 rounded ${statusText === 'New' ? 'bg-yellow-500 text-white' : statusText === 'Replied' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}">${statusText}</span>
                     </div>
-                    <p><strong>From:</strong> ${senderName}${adminIconHtml} (ID: ${feedback.userId})</p>
-                    <p><strong>Subject:</strong> ${feedback.subjectId || 'N/A'}</p>
-                    <p><strong>Question:</strong> ${feedback.questionId || 'N/A'}</p>
+                    <p><strong>From:</strong> ${senderName}${adminIconHtml} (ID: ${feedback.userId || 'N/A'})</p>
+                    <p><strong>Subject ID:</strong> ${feedback.subjectId || 'N/A'}</p>
+                    <p><strong>Question ID:</strong> ${feedback.questionId || 'N/A'}</p>
                     <p><strong>Date:</strong> ${date}</p>
-                    <p class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-500 mt-1 whitespace-pre-wrap text-xs">${feedback.feedbackText || 'No text'}</p>
-                    ${feedback.replyText ? `<p class="mt-2 pt-2 border-t dark:border-gray-600 text-xs"><strong>Admin Reply:</strong> ${feedback.replyText}</p>` : ''}
+                    <p class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-500 mt-1 whitespace-pre-wrap text-xs">${feedbackTextEscaped}</p>
+                    ${feedback.replyText ? `<p class="mt-2 pt-2 border-t dark:border-gray-600 text-xs"><strong>Admin Reply:</strong> ${replyTextEscaped}</p>` : ''}
                     <div class="mt-2 text-right">
                         ${feedback.status !== 'replied' ? `<button onclick="window.promptAdminReply('${feedbackId}', '${feedback.userId}')" class="btn-secondary-small text-xs">Reply</button>` : ''}
                     </div>
@@ -99,7 +115,7 @@ async function loadFeedbackForAdmin() {
 }
 
 export function promptAdminReply(feedbackId, recipientUserId) {
-    // ... (function remains the same) ...
+    // ... (function remains the same - unchanged) ...
     const replyText = prompt(`Enter reply for feedback ID ${feedbackId}:`);
     if (replyText && replyText.trim()) {
         handleAdminReply(feedbackId, recipientUserId, replyText.trim());
@@ -109,7 +125,7 @@ export function promptAdminReply(feedbackId, recipientUserId) {
 }
 
 async function handleAdminReply(feedbackId, recipientUserId, replyText) {
-    // ... (check currentUser, call sendAdminReply, update feedback status) ...
+    // ... (check currentUser, call sendAdminReply, update feedback status - unchanged) ...
      if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Action requires admin privileges.");
         return;
@@ -144,7 +160,7 @@ async function loadCoursesForAdmin() {
         // Query for courses that are either 'pending' or 'reported'
         const coursesSnapshot = await db.collection('courses')
                                           .where('status', 'in', ['pending', 'reported'])
-                                          .orderBy('createdAt', 'desc') // Show newest pending/reported first
+                                          .orderBy('createdAt', 'desc') // Show newest first
                                           .limit(50)
                                           .get();
 
@@ -160,33 +176,30 @@ async function loadCoursesForAdmin() {
             const date = course.createdAt ? new Date(course.createdAt.toDate()).toLocaleString() : 'N/A';
             const statusClass = course.status === 'pending' ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/80' : 'border-red-400 bg-red-50 dark:bg-red-900/80';
             const statusText = course.status === 'pending' ? 'Pending Approval' : 'Reported';
-             // *** ADDED Admin Icon for creator ***
-             const creatorName = course.creatorName || 'Unknown';
-             const isAdminCreator = course.creatorUid === ADMIN_UID;
-             const adminIconHtml = isAdminCreator ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
-
+            const creatorName = escape(course.creatorName || 'Unknown');
+            const isAdminCreator = course.creatorUid === ADMIN_UID;
+            const adminIconHtml = isAdminCreator ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
+            const courseName = escape(course.name || 'Unnamed Course');
 
             coursesHtml += `
                 <div class="course-card border rounded-lg p-3 shadow-sm text-sm ${statusClass}">
                      <div class="flex justify-between items-center mb-2">
-                         <h4 class="font-semibold text-base text-primary-700 dark:text-primary-300">${course.name || 'Unnamed Course'}</h4>
-                         <span class="text-xs font-bold px-2 py-0.5 rounded ${
-                             course.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'
-                         }">${statusText}</span>
+                         <h4 class="font-semibold text-base text-primary-700 dark:text-primary-300">${courseName}</h4>
+                         <span class="text-xs font-bold px-2 py-0.5 rounded ${course.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'}">${statusText}</span>
                      </div>
-                     <p><strong>Creator:</strong> ${creatorName}${adminIconHtml} (ID: ${course.creatorUid})</p>
+                     <p><strong>Creator:</strong> ${creatorName}${adminIconHtml} (ID: ${course.creatorUid || 'N/A'})</p>
                      <p><strong>Date:</strong> ${date}</p>
-                     <p><strong>Major:</strong> ${course.majorTag || 'N/A'} | <strong>Subject:</strong> ${course.subjectTag || 'N/A'}</p>
-                     ${course.status === 'reported' ? `<p class="text-xs mt-1"><strong>Report Reason:</strong> ${course.reportReason || 'None provided.'}</p><p class="text-xs"><strong>Reported By:</strong> ${course.reportedBy?.length || 0} user(s)</p>` : ''}
+                     <p><strong>Major:</strong> ${escape(course.majorTag || 'N/A')} | <strong>Subject:</strong> ${escape(course.subjectTag || 'N/A')}</p>
+                     ${course.status === 'reported' ? `<p class="text-xs mt-1"><strong>Report Reason:</strong> ${escape(course.reportReason || 'None provided.')}</p><p class="text-xs"><strong>Reported By:</strong> ${course.reportedBy?.length || 0} user(s)</p>` : ''}
                      <div class="mt-3 pt-2 border-t dark:border-gray-600 text-right space-x-2">
-                          <!-- Common View Details Button -->
                           <button onclick="window.showCourseDetails('${courseId}')" class="btn-secondary-small text-xs">View Details</button>
+                          <button onclick="window.showEditCourseForm('${courseId}')" class="btn-secondary-small text-xs">Edit</button>
                          ${course.status === 'pending' ? `
                              <button onclick="window.handleCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Approve</button>
                              <button onclick="window.handleCourseApproval('${courseId}', false)" class="btn-danger-small text-xs">Reject</button>
                          ` : ''}
                           ${course.status === 'reported' ? `
-                             <button onclick="window.handleCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Approve (Clear Report)</button>
+                             <button onclick="window.handleCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Clear Report</button>
                              <button onclick="window.handleCourseApproval('${courseId}', false, true)" class="btn-danger-small text-xs">Delete Course</button>
                          ` : ''}
                      </div>
@@ -201,3 +214,9 @@ async function loadCoursesForAdmin() {
         coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}</p>`;
     }
 }
+
+// Assign functions needed by buttons to window scope
+window.promptAdminReply = promptAdminReply;
+window.handleCourseApproval = handleCourseApproval;
+window.showCourseDetails = showCourseDetails;
+window.showEditCourseForm = showEditCourseForm;

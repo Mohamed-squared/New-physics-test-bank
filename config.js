@@ -1,6 +1,6 @@
 // --- Configuration ---
 
-// NEW: Admin User ID
+// Admin User ID
 export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1"; // Replace with your actual Admin UID
 export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Replace with your actual Gemini API Key
 
@@ -34,30 +34,86 @@ export const ONLINE_TEST_DURATION_MINUTES = 120; // 2 hours
 // Default structure for a *new* user's subject data if none exists
 export const initialSubjectData = {
     "subjects": {
-        "1": {
+        "1": { // Linked to FoP Course
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // Default filename
-            "max_questions_per_test": 42,
+            "fileName": "chapters.md", // Default filename for general test gen
+            "max_questions_per_test": 42, // Default max for general test gen
             "chapters": {}, // Populated by MD parse
-            "studied_chapters": [],
+            "studied_chapters": [], // General studied chapters (can be used by course or separately)
             "pending_exams": [],
             "exam_history": []
         },
-        "2": {
+        "2": { // Example unrelated subject
             "id": "2",
             "name": "ABC of Aviation",
-            "fileName": "ABC_of_Aviation.md", // Example second subject filename
+            "fileName": "ABC_of_Aviation.md",
             "max_questions_per_test": 42,
             "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
             "pending_exams": [],
             "exam_history": []
         }
-        // Other subjects would need a 'fileName' property too
     }
-    // enrolledCourses: [] // Managed globally, not per-user in this structure
 };
 
 // Default profile picture URL (relative path assumed)
 export const DEFAULT_PROFILE_PIC_URL = 'default-avatar.png';
+
+// --- Course System Configuration ---
+export const FOP_COURSE_ID = "fop_physics_v1"; // Unique ID for the Fundamentals of Physics course
+
+// Base paths for course resources (adjust as needed)
+export const COURSE_PDF_BASE_PATH = "./Fundamentals of Physics PDFs/"; // NOTE: Ensure this folder exists
+export const COURSE_TRANSCRIPTION_BASE_PATH = "./Fundamentals of Physics Transcriptions/"; // NOTE: Ensure this folder exists
+
+// Course Grading Weights
+export const GRADING_WEIGHTS = {
+    skipExams: 0.20,
+    assignments: 0.20,
+    weeklyExams: 0.15,
+    midcourseExams: 0.20,
+    finalExams: 0.20,
+    attendance: 0.05,
+    extraPracticeBonusMax: 5, // Max 5 bonus points
+};
+
+export const PASSING_GRADE_PERCENT = 65;
+
+// Pace multipliers
+export const PACE_MULTIPLIER = {
+    compact: 1.25,
+    mediocre: 1.0,
+    lenient: 0.75,
+};
+
+// Course structure details (can be moved to Firestore later)
+// This defines the structure for the specific FoP course
+export const FOP_COURSE_DEFINITION = {
+    id: FOP_COURSE_ID,
+    name: "Fundamentals of Physics",
+    description: "A comprehensive course covering the fundamentals of physics.",
+    totalChapters: 44,
+    relatedSubjectId: "1", // Links to the subject in user appData for question bank
+    // *** Placeholder Removed - Provide a real URL or null ***
+    youtubePlaylistUrl: "https://www.youtube.com/watch?v=Uo28HOrhipc&list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr", // Example: "https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID" or null if none
+    pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`, // Pattern for PDF paths
+    transcriptionPathPattern: `${COURSE_TRANSCRIPTION_BASE_PATH}chapter{num}.txt`, // Pattern for transcription paths
+    chapters: [ // List of chapter titles (as provided)
+        "Measurement", "Motion Along a Straight Line", "Vectors", "Motion in Two and Three Dimensions",
+        "Force and Motion—I", "Force and Motion—II", "Kinetic Energy and Work",
+        "Potential Energy and Conservation of Energy", "Center of Mass and Linear Momentum", "Rotation",
+        "Rolling, Torque, and Angular Momentum", "Equilibrium and Elasticity", "Gravitation", "Fluids",
+        "Oscillations", "Waves—I", "Waves—II", "Temperature, Heat, and the First Law of Thermodynamics",
+        "The Kinetic Theory of Gases", "Entropy and the Second Law of Thermodynamics", "Coulomb’s Law",
+        "Electric Fields", "Gauss’ Law", "Electric Potential", "Capacitance", "Current and Resistance",
+        "Circuits", "Magnetic Fields", "Magnetic Fields Due to Currents", "Induction and Inductance",
+        "Electromagnetic Oscillations and Alternating Current", "Maxwell’s Equations; Magnetism of Matter",
+        "Electromagnetic Waves", "Images", "Interference", "Diffraction", "Relativity",
+        "Photons and Matter Waves", "More About Matter Waves", "All About Atoms",
+        "Conduction of Electricity in Solids", "Nuclear Physics", "Energy from the Nucleus",
+        "Quarks, Leptons, and the Big Bang"
+    ],
+    midcourseChapters: [11, 22, 33], // Chapters after which a midcourse occurs
+    chapterResources: {} // Admin editable overrides (stored in Firestore preferably)
+};

@@ -1,40 +1,48 @@
-import { currentUser, currentSubject, db} from './state.js'; // Added ADMIN_UID
+import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap } from './state.js'; // Added course state imports
 import { ADMIN_UID } from './config.js';
 import { renderMathIn } from './utils.js';
 import { updateAdminPanelVisibility } from './script.js';
-import { DEFAULT_PROFILE_PIC_URL } from '../config.js'; // Added Default Pic URL
+import { DEFAULT_PROFILE_PIC_URL } from '../config.js';
 
 // --- Basic UI Toggles & Updates ---
 
 export function showLoginUI() {
-    // ... (function remains the same) ...
+    // ... (function remains the same - unchanged) ...
      console.log("Running showLoginUI...");
     document.getElementById('login-section')?.classList.remove('hidden');
     document.getElementById('content')?.classList.add('hidden');
-    document.getElementById('dashboard')?.classList.add('hidden');
+    document.getElementById('dashboard')?.classList.add('hidden'); // Hide progress dashboard
+    document.getElementById('course-dashboard-area')?.classList.add('hidden'); // Hide course dashboard
     document.getElementById('online-test-area')?.classList.add('hidden');
     document.getElementById('user-section')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
     document.querySelectorAll('.auth-required').forEach(el => el.style.display = 'none');
-    document.querySelector('#sidebar nav.auth-required')?.style.setProperty('display', 'none', 'important');
+    // Hide specific sidebar groups
+    document.getElementById('sidebar-standard-nav')?.style.setProperty('display', 'none', 'important');
+    document.getElementById('sidebar-course-nav')?.style.setProperty('display', 'none', 'important');
     updateAdminPanelVisibility();
 }
 
 export function hideLoginUI() {
-    // ... (function remains the same) ...
+    // ... (function remains the same - unchanged) ...
     console.log("Running hideLoginUI...");
     document.getElementById('login-section')?.classList.add('hidden');
-    document.getElementById('content')?.classList.remove('hidden');
+    // Don't automatically show content, let specific functions decide
+    // document.getElementById('content')?.classList.remove('hidden');
     document.getElementById('user-section')?.classList.remove('hidden');
     document.querySelectorAll('.auth-required').forEach(el => {
-        el.style.display = ''; // Use default display
+        el.style.display = ''; // Use default display (flex for nav)
     });
-    document.querySelector('#sidebar nav.auth-required')?.style.removeProperty('display');
+    // Show the standard nav by default when logged in
+    document.getElementById('sidebar-standard-nav')?.style.removeProperty('display');
+    // Keep course nav hidden until a course is active
+    document.getElementById('sidebar-course-nav')?.style.setProperty('display', 'none', 'important');
     updateAdminPanelVisibility();
 }
 
 // Fetch and update user info, including admin icon
 export async function fetchAndUpdateUserInfo(user) {
+     // ... (function remains the same - unchanged) ...
      if (!user || !db) return;
     const userDisplay = document.getElementById('user-display');
     const userSection = document.getElementById('user-section');
@@ -73,12 +81,11 @@ export async function fetchAndUpdateUserInfo(user) {
          nameSpan.title = displayName;
          nameSpan.textContent = displayName;
 
-         // *** NEW: Add Admin Icon ***
+         // Add Admin Icon
          let adminIconHtml = '';
          if (isCurrentUserAdmin) {
               adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
          }
-         // Append the icon HTML directly to the name span's innerHTML
          nameSpan.innerHTML = nameSpan.textContent + adminIconHtml;
 
 
@@ -86,7 +93,7 @@ export async function fetchAndUpdateUserInfo(user) {
          userSection?.classList.remove('hidden');
     }
 
-    // ... (existing inbox check logic remains the same) ...
+    // Inbox check (Unchanged)
     try {
         const inboxSnapshot = await db.collection('users').doc(user.uid).collection('inbox').where('isRead', '==', false).limit(10).get();
         const unreadCount = inboxSnapshot.size;
@@ -103,7 +110,7 @@ export async function fetchAndUpdateUserInfo(user) {
 }
 
 export function clearUserInfoUI() {
-    // ... (function remains the same) ...
+    // ... (function remains the same - unchanged) ...
     document.getElementById('user-display')?.replaceChildren();
     document.getElementById('user-section')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
@@ -112,11 +119,11 @@ export function clearUserInfoUI() {
 }
 
 export function updateSubjectInfo() {
-    // ... (function remains the same) ...
+    // ... (function remains the same - unchanged) ...
      const infoEl = document.getElementById('subject-info');
     if (!infoEl) return;
 
-    const stateCurrentUser = currentUser; // Use the state's currentUser
+    const stateCurrentUser = currentUser;
 
     if (currentSubject) {
         const chapterCount = (currentSubject.chapters && typeof currentSubject.chapters === 'object')
@@ -127,58 +134,99 @@ export function updateSubjectInfo() {
              <p class="font-semibold text-base text-gray-700 dark:text-gray-200">${currentSubject.name || 'Unnamed Subject'}</p>
              <p class="text-xs text-gray-500 dark:text-gray-400">${chapterCount} Chapters with Questions</p>
          </div>`;
-    } else if (stateCurrentUser) { // Check state's currentUser
-         infoEl.innerHTML = `<p class="text-sm text-warning font-medium">No Subject Selected</p>`;
+    } else if (stateCurrentUser) {
+         infoEl.innerHTML = `<p class="text-sm text-warning font-medium text-center md:text-left">No Subject Selected</p>`;
     } else {
         infoEl.replaceChildren();
     }
 }
 
-export async function displayContent(html) {
-    // ... (function remains the same) ...
-    const contentEl = document.getElementById('content');
-    if (contentEl) {
-        document.getElementById('dashboard')?.classList.add('hidden');
-        document.getElementById('online-test-area')?.classList.add('hidden');
-        contentEl.classList.remove('hidden');
-        contentEl.innerHTML = `<div class="content-card">${html}</div>`;
-        const cardElement = contentEl.firstElementChild;
-        if (cardElement) {
+// Modified displayContent to handle different containers
+export async function displayContent(html, targetElementId = 'content') {
+    const targetEl = document.getElementById(targetElementId);
+
+    if (targetEl) {
+        // Hide other primary content areas
+        if (targetElementId === 'content') {
+            document.getElementById('dashboard')?.classList.add('hidden');
+            document.getElementById('course-dashboard-area')?.classList.add('hidden');
+            document.getElementById('online-test-area')?.classList.add('hidden');
+        } else if (targetElementId === 'course-dashboard-area') {
+            document.getElementById('content')?.classList.add('hidden');
+            document.getElementById('dashboard')?.classList.add('hidden');
+            document.getElementById('online-test-area')?.classList.add('hidden');
+        }
+        // Add other cases if needed (e.g., progress dashboard 'dashboard')
+
+        targetEl.classList.remove('hidden');
+        // Wrap in content-card only if it's the main #content area and HTML isn't already a card
+        const needsCardWrapper = targetElementId === 'content' && !html.trim().startsWith('<div class="content-card');
+        targetEl.innerHTML = needsCardWrapper ? `<div class="content-card">${html}</div>` : html;
+
+        // Render MathJax within the newly added content
+        const elementToRender = needsCardWrapper ? targetEl.firstElementChild : targetEl;
+        if (elementToRender) {
             try {
-                 await renderMathIn(cardElement);
-                 console.log("MathJax rendered in displayContent.")
+                await renderMathIn(elementToRender);
+                console.log(`MathJax rendered in displayContent for #${targetElementId}.`);
             } catch (error) {
-                 console.error("Error during MathJax rendering in displayContent:", error);
+                console.error(`Error during MathJax rendering in displayContent for #${targetElementId}:`, error);
             }
         }
     } else {
-         console.error("displayContent: Could not find #content element");
+        console.error(`displayContent: Could not find target element #${targetElementId}`);
     }
 }
 
+// Modified clearContent to clear all potential main areas
 export function clearContent() {
-    // ... (function remains the same) ...
-     const contentEl = document.getElementById('content');
+    const contentEl = document.getElementById('content');
     const testAreaEl = document.getElementById('online-test-area');
     const dashboardEl = document.getElementById('dashboard');
     const dashboardContentEl = document.getElementById('dashboard-content');
+    const courseDashboardEl = document.getElementById('course-dashboard-area');
 
-    if (contentEl) { contentEl.replaceChildren(); }
+    if (contentEl) { contentEl.replaceChildren(); contentEl.classList.add('hidden'); }
     if (testAreaEl) { testAreaEl.replaceChildren(); testAreaEl.classList.add('hidden'); }
     if (dashboardEl) {
-         dashboardEl.classList.add('hidden');
-         if (dashboardContentEl) { dashboardContentEl.replaceChildren(); }
+        dashboardEl.classList.add('hidden');
+        if (dashboardContentEl) { dashboardContentEl.replaceChildren(); }
     }
+    if (courseDashboardEl) { courseDashboardEl.replaceChildren(); courseDashboardEl.classList.add('hidden'); }
 }
 
-export function setActiveSidebarLink(functionName) {
-    // ... (function remains the same) ...
-     const sidebarLinks = document.querySelectorAll('#sidebar nav .sidebar-link');
-    sidebarLinks.forEach(link => {
+// Modified setActiveSidebarLink to handle different nav sections
+export function setActiveSidebarLink(functionName, navSectionId = 'sidebar-standard-nav') {
+    // Deactivate links in ALL nav sections first
+    document.querySelectorAll('#sidebar nav .sidebar-link').forEach(link => {
         link.classList.remove('active-link');
-        const onclickAttr = link.getAttribute('onclick');
-        if (onclickAttr && onclickAttr.includes(functionName)) {
-            link.classList.add('active-link');
-        }
     });
+
+    // Activate the link in the specified section
+    const targetNav = document.getElementById(navSectionId);
+    if (targetNav) {
+        const sidebarLinks = targetNav.querySelectorAll('.sidebar-link');
+        sidebarLinks.forEach(link => {
+            const onclickAttr = link.getAttribute('onclick');
+            // Make matching more robust (handles potential arguments in onclick)
+            if (onclickAttr && onclickAttr.includes(functionName + '(')) {
+                link.classList.add('active-link');
+            }
+        });
+    } else {
+        console.warn(`setActiveSidebarLink: Nav section #${navSectionId} not found.`);
+    }
+
+    // Show/hide nav sections based on whether a course is active
+    const standardNav = document.getElementById('sidebar-standard-nav');
+    const courseNav = document.getElementById('sidebar-course-nav');
+    if (standardNav && courseNav) {
+        if (activeCourseId && navSectionId === 'sidebar-course-nav') {
+            standardNav.style.display = 'none';
+            courseNav.style.display = 'flex'; // Assuming flex column
+        } else {
+            standardNav.style.display = 'flex'; // Assuming flex column
+            courseNav.style.display = 'none';
+        }
+    }
 }

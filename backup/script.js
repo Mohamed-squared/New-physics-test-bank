@@ -14,9 +14,8 @@ import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdm
 
 // --- UI Imports ---
 import { importData, exportData, showImportExportDashboard } from './ui_import_export.js';
-// MODIFIED: Added setActiveSidebarLink, removed hideUserInfo/showUserInfo (handled by auth listener now)
-import { displayContent, clearContent, showLoginUI, hideLoginUI, updateSubjectInfo, setActiveSidebarLink } from './ui_core.js';
-import { showHomeDashboard } from './ui_home_dashboard.js'; // **** NEW ****
+import { displayContent, clearContent, showLoginUI, hideLoginUI, updateSubjectInfo, setActiveSidebarLink, fetchAndUpdateUserInfo } from './ui_core.js';
+import { showHomeDashboard } from './ui_home_dashboard.js';
 import { showTestGenerationDashboard, promptChapterSelectionForTest, getSelectedChaptersAndPromptTestType, promptTestType, startTestGeneration } from './ui_test_generation.js';
 import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js';
 import { launchOnlineTestUI, navigateQuestion, recordAnswer, confirmSubmitOnlineTest, confirmForceSubmit } from './ui_online_test.js';
@@ -38,8 +37,10 @@ import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progre
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
 import { showAdminDashboard, promptAdminReply } from './ui_admin_dashboard.js';
+import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval } from './ui_courses.js'; // Added course functions
 import { showInbox, handleMarkRead } from './ui_inbox.js';
-// ai_integration is used internally by ui_exams_dashboard
+import { handleProfilePictureSelect } from './ui_profile_picture.js'; // Added picture handler
+
 
 // --- Initialization ---
 
@@ -58,10 +59,9 @@ async function initializeApp() {
         themeToggle.addEventListener('click', () => {
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
-             // Re-render charts only if the specific dashboard is visible
              const dashboardElement = document.getElementById('dashboard');
              if (dashboardElement && !dashboardElement.classList.contains('hidden')) {
-                renderCharts();
+                renderCharts(); // Re-render charts only if dashboard is visible
              }
         });
         themeToggle.dataset.listenerAttached = 'true';
@@ -83,7 +83,6 @@ async function initializeApp() {
              sidebar.classList.add('hidden');
              overlay.classList.remove('is-visible');
          });
-         // Close sidebar on link click (ensure links have 'sidebar-link' class)
          sidebar.querySelectorAll('.sidebar-link').forEach(link => {
              link.addEventListener('click', () => {
                 if (window.innerWidth < 768) { // md breakpoint
@@ -106,17 +105,17 @@ async function initializeApp() {
         return;
     }
     try {
-        // Use the already initialized Firebase app from index.html script
         if (firebase.apps.length === 0) {
              console.error("Firebase was not initialized in index.html. App cannot run.");
              alert("Fatal Error: Firebase initialization failed.");
              hideLoading();
              return;
         }
-        // Use compat services if needed by other parts of the codebase
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        setupAuthListener(); // Setup listener AFTER setting state
+        window.auth = firebase.auth(); // Ensure global access
+        window.db = firebase.firestore(); // Ensure global access
+        setupAuthListener();
     } catch (e) {
         console.error("Firebase Services Access Failed in script.js:", e);
         alert("Error accessing Firebase services: " + e.message);
@@ -124,15 +123,45 @@ async function initializeApp() {
         return;
     }
 
+     // *** NEW: Initialize Mermaid.js ***
+     // Ensure Mermaid object exists before trying to initialize
+     if (typeof mermaid !== 'undefined') {
+         try {
+             mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
+             console.log("Mermaid initialized.");
+             // Add listener to re-theme Mermaid on theme toggle
+             themeToggle?.addEventListener('click', () => {
+                 mermaid.initialize({ theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
+                 // Potentially re-render any visible mermaid diagrams here if needed
+             });
+         } catch (mermaidError) {
+             console.error("Error initializing Mermaid:", mermaidError);
+         }
+     } else {
+         // Mermaid might not be loaded yet due to 'defer', handle this possibility
+         console.warn("Mermaid library not immediately available during initializeApp. Initialization might be delayed.");
+         // Optionally, retry initialization after a short delay or on window load
+         window.addEventListener('load', () => {
+             if (typeof mermaid !== 'undefined') {
+                 try {
+                     mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: document.documentElement.classList.contains('dark') } });
+                     console.log("Mermaid initialized (on window load).");
+                 } catch (mermaidError) {
+                     console.error("Error initializing Mermaid (on window load):", mermaidError);
+                 }
+             } else {
+                  console.error("Mermaid library failed to load.");
+             }
+         });
+     }
+
     console.log("initializeApp finishing setup.");
-    // Loading indicator hidden by auth listener or loadUserData
 }
 
 // --- Global Function Assignments ---
-// Assign functions from modules to the window object for inline handlers
-
+// (Keep all existing assignments)
 // Core UI / Navigation
-window.showHomeDashboard = showHomeDashboard; // **** NEW ****
+window.showHomeDashboard = showHomeDashboard;
 window.showTestGenerationDashboard = showTestGenerationDashboard;
 window.showManageStudiedChapters = showManageStudiedChapters;
 window.showExamsDashboard = showExamsDashboard;
@@ -140,7 +169,16 @@ window.showProgressDashboard = showProgressDashboard;
 window.showManageSubjects = showManageSubjects;
 window.showUserProfileDashboard = showUserProfileDashboard;
 window.closeDashboard = closeDashboard;
-window.initializeApp = initializeApp; // Allow manual reload
+window.initializeApp = initializeApp;
+
+// Course UI Functions
+window.showBrowseCourses = showBrowseCourses;
+window.showAddCourseForm = showAddCourseForm;
+window.submitNewCourse = submitNewCourse;
+window.handleCourseSearch = handleCourseSearch;
+window.showCourseDetails = showCourseDetails;
+window.handleReportCourse = handleReportCourse;
+window.handleCourseApproval = handleCourseApproval; // Admin action
 
 // Test Generation
 window.promptTestType = promptTestType;
@@ -149,8 +187,8 @@ window.getSelectedChaptersAndPromptTestType = getSelectedChaptersAndPromptTestTy
 window.startTestGeneration = startTestGeneration;
 
 // PDF / TeX Generation
-window.downloadTexFileWrapper = downloadTexFile; // Wrapper for base64 content
-// PDF generation attached dynamically in ui_test_generation
+window.downloadTexFileWrapper = downloadTexFile;
+// PDF generation attached dynamically
 
 // Online Test
 window.navigateQuestion = navigateQuestion;
@@ -161,7 +199,6 @@ window.confirmForceSubmit = confirmForceSubmit;
 // Exams Dashboard
 window.enterResultsForm = enterResultsForm;
 window.submitPendingResults = submitPendingResults;
-// Wrapper needed because showExamDetails is async
 window.showExamDetailsWrapper = async (index) => {
     try {
         await showExamDetails(index);
@@ -190,7 +227,7 @@ window.deleteSubject = deleteSubject;
 
 // User Profile / Auth
 window.updateUserProfile = updateUserProfile;
-window.signOutUserWrapper = signOutUser; // Wrapper to ensure it's available
+window.signOutUserWrapper = signOutUser;
 
 // Import/Export
 window.importData = importData;
@@ -204,48 +241,43 @@ window.completeOnboarding = completeOnboarding;
 // Admin / Inbox / Feedback
 window.showAdminDashboard = showAdminDashboard;
 window.showInbox = showInbox;
-window.handleMarkRead = handleMarkRead; // Make sure this is assigned
+window.handleMarkRead = handleMarkRead;
 window.promptAdminReply = promptAdminReply;
 
 // --- Dynamic UI Updates ---
-// Function to toggle admin panel visibility based on user ID
-// script.js
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
+    const currentUserFromState = currentUser; // Use state variable
     if (adminPanelLink) {
-        // Simple, insecure client-side check
-        const isAdmin = currentUser && currentUser.uid === ADMIN_UID;
+        const isAdmin = currentUserFromState && currentUserFromState.uid === ADMIN_UID;
         adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
-        // console.log(`Admin Panel Visibility (Client Check): ${isAdmin ? 'Shown' : 'Hidden'}`); // Optional logging
+    }
+    // Update user info in header to potentially show/hide admin icon
+    if (currentUserFromState) {
+        fetchAndUpdateUserInfo(currentUserFromState);
     }
 }
 
+
 // --- Auth Form Handling ---
-// Moved listener attachment into a function to be called after DOM is ready
 function attachAuthListeners() {
+    // ... (function remains the same) ...
     console.log("Attempting to attach auth listeners...");
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
     const googleButton = document.getElementById('google-signin-button');
 
-    // Simple check if listener already attached to prevent duplicates
     if (loginForm && !loginForm.dataset.listenerAttached) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const identifier = document.getElementById('login-identifier')?.value;
             const password = document.getElementById('login-password')?.value;
-            // Basic validation before calling Firebase
-            if (!identifier || !password) {
-                alert("Please enter both identifier and password.");
-                return;
-            }
-            signInUser(identifier, password).catch(err => console.error("Sign in submit error:", err)); // Error handled internally
+            if (!identifier || !password) { alert("Please enter both identifier and password."); return; }
+            signInUser(identifier, password).catch(err => console.error("Sign in submit error:", err));
         });
         loginForm.dataset.listenerAttached = 'true';
         console.log("Login form listener attached.");
-    } else if (!loginForm) {
-        console.warn("Login form (#login-form) NOT found.");
-    }
+    } else if (!loginForm) { console.warn("Login form (#login-form) NOT found."); }
 
     if (signupForm && !signupForm.dataset.listenerAttached) {
         signupForm.addEventListener('submit', (e) => {
@@ -253,33 +285,19 @@ function attachAuthListeners() {
             const username = document.getElementById('signup-username')?.value;
             const email = document.getElementById('signup-email')?.value;
             const password = document.getElementById('signup-password')?.value;
-            // Basic validation before calling Firebase
-            if (!username || !email || !password) {
-                alert("Please fill in all signup fields.");
-                return;
-            }
-            if (password.length < 6) {
-                 alert("Password must be at least 6 characters.");
-                 return;
-            }
-             // Regex validation for username happens inside signUpUser
-            signUpUser(username, email, password).catch(err => console.error("Sign up submit error:", err)); // Error handled internally
+            if (!username || !email || !password) { alert("Please fill in all signup fields."); return; }
+            if (password.length < 6) { alert("Password must be at least 6 characters."); return; }
+            signUpUser(username, email, password).catch(err => console.error("Sign up submit error:", err));
          });
          signupForm.dataset.listenerAttached = 'true';
          console.log("Signup form listener attached.");
-    } else if (!signupForm) {
-        console.warn("Signup form (#signup-form) NOT found.");
-    }
+    } else if (!signupForm) { console.warn("Signup form (#signup-form) NOT found."); }
 
     if (googleButton && !googleButton.dataset.listenerAttached) {
-        googleButton.addEventListener('click', () => {
-            signInWithGoogle(); // Errors handled internally
-        });
+        googleButton.addEventListener('click', () => { signInWithGoogle(); });
         googleButton.dataset.listenerAttached = 'true';
         console.log("Google button listener attached.");
-    } else if (!googleButton) {
-        console.warn("Google Sign-in button (#google-signin-button) NOT found.");
-    }
+    } else if (!googleButton) { console.warn("Google Sign-in button (#google-signin-button) NOT found."); }
 
     console.log("Finished attempting to attach auth listeners.");
 }
@@ -288,10 +306,10 @@ function attachAuthListeners() {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initializeApp();
-        attachAuthListeners(); // Attach listeners after DOM is loaded
+        attachAuthListeners();
     });
 } else {
-    initializeApp(); // DOM already loaded
-    attachAuthListeners(); // Attach listeners immediately
+    initializeApp();
+    attachAuthListeners();
 }
 // --- END OF FILE script.js ---

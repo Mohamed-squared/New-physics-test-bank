@@ -1,10 +1,11 @@
 // firebase_firestore.js
 
 // Import db from state.js, but currentUser will be passed as argument where needed
-import { db, data, setData, currentSubject, setCurrentSubject } from './state.js';
+// Added ADMIN_UID import
+import { db, data, setData, currentSubject, setCurrentSubject, currentUser as stateCurrentUser } from './state.js'; // Renamed currentUser import
 import { showLoading, hideLoading } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
-import { initialSubjectData, ADMIN_UID } from './config.js';
+import { initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Added DEFAULT_PROFILE_PIC_URL
 import { updateSubjectInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
 
@@ -15,21 +16,19 @@ import { showOnboardingUI } from './ui_onboarding.js';
  * Returns the markdown text content or null if fetch fails.
  */
 async function fetchMarkdownForSubject(subject) {
-    if (!subject) return null;
-    // Use subject.fileName, default to chapters.md if missing or for specific subject name/ID
+    // ... (function remains the same) ...
+     if (!subject) return null;
     const fileName = subject.fileName || (subject.name === "Fundamentals of Physics" ? "chapters.md" : `${subject.name}.md`);
-    // Basic sanitization - replace spaces, etc. Consider more robust slugification if names are complex.
     const safeFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const url = `${safeFileName}?t=${new Date().getTime()}`; // Add cache buster
+    const url = `${safeFileName}?t=${new Date().getTime()}`;
 
     console.log(`Fetching Markdown from: ${url}`);
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            // Handle 404 gracefully - it might be a new subject without a file yet
             if (response.status === 404) {
                 console.warn(`Markdown file not found at ${url}. Subject: ${subject.name}`);
-                return null; // Indicate file not found
+                return null;
             }
             throw new Error(`HTTP error fetching markdown! status: ${response.status} for ${url}`);
         }
@@ -38,11 +37,10 @@ async function fetchMarkdownForSubject(subject) {
         return mdContent;
     } catch (error) {
         console.error(`Error fetching Markdown for subject ${subject.name} (${url}):`, error);
-        // Optionally alert the user only for non-404 errors
         if (!error.message.includes('status: 404')) {
             alert(`Warning: Could not load chapter definitions for subject "${subject.name}". File might be missing or inaccessible.`);
         }
-        return null; // Indicate fetch failure
+        return null;
     }
 }
 
@@ -50,6 +48,7 @@ async function fetchMarkdownForSubject(subject) {
 // --- User Data Management ---
 
 export async function saveUserData(uid) {
+    // ... (function remains the same) ...
     if (!db) { console.error("Firestore DB not initialized"); return; }
     if (!uid || !data) {
         console.warn("Attempted to save data without UID or data object.");
@@ -57,141 +56,145 @@ export async function saveUserData(uid) {
     }
     const userRef = db.collection('users').doc(uid);
     try {
-        // Before saving, ensure the data structure is consistent (e.g., no undefined fields Firestore dislikes)
-        // This is a basic cleanup, more specific validation might be needed
-        const cleanData = JSON.parse(JSON.stringify(data)); // Deep clone and remove undefined
+        const cleanData = JSON.parse(JSON.stringify(data));
 
         await userRef.update({
-            appData: cleanData // Save the cleaned data
+            appData: cleanData
         });
-        // console.log("User data saved successfully."); // Verbose
+        // console.log("User data saved successfully.");
     } catch (error) {
         console.error("Error saving user data to Firestore:", error);
-        alert("Error saving progress: " + error.message); // Notify user
+        alert("Error saving progress: " + error.message);
     }
 }
 
 export async function loadUserData(uid) {
+    // ... (existing logic for fetching user doc) ...
     if (!db) { console.error("Firestore DB not initialized"); hideLoading(); return; }
-    if (!uid) {
-        console.error("loadUserData called without UID.");
-        hideLoading();
-        return;
-    }
+    if (!uid) { console.error("loadUserData called without UID."); hideLoading(); return; }
     showLoading("Loading your data...");
     console.log(`Loading data for user: ${uid}`);
     const userRef = db.collection('users').doc(uid);
     try {
         const doc = await userRef.get();
-        let needsSaveAfterLoad = false; // Flag to save data if modified during load
+        let needsSaveAfterLoad = false;
 
         if (doc.exists) {
             const userData = doc.data();
             let loadedData = userData.appData;
             console.log("User appData loaded from Firestore.");
 
+            // --- Data Initialization/Validation ---
             if (!loadedData || typeof loadedData.subjects !== 'object') {
-                 console.warn("Loaded appData is missing or invalid 'subjects' structure. Resetting to default.");
-                 // Create a deep copy of the initial structure
-                 loadedData = JSON.parse(JSON.stringify(initialSubjectData));
-                 needsSaveAfterLoad = true; // Mark for saving the reset structure
+                console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
+                loadedData = JSON.parse(JSON.stringify(initialSubjectData));
+                needsSaveAfterLoad = true;
             }
+            // Ensure photoURL exists at top level (needed for profile)
+             if (userData.photoURL === undefined) {
+                console.log("Initializing top-level photoURL.");
+                await userRef.update({ photoURL: auth?.currentUser?.photoURL || DEFAULT_PROFILE_PIC_URL });
+                needsSaveAfterLoad = false; // This save is separate
+             }
+            // --- End Initialization/Validation ---
+
 
             setData(loadedData); // Update state with potentially reset data
 
             // Sync with Markdown for each subject
             console.log("Syncing loaded subject data with Markdown files...");
-            let dataWasModifiedBySync = false;
-            if (data && data.subjects) {
-                for (const subjectId in data.subjects) {
-                    const subject = data.subjects[subjectId];
-                    if (!subject) continue; // Skip if subject data is corrupt
-
-                    const subjectMarkdown = await fetchMarkdownForSubject(subject);
-                    // Update chapters based on fetched markdown OR clear if MD is null (not found/error)
-                    const subjectChaptersBefore = JSON.stringify(subject.chapters || {});
-                    const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown); // Pass null if fetch failed
-                    const subjectChaptersAfter = JSON.stringify(subject.chapters || {});
-
-                    if (subjectModified || subjectChaptersBefore !== subjectChaptersAfter) {
-                        console.log(`Subject ${subject.name} (ID: ${subjectId}) data modified by Markdown sync.`);
-                        dataWasModifiedBySync = true;
-                    }
-                }
-                if (dataWasModifiedBySync) {
-                    console.log("Data was modified by Markdown sync overall.");
-                    needsSaveAfterLoad = true; // Mark for saving
-                } else {
-                    console.log("No changes detected during Markdown sync.");
-                }
-            } else {
-                 console.warn("Cannot sync with Markdown - state.data.subjects is missing.");
-            }
-
-            // Validate/Repair Data Structure (Crucial after potential reset or sync)
+             let dataWasModifiedBySync = false;
              if (data && data.subjects) {
-                for (const subjectId in data.subjects) {
-                    const subject = data.subjects[subjectId];
-                    if (!subject) continue;
+                 for (const subjectId in data.subjects) {
+                     const subject = data.subjects[subjectId];
+                     if (!subject) continue;
 
-                    // Ensure basic subject fields
-                    if (subject.id !== subjectId) { subject.id = subjectId; needsSaveAfterLoad = true; }
-                    if (!subject.name) { subject.name = `Subject ${subjectId}`; needsSaveAfterLoad = true; }
-                    if (!subject.fileName && subject.name === "Fundamentals of Physics") { subject.fileName = "chapters.md"; needsSaveAfterLoad = true; }
-                    else if (!subject.fileName) { subject.fileName = `${subject.name}.md`.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, ''); needsSaveAfterLoad = true; }
-                    subject.studied_chapters = subject.studied_chapters || [];
-                    subject.pending_exams = (subject.pending_exams || []).map(exam => ({
-                         ...exam,
-                         id: exam.id || `pending_${Date.now()}`, // Ensure ID exists
-                         allocation: (typeof exam.allocation === 'object' && exam.allocation !== null) ? exam.allocation : {},
-                         results_entered: exam.results_entered || false,
-                         timestamp: exam.timestamp || new Date(0).toISOString(), // Ensure timestamp exists
-                         totalQuestions: exam.totalQuestions || 0
-                    }));
-                    subject.exam_history = (subject.exam_history || []).map(exam => ({
-                         ...exam,
-                         examId: exam.examId || `history_${Date.now()}`, // Ensure ID exists
-                         type: exam.type || (exam.questions ? 'online' : 'pdf'),
-                         timestamp: exam.timestamp || new Date(0).toISOString(),
-                         score: exam.score ?? 0,
-                         totalQuestions: exam.totalQuestions ?? 0,
-                         originalScore: exam.originalScore ?? exam.score ?? 0, // Add originalScore field if missing
-                         // overriddenScore remains optional
-                         questions: (exam.questions || []).map(q => ({
-                            ...q,
-                            id: q.id || `q_${q.chapter}_${q.number}`, // Ensure ID exists
-                            isOverridden: q.isOverridden || false // Add isOverridden field if missing
-                         }))
-                    }));
-                    subject.max_questions_per_test = subject.max_questions_per_test || 42;
-                    subject.chapters = subject.chapters || {};
+                     const subjectMarkdown = await fetchMarkdownForSubject(subject);
+                     const subjectChaptersBefore = JSON.stringify(subject.chapters || {});
+                     const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown);
+                     const subjectChaptersAfter = JSON.stringify(subject.chapters || {});
 
-                    // Ensure basic chapter fields
-                    for (const chapNum in subject.chapters) {
-                       const chap = subject.chapters[chapNum];
-                       if (!chap) continue;
-                       chap.total_questions = chap.total_questions ?? 0; // Ensure total_questions exists
-                       chap.total_attempted = chap.total_attempted ?? 0;
-                       chap.total_wrong = chap.total_wrong ?? 0;
-                       chap.mistake_history = chap.mistake_history ?? [];
-                       chap.consecutive_mastery = chap.consecutive_mastery ?? 0;
-                       // Ensure available_questions is a valid array related to total_questions
-                       const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
-                       const currentAvailableSet = new Set(chap.available_questions || []);
-                       const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
-                       if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
-                            console.warn(`Repairing available_questions for Subject ${subjectId}, Chapter ${chapNum}.`);
-                            chap.available_questions = validAvailable;
-                            needsSaveAfterLoad = true;
-                       } else if (chap.available_questions === undefined) {
-                            chap.available_questions = validAvailable; // Initialize if missing
-                            needsSaveAfterLoad = true;
-                       }
-                    }
-                }
+                     if (subjectModified || subjectChaptersBefore !== subjectChaptersAfter) {
+                         console.log(`Subject ${subject.name} (ID: ${subjectId}) data modified by Markdown sync.`);
+                         dataWasModifiedBySync = true;
+                     }
+                 }
+                 if (dataWasModifiedBySync) {
+                     console.log("Data was modified by Markdown sync overall.");
+                     needsSaveAfterLoad = true;
+                 } else {
+                     console.log("No changes detected during Markdown sync.");
+                 }
              } else {
-                 console.warn("Cannot validate/repair data - state.data.subjects is missing.");
+                  console.warn("Cannot sync with Markdown - state.data.subjects is missing.");
              }
+
+
+             // Validate/Repair Data Structure (Crucial after potential reset or sync)
+              if (data && data.subjects) {
+                 for (const subjectId in data.subjects) {
+                     const subject = data.subjects[subjectId];
+                     if (!subject) continue;
+
+                     // Ensure basic subject fields
+                     if (subject.id !== subjectId) { subject.id = subjectId; needsSaveAfterLoad = true; }
+                     if (!subject.name) { subject.name = `Subject ${subjectId}`; needsSaveAfterLoad = true; }
+                     if (!subject.fileName && subject.name === "Fundamentals of Physics") { subject.fileName = "chapters.md"; needsSaveAfterLoad = true; }
+                     else if (!subject.fileName) { subject.fileName = `${subject.name}.md`.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, ''); needsSaveAfterLoad = true; }
+                     subject.studied_chapters = subject.studied_chapters || [];
+                     subject.pending_exams = (subject.pending_exams || []).map(exam => ({
+                          ...exam,
+                          id: exam.id || `pending_${Date.now()}`, // Ensure ID exists
+                          allocation: (typeof exam.allocation === 'object' && exam.allocation !== null) ? exam.allocation : {},
+                          results_entered: exam.results_entered || false,
+                          timestamp: exam.timestamp || new Date(0).toISOString(), // Ensure timestamp exists
+                          totalQuestions: exam.totalQuestions || 0
+                     }));
+                     subject.exam_history = (subject.exam_history || []).map(exam => ({
+                          ...exam,
+                          examId: exam.examId || `history_${Date.now()}`, // Ensure ID exists
+                          type: exam.type || (exam.questions ? 'online' : 'pdf'),
+                          timestamp: exam.timestamp || new Date(0).toISOString(),
+                          score: exam.score ?? 0,
+                          totalQuestions: exam.totalQuestions ?? 0,
+                          originalScore: exam.originalScore ?? exam.score ?? 0, // Add originalScore field if missing
+                          // overriddenScore remains optional
+                          questions: (exam.questions || []).map(q => ({
+                             ...q,
+                             id: q.id || `q_${q.chapter}_${q.number}`, // Ensure ID exists
+                             isOverridden: q.isOverridden || false // Add isOverridden field if missing
+                          }))
+                     }));
+                     subject.max_questions_per_test = subject.max_questions_per_test || 42;
+                     subject.chapters = subject.chapters || {};
+
+                     // Ensure basic chapter fields
+                     for (const chapNum in subject.chapters) {
+                        const chap = subject.chapters[chapNum];
+                        if (!chap) continue;
+                        chap.total_questions = chap.total_questions ?? 0; // Ensure total_questions exists
+                        chap.total_attempted = chap.total_attempted ?? 0;
+                        chap.total_wrong = chap.total_wrong ?? 0;
+                        chap.mistake_history = chap.mistake_history ?? [];
+                        chap.consecutive_mastery = chap.consecutive_mastery ?? 0;
+                        // Ensure available_questions is a valid array related to total_questions
+                        const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
+                        const currentAvailableSet = new Set(chap.available_questions || []);
+                        const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
+                        if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
+                             console.warn(`Repairing available_questions for Subject ${subjectId}, Chapter ${chapNum}.`);
+                             chap.available_questions = validAvailable;
+                             needsSaveAfterLoad = true;
+                        } else if (chap.available_questions === undefined) {
+                             chap.available_questions = validAvailable; // Initialize if missing
+                             needsSaveAfterLoad = true;
+                        }
+                     }
+                 }
+              } else {
+                  console.warn("Cannot validate/repair data - state.data.subjects is missing.");
+              }
+
 
             // Save if any modifications happened during load/sync/repair
             if (needsSaveAfterLoad) {
@@ -200,9 +203,9 @@ export async function loadUserData(uid) {
             }
 
             // Select Default Subject (use the possibly updated data)
+            // ... (selection logic remains the same) ...
             if (data && data.subjects) {
                 const subjectKeys = Object.keys(data.subjects);
-                // Try to keep the current subject if it still exists, otherwise pick the first
                 let subjectToSelectId = null;
                 if (currentSubject && data.subjects[currentSubject.id]) {
                     subjectToSelectId = currentSubject.id;
@@ -225,14 +228,15 @@ export async function loadUserData(uid) {
             await checkOnboarding(uid); // Check onboarding AFTER data load/validation
 
         } else {
-            console.log("User document not found for UID:", uid, "- Initializing data.");
-            const currentUserDetails = auth.currentUser; // Get auth user details
-            if (!currentUserDetails) {
-                throw new Error("Cannot initialize data: Current user details unavailable.");
-            }
-            await initializeUserData(uid, currentUserDetails.email, (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]), currentUserDetails.displayName, currentUserDetails.photoURL);
-            await loadUserData(uid); // Reload after initialization to ensure sync/validation happens
-            return;
+             console.log("User document not found for UID:", uid, "- Initializing data.");
+             const currentUserDetails = auth?.currentUser; // Use auth from firebase init
+             if (!currentUserDetails) {
+                 throw new Error("Cannot initialize data: Current user details unavailable.");
+             }
+             // Pass photoURL from auth object during initialization
+             await initializeUserData(uid, currentUserDetails.email, (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]), currentUserDetails.displayName, currentUserDetails.photoURL);
+             await loadUserData(uid); // Reload after initialization to ensure sync/validation happens
+             return;
         }
     } catch (error) {
         console.error("Error loading user data:", error);
@@ -243,6 +247,7 @@ export async function loadUserData(uid) {
 }
 
 export async function initializeUserData(uid, email, username, displayName = null, photoURL = null, forceReset = false) {
+    // ... (check for db/auth) ...
     if (!db || !auth) { console.error("Firestore DB or Auth not initialized"); return; }
     const userRef = db.collection('users').doc(uid);
     let docExists = false;
@@ -259,57 +264,68 @@ export async function initializeUserData(uid, email, username, displayName = nul
 
     if (!docExists || forceReset) {
         console.log(`Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}`);
-        let defaultData = JSON.parse(JSON.stringify(initialSubjectData)); // Deep copy
+        let defaultData = JSON.parse(JSON.stringify(initialSubjectData));
 
-        // Fetch Markdown for the default subject
-        const defaultSubject = defaultData.subjects["1"];
-        if (defaultSubject) {
-             const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
-             if (defaultMarkdown) {
-                 updateChaptersFromMarkdown(defaultSubject, defaultMarkdown);
-                 console.log("Initialized default subject chapters from Markdown.");
-             } else {
-                 console.warn("Could not fetch Markdown for default subject during initialization.");
-             }
-        } else {
-             console.error("Default subject (ID '1') not found in initialSubjectData config.");
+        // Fetch Markdown for the default subject(s) during initialization
+        for (const subjectId in defaultData.subjects) {
+            const defaultSubject = defaultData.subjects[subjectId];
+            if (defaultSubject) {
+                 const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
+                 if (defaultMarkdown) {
+                     updateChaptersFromMarkdown(defaultSubject, defaultMarkdown);
+                     console.log(`Initialized chapters for subject '${defaultSubject.name}' from Markdown.`);
+                 } else {
+                     console.warn(`Could not fetch Markdown for subject '${defaultSubject.name}' during initialization.`);
+                 }
+            }
         }
+        // --- End Fetch Markdown ---
 
         const dataToSet = {
              email: email,
              username: usernameLower,
              displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || username || email?.split('@')[0]),
-             photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || null),
+             // Use provided photoURL, fallback to default config URL
+             photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
              onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
              appData: defaultData
         };
 
         try {
-             await userRef.set(dataToSet, { merge: !forceReset });
-             console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
-             setData(defaultData); // Update local state
+            await userRef.set(dataToSet, { merge: !forceReset });
+            console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
+            setData(defaultData); // Update local state
              if (forceReset) {
                  const firstSubjectId = Object.keys(defaultData.subjects)[0];
                  setCurrentSubject(firstSubjectId ? defaultData.subjects[firstSubjectId] : null);
                  updateSubjectInfo();
              }
+            // Reserve username if newly set
+            if (usernameLower) {
+                try {
+                    const usernameRef = db.collection('usernames').doc(usernameLower);
+                    const usernameDoc = await usernameRef.get();
+                    if (!usernameDoc.exists) {
+                        await usernameRef.set({ userId: uid });
+                        console.log(`Username ${usernameLower} reserved during init.`);
+                    }
+                } catch(userErr) { console.error("Error reserving username during init:", userErr); }
+            }
         } catch (error) {
-             console.error("Error initializing user data:", error);
-             alert("Error setting up initial user data: " + error.message);
+            console.error("Error initializing user data:", error);
+            alert("Error setting up initial user data: " + error.message);
         }
     } else {
         // If user exists, ensure essential top-level fields are present
-         let updatesNeeded = {};
-         if (usernameLower && existingUserData && !existingUserData.username) {
-             updatesNeeded.username = usernameLower;
-         }
-         if (existingUserData && !existingUserData.displayName) {
-             updatesNeeded.displayName = displayName || username || email?.split('@')[0];
-         }
-         if (existingUserData && existingUserData.onboardingComplete === undefined) {
-             updatesNeeded.onboardingComplete = false; // Default if missing
-         }
+        let updatesNeeded = {};
+        if (usernameLower && existingUserData && !existingUserData.username) { updatesNeeded.username = usernameLower; }
+        if (existingUserData && !existingUserData.displayName) { updatesNeeded.displayName = displayName || username || email?.split('@')[0]; }
+        if (existingUserData && existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
+        // ** Ensure photoURL exists **
+        if (existingUserData && existingUserData.photoURL === undefined) {
+            updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL;
+        }
 
          if (Object.keys(updatesNeeded).length > 0) {
              console.log(`User data exists for ${uid}, updating missing fields:`, Object.keys(updatesNeeded));
@@ -318,12 +334,14 @@ export async function initializeUserData(uid, email, username, displayName = nul
                  console.log(`Fields updated for existing user ${uid}`);
                  // Reserve username if it was added
                  if (updatesNeeded.username) {
-                     const usernameRef = db.collection('usernames').doc(updatesNeeded.username);
-                     const usernameDoc = await usernameRef.get();
-                     if (!usernameDoc.exists) {
-                         await usernameRef.set({ userId: uid });
-                         console.log(`Username ${updatesNeeded.username} reserved.`);
-                     }
+                      try {
+                         const usernameRef = db.collection('usernames').doc(updatesNeeded.username);
+                         const usernameDoc = await usernameRef.get();
+                         if (!usernameDoc.exists) {
+                             await usernameRef.set({ userId: uid });
+                             console.log(`Username ${updatesNeeded.username} reserved.`);
+                         }
+                      } catch (userErr) { console.error("Error reserving username on update:", userErr);}
                  }
              } catch(updateError) {
                  console.error("Error updating existing user fields:", updateError);
@@ -334,10 +352,10 @@ export async function initializeUserData(uid, email, username, displayName = nul
     }
 }
 
-
 // --- Onboarding Check ---
 export async function checkOnboarding(uid) {
-    if (!db) { console.error("Firestore DB not initialized"); hideLoading(); return; }
+    // ... (function remains the same) ...
+     if (!db) { console.error("Firestore DB not initialized"); hideLoading(); return; }
     if (!uid) { hideLoading(); return; }
     console.log("Checking onboarding status...");
     const userRef = db.collection('users').doc(uid);
@@ -345,35 +363,31 @@ export async function checkOnboarding(uid) {
         const doc = await userRef.get();
         if (doc.exists && doc.data().onboardingComplete === false) {
             console.log("User needs onboarding.");
-            hideLoading(); // Hide loading before showing onboarding UI
+            hideLoading();
             showOnboardingUI();
         } else if (doc.exists) {
             console.log("Onboarding complete or not applicable.");
-            // Ensure main app UI is visible if onboarding isn't needed
             document.getElementById('main-content')?.classList.remove('hidden');
             document.getElementById('sidebar')?.classList.remove('hidden');
-            document.querySelectorAll('.auth-required').forEach(el => el.style.display = 'flex'); // Or appropriate display type
+            document.querySelectorAll('.auth-required').forEach(el => el.style.display = ''); // Use default display
             const contentEl = document.getElementById('content');
              if (contentEl?.textContent.includes("Loading...")) {
                 contentEl.innerHTML = '<p class="text-center p-4">Select an option from the sidebar.</p>';
              }
-            hideLoading(); // Hide loading as app is ready
+            hideLoading();
         } else {
             console.warn("User doc not found during onboarding check. Might be initializing.");
-            // Initialization/loadUserData should handle loading indicator
         }
     } catch (error) {
         console.error("Error checking onboarding status:", error);
-        hideLoading(); // Hide loading on error
+        hideLoading();
         alert("Error checking user setup: " + error.message);
     }
 }
 
-
 // --- Feedback Management ---
-
-// MODIFIED: Accepts user object
 export async function submitFeedback(feedbackData, user) {
+    // ... (function remains the same) ...
     if (!db || !user) {
         console.error("Cannot submit feedback: Firestore DB not initialized or user object not provided.");
         alert("Error submitting feedback: User not identified.");
@@ -404,9 +418,8 @@ export async function submitFeedback(feedbackData, user) {
 }
 
 // --- Inbox/Messaging ---
-
-// MODIFIED: Accepts adminUser object
 export async function sendAdminReply(recipientUid, subject, body, adminUser) {
+    // ... (function remains the same) ...
     if (!db || !adminUser || adminUser.uid !== ADMIN_UID) {
         console.error("Unauthorized: Only admin can send replies or adminUser object missing.");
         alert("Error: Action requires admin privileges.");
@@ -422,7 +435,7 @@ export async function sendAdminReply(recipientUid, subject, body, adminUser) {
     try {
         await messageRef.set({
             senderId: adminUser.uid,
-            senderName: "Admin", // Or use adminUser.displayName
+            senderName: "Admin",
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
             subject: subject,
             body: body,
@@ -437,8 +450,8 @@ export async function sendAdminReply(recipientUid, subject, body, adminUser) {
     }
 }
 
-// MODIFIED: Accepts user object
 export async function markMessageAsRead(messageId, user) {
+    // ... (function remains the same) ...
      if (!db || !user || !messageId) {
          console.error("Cannot mark message as read: DB/User/MessageID missing.");
          return false;

@@ -4,7 +4,6 @@
 
 /* Import Fonts (Example: Inter & Lexend Deca) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend+Deca:wght@400;500;600&display=swap');
-
 /* ==========================================================================
    CSS Variables and Base Styles
    ========================================================================== */
@@ -40,34 +39,58 @@
     --color-white:     #ffffff;
     --color-black:     #000000;
 
-    --color-success-100: #f0fdf4;
-    --color-success-200: #dcfce7; /* Added */
-    --color-success-500: #22c55e;
+    --color-success-50:  #f0fdf4; /* Lighter Success */
+    --color-success-100: #dcfce7;
+    --color-success-200: #bbf7d0;
+    --color-success-300: #86efac;
+    --color-success-400: #4ade80;
+    --color-success-500: #22c55e; /* Main Success */
     --color-success-600: #16a34a;
     --color-success-700: #15803d;
+    --color-success-800: #166534;
+    --color-success-900: #14532d;
+    --color-success-950: #052e16;
 
-    --color-danger-100: #fef2f2;
-    --color-danger-200: #fee2e2; /* Added */
-    --color-danger-500: #ef4444;
-    --color-danger-600: #dc2626;
-    --color-danger-700: #b91c1c;
+    --color-danger-50:  #fff1f2; /* Lighter Danger */
+    --color-danger-100: #ffe4e6;
+    --color-danger-200: #fecdd3;
+    --color-danger-300: #fda4af;
+    --color-danger-400: #fb7185;
+    --color-danger-500: #f43f5e; /* Main Danger */
+    --color-danger-600: #e11d48;
+    --color-danger-700: #be123c;
+    --color-danger-800: #9f1239;
+    --color-danger-900: #881337;
+    --color-danger-950: #4c0519;
 
-    --color-warning-100: #fffbeb;
-    --color-warning-200: #fef3c7; /* Added */
-    --color-warning-500: #f59e0b;
+    --color-warning-50:  #fffbeb; /* Lighter Warning */
+    --color-warning-100: #fef3c7;
+    --color-warning-200: #fde68a;
+    --color-warning-300: #fcd34d;
+    --color-warning-400: #fbbf24;
+    --color-warning-500: #f59e0b; /* Main Warning */
     --color-warning-600: #d97706;
     --color-warning-700: #b45309;
+    --color-warning-800: #92400e;
+    --color-warning-900: #78350f;
+    --color-warning-950: #451a03;
 
-    --color-info-100: #eff6ff;
-    --color-info-400: #60a5fa; /* Added */
-    --color-info-500: #3b82f6;
+    --color-info-50:  #eff6ff; /* Lighter Info */
+    --color-info-100: #dbeafe;
+    --color-info-200: #bfdbfe;
+    --color-info-300: #93c5fd;
+    --color-info-400: #60a5fa;
+    --color-info-500: #3b82f6; /* Main Info */
     --color-info-600: #2563eb;
     --color-info-700: #1d4ed8;
+    --color-info-800: #1e40af;
+    --color-info-900: #1e3a8a;
+    --color-info-950: #172554;
 
     /* --- Fonts --- */
     --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     --font-display: 'Lexend Deca', var(--font-sans); /* Optional distinct display font */
-
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     /* --- Transitions --- */
     --transition-fast: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-std:  all 250ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -198,21 +221,22 @@ p {
     color: var(--color-gray-400);
 }
 
-a {
+a.link, .link { /* Use .link class for consistent styling */
     color: var(--color-primary-600);
     text-decoration: none;
     transition: color var(--transition-fast);
 }
-a:hover {
+a.link:hover, .link:hover {
     color: var(--color-primary-700);
     text-decoration: underline;
 }
-.dark a {
+.dark a.link, .dark .link {
     color: var(--color-primary-400);
 }
-.dark a:hover {
+.dark a.link:hover, .dark .link:hover {
     color: var(--color-primary-300);
 }
+
 
 ul, ol {
     padding-left: 1.5em;
@@ -226,7 +250,7 @@ strong, b { font-weight: 600; }
 em, i { font-style: italic; }
 
 code {
-    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    font-family: var(--font-mono);
     background-color: var(--color-gray-100);
     color: var(--color-gray-700);
     padding: 0.2em 0.4em;
@@ -242,6 +266,7 @@ pre {
     margin-bottom: 1em;
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-inner);
+    font-family: var(--font-mono);
 }
 pre code {
     background-color: transparent;
@@ -284,16 +309,17 @@ hr {
 .text-right { text-align: right; }
 .italic { font-style: italic; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.whitespace-pre-wrap { white-space: pre-wrap; } /* Useful for feedback/transcriptions */
 
 /* Color utilities */
 .text-success { color: var(--color-success-600); }
-.dark .text-success { color: var(--color-success-500); }
+.dark .text-success { color: var(--color-success-400); }
 .text-danger { color: var(--color-danger-600); }
-.dark .text-danger { color: var(--color-danger-500); }
+.dark .text-danger { color: var(--color-danger-400); }
 .text-warning { color: var(--color-warning-600); }
-.dark .text-warning { color: var(--color-warning-500); }
+.dark .text-warning { color: var(--color-warning-400); }
 .text-info { color: var(--color-info-600); }
-.dark .text-info { color: var(--color-info-400); } /* Adjusted for dark bg */
+.dark .text-info { color: var(--color-info-400); }
 .text-muted { color: var(--color-gray-500); }
 .dark .text-muted { color: var(--color-gray-400); }
 
@@ -307,7 +333,7 @@ hr {
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
-    justify-content: center; /* Center if just title */
+    justify-content: center;
 }
 #sidebar .sidebar-header h2 {
     font-family: var(--font-display);
@@ -327,20 +353,20 @@ hr {
 #sidebar nav {
     flex-grow: 1;
     margin-top: 1rem;
-    padding: 0 0.75rem; /* Add padding */
+    padding: 0 0.75rem;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
+    display: flex; /* Changed from block */
+    flex-direction: column; /* Ensure column layout */
 }
 
 /* Sidebar links */
 .sidebar-link {
     display: flex;
     align-items: center;
-    padding: 0.65rem 0.85rem; /* Slightly adjusted padding */
+    padding: 0.65rem 0.85rem;
     margin-bottom: 0.25rem;
     font-size: 0.9rem; /* 14.4px */
-    font-weight: 500; /* Medium weight */
+    font-weight: 500;
     border-radius: var(--border-radius-md);
     color: var(--color-gray-600);
     transition: var(--transition-fast);
@@ -382,16 +408,16 @@ hr {
 }
 
 /* Active sidebar link */
-.sidebar-link.active-link { /* Renamed class */
+.sidebar-link.active-link {
     background-color: var(--color-primary-50);
     color: var(--color-primary-600);
-    font-weight: 600; /* Semibold for active */
+    font-weight: 600;
 }
 .sidebar-link.active-link svg {
    color: var(--color-primary-600);
 }
 .dark .sidebar-link.active-link {
-    background-color: var(--color-primary-900); /* Darker active bg */
+    background-color: var(--color-primary-900);
     color: var(--color-primary-300);
 }
 .dark .sidebar-link.active-link svg {
@@ -418,7 +444,7 @@ hr {
     border-radius: var(--border-radius-md);
     color: var(--color-gray-500);
     background-color: transparent;
-    border: 1px solid transparent; /* Reserve space */
+    border: 1px solid transparent;
     transition: var(--transition-fast);
 }
 #theme-toggle:hover {
@@ -463,28 +489,28 @@ html.dark #theme-icon-dark { display: block; }
 .admin-icon {
     display: inline-block;
     margin-left: 0.3em;
-    color: #f59e0b; /* Amber-500 */
-    width: 0.8em; /* Adjust size as needed */
+    color: var(--color-warning-500);
+    width: 0.8em;
     height: 0.8em;
-    vertical-align: middle; /* Align with text */
+    vertical-align: middle;
 }
 .dark .admin-icon {
-    color: #fcd34d; /* Amber-300 */
+    color: var(--color-warning-300);
 }
 
 /* ==========================================================================
    Button Styles
    ========================================================================== */
 
-.btn, /* Base button class */
-.btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning, /* Added warning */
-.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small { /* Added warning small */
+.btn,
+.btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning,
+.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.6rem 1.1rem; /* Adjusted padding */
-    font-weight: 600; /* Semibold */
-    font-size: 0.875rem; /* text-sm */
+    padding: 0.6rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
     line-height: 1.25rem;
     border-radius: var(--border-radius-md);
     border: 1px solid transparent;
@@ -495,7 +521,7 @@ html.dark #theme-icon-dark { display: block; }
     user-select: none;
 }
 
-/* Focus visible state (using outline for accessibility) */
+/* Focus visible state */
 .btn:focus-visible,
 .btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible,
 .btn-success:focus-visible, .btn-warning:focus-visible,
@@ -505,6 +531,7 @@ html.dark #theme-icon-dark { display: block; }
     outline-offset: 2px;
 }
 .dark .btn:focus-visible,
+/* ... other dark mode focus styles ... */
 .dark .btn-primary:focus-visible, .dark .btn-secondary:focus-visible, .dark .btn-danger:focus-visible,
 .dark .btn-success:focus-visible, .dark .btn-warning:focus-visible,
 .dark .btn-primary-small:focus-visible, .dark .btn-secondary-small:focus-visible, .dark .btn-danger-small:focus-visible,
@@ -521,6 +548,7 @@ html.dark #theme-icon-dark { display: block; }
 
 /* Disabled state */
 button:disabled, .btn:disabled,
+/* ... other disabled styles ... */
 .btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled, .btn-success:disabled, .btn-warning:disabled,
 .btn-primary-small:disabled, .btn-secondary-small:disabled, .btn-danger-small:disabled, .btn-success-small:disabled, .btn-warning-small:disabled {
     opacity: 0.5;
@@ -563,6 +591,7 @@ button:disabled, .btn:disabled,
     padding: 0.4rem 0.8rem;
     font-size: 0.75rem; /* text-xs */
     font-weight: 500; /* Medium */
+    box-shadow: none; /* Less shadow for small buttons */
 }
 .btn-success-small { background-color: var(--color-success-600); color: var(--color-white); }
 .btn-success-small:hover:not(:disabled) { background-color: var(--color-success-700); }
@@ -585,16 +614,30 @@ button:disabled, .btn:disabled,
 .dark .btn-danger-small { background-color: var(--color-danger-500); }
 .dark .btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-400); }
 
-
-
 /* Button Icons */
-.btn svg, .btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg, .btn-warning svg,
+.btn svg, /* ... other button icon selectors ... */
+.btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg, .btn-warning svg,
 .btn-primary-small svg, .btn-secondary-small svg, .btn-danger-small svg, .btn-success-small svg, .btn-warning-small svg {
     width: 1.125em; /* Size relative to text */
     height: 1.125em;
-    margin-right: 0.5em;
+    /* margin-right: 0.5em; */ /* Remove default margin, handle with spacing classes if needed */
     flex-shrink: 0;
 }
+/* Corrected CSS for Button Icons */
+.btn svg:not(:only-child),
+.btn-primary svg:not(:only-child),
+.btn-secondary svg:not(:only-child),
+.btn-danger svg:not(:only-child),
+.btn-success svg:not(:only-child),
+.btn-warning svg:not(:only-child),
+.btn-primary-small svg:not(:only-child),
+.btn-secondary-small svg:not(:only-child),
+.btn-danger-small svg:not(:only-child),
+.btn-success-small svg:not(:only-child),
+.btn-warning-small svg:not(:only-child) {
+    margin-right: 0.5em; /* Add margin only if text is present */
+}
+
 
 /* ==========================================================================
    Form Control Styles
@@ -604,7 +647,7 @@ label {
     display: block;
     margin-bottom: 0.4rem;
     font-size: 0.875rem;
-    font-weight: 500; /* Medium weight */
+    font-weight: 500;
     color: var(--color-gray-700);
 }
 .dark label {
@@ -616,12 +659,12 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="url"],
-input[type="search"], /* Added */
+input[type="search"],
 select,
 textarea {
     display: block;
     width: 100%;
-    padding: 0.6rem 0.9rem; /* Adjusted padding */
+    padding: 0.6rem 0.9rem;
     font-size: 0.9rem;
     font-family: var(--font-sans);
     line-height: 1.4;
@@ -650,15 +693,12 @@ select {
 input:focus, select:focus, textarea:focus {
     border-color: var(--color-primary-500);
     outline: 0;
-    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(14, 165, 233, 0.25); /* primary-500 */
+    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(14, 165, 233, 0.25);
 }
 
 .dark input[type="text"],
-.dark input[type="email"],
-.dark input[type="password"],
-.dark input[type="number"],
-.dark input[type="url"],
-.dark input[type="search"], /* Added */
+/* ... other dark input types ... */
+.dark input[type="email"], .dark input[type="password"], .dark input[type="number"], .dark input[type="url"], .dark input[type="search"],
 .dark select,
 .dark textarea {
     color: var(--color-gray-100);
@@ -668,69 +708,28 @@ input:focus, select:focus, textarea:focus {
 }
 .dark input:focus, .dark select:focus, .dark textarea:focus {
     border-color: var(--color-primary-400);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(56, 189, 248, 0.3); /* primary-400 */
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(56, 189, 248, 0.3);
 }
 
 /* Invalid input styles */
-input:invalid, select:invalid, textarea:invalid {
-    border-color: var(--color-danger-500) !important; /* Ensure override */
+input:invalid, select:invalid, textarea:invalid,
+input.border-red-500, textarea.border-red-500, select.border-red-500 /* Explicit error class */
+{
+    border-color: var(--color-danger-500) !important;
 }
-input:invalid:focus, select:invalid:focus, textarea:invalid:focus {
+input:invalid:focus, select:invalid:focus, textarea:invalid:focus,
+input.border-red-500:focus, textarea.border-red-500:focus, select.border-red-500:focus
+{
     box-shadow: var(--shadow-inner), 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
 }
-.dark input:invalid:focus, .dark select:invalid:focus, .dark textarea:invalid:focus {
+.dark input:invalid:focus, .dark select:invalid:focus, .dark textarea:invalid:focus,
+.dark input.border-red-500:focus, .dark textarea.border-red-500:focus, .dark select.border-red-500:focus
+{
      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(248, 113, 113, 0.3) !important;
 }
 
-input[type="checkbox"] {
-    height: 1rem; /* 16px */
-    width: 1rem;
-    border-radius: var(--border-radius-sm);
-    border: 1px solid var(--color-gray-400);
-    color: var(--color-primary-600);
-    transition: var(--transition-fast);
-    flex-shrink: 0;
-    vertical-align: middle;
-    appearance: none;
-    background-color: var(--color-white);
-    position: relative; /* For checkmark */
-    cursor: pointer;
-    display: inline-block;
-}
-input[type="checkbox"]:focus {
-     outline: none;
-     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
-}
-input[type="checkbox"]:checked {
-    border-color: var(--color-primary-500);
-    background-color: var(--color-primary-500);
-}
-input[type="checkbox"]:checked::before {
-    content: "";
-    display: block;
-    width: 0.3rem;
-    height: 0.6rem;
-    border: solid var(--color-white);
-    border-width: 0 2px 2px 0;
-    transform: rotate(45deg) translate(-50%, -50%);
-    position: absolute;
-    left: 50%;
-    top: 45%;
-}
-.dark input[type="checkbox"] {
-    border-color: var(--color-gray-500);
-    background-color: var(--color-gray-600);
-}
-.dark input[type="checkbox"]:focus {
-     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
-}
-.dark input[type="checkbox"]:checked {
-    border-color: var(--color-primary-400);
-    background-color: var(--color-primary-400);
-}
-
-input[type="radio"] { /* Similar styling for radios */
-    height: 1rem; width: 1rem; border-radius: 50%;
+input[type="checkbox"], input[type="radio"] {
+    height: 1rem; width: 1rem;
     border: 1px solid var(--color-gray-400);
     color: var(--color-primary-600);
     transition: var(--transition-fast);
@@ -738,29 +737,42 @@ input[type="radio"] { /* Similar styling for radios */
     appearance: none; background-color: var(--color-white);
     position: relative; cursor: pointer; display: inline-block;
 }
-input[type="radio"]:focus {
-    outline: none; box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+input[type="checkbox"] { border-radius: var(--border-radius-sm); }
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]:focus, input[type="radio"]:focus {
+     outline: none;
+     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
 }
-input[type="radio"]:checked {
+input[type="checkbox"]:checked, input[type="radio"]:checked {
     border-color: var(--color-primary-500);
-    background-color: var(--color-white); /* Keep bg white */
+    background-color: var(--color-primary-500);
+}
+input[type="radio"]:checked { background-color: var(--color-white); } /* Radio keeps white bg */
+
+input[type="checkbox"]:checked::before {
+    content: ""; display: block; width: 0.3rem; height: 0.6rem;
+    border: solid var(--color-white); border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-50%, -50%);
+    position: absolute; left: 50%; top: 45%;
 }
 input[type="radio"]:checked::before {
-    content: ""; display: block;
-    width: 0.5rem; height: 0.5rem; /* Smaller inner dot */
-    background-color: var(--color-primary-500);
-    border-radius: 50%;
-    position: absolute;
-    left: 50%; top: 50%;
-    transform: translate(-50%, -50%);
+    content: ""; display: block; width: 0.5rem; height: 0.5rem;
+    background-color: var(--color-primary-500); border-radius: 50%;
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
 }
-.dark input[type="radio"] {
+
+.dark input[type="checkbox"], .dark input[type="radio"] {
     border-color: var(--color-gray-500); background-color: var(--color-gray-600);
 }
-.dark input[type="radio"]:focus { box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3); }
-.dark input[type="radio"]:checked { border-color: var(--color-primary-400); background-color: var(--color-gray-600); }
+.dark input[type="checkbox"]:focus, .dark input[type="radio"]:focus {
+     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+}
+.dark input[type="checkbox"]:checked, .dark input[type="radio"]:checked {
+    border-color: var(--color-primary-400); background-color: var(--color-primary-400);
+}
+.dark input[type="radio"]:checked { background-color: var(--color-gray-600); }
 .dark input[type="radio"]:checked::before { background-color: var(--color-primary-400); }
-
 
 /* Form helper text */
 .form-help-text {
@@ -777,9 +789,9 @@ input[type="radio"]:checked::before {
    ========================================================================== */
 
 /* Main card structure */
-.content-card { /* Apply this class to main content containers */
+.content-card {
     background-color: var(--color-white);
-    padding: 1.5rem 2rem; /* Generous padding */
+    padding: 1.5rem 2rem;
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow);
     transition: background-color var(--transition-std), box-shadow var(--transition-std);
@@ -828,53 +840,16 @@ input[type="radio"]:checked::before {
     padding: 1.5rem 2rem;
 }
 
-/* Dynamic Content Area */
+/* Dynamic Content Area (#content) */
 #content {
     margin-top: 1rem;
 }
-/* Specific Styling for list items in certain contexts (e.g., dashboards) */
-/* Apply this style more selectively if needed by adding a class to the parent */
-#content ul:not(.list-none) li,
-#content ol:not(.list-none) li { /* Target lists within #content, excluding utility lists */
-    background-color: var(--color-gray-50);
-    padding: 0.75rem 1rem;
-    border-radius: var(--border-radius-md);
-    margin-bottom: 0.5rem;
-    border: 1px solid var(--border-color);
-    transition: background-color var(--transition-fast);
-}
-#content ul:not(.list-none) li:hover,
-#content ol:not(.list-none) li:hover {
-    background-color: var(--color-gray-100);
-}
-.dark #content ul:not(.list-none) li,
-.dark #content ol:not(.list-none) li {
-    background-color: var(--color-gray-700);
-    border-color: var(--border-color-dark);
-}
-.dark #content ul:not(.list-none) li:hover,
-.dark #content ol:not(.list-none) li:hover {
-    background-color: var(--color-gray-600);
-}
-/* Reset for nested lists inside prose, which have their own styling */
-.prose ul li, .prose ol li {
-    background-color: transparent;
-    padding: 0;
-    border-radius: 0;
-    margin-bottom: 0.4em; /* Default prose margin */
-    border: none;
-}
-/* Reset hover for prose lists */
-.prose ul li:hover, .prose ol li:hover {
-    background-color: transparent;
-}
-
-/* Dashboard Area */
+/* Progress Dashboard Area (#dashboard) */
 #dashboard {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
     margin-bottom: 1.5rem;
-    background-color: var(--color-gray-50); /* Subtle background for dashboard */
+    background-color: var(--color-gray-50);
 }
 .dark #dashboard {
     border-color: var(--border-color-dark);
@@ -891,32 +866,38 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-700);
     border-color: var(--border-color-dark);
 }
-#dashboard-content h3 {
-    font-family: var(--font-sans); /* Use body font for chart titles */
-    font-size: 0.9rem; /* Smaller chart titles */
+#dashboard-content h3, #dashboard-content h4 {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--color-gray-700);
 }
-.dark #dashboard-content h3 { color: var(--color-gray-300); }
+.dark #dashboard-content h3, .dark #dashboard-content h4 { color: var(--color-gray-300); }
+
+/* Course Dashboard Area (#course-dashboard-area) */
+#course-dashboard-area {
+    margin-top: 1rem;
+}
+/* Individual cards within course dashboard can use .content-card */
 
 /* Online Test Area */
 #online-test-area .fixed { /* Header/Footer */
-    background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent */
+    background-color: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(8px);
     border-color: var(--border-color);
     box-shadow: var(--shadow-md);
 }
 .dark #online-test-area .fixed {
-    background-color: rgba(15, 23, 42, 0.9); /* gray-900 with opacity */
+    background-color: rgba(15, 23, 42, 0.9);
     border-color: var(--border-color-dark);
 }
 #online-test-area #question-container {
-    padding-top: 5.5rem; /* More space for fixed header */
-    padding-bottom: 6.5rem; /* More space for fixed footer */
+    padding-top: 5.5rem;
+    padding-bottom: 6.5rem;
 }
 #timer {
-    font-family: 'Courier New', Courier, monospace; /* Monospace for timer */
+    font-family: var(--font-mono);
     background-color: var(--color-gray-200);
     color: var(--color-gray-800);
     padding: 0.25rem 0.75rem;
@@ -927,17 +908,18 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-700);
     color: var(--color-gray-100);
 }
-#timer.text-red-500 { color: var(--color-danger-500) !important; } /* Ensure override */
+#timer.text-red-500, #timer.text-danger-500 { color: var(--color-danger-500) !important; } /* Ensure override */
+
 
 /* Online Test Question Styling */
-#online-test-area .question-card { /* Add class to the question container div */
+#online-test-area .question-card {
     background-color: var(--color-white);
     padding: 1.5rem;
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
     margin-bottom: 1rem;
-    animation: fadeIn 0.3s ease-out forwards; /* Fade-in */
+    animation: fadeIn 0.3s ease-out forwards;
 }
 .dark #online-test-area .question-card {
     background-color: var(--color-gray-800);
@@ -945,7 +927,7 @@ input[type="radio"]:checked::before {
 }
 #online-test-area .option-label { /* Style the label containing radio+text */
     display: flex;
-    align-items: flex-start; /* Align radio with first line of text */
+    align-items: flex-start;
     padding: 0.8rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
@@ -957,9 +939,9 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-100);
     border-color: var(--color-gray-300);
 }
-/* This might need adjustment if radio isn't directly followed by label */
-#online-test-area input[type="radio"]:checked + .option-label,
-#online-test-area input[type="radio"]:checked ~ label.option-label /* Fallback */ {
+#online-test-area input[type="radio"]:checked + .option-label, /* Direct sibling */
+#online-test-area input[type="radio"]:checked ~ label.option-label /* General sibling */
+{
     border-color: var(--color-primary-500);
     background-color: var(--color-primary-50);
     box-shadow: 0 0 0 1px var(--color-primary-500);
@@ -984,7 +966,35 @@ input[type="radio"]:checked::before {
 }
 #online-test-area .option-text-container p:last-child { margin-bottom: 0; }
 #online-test-area .option-text-container ul, #online-test-area .option-text-container ol { margin-top: 0.5em; margin-bottom: 0.5em; padding-left: 1.2em; }
-#online-test-area .option-text-container mjx-container > svg { vertical-align: -0.2ex !important; } /* Fine-tune baseline */
+/* Fix for MathJax alignment within options */
+#online-test-area .option-text-container mjx-container > svg { vertical-align: -0.2ex !important; }
+
+/* Ensure prose styles apply correctly within rendered content */
+.prose { max-width: none; } /* Disable max-width constraint */
+.prose p { margin: 0.75em 0; }
+.prose ul, .prose ol { margin: 0.75em 0; padding-left: 1.6em; }
+.prose li { margin: 0.25em 0; }
+.prose code { font-size: 0.85em; }
+.prose pre { font-size: 0.85em; }
+/* Ensure dark mode prose colors */
+.dark .prose {
+  --tw-prose-body: var(--color-gray-300);
+  --tw-prose-headings: var(--color-gray-100);
+  --tw-prose-lead: var(--color-gray-400);
+  --tw-prose-links: var(--color-primary-400);
+  --tw-prose-bold: var(--color-gray-100);
+  --tw-prose-counters: var(--color-gray-400);
+  --tw-prose-bullets: var(--color-gray-600);
+  --tw-prose-hr: var(--color-gray-700);
+  --tw-prose-quotes: var(--color-gray-100);
+  --tw-prose-quote-borders: var(--color-gray-700);
+  --tw-prose-captions: var(--color-gray-400);
+  --tw-prose-code: var(--color-gray-100);
+  --tw-prose-pre-code: var(--color-gray-300);
+  --tw-prose-pre-bg: var(--color-gray-800);
+  --tw-prose-th-borders: var(--color-gray-600);
+  --tw-prose-td-borders: var(--color-gray-700);
+}
 
 
 /* ==========================================================================
@@ -1017,7 +1027,7 @@ input[type="radio"]:checked::before {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100; /* Ensure it's on top */
+    z-index: 100;
     transition: opacity 0.3s ease-in-out;
 }
 #loading-overlay > div { /* Inner container */
@@ -1034,7 +1044,7 @@ input[type="radio"]:checked::before {
     font-size: 1rem;
     font-weight: 500;
     color: var(--color-gray-700);
-    margin-bottom: 0; /* Remove default p margin */
+    margin-bottom: 0;
 }
 .dark #loading-overlay {
     background-color: rgba(15, 23, 42, 0.7); /* gray-900 */
@@ -1048,7 +1058,7 @@ input[type="radio"]:checked::before {
 }
 
 /* Toast / Notification */
-.toast-notification { /* Base class for fixed notifications */
+.toast-notification {
     position: fixed;
     top: 1.5rem;
     right: 1.5rem;
@@ -1066,15 +1076,16 @@ input[type="radio"]:checked::before {
 .toast-notification .toast-icon { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; }
 /* Success Toast */
 .toast-success { background-color: var(--color-success-100); color: var(--color-success-700); border-color: var(--color-success-200); }
-.dark .toast-success { background-color: var(--color-success-700); color: var(--color-success-100); border-color: var(--color-success-600); }
+.dark .toast-success { background-color: var(--color-success-800); color: var(--color-success-100); border-color: var(--color-success-700); }
 /* Error Toast */
 .toast-error { background-color: var(--color-danger-100); color: var(--color-danger-700); border-color: var(--color-danger-200); }
-.dark .toast-error { background-color: var(--color-danger-700); color: var(--color-danger-100); border-color: var(--color-danger-600); }
-/* Warning/Info Toast */
+.dark .toast-error { background-color: var(--color-danger-800); color: var(--color-danger-100); border-color: var(--color-danger-700); }
+/* Warning Toast */
 .toast-warning { background-color: var(--color-warning-100); color: var(--color-warning-700); border-color: var(--color-warning-200); }
-.dark .toast-warning { background-color: var(--color-warning-700); color: var(--color-warning-100); border-color: var(--color-warning-600); }
-.toast-info { background-color: var(--color-info-100); color: var(--color-info-700); border-color: var(--color-info-200); } /* Added Info */
-.dark .toast-info { background-color: var(--color-info-700); color: var(--color-info-100); border-color: var(--color-info-600); }
+.dark .toast-warning { background-color: var(--color-warning-800); color: var(--color-warning-100); border-color: var(--color-warning-700); }
+/* Info Toast */
+.toast-info { background-color: var(--color-info-100); color: var(--color-info-700); border-color: var(--color-info-200); }
+.dark .toast-info { background-color: var(--color-info-800); color: var(--color-info-100); border-color: var(--color-info-700); }
 
 
 /* Chart Container */
@@ -1093,131 +1104,22 @@ body::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover, aside 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ==========================================================================
-   Profile Picture Cropper Modal
+   Course & Profile Specific Styles
    ========================================================================== */
+.course-card h3 { margin-bottom: 0.25rem; }
+.course-card .link { color: var(--color-info-600); font-weight: 500; word-break: break-all; }
+.dark .course-card .link { color: var(--color-info-400); }
+.course-card .link:hover { text-decoration: underline; }
 
-/* The modal container (#crop-modal) itself is primarily styled with Tailwind classes
-   in ui_profile_picture.js (fixed, inset-0, bg-opacity, flex, items-center, etc.).
-   These styles target the Cropper.js library's internal elements for visibility
-   and basic theme consistency. */
-
-   #crop-modal .cropper-container {
-    /* Ensure the container doesn't have unwanted background in dark mode */
-    background-color: transparent;
-}
-
-#crop-modal .cropper-bg {
-     /* The background behind the image */
-     background-color: #333; /* Darker background for contrast */
-     opacity: 0.7;
-}
-.dark #crop-modal .cropper-bg {
-    background-color: #111;
-    opacity: 0.8;
-}
-
-#crop-modal .cropper-view-box,
-#crop-modal .cropper-face {
-    /* The main cropping area outline and overlay */
-    outline: 1px solid #38bdf8; /* primary-400 */
-    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 with alpha */
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* Dimming effect outside crop */
-}
-.dark #crop-modal .cropper-view-box,
-.dark #crop-modal .cropper-face {
-    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 still works well */
-    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7); /* Darker dimming */
-}
-
-#crop-modal .cropper-dashed {
-    /* The dashed lines inside the crop box */
-    border-color: rgba(255, 255, 255, 0.6);
-}
-.dark #crop-modal .cropper-dashed {
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
-#crop-modal .cropper-point {
-    /* The resize handle points */
-    background-color: rgba(56, 189, 248, 0.75); /* primary-400 */
-    opacity: 0.85;
-    height: 8px;
-    width: 8px;
-}
-#crop-modal .cropper-point:hover {
-     opacity: 1;
-     background-color: rgba(14, 165, 233, 0.9); /* primary-500 */
-}
-
-
-#crop-modal .cropper-line {
-    /* The lines of the crop box */
-    background-color: rgba(56, 189, 248, 0.75); /* primary-400 */
-    opacity: 0.85;
-}
-
-#crop-modal .cropper-center {
-    /* The center indicator */
-     background-color: rgba(255, 255, 255, 0.6);
-     height: 4px;
-     width: 4px;
-     opacity: 0.75;
-}
-
-#crop-modal > div { /* Inner card */
-    /* Uses Tailwind classes */
-    overflow: visible; /* Allow Cropper UI to potentially overflow slightly */
-}
-#image-to-crop {
-    display: block;
-    max-width: 100%;
-    /* Cropper.js sets height automatically */
-}
-/* Ensure Cropper.js elements are visible in dark mode if needed */
-.dark .cropper-view-box,
-.dark .cropper-face {
-    outline-color: rgba(56, 189, 248, 0.75); /* primary-400 */
-}
-.dark .cropper-dashed,
-.dark .cropper-point,
-.dark .cropper-line,
-.dark .cropper-center {
-    opacity: 0.75;
-}
-.dark .cropper-line {
-    background-color: #fff;
-}
-.dark .cropper-point {
-     background-color: #fff;
-}
-
-/* ==========================================================================
-   Course Card Styling
-   ========================================================================== */
-.course-card h3 {
-    margin-bottom: 0.25rem; /* Reduce bottom margin for tighter look */
-}
-.course-card h4 {
-    margin-bottom: 0.5rem; /* Slightly more margin for admin cards */
-}
-.course-card .link { /* Styling for external links */
-    color: var(--color-info-600);
-    font-weight: 500;
-    word-break: break-all; /* Prevent long URLs from breaking layout */
-}
-.dark .course-card .link {
-     color: var(--color-info-400);
-}
-.course-card .link:hover {
-     text-decoration: underline;
-}
+/* Profile Badges */
+.course-badge p { margin-bottom: 0.1rem; }
 
 /* ==========================================================================
    Accessibility & Misc Fixes
    ========================================================================== */
 
 :focus { outline: none; } /* Rely on focus-visible */
-:focus-visible { /* Default focus style, browsers might override */
+:focus-visible { /* Default focus style */
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
 }
@@ -1234,16 +1136,16 @@ body::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover, aside 
     overflow-y: hidden;
     padding: 0.5em 0;
     display: block;
-    text-align: left !important; /* Force alignment */
+    text-align: left !important;
 }
 .katex-display > .katex { white-space: nowrap; }
-mjx-container > svg { vertical-align: baseline; } /* Reset vertical align */
+mjx-container > svg { vertical-align: baseline; }
 
 /* Image Styling */
 img { max-width: 100%; height: auto; vertical-align: middle; }
 .question-text-container img, .option-text-container img {
     display: block;
-    margin: 1em auto; /* Center horizontally */
+    margin: 1em auto;
     border: 1px solid var(--border-color);
     padding: 4px;
     border-radius: var(--border-radius-md);
@@ -1267,30 +1169,22 @@ details > summary {
     justify-content: space-between;
 }
 details > summary::before { /* Custom marker */
-    content: '►';
-    display: inline-block;
-    margin-right: 0.5em;
-    font-size: 0.7em;
-    transition: transform var(--transition-fast);
+    content: '►'; display: inline-block; margin-right: 0.5em;
+    font-size: 0.7em; transition: transform var(--transition-fast);
     color: var(--color-gray-400);
 }
-details[open] > summary::before {
-    transform: rotate(90deg);
-}
+details[open] > summary::before { transform: rotate(90deg); }
 .dark details > summary { color: var(--color-gray-300); }
 details > summary:hover { color: var(--color-primary-600); }
 .dark details > summary:hover { color: var(--color-primary-400); }
 details[open] > summary { margin-bottom: 0.5em; }
 details > div { /* Content inside details */
-    padding: 1em;
-    background-color: var(--color-gray-50);
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--border-color);
+    padding: 1em; background-color: var(--color-gray-50);
+    border-radius: var(--border-radius-md); border: 1px solid var(--border-color);
     margin-top: 0.5em;
 }
 .dark details > div {
-    background-color: var(--color-gray-700);
-    border-color: var(--border-color-dark);
+    background-color: var(--color-gray-700); border-color: var(--border-color-dark);
 }
 
 /* ==========================================================================
@@ -1298,30 +1192,18 @@ details > div { /* Content inside details */
    ========================================================================== */
 @media (max-width: 767px) { /* md breakpoint */
     aside#sidebar {
-        position: fixed;
-        left: 0; top: 0; bottom: 0;
-        z-index: 50;
-        transform: translateX(-100%);
-        border-right: none;
-        box-shadow: var(--shadow-xl);
+        position: fixed; left: 0; top: 0; bottom: 0;
+        z-index: 50; transform: translateX(-100%);
+        border-right: none; box-shadow: var(--shadow-xl);
     }
-    aside#sidebar.is-open {
-        transform: translateX(0);
-    }
+    aside#sidebar.is-open { transform: translateX(0); }
     .mobile-overlay {
-        position: fixed;
-        inset: 0;
-        background-color: rgba(0, 0, 0, 0.6);
-        z-index: 40;
-        opacity: 0;
-        transition: opacity 0.3s ease-in-out;
+        position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.6);
+        z-index: 40; opacity: 0; transition: opacity 0.3s ease-in-out;
         pointer-events: none;
     }
-     .mobile-overlay.is-visible {
-        opacity: 1;
-        pointer-events: auto;
-    }
-    /* Adjust main card padding on mobile */
+     .mobile-overlay.is-visible { opacity: 1; pointer-events: auto; }
+    /* Adjust content padding on mobile */
     .content-card { padding: 1rem 1.25rem; }
     /* Adjust button padding slightly on mobile */
     .btn { padding: 0.55rem 1rem; }
@@ -1330,4 +1212,6 @@ details > div { /* Content inside details */
     h1 { font-size: 1.75rem; }
     h2 { font-size: 1.375rem; }
     h3 { font-size: 1.125rem; }
+    /* Reduce timer size */
+    #timer { font-size: 1rem; padding: 0.2rem 0.5rem; }
 }

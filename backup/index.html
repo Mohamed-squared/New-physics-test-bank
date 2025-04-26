@@ -3,76 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TestGen Pro - Advanced Study Tool</title> <!-- Improved Title -->
+    <title>TestGen Pro - Advanced Study Tool</title>
 
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
-        // Basic Tailwind config
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    // Extend with colors from CSS Variables for potential utility classes
-                    colors: {
-                        primary: {
-                            50: 'var(--color-primary-50)', 100: 'var(--color-primary-100)',
-                            200: 'var(--color-primary-200)', 300: 'var(--color-primary-300)',
-                            400: 'var(--color-primary-400)', 500: 'var(--color-primary-500)',
-                            600: 'var(--color-primary-600)', 700: 'var(--color-primary-700)',
-                            800: 'var(--color-primary-800)', 900: 'var(--color-primary-900)',
-                            950: 'var(--color-primary-950)'
-                        },
-                        gray: { // Define grays if needed for TW utilities
-                            50: 'var(--color-gray-50)', 100: 'var(--color-gray-100)',
-                            200: 'var(--color-gray-200)', 300: 'var(--color-gray-300)',
-                            400: 'var(--color-gray-400)', 500: 'var(--color-gray-500)',
-                            600: 'var(--color-gray-600)', 700: 'var(--color-gray-700)',
-                            800: 'var(--color-gray-800)', 900: 'var(--color-gray-900)',
-                            950: 'var(--color-gray-950)'
-                        }
-                        // Add success, danger, warning if needed for TW utilities
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-                        display: ['Lexend Deca', 'ui-sans-serif', 'system-ui'],
-                    },
-                    // Adjusted typography settings
-                    typography: ({ theme }) => ({
-                        DEFAULT: {
-                            css: {
-                                maxWidth: 'none',
-                                color: 'var(--color-gray-600)',
-                                a: { color: 'var(--color-primary-600)', '&:hover': { color: 'var(--color-primary-700)'} },
-                                'h1, h2, h3, h4': { color: 'var(--color-gray-900)', fontFamily: 'var(--font-display)' },
-                                code: { backgroundColor: 'var(--color-gray-100)', color: 'var(--color-gray-700)', padding: '0.2em 0.4em', borderRadius: 'var(--border-radius-sm)', fontWeight: '500'},
-                                'pre code': { backgroundColor: 'transparent', color: 'inherit', padding: '0', borderRadius: '0', fontWeight: '400' },
-                                pre: { backgroundColor: 'var(--color-gray-100)' },
-                            },
-                        },
-                        invert: { // Dark mode typography
-                            css: {
-                                color: 'var(--color-gray-300)',
-                                a: { color: 'var(--color-primary-400)', '&:hover': { color: 'var(--color-primary-300)'} },
-                                'h1, h2, h3, h4': { color: 'var(--color-gray-100)' },
-                                code: { backgroundColor: 'var(--color-gray-700)', color: 'var(--color-gray-200)' },
-                                pre: { backgroundColor: 'var(--color-gray-800)' },
-                                '--tw-prose-bullets': theme('colors.gray.600'),
-                                '--tw-prose-hr': theme('colors.gray.700'),
-                                '--tw-prose-quotes': theme('colors.gray.100'),
-                                '--tw-prose-quote-borders': theme('colors.gray.700'),
-                                '--tw-prose-captions': theme('colors.gray.400'),
-                                '--tw-prose-th-borders': theme('colors.gray.600'),
-                                '--tw-prose-td-borders': theme('colors.gray.700'),
-                            },
-                        },
-                    }),
-                }
-            }
-        }
+        tailwind.config = { /* ... existing config ... */ };
     </script>
 
-    <!-- MathJax Config - Using SVG Output via startup.js -->
+    <!-- MathJax Config -->
     <script>
       window.MathJax = {
         loader: { load: ['input/tex', 'output/svg'] },
@@ -86,6 +25,9 @@
     <!-- Other Libraries (Deferred) -->
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- *** Mermaid.js (JS Only - Initialization moved to script.js) *** -->
+    <script defer src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <!-- REMOVED Mermaid Initialization Script Block -->
 
     <!-- Google AI SDK -->
     <script type="module">
@@ -94,7 +36,6 @@
         console.log("Google AI SDK loaded successfully.");
       } catch (error) {
         console.error("Failed to load Google AI SDK:", error);
-        // Consider a less intrusive way to inform the user if AI is critical
       }
     </script>
 
@@ -114,7 +55,7 @@
 
             <!-- Navigation Links -->
             <nav class="flex-1 mt-4 px-3 space-y-1 auth-required" style="display: none;">
-                <!-- NEW: Home Link -->
+                 <!-- Home Link -->
                 <a href="#" onclick="window.showHomeDashboard(); return false;" class="sidebar-link">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
                     Home
@@ -135,6 +76,11 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
                     Progress Dashboard
                 </a>
+                 <!-- Courses Link -->
+                <a href="#" onclick="window.showBrowseCourses(); return false;" class="sidebar-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
+                    Courses
+                </a>
                  <a href="#" onclick="showManageSubjects(); return false;" class="sidebar-link">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                     Manage Subjects
@@ -148,7 +94,7 @@
                     Inbox <span id="inbox-unread-count" class="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 hidden">0</span>
                  </a>
                  <a href="#" id="admin-panel-link" onclick="showAdminDashboard(); return false;" class="sidebar-link" style="display: none;">
-                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                     Admin Panel
                  </a>
                  <a href="#" onclick="window.showImportExportDashboard(); return false;" class="sidebar-link">
@@ -168,7 +114,7 @@
 
         <!-- Main Content Area -->
         <main id="main-content">
-            <div class="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+             <div class="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
                  <!-- Mobile Header -->
                  <div class="md:hidden flex justify-between items-center mb-5">
                      <h1 class="text-lg font-semibold text-primary-600 dark:text-primary-400">TestGen Pro</h1>
@@ -177,56 +123,55 @@
                      </button>
                  </div>
 
-                <!-- Application Content Wrapper (Replaces old card structure) -->
+                <!-- Application Content Wrapper -->
                 <div id="app-content-wrapper">
-                    <!-- Card Header Area (Moved outside content card for persistence) -->
+                    <!-- Card Header Area -->
                      <div id="card-header" class="mb-6">
                          <div id="subject-info">
                             <p class="text-sm text-gray-500 dark:text-gray-400">Loading...</p>
                          </div>
                          <div id="user-section" class="hidden items-center space-x-3">
-                            <!-- Populated by JS -->
                              <div id="user-display" class="flex items-center"></div>
                          </div>
                      </div>
 
                      <!-- LOGIN/SIGNUP SECTION -->
-                     <div id="login-section" class="hidden content-card"> <!-- Use content-card style -->
+                      <div id="login-section" class="hidden content-card max-w-md mx-auto">
                         <h2 class="text-xl font-semibold text-center mb-6">Login or Sign Up</h2>
                          <form id="login-form" class="mb-6 space-y-4">
-                              <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Login</h3>
-                              <div>
+                             <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Login</h3>
+                             <div>
                                  <label for="login-identifier">Email or Username</label>
-                                 <input type="text" id="login-identifier" name="login-identifier" required placeholder="your@email.com or username">
+                                 <input type="text" id="login-identifier" name="login-identifier" required placeholder="your@email.com or username" autocomplete="username"> <!-- Added autocomplete -->
                              </div>
                              <div>
                                  <label for="login-password">Password</label>
-                                 <input type="password" id="login-password" required placeholder="••••••••">
+                                 <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password"> <!-- Added autocomplete -->
                              </div>
                              <button type="submit" class="w-full btn-primary">Login</button>
                          </form>
                          <hr class="my-6"/>
                          <form id="signup-form" class="mb-6 space-y-4">
-                              <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Sign Up</h3>
+                             <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Sign Up</h3>
                              <div>
                                  <label for="signup-username">Username</label>
-                                 <input type="text" id="signup-username" required pattern="^[a-zA-Z0-9_]{3,20}$" title="3-20 characters, letters, numbers, underscores only." placeholder="choose_a_username">
+                                 <input type="text" id="signup-username" required pattern="^[a-zA-Z0-9_]{3,20}$" title="3-20 characters, letters, numbers, underscores only." placeholder="choose_a_username" autocomplete="username"> <!-- Added autocomplete -->
                                  <p class="form-help-text">3-20 chars, letters, numbers, _ only.</p>
                              </div>
                              <div>
                                  <label for="signup-email">Email</label>
-                                 <input type="email" id="signup-email" required placeholder="your@email.com">
+                                 <input type="email" id="signup-email" required placeholder="your@email.com" autocomplete="email"> <!-- Added autocomplete -->
                              </div>
                              <div>
                                  <label for="signup-password">Password</label>
-                                 <input type="password" id="signup-password" required minlength="6" placeholder="min. 6 characters">
+                                 <input type="password" id="signup-password" required minlength="6" placeholder="min. 6 characters" autocomplete="new-password"> <!-- Added autocomplete -->
                                  <p class="form-help-text">Must be at least 6 characters.</p>
                              </div>
                              <button type="submit" class="w-full btn-primary">Sign Up</button>
                          </form>
                          <hr class="my-6"/>
                          <div class="text-center">
-                              <p class="text-sm text-muted mb-3">Or sign in with:</p>
+                             <p class="text-sm text-muted mb-3">Or sign in with:</p>
                              <button id="google-signin-button" class="btn-secondary inline-flex items-center">
                                   <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path></svg>
                                  Sign In with Google
@@ -237,17 +182,16 @@
                     <!-- Dynamic Content Area -->
                     <div id="content">
                         <!-- Initial content shown while checking auth state -->
-                         <div class="text-center p-8 content-card"> <!-- Use card style -->
+                         <div class="text-center p-8 content-card">
                              <h2 class="text-xl font-semibold mb-3">Loading TestGen Pro...</h2>
                              <p class="text-muted">Authenticating and loading your study data.</p>
-                              <!-- Optional simple spinner -->
                               <div class="inline-block mt-4 loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div>
                          </div>
                     </div>
 
                      <!-- Progress Dashboard Area -->
-                     <div id="dashboard" class="hidden content-card"> <!-- Use card style -->
-                         <div class="flex justify-between items-center mb-4">
+                     <div id="dashboard" class="hidden content-card">
+                          <div class="flex justify-between items-center mb-4">
                             <h2 class="text-xl font-semibold text-primary-600 dark:text-primary-400 flex items-center">
                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-2"><path d="M2 10a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V10.75H2.75A.75.75 0 0 1 2 10Z" /><path d="M7.25 3A.75.75 0 0 0 6.5 3.75v12.5a.75.75 0 0 0 1.5 0V4.5h1V16.25a.75.75 0 0 0 1.5 0V3.75a.75.75 0 0 0-.75-.75h-2.5Z" /><path d="M13.5 6a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 .75.75v10a.75.75 0 0 1-1.5 0V6.75H14.25A.75.75 0 0 1 13.5 6Z" /></svg>
                                 Progress Dashboard
@@ -269,12 +213,14 @@
     <!-- Mobile Overlay -->
     <div id="mobile-overlay" class="mobile-overlay md:hidden"></div>
     <!-- Loading Overlay -->
-    <div id="loading-overlay" class="hidden"> <!-- Style in CSS -->
-        <div> <!-- Inner container -->
+    <div id="loading-overlay" class="hidden">
+         <div>
             <div class="loader"></div>
             <p id="loading-message">Processing...</p>
         </div>
     </div>
+    <!-- Crop Modal Structure (Added here, hidden by default) -->
+    <!-- Populated and managed by ui_profile_picture.js -->
 
     <!-- Firebase SDK & Config -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
@@ -292,10 +238,10 @@
         measurementId: "G-1M82PJ27DY"
       };
       try {
-           if (!firebase.apps.length) { // Prevent re-initialization
+           if (!firebase.apps.length) {
               firebase.initializeApp(firebaseConfig);
-              window.auth = firebase.auth();
-              window.db = firebase.firestore();
+              window.auth = firebase.auth(); // Make globally accessible if needed (though modules are preferred)
+              window.db = firebase.firestore(); // Make globally accessible if needed
               console.log("Firebase Initialized Successfully (End of Body)");
            }
        } catch (e) {

@@ -1,92 +1,92 @@
-import { currentUser, currentSubject, db } from './state.js';
+import { currentUser, currentSubject, db} from './state.js'; // Added ADMIN_UID
+import { ADMIN_UID } from './config.js';
 import { renderMathIn } from './utils.js';
-// Import the visibility function from script.js where it's defined
 import { updateAdminPanelVisibility } from './script.js';
+import { DEFAULT_PROFILE_PIC_URL } from '../config.js'; // Added Default Pic URL
 
 // --- Basic UI Toggles & Updates ---
 
 export function showLoginUI() {
-    console.log("Running showLoginUI...");
+    // ... (function remains the same) ...
+     console.log("Running showLoginUI...");
     document.getElementById('login-section')?.classList.remove('hidden');
-    // Hide main content sections specifically
     document.getElementById('content')?.classList.add('hidden');
     document.getElementById('dashboard')?.classList.add('hidden');
     document.getElementById('online-test-area')?.classList.add('hidden');
-    // Hide user info and subject info in header
     document.getElementById('user-section')?.classList.add('hidden');
-    document.getElementById('subject-info')?.replaceChildren(); // Clear subject info
-    // Hide elements requiring authentication
+    document.getElementById('subject-info')?.replaceChildren();
     document.querySelectorAll('.auth-required').forEach(el => el.style.display = 'none');
-    // Ensure sidebar itself might be visible but nav hidden
     document.querySelector('#sidebar nav.auth-required')?.style.setProperty('display', 'none', 'important');
-
-    updateAdminPanelVisibility(); // Update admin link visibility
+    updateAdminPanelVisibility();
 }
 
 export function hideLoginUI() {
+    // ... (function remains the same) ...
     console.log("Running hideLoginUI...");
     document.getElementById('login-section')?.classList.add('hidden');
-    // Show the main content wrapper area
-    document.getElementById('content')?.classList.remove('hidden'); // Show dynamic content area
-    // Show user section in header
+    document.getElementById('content')?.classList.remove('hidden');
     document.getElementById('user-section')?.classList.remove('hidden');
-    // Show elements requiring authentication
     document.querySelectorAll('.auth-required').forEach(el => {
-        // Use 'flex' or 'block' based on element type? 'flex' is common for sidebar links
-        el.style.display = ''; // Use default display (likely flex or block)
+        el.style.display = ''; // Use default display
     });
-    // Ensure sidebar nav is visible
     document.querySelector('#sidebar nav.auth-required')?.style.removeProperty('display');
-
-    updateAdminPanelVisibility(); // Update admin link visibility
+    updateAdminPanelVisibility();
 }
 
-// Renamed from showUserInfo to avoid conflict with auth listener call
+// Fetch and update user info, including admin icon
 export async function fetchAndUpdateUserInfo(user) {
      if (!user || !db) return;
     const userDisplay = document.getElementById('user-display');
     const userSection = document.getElementById('user-section');
 
     let displayName = 'User';
-    let photoURL = 'default-avatar.png'; // Ensure you have this default image
+    let photoURL = DEFAULT_PROFILE_PIC_URL; // Use default from config
+    let isCurrentUserAdmin = user.uid === ADMIN_UID; // Check if the logged-in user is admin
 
     try {
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
             const userData = userDoc.data();
-            // Prioritize Firestore data, fallback to Auth data
             displayName = userData.displayName || user.displayName || user.email?.split('@')[0] || 'User';
-            photoURL = userData.photoURL || user.photoURL || 'default-avatar.png';
+            // Use Firestore photoURL, fallback to Auth photoURL, then config default
+            photoURL = userData.photoURL || user.photoURL || DEFAULT_PROFILE_PIC_URL;
         } else {
              console.warn("No Firestore profile document found for user, using Auth data.");
              displayName = user.displayName || user.email?.split('@')[0] || 'User';
-             photoURL = user.photoURL || 'default-avatar.png';
+             photoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
         }
     } catch (error) {
         console.error("Error fetching user profile for UI:", error);
-        // Fallback to Auth data on error
         displayName = user.displayName || user.email?.split('@')[0] || 'User';
-        photoURL = user.photoURL || 'default-avatar.png';
+        photoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
     }
 
     if (userDisplay) {
          const img = document.createElement('img');
          img.src = photoURL;
          img.alt = "Profile";
-         // Use styles defined in styles.css for consistency if needed, or use TW classes
          img.className = "w-8 h-8 rounded-full mr-2 object-cover border-2 border-white dark:border-gray-700 shadow-sm";
-         img.onerror = () => { img.src = 'default-avatar.png'; console.error('Error loading profile image:', photoURL); };
+         img.onerror = () => { img.src = DEFAULT_PROFILE_PIC_URL; console.error('Error loading profile image:', photoURL); };
 
-         const span = document.createElement('span');
-         span.className = "text-sm font-medium text-gray-700 dark:text-gray-200 truncate hidden sm:inline"; // Hide on very small screens
-         span.title = displayName;
-         span.textContent = displayName;
+         const nameSpan = document.createElement('span');
+         nameSpan.className = "text-sm font-medium text-gray-700 dark:text-gray-200 truncate hidden sm:inline";
+         nameSpan.title = displayName;
+         nameSpan.textContent = displayName;
 
-         userDisplay.replaceChildren(img, span);
-         userSection?.classList.remove('hidden'); // Make sure the section is visible
+         // *** NEW: Add Admin Icon ***
+         let adminIconHtml = '';
+         if (isCurrentUserAdmin) {
+              adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
+         }
+         // Append the icon HTML directly to the name span's innerHTML
+         nameSpan.innerHTML = nameSpan.textContent + adminIconHtml;
+
+
+         userDisplay.replaceChildren(img, nameSpan);
+         userSection?.classList.remove('hidden');
     }
 
-    // Check and show inbox unread count (example)
+    // ... (existing inbox check logic remains the same) ...
     try {
         const inboxSnapshot = await db.collection('users').doc(user.uid).collection('inbox').where('isRead', '==', false).limit(10).get();
         const unreadCount = inboxSnapshot.size;
@@ -102,8 +102,8 @@ export async function fetchAndUpdateUserInfo(user) {
     }
 }
 
-// Used when logging out
 export function clearUserInfoUI() {
+    // ... (function remains the same) ...
     document.getElementById('user-display')?.replaceChildren();
     document.getElementById('user-section')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
@@ -111,41 +111,38 @@ export function clearUserInfoUI() {
      if (unreadBadge) unreadBadge.classList.add('hidden');
 }
 
-
 export function updateSubjectInfo() {
-    const infoEl = document.getElementById('subject-info');
+    // ... (function remains the same) ...
+     const infoEl = document.getElementById('subject-info');
     if (!infoEl) return;
+
+    const stateCurrentUser = currentUser; // Use the state's currentUser
 
     if (currentSubject) {
         const chapterCount = (currentSubject.chapters && typeof currentSubject.chapters === 'object')
-                             ? Object.keys(currentSubject.chapters).filter(num => currentSubject.chapters[num]?.total_questions > 0).length // Count only chapters with questions
+                             ? Object.keys(currentSubject.chapters).filter(num => currentSubject.chapters[num]?.total_questions > 0).length
                              : 0;
         infoEl.innerHTML = `
-         <div class="text-sm text-right md:text-left"> <!-- Align text based on screen size -->
+         <div class="text-sm text-right md:text-left">
              <p class="font-semibold text-base text-gray-700 dark:text-gray-200">${currentSubject.name || 'Unnamed Subject'}</p>
              <p class="text-xs text-gray-500 dark:text-gray-400">${chapterCount} Chapters with Questions</p>
          </div>`;
-    } else if (currentUser) { // Only show "No Subject" if logged in
+    } else if (stateCurrentUser) { // Check state's currentUser
          infoEl.innerHTML = `<p class="text-sm text-warning font-medium">No Subject Selected</p>`;
     } else {
-        infoEl.replaceChildren(); // Clear if not logged in
+        infoEl.replaceChildren();
     }
 }
 
-// Displays HTML content in the main #content area and renders MathJax
 export async function displayContent(html) {
+    // ... (function remains the same) ...
     const contentEl = document.getElementById('content');
     if (contentEl) {
-        // Hide other main sections potentially managed outside this function
         document.getElementById('dashboard')?.classList.add('hidden');
         document.getElementById('online-test-area')?.classList.add('hidden');
-        contentEl.classList.remove('hidden'); // Ensure content area is visible
-
-        // Set HTML and apply base styling if needed (content-card is good)
-        contentEl.innerHTML = `<div class="content-card">${html}</div>`; // Wrap content in standard card
+        contentEl.classList.remove('hidden');
+        contentEl.innerHTML = `<div class="content-card">${html}</div>`;
         const cardElement = contentEl.firstElementChild;
-
-        // Render MathJax within the newly added content
         if (cardElement) {
             try {
                  await renderMathIn(cardElement);
@@ -154,48 +151,32 @@ export async function displayContent(html) {
                  console.error("Error during MathJax rendering in displayContent:", error);
             }
         }
-
     } else {
          console.error("displayContent: Could not find #content element");
     }
 }
 
-// Clears the main content sections more selectively
 export function clearContent() {
-    const contentEl = document.getElementById('content');
+    // ... (function remains the same) ...
+     const contentEl = document.getElementById('content');
     const testAreaEl = document.getElementById('online-test-area');
-    const dashboardEl = document.getElementById('dashboard'); // Progress dashboard container
+    const dashboardEl = document.getElementById('dashboard');
     const dashboardContentEl = document.getElementById('dashboard-content');
 
-    // Clear dynamic content area
-    if (contentEl) {
-        contentEl.replaceChildren();
-        // Keep #content wrapper visible, hide only if explicitly needed elsewhere
-        // contentEl.classList.add('hidden');
-    }
-    // Clear and hide online test area
-    if (testAreaEl) {
-        testAreaEl.replaceChildren();
-        testAreaEl.classList.add('hidden');
-    }
-    // Clear and hide progress dashboard area
+    if (contentEl) { contentEl.replaceChildren(); }
+    if (testAreaEl) { testAreaEl.replaceChildren(); testAreaEl.classList.add('hidden'); }
     if (dashboardEl) {
          dashboardEl.classList.add('hidden');
-         if (dashboardContentEl) {
-             dashboardContentEl.replaceChildren();
-         }
-         // Chart destruction should be handled when the dashboard is closed
-         // See closeDashboard in ui_progress_dashboard.js
+         if (dashboardContentEl) { dashboardContentEl.replaceChildren(); }
     }
 }
 
-// NEW: Function to highlight the active sidebar link
 export function setActiveSidebarLink(functionName) {
-    const sidebarLinks = document.querySelectorAll('#sidebar nav .sidebar-link');
+    // ... (function remains the same) ...
+     const sidebarLinks = document.querySelectorAll('#sidebar nav .sidebar-link');
     sidebarLinks.forEach(link => {
-        link.classList.remove('active-link'); // Use the new class name
+        link.classList.remove('active-link');
         const onclickAttr = link.getAttribute('onclick');
-        // Check if onclick attribute exists and includes the function name
         if (onclickAttr && onclickAttr.includes(functionName)) {
             link.classList.add('active-link');
         }
