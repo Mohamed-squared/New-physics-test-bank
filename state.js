@@ -1,3 +1,5 @@
+
+
 // --- Core Data & State ---
 export let auth = null;
 export let db = null;
@@ -76,6 +78,9 @@ export function clearUserSession() {
     document.getElementById('dashboard')?.classList.add('hidden');
     document.getElementById('online-test-area')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
+     // Stop any potential PDF viewer or YouTube players
+     window.cleanupPdfViewer?.();
+     window.cleanupYouTubePlayers?.();
 }
 
 // --- Structure Update Notes for userCourseProgress items ---
@@ -88,8 +93,13 @@ export function clearUserSession() {
     baseMediocrePace: number | null, // chapters/day, set after week 1
     currentPace: number | null, // chapters/day, recalculated daily
     courseStudiedChapters: number[], // Chapters marked as studied *within this course*
+    // NEW: Track watched videos
+    watchedVideoUrls: { [chapterNum]: string[] }, // Store URLs of videos marked as watched for a chapter
+    // NEW: Skip Exam Tracking
+    skipExamAttempts: { [chapterNum]: number }, // Count attempts per chapter
+    lastSkipExamScore: { [chapterNum]: number | null }, // Last percentage score
     dailyProgress: { [dateString]: { chaptersStudied: number[], assignmentCompleted: boolean, assignmentScore: number | null } },
-    skipExamScores: { [chapterNum]: number },
+    skipExamScores: { [chapterNum]: number }, // DEPRECATED? Or keep for grading? This stored the score if taken. Renaming might be better.
     assignmentScores: { [assignmentId]: number }, // assignmentId could be "dayX" or "dateString"
     weeklyExamScores: { [weekNum]: number },
     midcourseExamScores: { [midcourseNum]: number }, // e.g., 1, 2, 3
@@ -104,3 +114,4 @@ export function clearUserSession() {
     currentChapterTarget: number, // Which chapter the user *should* be working on today
     currentDayObjective: string | null // e.g., "Study Chapter 5, Complete Assignment 5"
 }*/
+

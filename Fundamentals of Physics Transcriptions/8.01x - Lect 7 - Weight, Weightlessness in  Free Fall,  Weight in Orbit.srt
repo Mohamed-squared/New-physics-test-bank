@@ -1,0 +1,1914 @@
+1
+00:00:01,635 --> 00:00:07,835
+So far, in these lectures, we've talked about mass, about acceleration, and about forces,
+
+2
+00:00:08,365 --> 00:00:11,065
+but we never used the word weight.
+
+3
+00:00:11,335 --> 00:00:18,705
+And weight is a very non-intuitive and a very tricky thing, which is the entire subject of today's lecture.
+
+4
+00:00:19,565 --> 00:00:21,155
+What is weight?
+
+5
+00:00:22,125 --> 00:00:28,125
+Here you stand on a bathroom scale.
+
+6
+00:00:29,625 --> 00:00:34,855
+Gravity is acting upon you. The force is mg.
+
+7
+00:00:35,585 --> 00:00:37,285
+Your mass is M.
+
+8
+00:00:38,735 --> 00:00:42,565
+The bathroom scale is pushing on you with a force F scale.
+
+9
+00:00:43,625 --> 00:00:59,575
+And that F scale, which in this case, if the system is not being accelerated, is the same as mg, that force from the bathroom scale on you, we define as weight.
+
+10
+00:01:00,325 --> 00:01:06,165
+When I stand on the bathroom scale, I could see my weight is about 165 lbs.
+
+11
+00:01:06,495 --> 00:01:10,625
+Now it may be calibrated in Newtons, but that's of course very unusual.
+
+12
+00:01:11,515 --> 00:01:19,375
+If I weigh myself on the moon where the gravitational acceleration is six times less, then I would weigh six times less.
+
+13
+00:01:20,565 --> 00:01:22,985
+So far, so good.
+
+14
+00:01:23,805 --> 00:01:26,265
+Now, I'm going to put you in an elevator.
+
+15
+00:01:29,245 --> 00:01:37,675
+And I'm going to accelerate you upwards and you're standing on your bathroom scale.
+
+16
+00:01:38,475 --> 00:01:44,375
+Acceleration is in this direction. And I will call this plus, and I will call this minus.
+
+17
+00:01:45,855 --> 00:01:54,475
+Gravity is acting upon you, mg, and the bathroom scale is pushing on you with a force F.
+
+18
+00:01:55,835 --> 00:01:59,635
+That force by definition is weight.
+
+19
+00:02:01,375 --> 00:02:15,955
+Before I write down some equations, I want you to realize that whenever, whenever you see in any of my equations G, G is always plus 9.8. And my signs, my minus signs take care of the directions,
+
+20
+00:02:16,315 --> 00:02:19,775
+but G is always plus 9.8 or plus 10 if you prefer that.
+
+21
+00:02:20,825 --> 00:02:28,445
+Okay, it's clear that if this is accelerated upwards, that f of S must be larger than mg, otherwise I cannot be accelerated.
+
+22
+00:02:28,805 --> 00:02:47,505
+And so we get Newton's second law, F of S is in plus direction minus mg is in this direction equals M times A. And so the bathroom scale indicates M times A plus G.
+
+23
+00:02:48,245 --> 00:02:50,415
+And I have gained weight.
+
+24
+00:02:51,185 --> 00:03:01,015
+If this acceleration is 5 meters per second square in this direction, I am one and a half times my normal weight.
+
+25
+00:03:01,455 --> 00:03:04,235
+If I look on the bathroom scale, that's what I see.
+
+26
+00:03:05,135 --> 00:03:08,275
+Seeing is believing. That is my weight.
+
+27
+00:03:08,595 --> 00:03:15,055
+If I accelerate upwards with 30 meters per second squared, 30 plus 10 is 40.
+
+28
+00:03:15,545 --> 00:03:24,445
+I am four times my normal weight. Instead of my 160 5 lbs, I would weigh close to 700 lbs.
+
+29
+00:03:24,885 --> 00:03:27,445
+I see that. Seeing is believing.
+
+30
+00:03:27,785 --> 00:03:29,625
+That is my weight.
+
+31
+00:03:30,705 --> 00:03:43,575
+Now, I'm going to put you in the elevator. Here you are. And I'm going to accelerate you down. This is now A.
+
+32
+00:03:44,225 --> 00:03:47,365
+And just for my convenience, I call this now the plus direction.
+
+33
+00:03:47,695 --> 00:03:50,295
+Just for my convenience, it doesn't really matter.
+
+34
+00:03:50,865 --> 00:03:59,275
+So now we have here mg, that is gravity acting upon you. And now you have the force from the bathroom scale.
+
+35
+00:04:00,515 --> 00:04:05,545
+Clearly mg must be larger than FC, f of S, otherwise you couldn't go being accelerated downwards.
+
+36
+00:04:05,905 --> 00:04:16,015
+So if now we write down Newton's second law, then we get mg minus f of S must be M times A.
+
+37
+00:04:16,395 --> 00:04:25,405
+This holds for acceleration down, and so I get F of S equals M times g minus A.
+
+38
+00:04:27,385 --> 00:04:31,475
+This is one way of doing it, and you put in positive values for A.
+
+39
+00:04:31,845 --> 00:04:38,305
+If A is 5 meters per second square, you get 10 minus 5 is 5. Your weight is half. You've lost weight.
+
+40
+00:04:39,165 --> 00:04:42,185
+Being accelerated down, you've lost weight.
+
+41
+00:04:42,915 --> 00:04:56,805
+You could also have used this equation and not go through this trouble of setting up Newton's law again, you could simply have said, okay, this A is minus in this coordinate system. And so you put in a minus five and a plus 10, you get the same answer.
+
+42
+00:04:57,655 --> 00:05:01,695
+So, you have lost weight when you accelerate downwards.
+
+43
+00:05:02,605 --> 00:05:06,405
+Suppose now I cut the cable.
+
+44
+00:05:06,865 --> 00:05:08,165
+I cut it.
+
+45
+00:05:09,205 --> 00:05:13,565
+Then this A is 10 meters per second square, if we round it off.
+
+46
+00:05:14,055 --> 00:05:16,175
+You go down with 10 meters per second square.
+
+47
+00:05:16,485 --> 00:05:18,985
+So g minus A is zero.
+
+48
+00:05:19,845 --> 00:05:22,565
+You are now weightless.
+
+49
+00:05:23,225 --> 00:05:24,415
+You're free falling.
+
+50
+00:05:24,855 --> 00:05:31,495
+You have no longer any weight. You look at the bathroom scale and the bathroom scale will indicate a zero.
+
+51
+00:05:32,385 --> 00:05:35,745
+You're floating. Everything in the elevator is floating.
+
+52
+00:05:36,285 --> 00:05:43,105
+If you had a glass with water, you could turn it over, and the water would not fall out.
+
+53
+00:05:43,555 --> 00:05:50,515
+It's like having the shuttle in orbit with the astronauts being weightless.
+
+54
+00:05:50,785 --> 00:05:57,415
+There is a great similarity between the astronauts in the shuttle and a free falling elevator.
+
+55
+00:05:57,705 --> 00:06:02,165
+The only difference is that the elevator will crash, will kill you.
+
+56
+00:06:02,585 --> 00:06:14,245
+In the case of the shuttle, it never hits the earth because of its high speed. We'll talk about this much later when we deal with orbits and with Kepler's law.
+
+57
+00:06:15,795 --> 00:06:18,925
+What exactly is free fall?
+
+58
+00:06:19,465 --> 00:06:25,565
+Free fall is when the forces acting upon you are exclusively gravitational.
+
+59
+00:06:26,885 --> 00:06:36,055
+Nothing is pushing on you, no seat is pushing on you, no string is pushing on you. Nothing is pulling on you. Only gravity.
+
+60
+00:06:36,945 --> 00:06:42,535
+I will return to thislessness very shortly in great detail. But before I do that,
+
+61
+00:06:42,915 --> 00:06:51,585
+I would like to address the issue, how could I determine your weight if I hang you from a string?
+
+62
+00:06:52,335 --> 00:06:56,415
+So now, instead of standing on a bathroom scale,
+
+63
+00:06:57,465 --> 00:07:09,245
+you are here. Here is a string. You might even have in the string a tension meter, as we have seen earlier in lectures, and you're holding desperately onto that string.
+
+64
+00:07:10,175 --> 00:07:11,415
+Just like that.
+
+65
+00:07:12,525 --> 00:07:27,665
+System is not being accelerated. Gravity is mg. And so there must be a tension in this string T, which is pulling you up, which if there is no acceleration, must be mg.
+
+66
+00:07:28,575 --> 00:07:32,435
+I read the scale and I read my weight.
+
+67
+00:07:33,085 --> 00:07:37,575
+This scale indicates in my case 165 pounds.
+
+68
+00:07:37,905 --> 00:07:40,595
+While I'm hanging, I can see my weight.
+
+69
+00:07:41,465 --> 00:07:51,215
+So you see, it makes very little difference whether I'm standing on a bathroom scale and read the force with which the bathroom scale pushes up on me,
+
+70
+00:07:51,655 --> 00:07:57,935
+or whether I hang from a scale, extend a spring and read that value.
+
+71
+00:07:58,395 --> 00:08:02,455
+It makes no difference. The tension here would indicate my weight.
+
+72
+00:08:03,235 --> 00:08:13,105
+There's a complete similarity with the bathroom scale, except in one case, something is pulling on me, in the other case, something is pushing on me from below.
+
+73
+00:08:14,255 --> 00:08:22,385
+Now let's accelerate this system upwards with an acceleration A. And I call this plus.
+
+74
+00:08:23,345 --> 00:08:27,965
+Then of course, this T must grow, otherwise you cannot be accelerated.
+
+75
+00:08:28,415 --> 00:08:38,725
+Newton's second law. T minus mg must be MA. The tension in the string equals M times A plus G.
+
+76
+00:08:39,115 --> 00:08:43,265
+Ah, we've seen that before. No difference with the elevator.
+
+77
+00:08:43,815 --> 00:08:47,265
+You accelerate the system, the tension will increase, and you will see that.
+
+78
+00:08:47,535 --> 00:08:52,215
+You will read that on the scale. Your weight has increased.
+
+79
+00:08:52,855 --> 00:08:53,855
+You weigh more.
+
+80
+00:08:54,915 --> 00:09:01,245
+Needless to say, of course, if you accelerate the system down, that you will weigh less. I just went through that argument.
+
+81
+00:09:01,695 --> 00:09:07,105
+And if I cut the cable completely, you go into free fall, T will go to zero.
+
+82
+00:09:07,655 --> 00:09:17,105
+A become minus 10 plus 10 is zero, you're in free fall, the scale reads zero, you are completely weightless.
+
+83
+00:09:18,665 --> 00:09:28,015
+If we accept the idea of weight being indicated by the tension in a string,
+
+84
+00:09:28,625 --> 00:09:32,525
+then there is a very interesting consequence of that.
+
+85
+00:09:33,765 --> 00:09:45,615
+I have here a pin which is completely frictionless. And I have on both sides a string, and this string has negligibly small mass. Let's just assume that it is massless.
+
+86
+00:09:46,165 --> 00:09:57,245
+And there is here an object M1, and there is here an object M2, and I'm telling you that M2 is larger than M1.
+
+87
+00:09:57,845 --> 00:10:02,745
+So we all know what's going to happen. This system is going to accelerate in this direction.
+
+88
+00:10:03,235 --> 00:10:07,535
+M2 will be accelerated down and M1 will be accelerated up.
+
+89
+00:10:09,435 --> 00:10:13,375
+What comes now is important that you grasp that.
+
+90
+00:10:13,865 --> 00:10:21,125
+I claim that the tension on the left side must be the same as the tension in this string on the right side.
+
+91
+00:10:21,715 --> 00:10:25,475
+T left must be T right. Why is that?
+
+92
+00:10:26,525 --> 00:10:32,835
+It is because the pin is frictionless and it is because the string is massless.
+
+93
+00:10:33,815 --> 00:10:38,825
+Take a little section of the string here, a tiny little section.
+
+94
+00:10:39,815 --> 00:10:45,095
+If there is a tension on it, there is a force in this direction, and there is a force in this direction.
+
+95
+00:10:45,715 --> 00:10:50,775
+These two could never be different because then this massless string would get an infinite acceleration.
+
+96
+00:10:51,575 --> 00:10:55,245
+So there can never be a change in tension from this side of the string to the other.
+
+97
+00:10:55,745 --> 01:02,075
+If you take a little section of the string here, there it is. Tey- weeny little section.
+
+98
+01:02,565 --> 01:06,255
+So there is tension on the string, and there is tension on the string.
+
+99
+01:07,405 --> 01:12,115
+This one could never be larger than that because this little piece of string would get an infinite acceleration.
+
+100
+01:12,335 --> 01:21,205
+So, because there is no friction on the pin, and because the strings are massless, only because of that must the tension be everywhere the same.
+
+101
+01:21,645 --> 01:25,035
+If there is friction in the pin, which we will do later, then it's not the case.
+
+102
+01:25,795 --> 01:30,815
+Given the fact that the tension left and the tension right are the same,
+
+103
+01:31,085 --> 01:36,305
+I must now conclude that these two objects have the same weight.
+
+104
+01:36,615 --> 01:40,665
+Because didn't we agree that tension is an indication of weight.
+
+105
+01:41,335 --> 01:43,945
+So these objects have now the same weight.
+
+106
+01:44,185 --> 01:50,355
+And some people may say, 'Oh, that's a lot of nonsense. You must be kidding. If M2 is larger than M1, this must have a larger weight than that.'
+
+107
+01:50,605 --> 01:52,385
+Well, they are confusing weight with mass.
+
+108
+01:52,775 --> 02:04,015
+It is true that M2 is a larger mass than M1, but it's equally true that the weight of these two objects is now the same according to my definition of weight.
+
+109
+02:05,515 --> 02:10,465
+Let us calculate the acceleration of this system and let's calculate the tension.
+
+110
+02:11,225 --> 02:12,595
+And let's see what comes out.
+
+111
+02:13,185 --> 02:18,675
+I first isolate here object number one. So this is my object number one.
+
+112
+02:19,315 --> 02:26,185
+I have gravity M1G, and I have a tension T.
+
+113
+02:27,425 --> 02:34,025
+Non-negotiable. T be better larger than M1G, otherwise it would never be accelerated up. And we know it will be accelerated up.
+
+114
+02:34,975 --> 02:39,545
+So what do we get? We get T, I will call this plus direction by the way.
+
+115
+02:40,695 --> 02:45,525
+minus M1G equals M times A.
+
+116
+02:46,425 --> 02:52,895
+So the tension equals M1 * A + G.
+
+117
+02:53,855 --> 02:55,175
+Hey, we've seen that one before.
+
+118
+02:55,795 --> 03:00,445
+This one is being accelerated upwards. Notice, it gains weight.
+
+119
+03:01,815 --> 03:06,735
+That's the tension. And this is the acceleration. I have one equation with two unknowns.
+
+120
+03:07,695 --> 03:09,365
+So I can't solve it yet.
+
+121
+03:10,525 --> 03:14,035
+But there is another one. There is number two here.
+
+122
+03:14,825 --> 03:22,025
+For number two, we have a force M2G, and we have the tension up.
+
+123
+03:22,435 --> 03:26,695
+This one better be larger than that one, otherwise it wouldn't be accelerated down.
+
+124
+03:27,535 --> 03:30,115
+Let me call this direction plus.
+
+125
+03:30,795 --> 03:36,385
+The reason why I now switch directions and call this plus as well as this is a good reason for it.
+
+126
+03:36,695 --> 03:38,575
+It's not so arbitrary anymore.
+
+127
+03:38,855 --> 03:44,615
+I know that this acceleration is going to be a positive number because it's going in this direction, it's a given.
+
+128
+03:45,655 --> 03:52,265
+If I called this negative, I would get here a negative acceleration for the same thing for which I get here a positive.
+
+129
+03:52,555 --> 03:57,595
+That's a pain in the neck. I don't want to have a plus and a minus sign there. Have to think about that it means the same thing.
+
+130
+03:57,875 --> 04:06,215
+So the the moment that I defined define this the plus direction, I know that this acceleration will also come out to be the same sign as this one.
+
+131
+04:06,525 --> 04:07,755
+So I flip the signs there.
+
+132
+04:08,485 --> 04:10,465
+So now I apply Newton's law.
+
+133
+04:11,115 --> 04:17,155
+I get M2G minus T equals M2A.
+
+134
+04:17,865 --> 04:28,245
+And so I get T, I'll write it here equals M2 times g minus A.
+
+135
+04:30,735 --> 04:34,725
+Two equations with two unknowns.
+
+136
+04:36,735 --> 04:40,245
+Well, that shouldn't be so hard to solve these two equations.
+
+137
+04:40,745 --> 04:49,055
+You can immediately eliminate T by the way, if you add this one with this one, you're ready, I call this equation one, and you call this equation two,
+
+138
+04:49,755 --> 05:03,205
+you immediately lose your T and you get that the acceleration A equals M2 - M1 divided by M1 + M2 times G.
+
+139
+05:04,865 --> 05:16,275
+And you substitute that A in that equation, and you find that the tension equals 2mg divided by M1 + M2.
+
+140
+05:17,005 --> 05:19,675
+This is very easy for you to verify.
+
+141
+05:21,275 --> 05:24,655
+Let us look, this is M1 M2.
+
+142
+05:27,405 --> 05:32,685
+2M1 M2, I lost one M, 2M1 M2.
+
+143
+05:33,155 --> 05:36,545
+Let's look at these equations. Let's scrutinize them a little. Let's get some feeling for it.
+
+144
+05:37,185 --> 05:40,595
+Rather than accepting them as being dumb equations.
+
+145
+05:41,345 --> 05:47,585
+Let's first take the case that M2 equals M1, and I'll call that M.
+
+146
+05:48,665 --> 06:00,015
+Notice that A becomes zero, and notice if you substitute for M1 and M2 M here, that you get 2m, you get mg.
+
+147
+06:00,655 --> 06:02,895
+So T becomes mg.
+
+148
+06:03,555 --> 06:05,165
+That is utterly obvious.
+
+149
+06:05,585 --> 06:12,125
+If M1 and M2 are the same, nothing is going to happen. They're going to sit there. The acceleration will be zero.
+
+150
+06:12,515 --> 06:17,405
+And the tension on both sides, which is always the same, we argue that, is going to be mg.
+
+151
+06:17,925 --> 06:18,905
+Clear.
+
+152
+06:19,685 --> 06:21,895
+Now, we're going to make it more interesting.
+
+153
+06:22,515 --> 06:31,645
+Suppose we make M2 much, much larger than M1, and in a limiting case, we even go with M1 to zero.
+
+154
+06:32,605 --> 06:33,725
+Let's do that.
+
+155
+06:34,475 --> 06:44,045
+What you see now, if M1 goes to zero, this this goes away. This goes away. A goes to G.
+
+156
+06:44,985 --> 06:51,645
+And T goes to zero. If M1 is zero, T goes to zero.
+
+157
+06:52,415 --> 06:54,275
+That is obvious.
+
+158
+06:54,805 --> 07:01,005
+Because if I make M1 zero, M2 goes into free fall.
+
+159
+07:01,405 --> 07:13,005
+And if M2 goes into free fall, its weight is zero. And so the tension is zero. And it's exactly what you see. And you see that the acceleration of that object is G, which it better be because it's in free fall.
+
+160
+07:13,675 --> 07:18,375
+So you see, this makes sense. This is exactly consistent with your intuition.
+
+161
+07:19,105 --> 07:32,385
+And if you wanted to make M1 much, much larger than M2, and you take the limiting case for M 2 goes to zero, you'll find again that A goes to Z, G, and that T goes to zero.
+
+162
+07:33,075 --> 07:44,075
+Except that now the acceleration is not this way, but now the acceleration is this way. And now this object will go into free fall.
+
+163
+07:44,815 --> 07:48,915
+And therefore, there is no tension in the string anymore.
+
+164
+07:52,865 --> 07:58,285
+M1, if I return to the case which we have there, that M2 is larger than M1,
+
+165
+07:58,675 --> 08:03,575
+M1 is being accelerated upwards. That's non-negotiable. So it must have gained weight.
+
+166
+08:04,725 --> 08:09,055
+M2 is being accelerated down, so it must have lost weight.
+
+167
+08:09,335 --> 08:11,705
+Just like being in an elevator, there is no difference.
+
+168
+08:13,485 --> 08:15,065
+They each way the same.
+
+169
+08:15,645 --> 08:20,425
+One loses weight, the other gains weight. They each way the same.
+
+170
+08:21,145 --> 08:41,285
+And so I can make the prediction that if this is M2G, which was its original weight, and this now is the new weight T, that M2G must be larger than T. M1 gains weight, so T must be larger than M1G. M2 loses weight, so T must be smaller than M2G.
+
+171
+08:41,915 --> 08:43,655
+That's my prediction. It has to be.
+
+172
+08:44,445 --> 08:55,795
+And we can, I can show you that with some easy numbers. Let M1 be 1.1 kg and let M2 be 1.25 kg.
+
+173
+08:57,305 --> 09:03,175
+Frictionless system and the string has a negligible mass.
+
+174
+09:03,735 --> 09:14,215
+What is the acceleration A of the system? I get M2 - M1, that is 0.15 divided by the sum, which is 2.35.
+
+175
+09:14,775 --> 09:19,215
+And that is approximately 0.064G.
+
+176
+09:20,275 --> 09:26,545
+approximately 0.064G. It's about 1/16th of the gravitational acceleration.
+
+177
+09:27,035 --> 09:30,265
+So it's a very modest acceleration.
+
+178
+09:30,925 --> 09:45,225
+What is the tension? Well, I substitute my numbers for M1 and M2 in there. You can take for G 10 if you like that. And you will find that the tension equals 1.17 G.
+
+179
+09:46,515 --> 09:49,315
+And now look at what I predicted.
+
+180
+09:50,015 --> 09:53,425
+They both weigh 1.17 G. That's non-negotiable.
+
+181
+09:53,905 --> 09:58,555
+That is my definition of weight. The tension in both sides is the same, that's my definition of weight.
+
+182
+09:59,445 --> 10:01,095
+This is their weight.
+
+183
+10:01,915 --> 10:08,895
+This one had a weight 1.25 G without being accelerated.
+
+184
+10:09,345 --> 10:12,735
+You see, it has lost weight, because it accelerated down.
+
+185
+10:13,475 --> 10:16,845
+This one had a weight of 1.1 G.
+
+186
+10:17,475 --> 10:20,595
+You see, it has gained weight because it's accelerated up.
+
+187
+10:21,135 --> 10:27,715
+So you see the whole picture ties together very neatly and it's important that you look at it that way.
+
+188
+10:28,785 --> 10:34,595
+I now want to return to the idea of complete weightlessness.
+
+189
+10:35,275 --> 10:41,935
+And I want to remind you, a few lectures ago, how I was swinging you at the end of a string in the vertical.
+
+190
+10:42,375 --> 10:43,585
+I was swinging you like this.
+
+191
+10:44,285 --> 10:47,445
+And I was swinging a bucket of water like this.
+
+192
+10:47,875 --> 10:49,625
+And I want to return to that.
+
+193
+10:50,995 --> 11:01,675
+I want to look at you when you are at the bottom of your circle and when you are at the very top of that circle.
+
+194
+11:04,755 --> 11:09,325
+You go around a circle which has radius R.
+
+195
+11:09,975 --> 11:11,495
+Here is that circle.
+
+196
+11:14,875 --> 11:16,225
+Okay.
+
+197
+11:17,035 --> 11:24,275
+There's a string here, you're here, and there's a string here. And at some point in time, you're there and you're going around.
+
+198
+11:24,605 --> 11:31,555
+Let's assume that you're going around with an angular velocity omega, and for simplicity, we keep omega constant.
+
+199
+11:32,165 --> 11:33,645
+But that's really not that important.
+
+200
+11:34,635 --> 11:36,355
+Okay, this is point P.
+
+201
+11:37,565 --> 11:39,035
+And this is point S.
+
+202
+11:39,655 --> 11:43,755
+Let's first look at the situation at point P.
+
+203
+11:44,805 --> 11:49,355
+You have a mass and so gravity acts upon you, mg.
+
+204
+11:50,245 --> 11:53,605
+There is tension in the string, T.
+
+205
+11:54,785 --> 12:02,075
+There must be, this is non-negotiable, a centripetal acceleration upwards, otherwise you could never do this.
+
+206
+12:02,415 --> 12:04,345
+Remember from the uniform circular motion.
+
+207
+12:04,825 --> 12:18,945
+So there must be here a centripetal acceleration, which is omega square R or if you prefer V squared divided by R, if V is the speed, tangential speed at that point.
+
+208
+12:19,765 --> 12:20,825
+It must be there.
+
+209
+12:22,375 --> 12:23,875
+Let's look here.
+
+210
+12:25,155 --> 12:30,415
+Right there, gravity is acting upon you. Mg.
+
+211
+12:32,415 --> 12:35,585
+Let's assume the string is pulling on you. Let's assume that for now.
+
+212
+12:36,315 --> 12:38,375
+So there is tension.
+
+213
+12:38,935 --> 12:40,945
+String is pulling on you.
+
+214
+12:42,225 --> 12:53,885
+Therefore, non-negotiable, when you make this curvature here, there must be a centripetal acceleration, and that centripetal acceleration must be omega square R.
+
+215
+12:54,225 --> 12:55,935
+That is non-negotiable.
+
+216
+12:56,225 --> 12:57,415
+It has to be there.
+
+217
+12:57,875 --> 13:02,235
+Let's now evaluate first the situation at P.
+
+218
+13:03,305 --> 13:07,435
+And I will call this plus, and I'll call this minus.
+
+219
+13:08,665 --> 13:19,225
+So what I get now is that T minus mg must be M times the centripetal acceleration.
+
+220
+13:19,835 --> 13:24,855
+So T must be M times the centripetal acceleration plus G.
+
+221
+13:25,475 --> 13:33,885
+Hey, that looks very familiar. It looks like someone is being someone is being accelerated in an elevator, almost the same equation.
+
+222
+13:35,925 --> 13:47,535
+If the centripetal acceleration at this point, for instance, were 10 meters per second squared, then you would weigh twice your normal weight.
+
+223
+13:48,205 --> 13:52,815
+The tension here would be twice mg.
+
+224
+13:54,275 --> 14:01,505
+If this were 5 meters per second squared, then you would be one and a half times you weight.
+
+225
+14:02,645 --> 14:07,105
+Let's now look at the situation at S.
+
+226
+14:08,565 --> 14:16,285
+At point S, I'm going to call this plus and that minus.
+
+227
+14:18,455 --> 14:28,245
+I'm going to find that T plus mg must be M times the centripetal acceleration. Newton's second law.
+
+228
+14:28,815 --> 14:35,345
+So I find that the tension there equals n times A of C minus G.
+
+229
+14:36,315 --> 14:40,065
+Hey, very similar to what I've seen before.
+
+230
+14:40,795 --> 14:43,625
+This object is losing weight.
+
+231
+14:46,515 --> 14:55,335
+Let us take the situation that A of C is exactly 10 m per second squared. And we discussed that last time when we had the bucket of water in our hands.
+
+232
+14:55,695 --> 15:02,965
+If A of C, if the centripetal acceleration when it make when it goes through the top is 10, then this is zero.
+
+233
+15:03,555 --> 15:11,455
+So the string has no tension. The string goes limp, and the bucket of water and you are weightless.
+
+234
+15:12,615 --> 15:25,895
+If the centripetal acceleration is larger than 10, then, of course, the string will be tight. There will be a force on you, and whatever comes out of here will indicate your weight.
+
+235
+15:26,885 --> 15:33,075
+If A of C is smaller than 10, that's meaningless.
+
+236
+15:33,605 --> 15:39,555
+The tension can never be negative. A string with negative tension has no physical meaning.
+
+237
+15:39,855 --> 15:44,175
+What it means is that the bucket of water would never have made it to this point.
+
+238
+15:44,535 --> 15:54,535
+If you try to swing it up, as someone tried in the second lecture, but didn't make it to that point, the bucket of water will just fall. And you end up with a mess, but that's a detail.
+
+239
+15:56,115 --> 16:10,845
+So, the bucket of water, when it is here, if the acceleration there, the centripetal acceleration were exactly 10 meters per second squared, then that bucket of water would be weightless.
+
+240
+16:12,675 --> 16:17,905
+So, I said earlier that when you're in free fall, all objects in free fall are weightless.
+
+241
+16:18,925 --> 16:23,835
+It's like a spacecraft in orbit, or it is an elevator with a cut cable.
+
+242
+16:24,945 --> 16:34,305
+It also means that if I jump off the table, that I'm weightless while I am in mid-air, so to speak.
+
+243
+16:34,655 --> 16:39,425
+It means this tennis ball, while it is in free fall, it has no weight.
+
+244
+16:40,155 --> 16:47,075
+Now it has weight. Now the weight is even higher because I'm accelerating it. And now it has no weight.
+
+245
+16:47,395 --> 16:53,295
+The tennis ball is weightless. And I assume for now that the air drag plays no role.
+
+246
+16:55,555 --> 17:02,075
+If I jump off the table, I will be weightless for about half a second.
+
+247
+17:02,565 --> 17:03,885
+This is about 1 meter.
+
+248
+17:04,325 --> 17:11,575
+If I jump from a tower which is 100 meters high, I will be weightless for four and a half seconds, ignoring air drag.
+
+249
+17:12,235 --> 17:16,535
+I prefer today the half a second.
+
+250
+17:18,555 --> 17:23,535
+I'm going to jump off this table with this water in my hand.
+
+251
+17:25,465 --> 17:32,735
+And I'm going to tell you how I can convince you that as I jumped, that I will indeed be weightless.
+
+252
+17:33,765 --> 17:35,085
+Here is the bottle.
+
+253
+17:36,375 --> 17:39,445
+There's a gravitational force on the bottle.
+
+254
+17:40,425 --> 17:43,665
+My hands are pushing up on this bottle.
+
+255
+17:44,365 --> 17:46,995
+My hands are being a bathroom scale.
+
+256
+17:47,315 --> 17:51,455
+I feel in my muscles the need to push up.
+
+257
+17:51,775 --> 17:56,775
+In fact, I might even be able to estimate the weight, playing the role of a bathroom scale.
+
+258
+17:57,265 --> 18:01,755
+It's a gallon of water. That's about 9 lbs.
+
+259
+18:04,275 --> 18:09,095
+Now my own body, gravity is acting upon me, but I'm being pushed up right there.
+
+260
+18:11,545 --> 18:17,375
+Suppose we jumped.
+
+261
+18:18,435 --> 18:22,335
+There would be no pushing from me on the bottle anymore.
+
+262
+18:22,585 --> 18:30,595
+No pushing there on me at the table. Only gravitation would act upon us and we would be weightless.
+
+263
+18:31,125 --> 18:33,415
+How can I show you that we are weightless?
+
+264
+18:33,755 --> 18:42,125
+Well, if I don't have to use my muscles to push on this bottle upwards, I might as well lower my hands a little bit during this free fall.
+
+265
+18:42,845 --> 18:49,205
+And you will see that the bottle will just stay above my hands without my having to push up.
+
+266
+18:49,465 --> 18:58,345
+Therefore, being the bathroom scale, I no longer have to push on it. I no longer my muscles don't feel anything, and the bottle is therefore weightless.
+
+267
+18:59,185 --> 19:07,305
+The bottle is weightless when we jump. I am weightless and even this bagel is weightless. We're all weightless during half a second.
+
+268
+19:08,635 --> 19:12,485
+There is no such thing in physics as a free lunch.
+
+269
+19:12,905 --> 19:17,505
+You have to pay a price for this half a second of weightlessness.
+
+270
+19:18,245 --> 19:20,165
+What happens when I hit the floor?
+
+271
+19:20,565 --> 19:26,485
+I hit the floor with this velocity in this direction, which is about 5 meters per second. You can calculate that.
+
+272
+19:27,035 --> 19:29,495
+But a little later, I've come to a stop.
+
+273
+19:29,955 --> 19:38,595
+That means during the impact, there must be an acceleration upwards. Otherwise my velocity in this direction could never become zero.
+
+274
+19:39,335 --> 19:45,555
+Therefore, I will weigh more during this impact. There is an acceleration in this direction.
+
+275
+19:46,165 --> 19:49,145
+The 5 meters per second goes to zero.
+
+276
+19:49,725 --> 19:54,945
+If I make the assumption that it takes two tens of a second, that's a very rough guess this impact time.
+
+277
+19:55,545 --> 20:02,415
+Then the average acceleration will be 5 meters per second divided by 0.2, that is 25 meters per second squared.
+
+278
+20:02,915 --> 20:06,705
+That means the acceleration upwards is 2 and a half G.
+
+279
+20:07,385 --> 20:11,375
+That means I will weigh three and a half times more. Remember this A plus G.
+
+280
+20:11,745 --> 20:17,885
+So A is 2 and a half G up, plus the G that we already have, that makes it three and a half G.
+
+281
+20:18,325 --> 20:24,265
+So instead of weighing 165 pounds, I weigh close to 600 pounds for two tens of a second.
+
+282
+20:24,775 --> 20:30,225
+So we get four phases. Right now, I'm my normal weight. If I stand on a bathroom scale.
+
+283
+20:30,725 --> 20:37,505
+I jump for half a second, weightless. Hit the floor for about two tens of a second, maybe close to 600 pounds.
+
+284
+20:37,955 --> 20:41,235
+And then after that, I will have my normal weight again.
+
+285
+20:41,965 --> 20:49,445
+Now, you're going to have only half a second to see that this bottle, as I jump is floating above my hands.
+
+286
+20:49,705 --> 20:54,725
+I will pull my hands off. So you will see that I no longer have to push it.
+
+287
+20:55,105 --> 20:57,565
+That means it's weightless.
+
+288
+20:58,985 --> 21:01,055
+If you're ready, I'm ready.
+
+289
+21:01,645 --> 21:04,405
+3, two, one, zero.
+
+290
+21:05,935 --> 21:07,745
+Did you see it floating above my hands?
+
+291
+21:08,075 --> 21:09,825
+We were both weightless.
+
+292
+21:11,425 --> 21:16,975
+Now, I have been thinking about this for a long, long time.
+
+293
+21:17,235 --> 21:27,465
+I have been thinking whether perhaps this could not be shown in a more dramatic way, perhaps even a more convincing way.
+
+294
+21:27,815 --> 21:35,705
+And so I thought of the idea of putting a bathroom scale under my feet, tying it very loosely so that it wouldn't fall off when I jump.
+
+295
+21:36,275 --> 21:43,745
+And then show you that while I am half a second in free fall, that the bathroom scale indeed indicates zero.
+
+296
+21:44,655 --> 21:49,475
+And don't think that I haven't tried it. I've tried it many times with many bathroom scales. I made many jumps.
+
+297
+21:49,995 --> 21:51,255
+There is a problem.
+
+298
+21:51,715 --> 21:56,725
+And the problem is the bathroom scales that you buy, that you normally get commercially,
+
+299
+21:57,475 --> 21:59,055
+they indeed want to go to zero.
+
+300
+21:59,595 --> 22:04,535
+It takes them a long time. They have a lot of inertia. Their response time is slow.
+
+301
+22:05,695 --> 22:09,035
+But even if they make it to zero by the time you hit the floor,
+
+302
+22:09,555 --> 22:16,115
+then immediately the weight increases because you hit the floor and your weight comes up by three and a half times.
+
+303
+22:16,405 --> 22:21,435
+So it begins to swing back and forth and it becomes completely chaotic, and you can no longer see what's happening.
+
+304
+22:21,985 --> 22:28,005
+And it just so happened that about six months ago, Dave, I had dinner with Professor Dave Trumper.
+
+305
+22:28,405 --> 22:32,275
+And I explained it to him that it is just unfortunate that you can never really show it.
+
+306
+22:32,555 --> 22:39,225
+that you jump off the table, have a bathroom scale under you, and see that weight go down to zero when you're in free fall.
+
+307
+22:39,555 --> 22:42,525
+And he said, duck soup. I can do that.
+
+308
+22:42,945 --> 22:48,555
+He says, I can make you a scale which has a response time of maybe 10 milliseconds.
+
+309
+22:49,435 --> 22:55,165
+So, when you jump off the table, in 10 milliseconds, you will see that thing go down to zero.
+
+310
+22:55,725 --> 23:05,245
+And he delivered. He came through. He built this wonderful device which he and I are going to demonstrate to you.
+
+311
+23:05,925 --> 23:11,645
+Let me first give you some reasonable light for this.
+
+312
+23:14,225 --> 23:22,485
+And I would like to show you on the scale there, what this scale that he built is indicating.
+
+313
+23:22,895 --> 23:24,055
+Here is the scale.
+
+314
+23:25,435 --> 23:26,565
+I have it in my hands.
+
+315
+23:27,115 --> 23:31,245
+And on top of this scale is a little platform, just like on your scale.
+
+316
+23:31,725 --> 23:34,005
+This platform weighs 4 and a half pounds.
+
+317
+23:34,675 --> 23:38,675
+And you can see that. It's just about 4 and a half.
+
+318
+23:39,595 --> 23:43,415
+Now you will say, hmm, I wouldn't want that kind of a bathroom scale.
+
+319
+23:43,795 --> 23:51,145
+I mean, if I want to see my bathroom scale, I want to see a zero before I want to go up. I'm heavy enough all by myself. I don't want to get another four and a half pounds."
+
+320
+23:51,745 --> 23:55,425
+The manufacturer has simply zeroed that scale for you.
+
+321
+23:55,795 --> 23:58,875
+But obviously, also your bathroom scale has a cover on it.
+
+322
+23:59,695 --> 24:09,095
+Once you have seen these demonstrations, you will be able to answer for yourself why we don't zero this, why we really leave this to be four and a half.
+
+323
+24:09,455 --> 24:18,415
+That's the actual mass which is on top of the spring. Well, it's not really a spring. It is a pressure gauge, but think of it as a spring.
+
+324
+24:18,665 --> 24:19,935
+4 and 1/2 pounds.
+
+325
+24:20,865 --> 24:27,705
+Here, we have a a weight, which is a barbell weight, which is 10 lbs.
+
+326
+24:28,535 --> 24:29,135
+Right.
+
+327
+24:30,445 --> 24:35,875
+Is this from one of your children, Dave? Are you doing it yourself?
+
+328
+24:36,535 --> 24:37,415
+10 lbs.
+
+329
+24:38,215 --> 24:40,175
+We'll put it on top here.
+
+330
+24:41,405 --> 24:44,295
+What do you see? Roughly 14 and 1/2 lbs.
+
+331
+24:45,495 --> 24:49,265
+All right, we're going to tape it down.
+
+332
+24:49,265 --> 24:54,475
+There we go.
+
+333
+24:55,375 --> 25:05,555
+And we're going to drop it from about 1 and 1/2, 2 meters, and we drop it in here, well cushioned, because we don't want to break this beautiful device.
+
+334
+25:08,275 --> 25:15,185
+When we drop it, the response is so fast that you will see indeed that pointer go to zero.
+
+335
+25:16,035 --> 25:21,585
+Now keep in mind when it hits the cushioning, that the weight will go up.
+
+336
+25:22,475 --> 25:29,255
+For now, I want you to concentrate only on the thing going to zero and not what comes later. We will deal with that within a minute.
+
+337
+25:30,865 --> 25:38,145
+Okay. 14 and a half pounds.
+
+338
+25:40,675 --> 25:44,635
+You know why the thing is actually jiggling back and forth? Because I can't hold it exactly still.
+
+339
+25:46,265 --> 25:52,075
+And so I slightly accelerate it upwards and downwards. And when I accelerate it slightly upwards, it weighs a little more.
+
+340
+25:52,665 --> 25:55,205
+And when I accelerate it downwards, it weighs less. It's interesting.
+
+341
+25:55,685 --> 25:57,445
+You can see I'm nervous."
+
+342
+25:57,815 --> 25:59,665
+Here, that's my nervous tension meter there.
+
+343
+26:00,305 --> 26:00,905
+Okay.
+
+344
+26:01,555 --> 26:02,305
+We're ready?
+
+345
+26:03,175 --> 26:04,515
+Look at, don't look at me now.
+
+346
+26:04,865 --> 26:09,265
+Look at that pointer. 3, 2, 1, 0.
+
+347
+26:10,685 --> 26:13,435
+Did you see it go to zero? All the way to zero.
+
+348
+26:14,995 --> 26:18,635
+Now comes something even more remarkable.
+
+349
+26:19,705 --> 26:21,225
+He said to me,
+
+350
+26:21,935 --> 26:31,855
+I can also make the students see the response on a time scale of about fraction of a second."
+
+351
+26:31,855 --> 26:37,455
+By the way, this is the hero who made all this stuff. He's fantastic.
+
+352
+26:37,455 --> 26:38,635
+Yeah.
+
+353
+26:42,845 --> 26:53,745
+He can show you the weight on an electronic scale, and this weight you will see as a function of time.
+
+354
+26:55,905 --> 27:03,785
+I'll put the 10 lbs back on again. Tape it a little tighter.
+
+355
+27:05,385 --> 27:10,635
+And so the level that you see now is 14 and 1/2 lbs.
+
+356
+27:11,135 --> 27:14,525
+This is 14 and 1/2 lbs, and this is zero. This mark is zero.
+
+357
+27:15,255 --> 27:16,255
+Zero."
+
+358
+27:16,835 --> 27:20,935
+I'm going to hold it in my hand.
+
+359
+27:24,795 --> 27:28,715
+And notice, if I can hold it still, you're back to your 14 and 1/2 pounds.
+
+360
+27:29,985 --> 27:43,805
+Now, I'm going to drop it. You will see it go down to zero. It will hit the floor, the cushion, it will get an acceleration upwards. It will become way heavier than it was before."
+
+361
+27:44,205 --> 27:48,485
+And then it will even be bounce back up in the air. It goes again into free fall.
+
+362
+27:48,945 --> 27:55,595
+We will freeze that for you and you will be able to we will be able to analyze it then after it all happens.
+
+363
+27:56,615 --> 27:57,785
+So,
+
+364
+27:59,385 --> 28:01,315
+14 and a half pounds.
+
+365
+28:01,965 --> 28:04,515
+3, two, one, zero.
+
+366
+28:06,335 --> 28:08,395
+And now Professor Trumper is freezing it for you.
+
+367
+28:08,635 --> 28:11,425
+Now look at this. Look at this incredible picture.
+
+368
+28:12,365 --> 28:17,755
+I mean, this is truly an eye opener for me when I saw the physics in here is unbelievable.
+
+369
+28:18,585 --> 28:20,545
+Here is your 14 and 1/2 pounds.
+
+370
+28:21,525 --> 28:24,195
+Tick marks from here to here are half a second.
+
+371
+28:24,575 --> 28:26,605
+It was half a second in free fall.
+
+372
+28:26,915 --> 28:28,995
+And it goes to zero. That's no weight.
+
+373
+28:29,685 --> 28:35,565
+Now it hits the floor, the cushion, and its weight goes up in something like a tenth of a second.
+
+374
+28:35,735 --> 28:40,745
+Look, this is about one, two, three, it's about three and a half times its weight now.
+
+375
+28:40,995 --> 28:47,675
+So the 14 and a half has to be multiplied by three and a half or four, which is exactly what we predicted, that it would be much higher.
+
+376
+28:47,885 --> 28:52,885
+But now it's being it bounces off because it's a very nice cushion. It throws it back up.
+
+377
+28:52,885 --> 28:55,785
+So it goes back into the air, so it goes immediately to weightlessness again.
+
+378
+28:56,275 --> 29:04,745
+And then it oscillates back and forth. And then here, you would expect that this level 14 and a half pounds would be the same as this.
+
+379
+29:05,055 --> 29:16,125
+And the only reason why that's not the case, there is a little cable that fell with it, which is pushing a little bit up on the upper uh on the upper disc that is there."
+
+380
+29:16,125 --> 29:25,315
+So it's making it a little lighter. Isn't it incredible? You see here in front of you, the weightlessness, and you see the extra weight when it hits, and again followed by weightlessness.
+
+381
+29:25,855 --> 29:28,925
+Dave, A+, you pass the course.
+
+382
+29:29,165 --> 29:31,235
+Yeah."
+
+383
+29:32,195 --> 29:38,455
+There is a great interest in doing experiments under weightless conditions.
+
+384
+29:39,825 --> 29:52,155
+NASA was very interested in it. And if you would jump 100 meters up in the sky, you would only be 9 seconds up. You wouldn't even be weightless because of air drag."
+
+385
+29:52,795 --> 30:02,205
+However, if you could jump up way near the top of the atmosphere where the air drag is negligible, then you would be weightless for quite some time.
+
+386
+30:02,585 --> 30:07,445
+And that is what people have been doing for the past few decades.
+
+387
+30:07,745 --> 30:18,035
+Professor Young and Professor Omen here at the Aeronautics department have done what they call zero gravity experiments from airplanes."
+
+388
+30:18,035 --> 30:24,425
+And I will explain that in detail, but first I want you to appreciate that zero gravity is a complete misnomer.
+
+389
+30:24,945 --> 30:28,675
+Zero weight, yes. Zero gravity, no.
+
+390
+30:28,905 --> 30:40,085
+If you have an airplane anywhere near earth, flying, whether the engines are on or whether the engines are off or whether it is free falling, doesn't matter, there is never zero gravity. There is always gravity, thank goodness.
+
+391
+30:40,715 --> 30:44,155
+But if you're in free fall, indeed, there is no weight.
+
+392
+30:44,875 --> 30:52,345
+Apart from that, they call them zero gravity experiments, and why not? Maybe it sells better."
+
+393
+30:54,595 --> 31:06,445
+They fly an airplane which is the KC-135 and they do these experiments at an altitude of about 30,000 feet.
+
+394
+31:08,295 --> 31:12,155
+Try to clean this as best as I can.
+
+395
+31:13,805 --> 31:22,295
+The plane comes in at one point in time at an angle of about 45 degrees.
+
+396
+31:22,625 --> 31:25,495
+There's nothing special about that 45 degrees.
+
+397
+31:26,015 --> 31:31,515
+Just that's the way it's done. You have to also think of the convenience convenience for the passengers.
+
+398
+31:31,975 --> 31:40,585
+The speed is then about 400 and 25 miles per hour.
+
+399
+31:41,405 --> 31:48,545
+So the horizontal component is about 300 miles per hour, and the vertical component is also 300.
+
+400
+31:49,705 --> 31:54,435
+The air drag is very little. Let's assume for the sake of the argument that the engines are cut.
+
+401
+31:54,985 --> 31:58,515
+And the plane goes into free fall.
+
+402
+31:58,755 --> 32:02,895
+It's no different from this tennis ball. It's the same thing.
+
+403
+32:03,385 --> 32:04,855
+You're going to see a parabola.
+
+404
+32:05,615 --> 32:11,615
+And so this plane is going to free fall and comes back to this level.
+
+405
+32:13,495 --> 32:16,075
+And let's analyze this arc, this parabola.
+
+406
+32:16,675 --> 32:23,525
+Right here at the top, clearly, there will still be 300 m per second in the absence of any air drag.
+
+407
+32:24,635 --> 32:40,505
+You should be able to calculate with all the tools that you have available how high this goes from this level. In other words, what is the time that the velocity in the Y direction comes to zero?"
+
+408
+32:40,505 --> 32:44,485
+You can calculate that, and then you know how much it has traveled. Very crude numbers, this is about 900 m.
+
+409
+32:45,255 --> 32:57,645
+And it will take about 15 seconds to reach this point, so it will take about 30 seconds to go from here to here. And in those 30 seconds, the horizontal displacement is about three and a half kilometers.
+
+410
+32:57,645 --> 33:03,415
+And all these numbers you should be able to confirm.
+
+411
+33:04,395 --> 33:07,645
+Right here, the engines are restarted.
+
+412
+33:09,205 --> 33:15,535
+During this free fall, everyone in the airplane is weightless, including the airplane itself.
+
+413
+33:16,305 --> 33:24,235
+Now the engine start and the engine is sort of going the plane is going to pull up, goes into this phase, and then the plane flies horizontally for a while.
+
+414
+33:24,945 --> 33:38,035
+During this phase, as we just discussed, it's like hitting the floor. You need an acceleration in this direction. There will be weight increase.
+
+415
+33:38,275 --> 33:44,245
+So there is here an acceleration upwards. And during this time, very roughly, people have about twice the weight.
+
+416
+33:44,825 --> 33:47,195
+And then here they have again normal weight.
+
+417
+33:47,595 --> 33:57,365
+And then the plane pulls up again, and here it goes and repeats the whole thing again going into free fall.
+
+418
+33:57,935 --> 34:08,825
+So again, here, people have more than their normal weight. 08, more than normal weight, free fall.
+
+419
+34:08,825 --> 34:13,435
+And the whole cycle takes about 90 seconds.
+
+420
+34:14,765 --> 34:30,205
+You can imagine that it's very important when you are here in free fall, when you have no weight, that when your weight comes back and your weight doubles, and Professor Omen told me that this change from zero to twice your weight takes less than a second.
+
+421
+34:30,505 --> 34:39,175
+That you better know where your feet are and where your head is. Because if your head is down and you all of a sudden double your weight, you crush your skull.
+
+422
+34:39,815 --> 34:49,375
+So you have to be sure that you're standing straight up in the plane when your weight begins to double, and we will see that very shortly how that works.
+
+423
+34:49,825 --> 34:54,825
+I want to show you first some slides from these experiments.
+
+424
+34:55,765 --> 35:00,925
+So here you see the situation that we just described.
+
+425
+35:00,925 --> 35:03,355
+Let us start here, that is where I started with you.
+
+426
+35:04,245 --> 35:06,385
+The plane turns the engines off.
+
+427
+35:06,715 --> 35:08,005
+This is the parabola.
+
+428
+35:08,585 --> 35:10,505
+Here, the engines are restarted.
+
+429
+35:10,915 --> 35:12,935
+This is the free fall period.
+
+430
+35:13,785 --> 35:15,415
+This is about 30 seconds.
+
+431
+35:16,315 --> 35:21,305
+The engine is restarted and during this time, there is an acceleration upwards.
+
+432
+35:21,645 --> 35:27,085
+And they call it a 2G peak. Well, they really mean 1G. What they really mean that my weight doubles.
+
+433
+35:27,485 --> 35:35,395
+They call that 2G. But of course, they call this 0G, which is equally incorrect. It's not 0 G, you have no weight.
+
+434
+35:36,225 --> 35:38,815
+This is weightless, here your weight is double.
+
+435
+35:39,065 --> 35:44,405
+Here your weight is normal. Here your weight roughly doubles, and you go into another free fall period.
+
+436
+35:44,805 --> 35:48,785
+And the cycle from here to here is about 90 seconds.
+
+437
+35:49,525 --> 35:58,505
+Now, the irony has it that the reason why these flights are done is to study motion sickness under weightless conditions.
+
+438
+35:58,745 --> 36:01,255
+Astronauts were complaining about motion sickness.
+
+439
+36:01,825 --> 36:09,995
+And so Professor Young and Omen have done lots and lots of experiments with airplanes and later also in the shuttle to study this motion sickness.
+
+440
+36:10,435 --> 36:16,175
+I find it rather ironic because if you and I were part of these experiments,
+
+441
+36:16,645 --> 36:20,145
+we would get terribly sick because of the experiment.
+
+442
+36:20,545 --> 36:26,425
+Just imagine that you go from weightlessness into twice your weight, back to weightlessness. We would be puking all day.
+
+443
+36:26,865 --> 36:33,575
+How can you study people who are sick? How can you study the sickness due to weightlessness?"
+
+444
+36:34,075 --> 36:35,985
+Well, they must have found a way.
+
+445
+36:36,835 --> 36:38,895
+They do this about 50 times per day.
+
+446
+36:39,685 --> 36:48,155
+And now I want to show you some real data which were kindly given to me by Professor Young, where you see them actually
+
+447
+36:49,045 --> 36:51,245
+in the plane.
+
+448
+36:52,565 --> 36:56,625
+I believe I have to put this on one.
+
+449
+36:57,315 --> 37:01,595
+And start the"
+
+450
+37:01,985 --> 37:03,835
+Can you turn off the slide projector?"
+
+451
+37:06,855 --> 37:12,855
+So here you see them in the plane. They're not weightless, they are climbing up."
+
+452
+37:13,415 --> 37:14,485
+Right."
+
+453
+37:21,285 --> 37:26,265
+I think this is Professor Young. Guys lying on the floor must be a bit tired.
+
+454
+37:26,675 --> 37:33,585
+The lights will shortly go on. And when the light goes on, that's an indication that the weightlessness is coming up.
+
+455
+37:34,025 --> 37:40,695
+Already went on. I must have missed it. I wasn't looking. And there they go into weightlessness."
+
+456
+37:41,575 --> 37:43,455
+Swimming"
+
+457
+37:44,085 --> 37:45,575
+Here this person is upside down here.
+
+458
+37:46,025 --> 37:51,855
+You better get straight up before you weight doubles, because you crush into the floor.
+
+459
+37:52,265 --> 37:55,385
+Right"
+
+460
+37:58,235 --> 38:00,275
+Okay.
+
+461
+38:03,415 --> 38:09,145
+And now it takes 60 seconds because the whole cycle is 90 seconds.
+
+462
+38:10,105 --> 38:19,485
+And in these 60 seconds, they get ready for the next free fall for the next weightlessness.
+
+463
+38:19,775 --> 38:30,745
+And you will see very shortly the light will go on again, and that will tell them that the weightlessness is coming up, and then they will be weightless for another 30 seconds.
+
+464
+38:31,095 --> 38:32,655
+Right.
+
+465
+38:34,605 --> 38:37,905
+The sound that you hear is obviously the engines of the plane.
+
+466
+38:43,915 --> 38:45,585
+There you go. Light goes on, they get a warning."
+
+467
+38:46,025 --> 38:50,155
+They take their headphones off, everything becomes weightless. They may not like that.
+
+468
+38:50,655 --> 38:59,145
+And so they put their headphones on in a secure place. You see that here. Professor Young takes his off."
+
+469
+38:59,415 --> 39:02,445
+And there they go again."
+
+470
+39:03,215 --> 39:11,385
+Swimming in mid-air, 30 seconds weightless.
+
+471
+39:11,875 --> 39:13,755
+Okay.
+
+472
+39:19,345 --> 39:24,305
+And the plane in which this happens,"
+
+473
+39:24,795 --> 39:27,305
+Yeah, these things happen."
+
+474
+39:27,855 --> 39:33,855
+I'd like to show you the last slide of the plane that they do these experiments from.
+
+475
+39:34,265 --> 39:44,205
+This is the plane while it is in free fall, at about 45 degree angle. And these people have done a tremendous job."
+
+476
+39:44,845 --> 39:53,425
+in indeed making a major contribution to the air sickness due to weightlessness.
+
+477
+39:53,845 --> 39:56,645
+All right, see you Friday.
+
+478
+39:57,135 --> 39:59,765
+Okay.
+
+479
+49:59,765 --> 50:02,635

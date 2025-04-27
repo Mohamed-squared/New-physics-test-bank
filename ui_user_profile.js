@@ -1,6 +1,6 @@
 // ui_user_profile.js
 
-import { currentUser, db, auth, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
+import { currentUser, db, auth, userCourseProgressMap, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
 import { displayContent, fetchAndUpdateUserInfo, showLoginUI, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading } from './utils.js';
 import { signOutUser } from './firebase_auth.js';
@@ -29,7 +29,7 @@ export function showUserProfileDashboard() {
             const userData = doc.data();
             currentDisplayName = userData.displayName || currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
             currentPhotoURL = userData.photoURL || currentUser.photoURL || DEFAULT_PROFILE_PIC_URL;
-            completedBadges = userData.completedCourseBadges || []; // Load badges
+            completedBadges = userData.completedCourseBadges || []; // Load badges from user doc
         } else {
             console.warn("Firestore profile doc not found, using Auth profile data.");
             currentDisplayName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
@@ -37,17 +37,24 @@ export function showUserProfileDashboard() {
         }
         const photoUrlValue = currentPhotoURL || '';
 
-        // --- NEW: Generate Badges HTML ---
+        // --- Generate Badges HTML ---
         let badgesHtml = '';
         if (completedBadges.length > 0) {
              badgesHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Completed Courses</h3><div class="flex flex-wrap gap-3">`;
              completedBadges.forEach(badge => {
-                 const gradeColor = getLetterGradeColor(badge.grade); // Get color class
+                 // Use the stored badge data (grade, course name, date)
+                 // Map grade to badge image filename
+                 const grade = badge.grade || 'C'; // Default to C if grade missing
+                 const badgeFileName = `badge-${grade.toLowerCase().replace('+', '_plus')}.png`;
+                 const badgeUrl = `./assets/images/branding/${badgeFileName}`;
+                 const courseName = badge.courseName || 'Course'; // Fallback name
+                 const dateStr = badge.completionDate?.toDate ? badge.completionDate.toDate().toLocaleDateString() : (badge.completionDate ? new Date(badge.completionDate).toLocaleDateString() : '');
+
                  badgesHtml += `
-                     <div class="course-badge border rounded-lg p-3 shadow-sm ${gradeColor.bg} ${gradeColor.border} w-full sm:w-auto flex-grow text-center" title="${badge.description || `Completed ${badge.courseName}`}">
-                         <p class="font-bold text-lg ${gradeColor.text}">${badge.grade || 'N/A'}</p>
-                         <p class="text-sm font-medium ${gradeColor.text}">${badge.courseName || 'Course'}</p>
-                         <p class="text-xs ${gradeColor.textMuted}">${badge.date ? new Date(badge.date).toLocaleDateString() : ''}</p>
+                     <div class="course-badge border rounded-lg p-2 shadow-sm bg-gray-50 dark:bg-gray-700 flex flex-col items-center text-center w-28" title="${courseName} - Grade: ${grade} (${dateStr})">
+                         <img src="${badgeUrl}" alt="${grade} Grade Badge" class="w-16 h-16 mb-1" onerror="this.style.display='none'; console.error('Error loading badge: ${badgeUrl}')">
+                         <p class="text-xs font-medium text-gray-700 dark:text-gray-300 leading-tight">${courseName}</p>
+                         <p class="text-xs text-gray-500 dark:text-gray-400">${dateStr}</p>
                      </div>`;
              });
              badgesHtml += `</div>`;
@@ -103,8 +110,7 @@ export function showUserProfileDashboard() {
              </div>
         </div>`;
 
-        // Use displayContent to handle insertion and MathJax
-        displayContent(html); // MathJax likely not needed here, but safe
+        displayContent(html); // Use displayContent to handle insertion
 
         // Add input listener for photo URL preview
         const photoURLInput = document.getElementById('photoURLInput');
@@ -116,15 +122,20 @@ export function showUserProfileDashboard() {
                 previewImg.src = (isValidUrl && urlValue) ? urlValue : DEFAULT_PROFILE_PIC_URL;
                 photoURLInput.classList.toggle('border-red-500', urlValue !== '' && !isValidUrl);
             });
-            if (previewImg.complete && previewImg.naturalWidth === 0 && previewImg.src !== DEFAULT_PROFILE_PIC_URL) {
-                previewImg.onerror();
+            // Trigger error handler immediately if current URL is invalid (after setting src)
+            if (previewImg.src && previewImg.src !== DEFAULT_PROFILE_PIC_URL) {
+                 previewImg.onerror = () => { previewImg.src = DEFAULT_PROFILE_PIC_URL; };
+                 // Check if already broken
+                 if (previewImg.complete && previewImg.naturalWidth === 0) {
+                      previewImg.src = DEFAULT_PROFILE_PIC_URL;
+                 }
             }
         }
 
     }).catch(error => {
         hideLoading();
         console.error("Error fetching user profile details from Firestore:", error);
-        // Fallback display logic (similar to original, but simpler)
+        // Fallback display logic
         let currentDisplayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User';
         let currentPhotoURL = currentUser?.photoURL || DEFAULT_PROFILE_PIC_URL;
         const photoUrlValue = currentPhotoURL || '';
@@ -150,13 +161,15 @@ export function showUserProfileDashboard() {
                  const isValidUrl = urlValue === '' || urlValue.startsWith('http://') || urlValue.startsWith('https://');
                  previewImgFallback.src = (isValidUrl && urlValue) ? urlValue : DEFAULT_PROFILE_PIC_URL;
              });
-             if (previewImgFallback.complete && previewImgFallback.naturalWidth === 0 && previewImgFallback.src !== DEFAULT_PROFILE_PIC_URL) previewImgFallback.onerror();
+             if (previewImgFallback.src && previewImgFallback.src !== DEFAULT_PROFILE_PIC_URL) {
+                  previewImgFallback.onerror = () => { previewImgFallback.src = DEFAULT_PROFILE_PIC_URL; };
+                  if (previewImgFallback.complete && previewImgFallback.naturalWidth === 0) previewImgFallback.src = DEFAULT_PROFILE_PIC_URL;
+             }
          }
     });
 }
 
 export async function updateUserProfile(event) {
-    // ... (Function remains mostly the same - unchanged) ...
     event.preventDefault();
     if (!currentUser || !auth || !db) {
         alert("Error: Cannot update profile. Not logged in or Firebase not ready.");
@@ -185,45 +198,53 @@ export async function updateUserProfile(event) {
         photoURLInput?.classList.remove('border-red-500');
     }
 
+    // If URL is empty, use the config default or null for Auth update
     if (newPhotoURL === '') {
-        newPhotoURL = null;
+        newPhotoURL = DEFAULT_PROFILE_PIC_URL; // For Firestore storage
     }
+    // For auth.updateProfile, use null if empty, otherwise the valid URL
+    const photoURLForAuth = (newPhotoURL === DEFAULT_PROFILE_PIC_URL) ? null : newPhotoURL;
 
     showLoading("Updating profile...");
     try {
         const currentAuthUser = auth.currentUser;
         if (!currentAuthUser) throw new Error("Auth state error: currentUser is null.");
 
-        const profileUpdates = {
-            displayName: newDisplayName,
-             ...(newPhotoURL !== currentAuthUser.photoURL) && { photoURL: newPhotoURL }
+        // --- Prepare Auth Update ---
+        const authUpdates = {};
+        if (newDisplayName !== currentAuthUser.displayName) {
+            authUpdates.displayName = newDisplayName;
+        }
+        // Update Auth photoURL only if it's different from current AND not the default placeholder
+        if (photoURLForAuth !== currentAuthUser.photoURL) {
+             authUpdates.photoURL = photoURLForAuth;
+        }
+
+        // --- Prepare Firestore Update ---
+        const firestoreUpdates = {
+             displayName: newDisplayName,
+             photoURL: newPhotoURL // Store the potentially default URL in Firestore
         };
 
-        const authUpdates = {};
-        if (profileUpdates.displayName !== currentAuthUser.displayName) {
-            authUpdates.displayName = profileUpdates.displayName;
-        }
-        if (profileUpdates.photoURL !== undefined) {
-             authUpdates.photoURL = profileUpdates.photoURL;
-        }
-
+        // --- Execute Updates ---
+        let authUpdatePromise = Promise.resolve(); // Default to resolved promise
         if (Object.keys(authUpdates).length > 0) {
-            await currentAuthUser.updateProfile(authUpdates);
-            console.log("Firebase Auth profile updated.");
+            authUpdatePromise = currentAuthUser.updateProfile(authUpdates);
+            console.log("Updating Firebase Auth profile...");
         } else {
              console.log("No changes detected for Firebase Auth profile.");
         }
 
         const userRef = db.collection('users').doc(currentUser.uid);
-        const firestoreUpdates = {
-             displayName: newDisplayName,
-             photoURL: newPhotoURL === null ? DEFAULT_PROFILE_PIC_URL : newPhotoURL
-        };
-         await userRef.update(firestoreUpdates);
-        console.log("Firestore profile document updated.");
+        const firestoreUpdatePromise = userRef.update(firestoreUpdates);
+        console.log("Updating Firestore profile document...");
+
+        // Wait for both updates to complete
+        await Promise.all([authUpdatePromise, firestoreUpdatePromise]);
+        console.log("Auth and Firestore profiles updated.");
 
         hideLoading();
-        await fetchAndUpdateUserInfo(auth.currentUser); // Refresh header
+        await fetchAndUpdateUserInfo(auth.currentUser); // Refresh header with latest data
 
         const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Profile updated successfully!</p></div>`;
          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml;

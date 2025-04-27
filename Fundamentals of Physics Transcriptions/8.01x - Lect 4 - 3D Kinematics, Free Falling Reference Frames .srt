@@ -1,0 +1,2135 @@
+1
+00:00:00,878 --> 00:00:06,988
+Today, we're going to take it quite easy.
+
+2
+00:00:07,938 --> 00:00:10,568
+I also have to take it a little easy
+
+3
+00:00:10,568 --> 00:00:15,998
+because my voice maybe feathering out if I'm not careful.
+
+4
+00:00:17,218 --> 00:00:20,418
+We're going to apply today what we have learned.
+
+5
+00:00:20,418 --> 00:00:23,768
+So there's nothing new, but it's applications.
+
+6
+00:00:24,388 --> 00:00:27,738
+And that's important, things that you can let it sink in.
+
+7
+00:00:29,828 --> 00:00:35,428
+We have here a trajectory of a golf ball or a tennis ball in 26100.
+
+8
+00:00:36,258 --> 00:00:37,978
+We shoot it up at an angle alpha.
+
+9
+00:00:38,728 --> 00:00:43,368
+The horizontal component in the X direction is v0 cosine alpha.
+
+10
+00:00:44,098 --> 00:00:46,878
+And the vertical component is v0 sine alpha.
+
+11
+00:00:47,888 --> 00:00:50,118
+It reaches the highest point at P
+
+12
+00:00:50,518 --> 00:00:53,358
+and it returns to the ground at point S.
+
+13
+00:00:53,978 --> 00:00:55,038
+This is the
+
+14
+00:00:56,178 --> 00:00:59,888
+increasing Y direction, and this is the increasing X direction.
+
+15
+01:00,888 --> 00:01:07,858
+We're going to use very heavily the equations that you see here that are so familiar with us.
+
+16
+01:08,268 --> 00:01:17,898
+These are the one-dimensional equations in X direction when there is where there is no acceleration and the one-dimensional equations in the Y direction where there is acceleration.
+
+17
+01:18,858 --> 00:01:25,118
+In order to use these equations, we need all these constants X0, v0x and v0y.
+
+18
+01:25,848 --> 00:01:27,328
+We've seen those last time.
+
+19
+01:27,918 --> 00:01:32,748
+I choose for X0, I choose zero arbitrarily, also for Y0.
+
+20
+01:33,468 --> 00:01:36,208
+The velocity in the X direction will never change.
+
+21
+01:36,208 --> 00:01:39,938
+This v0x will always remain v0 cosine alpha.
+
+22
+01:40,318 --> 00:01:48,818
+The velocity in the Y direction, however, in the beginning at T equals 0 is v0 sin alpha, and that one will change because there is here this T.
+
+23
+01:48,818 --> 00:01:54,718
+And that's why the velocity is going to change this T will do it.
+
+24
+01:54,948 --> 00:01:57,148
+And the acceleration in the Y direction,
+
+25
+01:57,148 --> 00:02:11,638
+ Since this is increasing value of Y is going to be negative 9.8, since I call always 9.8 plus since I always call g plus 9.8, this is minus G.
+
+26
+02:13,448 --> 00:02:20,998
+I now want to ask first the question that you may never have seen answered, what is the shape of this?
+
+27
+02:21,348 --> 00:02:24,578
+Well, we can go to equation number three there,
+
+28
+02:25,918 --> 00:02:47,038
+and we can write down, this is equation number three, that Y as a function of time equals v0yt, so that is v0 sin alpha times t minus 12 GT squared.
+
+29
+02:47,678 --> 00:02:48,828
+That's the equation in Y.
+
+30
+02:48,828 --> 00:02:50,548
+I go to equation number one,
+
+31
+02:51,658 --> 00:03:04,768
+and I write down X at any moment in time equals v0x times T. So that is v0 cosine alpha times t.
+
+32
+03:05,298 --> 00:03:09,908
+Now I eliminate T, and the best way to do that is to do it here,
+
+33
+03:09,908 --> 00:03:18,728
+to write for t X divided by V0 cosine alpha.
+
+34
+03:19,538 --> 00:03:27,918
+Now I can drop all sub indexes T, because we're now going to see X versus Y. We're going to eliminate T.
+
+35
+03:28,548 --> 00:03:37,368
+So this time here, I'm going to substitute in here and in there, and so I'm going to get Y equals.
+
+36
+03:38,228 --> 00:03:42,928
+There's a V0 here and there's a V0 there, that cancels.
+
+37
+03:43,348 --> 00:03:47,018
+There's a sign alpha here and a cosine alpha there.
+
+38
+03:47,018 --> 00:03:52,968
+That makes it the tangent of alpha, and then I have here an X.
+
+39
+03:53,878 --> 00:04:07,728
+Then I get minus 12 g times this squared X squared divided by V0 cosine alpha squared.
+
+40
+04:08,228 --> 00:04:09,768
+And now look very carefully.
+
+41
+04:10,608 --> 00:04:22,418
+Y is a constant times X minus another constant times X squared.
+
+42
+04:22,658 --> 00:04:23,888
+That is a parabola.
+
+43
+04:24,138 --> 00:04:31,118
+It's a second order equation in X and it's a parabola and the parabola has this shape.
+
+44
+04:31,908 --> 00:04:38,898
+So you see now by eliminating the time that we have here a parabola.
+
+45
+04:39,888 --> 00:04:43,718
+Now I want to massage this quite a bit further today.
+
+46
+04:44,238 --> 00:04:56,968
+I would like to know at what time the object here comes to a halt, to its highest point, it comes to a hold in the Y direction, it comes to the highest point,
+
+47
+04:56,968 --> 00:04:59,538
+and I want to know how high that is.
+
+48
+05:00,678 --> 00:05:09,268
+Well, the best way to do is to go to equation four and to say to equation four, when are you zero?
+
+49
+05:09,778 --> 00:05:15,868
+Because that is the moment that the velocity in the Y direction becomes zero. It must be at its highest point then.
+
+50
+05:16,578 --> 00:05:22,968
+So in order to find for us the position of the highest point P,
+
+51
+05:24,668 --> 00:05:31,038
+we first ask ourselves the question from equation number four,
+
+52
+05:32,468 --> 00:05:35,768
+When is the velocity in the Y direction zero?
+
+53
+05:36,808 --> 00:05:47,468
+And that then becomes V0 Y which is V0 sin alpha minus GT.
+
+54
+05:48,068 --> 00:05:58,398
+And out pops that T at point P is going to be V0 sin alpha divided by G.
+
+55
+05:58,998 --> 00:06:02,678
+That's the time that it takes for the object to reach the highest point.
+
+56
+06:03,298 --> 00:06:07,838
+Where is it then? What is the highest point above the ground?
+
+57
+06:08,228 --> 00:06:13,798
+Well, now you have to go to equation number three and you have to substitute this time in there.
+
+58
+06:14,688 --> 00:06:34,928
+So that highest point h, which is Y at the time T of P equals V0 Y T, that is V0 times the sign of alpha, but I have to multiply it by this time.
+
+59
+06:35,138 --> 00:06:41,068
+And so I get another V0 sign alpha and I get a G here.
+
+60
+06:41,218 --> 00:06:42,168
+minus
+
+61
+06:43,428 --> 00:06:44,358
+GT.
+
+62
+06:45,338 --> 00:06:49,478
+My Oh, no, no. This equation. minus half GT squared.
+
+63
+06:49,878 --> 00:07:02,118
+minus 12 G times this one squared, which is V0 sin alpha squared divided by G.
+
+64
+07:03,718 --> 00:07:05,758
+divided by G squared.
+
+65
+07:06,378 --> 00:07:10,128
+Because there's a G here, you see. So you square the whole thing, it is T squared.
+
+66
+07:10,808 --> 00:07:12,178
+You lose 1 G.
+
+67
+07:13,238 --> 00:07:32,968
+And you will find then that the highest point, let's write it down here so that we don't block that blackboard. The highest point in the sky equals V0 sin alpha squared divided by 2G.
+
+68
+07:34,848 --> 00:07:36,648
+Okay.
+
+69
+07:37,628 --> 00:07:39,108
+That is the highest point.
+
+70
+07:39,108 --> 00:07:45,648
+Let's give that some color because we may want to keep that.
+
+71
+07:47,538 --> 00:08:00,358
+Is it reasonable that that point, that highest point in the sky gets higher when V0 is higher? Of course. If I shoot it up at a higher speed, of course it will get higher.
+
+72
+08:00,658 --> 00:08:03,978
+So it is completely intuitive that V0 is upstairs.
+
+73
+08:04,818 --> 00:08:10,888
+If I increase the angle from a small angle to larger and larger and larger.
+
+74
+08:11,398 --> 00:08:14,288
+Is it reasonable that it will get higher? Of course.
+
+75
+08:14,928 --> 00:08:25,678
+You all feel in your stomach that the highest possible value you can get is by when you make alpha 90 degrees for a given velocity. That's the highest it will go in the sky.
+
+76
+08:26,278 --> 00:08:28,538
+So clearly this is also very pleasing.
+
+77
+08:29,078 --> 00:08:34,188
+If you did the experiment on the moon with the same initial speed, it will go much higher.
+
+78
+08:34,568 --> 00:08:38,408
+So you're also happy to see that this G here is downstairs.
+
+79
+08:39,238 --> 00:08:40,748
+So that makes sense.
+
+80
+08:43,158 --> 00:08:48,868
+At what time will the object be at point S?
+
+81
+08:49,538 --> 00:08:51,868
+Now there are two ways that you can do that.
+
+82
+08:52,398 --> 00:08:58,518
+You either go to this equation number three and you ask equation number three, when are you zero?
+
+83
+08:59,018 --> 00:09:00,468
+It will give you two answers.
+
+84
+09:01,138 --> 00:09:08,828
+It will say, I'm zero here at this time, and I'm zero at that time, and those are the two times that you want, and this is the one you pick.
+
+85
+09:09,538 --> 00:09:10,748
+That's perfectly fine.
+
+86
+09:10,998 --> 00:09:19,448
+I think there's a faster way to do it. And that's the following. This is a parabola, so it's completely symmetric about the vertical about P.
+
+87
+09:19,848 --> 00:09:24,718
+So to climb up from O to P must take the same amount of time as to go down from P to S.
+
+88
+09:25,148 --> 00:09:42,678
+And so I claim that the time to reach point S must be twice the time to reach point P, and therefore it's going to be 2V0 sine alpha divided by G.
+
+89
+09:44,628 --> 00:09:51,438
+But now, we want to look again whether the V zeros and the sign alpha have the right place.
+
+90
+09:52,058 --> 00:59,998
+Indeed, if I increased the speed, I would expect it to take longer before it reaches S.
+
+91
+10:01,218 --> 10:07,948
+If I give it a larger speed, it will come out farther and obviously the time will take longer.
+
+92
+10:08,398 --> 10:12,548
+If I do it at a higher angle, it will also take longer.
+
+93
+10:13,058 --> 10:15,978
+And if I do it on the moon, it will also take longer.
+
+94
+10:16,398 --> 10:26,768
+So this makes sense. These equations are pleasing in terms of their the way that V0 and sin alpha appear in the equations.
+
+95
+10:27,518 --> 10:34,558
+But now comes an important point, which I'm going to use throughout this lecture. I want to know what OS is.
+
+96
+10:35,788 --> 10:37,358
+The distance OS.
+
+97
+10:37,718 --> 10:42,488
+I shoot it up and it hits the floor again. What is that distance that it travels?
+
+98
+10:43,138 --> 10:50,358
+Well, for that, I need equation number one. It is V0x times the time.
+
+99
+10:51,108 --> 10:56,678
+And V0x is um V0 cosine alpha.
+
+100
+10:57,868 --> 11:01,798
+So we get V0 cosine alpha.
+
+101
+11:02,278 --> 11:05,978
+Times the time to hit it, that is 2v0 sin alpha.
+
+102
+11:06,598 --> 11:07,948
+So I get a two here.
+
+103
+11:08,948 --> 11:10,628
+I get a sine alpha.
+
+104
+11:11,688 --> 11:12,938
+And I get a G here.
+
+105
+11:14,338 --> 11:17,168
+And I have another V zero there.
+
+106
+11:17,558 --> 11:32,548
+And so the answer is V0 squared times the sign of the double angle, remember two cosine alpha sin alpha is the sign of 2 alpha divided by G.
+
+107
+11:33,178 --> 11:34,348
+And this is OS.
+
+108
+11:35,518 --> 11:42,498
+And I'm going to need this a lot. This reminds me not to remove it.
+
+109
+11:44,108 --> 11:49,238
+Now, I sort of wonder and you should too.
+
+110
+11:49,758 --> 11:54,628
+Why is it that the highest point in the sky has a V0 squared?
+
+111
+11:55,238 --> 11:59,448
+And why is the farthest point also? Why does it also have a V0 square?
+
+112
+11:59,878 --> 12:02,558
+There must be a way that you can reason that.
+
+113
+12:03,348 --> 12:06,248
+Why is it not just V0? Why is it V0 square?
+
+114
+12:06,848 --> 12:09,418
+Well, I'll let you argue about the highest point.
+
+115
+12:09,928 --> 12:14,658
+And I'll give you a good reason for the distance OS.
+
+116
+12:15,288 --> 12:16,818
+Don't look at the equations.
+
+117
+12:17,368 --> 12:22,908
+Just simply think for a change.
+
+118
+12:23,328 --> 12:24,618
+Don't look at the equations.
+
+119
+12:25,718 --> 12:28,788
+I double the speed.
+
+120
+12:29,798 --> 12:41,818
+If I double the speed, then it's quite reasonable that the time that it takes for the object to reach the ground will double.
+
+121
+12:41,818 --> 12:42,878
+But,
+
+122
+12:44,588 --> 12:51,758
+while the time that it flies has doubled, the horizontal velocity has also doubled.
+
+123
+12:52,148 --> 12:56,718
+And so the distance that it will travel in horizontal direction is four times that.
+
+124
+12:57,588 --> 13:05,898
+Twice because the time has doubled, and another factor of two because the horizontal component has also doubled.
+
+125
+13:06,268 --> 13:10,408
+So that's why you see V0 square there, completely pleasing.
+
+126
+13:12,338 --> 13:17,808
+This tells you immediately that the if you want to throw a ball as far as possible,
+
+127
+13:18,728 --> 13:22,668
+people who play baseball know that, you should do it at 45 degrees.
+
+128
+13:23,498 --> 13:30,858
+Because if you throw it at 45 degrees, then this angle 90 degrees and that is one.
+
+129
+13:31,268 --> 13:46,708
+Of course, in in reality, a baseball player knows better, they give effect to the ball, they deal with air drag, they spin the ball, and then these equations are not valid. This is only in case we deal with with vacuum.
+
+130
+13:49,208 --> 13:56,228
+I now would like to test some of the results that we have here, we have worked out here.
+
+131
+13:56,608 --> 14:05,338
+I'm going to shoot a pellet, a metal ball. I'm going to shoot it at various angles.
+
+132
+14:05,908 --> 14:08,418
+30 degrees, 60 degrees, 45 degrees.
+
+133
+14:08,888 --> 14:14,388
+And I'm going to make a prediction if I shoot it up from there, where it will hit the table.
+
+134
+14:15,728 --> 14:24,768
+A measurement is meaningless without knowing the uncertainties.
+
+135
+14:25,798 --> 14:27,848
+So that's the first thing we have to deal with.
+
+136
+14:28,658 --> 14:34,778
+The first thing I want to know is what is the velocity of this bullet when it comes out of the spring?
+
+137
+14:35,138 --> 14:38,788
+And does it vary if I do it three, five, six times in a row?
+
+138
+14:38,788 --> 14:42,268
+It's not a $20,000 spring gun.
+
+139
+14:42,778 --> 14:44,908
+So it's likely to vary.
+
+140
+14:45,858 --> 14:49,358
+And the way I'm going to do that is as follows.
+
+141
+14:50,408 --> 15:02,088
+If I shoot an object vertically up, that is the maximum value that it can go, when alpha equals 90 degrees,
+
+142
+15:02,918 --> 15:11,378
+then the sign of alpha is one, then the height is V0 squared divided by 2 G.
+
+143
+15:11,918 --> 15:23,728
+In other words, if I measure the height, if I shoot it up vertically, and you can measure that for me, you will see how I'm asking you to do that, then we can calculate V0 squared.
+
+144
+15:24,768 --> 15:35,278
+So the first thing I want to do is to shoot it up vertically, and how are you going to help me to calculate to tell me how high it is?
+
+145
+15:35,858 --> 15:38,738
+That comes easier than you think.
+
+146
+15:40,578 --> 15:44,138
+The top part, oh, we removed this.
+
+147
+15:44,898 --> 15:52,738
+The top part of this stick is 3 meters.
+
+148
+15:52,738 --> 15:53,828
+The top mark.
+
+149
+15:54,698 --> 15:56,628
+That very top mark is 3 meters.
+
+150
+15:57,088 --> 16:05,778
+And all I want you to tell me whether it is yay much above or yay much below, and then we'll estimate that yay much, and then we'll make a guess.
+
+151
+16:06,148 --> 16:07,378
+And I'll do it twice.
+
+152
+16:08,758 --> 16:09,858
+So are you ready?
+
+153
+16:10,748 --> 16:14,908
+Make sure that you can distinguish between above and below, makes a big difference.
+
+154
+16:15,368 --> 16:16,238
+Yeah?
+
+155
+16:18,898 --> 16:19,678
+Okay.
+
+156
+16:19,988 --> 16:22,278
+Three, two, one, zero.
+
+157
+16:23,788 --> 16:25,368
+Okay, was it higher or lower?
+
+158
+16:25,538 --> 16:25,798
+Higher.
+
+159
+16:26,478 --> 16:26,988
+How much?
+
+160
+16:28,778 --> 16:29,438
+This much?
+
+161
+16:29,918 --> 16:31,088
+Do we agree?
+
+162
+16:31,308 --> 16:32,538
+Let's say 5 cm, right?
+
+163
+16:32,968 --> 16:34,588
+We're going to allow for an uncertainty.
+
+164
+16:34,968 --> 16:35,758
+I'll do it again.
+
+165
+16:36,368 --> 16:38,248
+I want to see how well it reproduces.
+
+166
+16:39,778 --> 16:42,188
+Three, two, 1, 0.
+
+167
+16:44,228 --> 16:44,478
+Higher.
+
+168
+16:46,428 --> 16:47,118
+Lower.
+
+169
+16:48,568 --> 16:49,478
+Higher.
+
+170
+16:50,458 --> 16:54,988
+So it was 10 cm, 5 cm higher, so we'll take seven.
+
+171
+16:56,368 --> 16:59,708
+So we will make seven, and we'll have to allow for an uncertainty.
+
+172
+17:00,888 --> 17:10,698
+So H max is about 3.07.
+
+173
+17:11,648 --> 17:13,788
+I've done this this morning 20 times.
+
+174
+17:14,448 --> 17:20,698
+And there were times that the height differed by more than 10 cm, sometimes even 15 cm.
+
+175
+17:22,018 --> 17:32,398
+I therefore would feel most comfortable if you allow me an uncertainty of 15 cm in that height.
+
+176
+17:33,098 --> 17:40,348
+Remember, once we start shooting at 30 degrees, there's no way that we can evaluate the velocity anymore. We have to just take this value at face value.
+
+177
+17:40,608 --> 17:44,478
+This is the way we've measured V zero, and that's it.
+
+178
+17:46,128 --> 17:48,278
+This is a 5% error.
+
+179
+17:50,168 --> 17:51,568
+5%.
+
+180
+17:52,678 --> 17:55,128
+So what now is V0 squared?
+
+181
+17:57,108 --> 17:59,498
+Well, that's easy to calculate now.
+
+182
+18:00,448 --> 18:10,378
+V0 squared equals 3.07 times 2 times 9.8.
+
+183
+18:10,958 --> 18:13,618
+Oh, my calculator was off. That's a detail.
+
+184
+18:14,498 --> 18:24,138
+Um 3.07 * 2 * 9.8 That is 60.17.
+
+185
+18:24,138 --> 18:26,078
+I'd like you to check that.
+
+186
+18:26,538 --> 18:37,808
+60.17 plus an error of 5%, that is an error of three. So you might as well make this 60.2.
+
+187
+18:38,218 --> 18:40,478
+Would you please confirm that I didn't make a mistake?
+
+188
+18:40,768 --> 18:44,148
+3.07 is H max.
+
+189
+18:44,778 --> 18:54,378
+I multiply it by 2 by 9.9. That is 60.2, is a 5% error, and a 5% error is indeed three.
+
+190
+18:54,908 --> 18:57,938
+This is meter squared per second squared.
+
+191
+18:58,898 --> 19:04,488
+I don't care what V0 is, because if we're going to measure OS, all I need is V0 squared.
+
+192
+19:05,098 --> 19:12,238
+And if you at home are going to calculate what the height will be at the various angles, all you need is V0 squared.
+
+193
+19:12,788 --> 19:14,638
+So I'm not even interested in V0.
+
+194
+19:14,948 --> 19:17,158
+I'll just stick to V0 squared.
+
+195
+19:17,398 --> 19:22,778
+And V0 squared will have exactly the same uncertainty. We'll have an uncertainty of 5%.
+
+196
+19:23,078 --> 19:25,048
+because it comes immediately from H.
+
+197
+19:25,248 --> 19:26,778
+So you're not going to change that.
+
+198
+19:28,728 --> 19:32,908
+Okay, so so much for the uncertainty in V0 squared.
+
+199
+19:33,758 --> 19:37,068
+Now I'm going to set the angle at 45 degrees.
+
+200
+19:38,018 --> 19:44,808
+But how accurately can I do that? I don't think I can do that any better than one degree.
+
+201
+19:45,798 --> 19:51,798
+I'll try to do the best I can, but I can't really guarantee you that I'm accurate to one degree.
+
+202
+19:52,848 --> 20:02,178
+So now comes the question, what happens with the sign of two alpha? Because we're going to measure OS.
+
+203
+20:02,718 --> 20:05,538
+What happens with the sign of 2 alpha?
+
+204
+20:05,848 --> 20:11,838
+The sign of 90 degrees is 1.0000.
+
+205
+20:12,408 --> 20:16,138
+But what would be the sign of 88 degrees?
+
+206
+20:16,778 --> 20:20,808
+That is the value that I cannot exclude if I'm off by one degree.
+
+207
+20:21,878 --> 20:27,408
+And that value is 0. 9994.
+
+208
+20:28,388 --> 20:42,948
+That is so close to one that it is only off by 0.6%. 0.06%. And that is so low compared to 5%, forget it.
+
+209
+20:43,638 --> 20:44,988
+Forget the error in alpha.
+
+210
+20:45,748 --> 20:47,028
+We can completely forget it.
+
+211
+20:47,338 --> 20:48,848
+There's a reason for that.
+
+212
+20:49,348 --> 20:55,318
+When alpha is 45 degrees, then two alpha is 90 degrees.
+
+213
+20:55,858 --> 20:58,428
+And the sign curve goes like this at 90 degrees.
+
+214
+20:58,648 --> 21:00,428
+It's almost flat here.
+
+215
+21:00,708 --> 21:04,598
+So even if you're off in angle by a little bit, you're still very close to one. That's the reason.
+
+216
+21:05,188 --> 21:09,538
+So all we have to worry about is the uncertainty in V0 squared.
+
+217
+21:10,568 --> 21:12,548
+And so now comes my big prediction.
+
+218
+21:13,088 --> 21:15,398
+I'm going to make a prediction now.
+
+219
+21:16,498 --> 21:17,918
+For 45 degrees,
+
+220
+21:22,398 --> 21:25,458
+that OS equals
+
+221
+21:26,288 --> 21:27,698
+V0 squared.
+
+222
+21:28,638 --> 21:29,918
+We have that.
+
+223
+21:30,158 --> 21:31,388
+That is 60.2.
+
+224
+21:33,058 --> 21:39,508
+And we have the sign of two alpha is 1, and we divide by 9.8.
+
+225
+21:39,928 --> 21:42,378
+That is 6.14 m.
+
+226
+21:46,288 --> 21:56,288
+With an uncertainty of 5%, right? Because that's the uncertainty in V0 squared. And so that is an uncertainty of 30 cm, actually 31 cm.
+
+227
+21:57,268 --> 21:58,948
+This is my prediction.
+
+228
+22:01,578 --> 22:04,488
+For an angle of 45 degrees.
+
+229
+22:06,018 --> 22:12,218
+This will only hold if there is no air drag or if the air drag is negligible.
+
+230
+22:12,918 --> 22:24,818
+And of course, equally important that that spring gun, when the ball comes out, that the the velocity square is indeed within the range that we have assumed.
+
+231
+22:25,358 --> 22:31,908
+And that it doesn't have bad days and good days. There's no way I I can check that anymore.
+
+232
+22:32,878 --> 22:33,658
+All right.
+
+233
+22:34,688 --> 22:38,678
+So we're going to mark the point 614.
+
+234
+22:39,008 --> 22:43,888
+This is 1 m, 2 m, 3 m, 4 m, 5 m, 6 m.
+
+235
+22:44,418 --> 22:45,848
+6.14.
+
+236
+22:47,708 --> 22:48,928
+14.
+
+237
+22:50,808 --> 22:51,858
+14 cm.
+
+238
+22:52,238 --> 22:54,238
+Oh my god, it's all the way here.
+
+239
+22:55,058 --> 23:01,988
+And then I allow for an error of about 30 cm. Did I do that right? That is correct.
+
+240
+23:03,188 --> 23:06,618
+45 degrees, a 30 cm uncertainty.
+
+241
+23:07,338 --> 23:09,218
+That is all the way up to here.
+
+242
+23:11,218 --> 23:18,678
+And then the next one roughly 30 cm.
+
+243
+23:19,498 --> 23:25,618
+So that's where if our calculations make sense, that's where the ball should hit.
+
+244
+23:26,808 --> 23:31,608
+Now I would like you to come here if you don't mind and stand here.
+
+245
+23:32,518 --> 23:34,558
+And the moment that that ball hits,
+
+246
+23:35,718 --> 23:36,898
+point your finger at it.
+
+247
+23:37,368 --> 23:39,808
+Don't do it before I shoot, but just after I shoot.
+
+248
+23:41,338 --> 23:42,988
+And then we'll hope for the best.
+
+249
+23:43,988 --> 23:44,548
+Yeah?
+
+250
+23:45,218 --> 23:45,718
+Okay.
+
+251
+23:46,598 --> 23:47,868
+You're not nervous, right?
+
+252
+23:49,628 --> 23:51,928
+Where what happened with that ball that I had?
+
+253
+23:52,838 --> 23:53,998
+Did I put it in my pocket?
+
+254
+23:56,658 --> 23:57,538
+Oh, it's here.
+
+255
+23:58,328 --> 23:58,928
+Thank you.
+
+256
+24:00,348 --> 24:03,738
+So I'm going to set it now to the best I can at 45 degrees.
+
+257
+24:04,848 --> 24:05,168
+Okay.
+
+258
+24:12,048 --> 24:13,948
+So I can ever shoot it any further.
+
+259
+24:14,388 --> 24:19,308
+This is the the angle which is the maximum possible distance.
+
+260
+24:20,658 --> 24:21,618
+You ready?
+
+261
+24:22,888 --> 24:23,188
+You are?
+
+262
+24:25,768 --> 24:28,548
+Don't look at me, look there, it goes fast.
+
+263
+24:29,018 --> 24:31,708
+Three, two, one, zero.
+
+264
+24:33,068 --> 24:34,398
+Put your finger there.
+
+265
+24:37,288 --> 24:38,578
+Isn't that fantastic?
+
+266
+24:39,708 --> 24:40,808
+Isn't that amazing?
+
+267
+24:41,328 --> 24:45,288
+Do you see now how important it is that you have uncertainties in your measurement?
+
+268
+24:46,028 --> 24:47,918
+In high school you would have said it has to hit there.
+
+269
+24:48,448 --> 24:50,938
+Boom man. It has an error.
+
+270
+24:51,568 --> 24:53,588
+And the error has to be taken into account.
+
+271
+24:53,868 --> 24:55,168
+Where's my ball by the way?
+
+272
+24:57,818 --> 24:58,398
+Boy.
+
+273
+25:00,138 --> 25:01,788
+Oh, I have it Oh, here.
+
+274
+25:04,708 --> 25:05,388
+Okay.
+
+275
+25:06,038 --> 25:07,628
+You can sit down now. You did great.
+
+276
+25:07,628 --> 25:09,178
+It worked just because you were there.
+
+277
+25:14,828 --> 25:22,738
+So now, I wonder what happens if I fire the ball at at 30 degrees.
+
+278
+25:23,988 --> 25:35,658
+Well, if I do it at 30 degrees, then my V0 square is the same. I don't have to worry about that, I hope.
+
+279
+25:36,268 --> 25:42,338
+However, I cannot be certain about the angle to better than one degree.
+
+280
+25:43,568 --> 25:47,698
+So you will say, well, come on now. Don't be decadent.
+
+281
+25:48,158 --> 25:56,128
+I mean, here we had an error of only 0.06% because of this one degree possible one degree offset.
+
+282
+25:56,428 --> 25:58,208
+Let's just ignore this error too.
+
+283
+25:59,758 --> 26:02,348
+Oh, that is risky.
+
+284
+26:03,268 --> 26:04,718
+That is risky now.
+
+285
+26:05,508 --> 26:08,528
+Because the sign of 60 degrees, that's what you deal with.
+
+286
+26:09,158 --> 26:14,518
+The sign of 60 degrees, I think is 0.866.
+
+287
+26:15,048 --> 26:16,078
+That's right.
+
+288
+26:19,298 --> 26:28,928
+But the sign of 58 degrees, which is possible if I'm 1 degree under, is 0.848.
+
+289
+26:31,818 --> 26:34,778
+And that is substantially lower.
+
+290
+26:36,058 --> 26:48,158
+And therefore, I must allow for an uncertainty in the sign of the angle by roughly, oh, maybe something like 17 or 18 units.
+
+291
+26:48,158 --> 26:54,318
+0. What is this difference? 0. 0 18.
+
+292
+26:55,008 --> 27:03,018
+If you want to check what the sign of 62 degrees is, you will see that that is about this much higher than this.
+
+293
+27:04,268 --> 27:15,538
+So we must allow for this error. And that is an error which is by no means negligible anymore. There's no point here.
+
+294
+27:16,848 --> 27:22,558
+That is an error which is 18 divided by 866. That is a 2% error.
+
+295
+27:23,788 --> 27:30,058
+So now we're dealing all of a sudden with a 2% error in the sign of 2 alpha,
+
+296
+27:30,398 --> 27:34,078
+even though there's only a 1 degree uncertainty in the angle.
+
+297
+27:34,488 --> 27:37,648
+And the reason is that this sign curve is like so.
+
+298
+27:38,288 --> 27:41,078
+So a small angle change here makes no difference.
+
+299
+27:41,558 --> 27:44,268
+But a small angle change here makes a lot of difference.
+
+300
+27:44,268 --> 27:44,998
+And that's the reason.
+
+301
+27:45,328 --> 27:53,908
+And you can see that it is the slope of the sign curve that gives you a much larger error if you are off by a teeny weeny little bit.
+
+302
+27:54,778 --> 27:57,158
+So now we are ready to make a prediction.
+
+303
+27:57,778 --> 27:58,948
+So here comes the prediction.
+
+304
+28:03,368 --> 28:07,288
+OS now for 30 degrees.
+
+305
+28:09,868 --> 28:18,178
+So I have to go through V0 squared, I have that, 60.2.
+
+306
+28:19,678 --> 28:29,558
+And then I have to multiply by the sign of two alpha, that is the sign of 60 multiply.
+
+307
+28:30,658 --> 28:33,818
+And then I think I have to divide by G, that is right.
+
+308
+28:34,198 --> 28:35,698
+9.8.
+
+309
+28:36,308 --> 28:42,698
+And I find 5.31 plus or minus. Now,
+
+310
+28:43,878 --> 28:46,898
+2% error in the sign of 2 alpha.
+
+311
+28:47,488 --> 28:49,618
+5% error in V0 squared.
+
+312
+28:49,938 --> 28:53,998
+That gives me, I can't help it, a 7% error.
+
+313
+28:54,558 --> 28:58,668
+So I have a 7% uncertainty multiplied by 0.07.
+
+314
+28:58,888 --> 29:03,948
+So I cannot trust this any better than 37 cm.
+
+315
+29:05,508 --> 29:11,758
+And so now I'm going to put the markers out at 5 m and 31 cm.
+
+316
+29:12,798 --> 29:14,638
+This is the 5 meter mark.
+
+317
+29:15,858 --> 29:17,258
+31 cm.
+
+318
+29:18,508 --> 29:21,858
+And I allow for 37 cm on either side.
+
+319
+29:22,838 --> 29:23,698
+That's here.
+
+320
+29:25,018 --> 29:29,868
+And 37 cm on this side, that is here.
+
+321
+29:31,768 --> 29:33,818
+Going to set the angle at 30 degrees.
+
+322
+29:36,948 --> 29:38,988
+Yeah, yeah, where come you in?
+
+323
+29:39,618 --> 29:40,978
+We need woman power here.
+
+324
+29:42,828 --> 29:43,598
+Stay here.
+
+325
+29:44,568 --> 29:46,058
+Stay out of the fire line.
+
+326
+29:47,078 --> 29:49,608
+And when that ball hits, you jump on it.
+
+327
+29:49,968 --> 29:50,918
+Yeah, you jump on it.
+
+328
+29:52,178 --> 29:54,368
+Okay, everything under control.
+
+329
+29:55,118 --> 29:58,178
+Five Make sure I marked it right. 5 meters 31.
+
+330
+29:58,178 --> 29:59,498
+That looks about okay.
+
+331
+29:59,998 --> 30:03,128
+And now I have to change the angle to 30 degrees.
+
+332
+30:11,008 --> 30:14,078
+Okay, this is close as I can do it.
+
+333
+30:16,658 --> 30:17,418
+Okay.
+
+334
+30:18,058 --> 30:18,738
+You ready?
+
+335
+30:19,738 --> 30:20,378
+You are?
+
+336
+30:21,048 --> 30:24,308
+Three, two, one, zero.
+
+337
+30:25,358 --> 30:27,868
+Hit the jackpot.
+
+338
+30:36,108 --> 30:38,878
+Incredible.
+
+339
+30:39,558 --> 30:44,168
+What you can argue now and successfully.
+
+340
+30:44,748 --> 30:48,918
+You could say perhaps you have been a little bit too conservative on your errors.
+
+341
+30:48,918 --> 30:49,878
+And I admit that.
+
+342
+30:50,548 --> 30:58,778
+But believe me, when I did this morning, this five, six times, that the error in V zero was quite substantial. The high differences were sometimes 15 cm.
+
+343
+30:59,258 --> 31:04,288
+And so I had no choice, but it looked like we were a bit on the conservative side.
+
+344
+31:04,928 --> 31:09,218
+Suppose now I repeated this experiment at 60 degrees.
+
+345
+31:10,818 --> 31:11,848
+What will change?
+
+346
+31:16,658 --> 31:18,568
+What will change?
+
+347
+31:19,028 --> 31:20,588
+Will OS change?
+
+348
+31:21,798 --> 31:28,038
+No, because the sign of 120 degrees is the same as the sign of 60 degrees.
+
+349
+31:28,648 --> 31:34,408
+You have two alpha here, the sign of 60 is the same as the sign of 120.
+
+350
+31:36,618 --> 31:45,788
+If you allow for an uncertainty of 1 degree on either side, you will find exactly these same numbers because of the symmetry of the sign curve.
+
+351
+31:46,118 --> 31:48,538
+So again, you're off by 2%.
+
+352
+31:48,948 --> 31:49,948
+No difference.
+
+353
+31:50,368 --> 31:52,648
+And so this prediction is unchanged.
+
+354
+31:53,658 --> 31:59,928
+However, I want to ask you one question to see whether you are half alert or half asleep.
+
+355
+32:01,848 --> 32:05,598
+At 30 degrees, you saw this.
+
+356
+32:06,258 --> 32:11,918
+At 60 degrees, giving it the same initial speed, you will see this.
+
+357
+32:14,058 --> 32:18,858
+It will have to hit here within the uncertainty of our measurements at the same location.
+
+358
+32:19,268 --> 32:22,038
+It will of course go much higher.
+
+359
+32:22,488 --> 32:27,408
+You can calculate that because you will have to use this for the equation for the height.
+
+360
+32:28,288 --> 32:30,778
+And that goes with the sign of alpha.
+
+361
+32:31,178 --> 32:34,678
+The sign of alpha for 60 degrees is way higher than 30 degrees.
+
+362
+32:35,738 --> 32:44,378
+But now comes the question, will this trajectory take longer than this one or will they take the same amount of time?
+
+363
+32:45,938 --> 32:47,588
+Who is for the same amount of time?
+
+364
+32:49,858 --> 32:50,968
+Who is for longer?
+
+365
+32:52,868 --> 32:53,848
+Who is for shorter?
+
+366
+32:55,648 --> 32:56,098
+Okay.
+
+367
+32:57,458 --> 33:02,588
+I'm happy with one set of fingers and unhappy with another set of fingers.
+
+368
+33:04,878 --> 33:10,718
+What is the horizontal velocity of the golf ball when it takes off?
+
+369
+33:11,888 --> 33:22,488
+If the velocity is the same in both cases, can't you see that this horizontal component is way larger than this horizontal component?
+
+370
+33:23,458 --> 33:28,138
+And if they travel the same distance, then this trip must take longer.
+
+371
+33:29,358 --> 33:38,128
+Because it's the horizontal component in the X direction, that determines how long it will take to go from here to there.
+
+372
+33:38,608 --> 33:42,988
+Suppose I shot it straight up, how long do you think it will take to hit here?
+
+373
+33:45,728 --> 33:47,638
+It has no horizontal component.
+
+374
+33:48,378 --> 33:55,628
+All right? So, think about this. This trajectory will take longer, but it ends up at the same point.
+
+375
+33:56,878 --> 34:00,788
+All right, number three, would you come here?
+
+376
+34:01,438 --> 34:03,488
+So I don't have to change these markers.
+
+377
+34:03,938 --> 34:04,778
+They're all perfect.
+
+378
+34:06,088 --> 34:09,418
+Provided that nature is willing to reproduce itself.
+
+379
+34:10,658 --> 34:11,838
+60 degrees.
+
+380
+34:19,118 --> 34:24,168
+So we'll go way higher, but if all goes well, it should hit
+
+381
+34:26,068 --> 34:27,198
+within the same marks. Ready?
+
+382
+34:28,688 --> 34:31,708
+Three, two, one, zero.
+
+383
+34:34,548 --> 34:36,978
+Here, man. Yeah, here, right?
+
+384
+34:38,298 --> 34:40,248
+Thank you very much. Wonderful. Look.
+
+385
+34:41,718 --> 34:44,518
+Maybe my uncertainties were not so dumb.
+
+386
+34:44,818 --> 34:46,878
+We were just lucky here with the jackpot.
+
+387
+34:47,398 --> 34:50,978
+It's comfortably within the error, but close to this one.
+
+388
+34:51,308 --> 34:55,208
+So I'm quite happy that I took the uncertainties the way I did.
+
+389
+34:55,808 --> 34:59,888
+Can we recover the ball? Did someone see it take off? Oh yeah.
+
+390
+35:01,058 --> 35:15,498
+All right. Now we will enter a different part of this lecture, which is actually a very a very sad part.
+
+391
+35:21,788 --> 35:26,598
+You know that people in Africa shoot monkeys.
+
+392
+35:33,288 --> 35:36,128
+There's a monkey here in a tree.
+
+393
+35:39,918 --> 35:41,728
+Very happy.
+
+394
+35:45,888 --> 35:49,788
+And here is a hunter
+
+395
+35:52,368 --> 35:54,118
+who never took 801.
+
+396
+35:56,098 --> 36:00,738
+And he has a a gun, which is a golf ball gun.
+
+397
+36:03,908 --> 36:08,318
+And he aims that gun right at the monkey.
+
+398
+36:09,818 --> 36:13,238
+He shoots it with a certain velocity, the golf ball.
+
+399
+36:14,138 --> 36:19,578
+Let this be the speed, V zero.
+
+400
+36:20,568 --> 36:28,018
+So the horizontal component, you're going to see that again and again, V0 cosine alpha.
+
+401
+36:28,858 --> 36:36,118
+And the vertical component equals V0 sin alpha.
+
+402
+36:37,358 --> 36:45,998
+Let this be my increasing value of Y, and this be my increasing value of X.
+
+403
+36:48,388 --> 36:56,478
+This um golf ball, this this golf gun is really not first class, thank goodness.
+
+404
+36:57,158 --> 37:03,418
+And so, when the hunter shoots this golf ball, this happens.
+
+405
+37:06,228 --> 37:08,998
+And it ends up here at point P.
+
+406
+37:10,478 --> 37:14,238
+Lucky monkey, so far.
+
+407
+37:16,308 --> 37:24,628
+Now, it is very tragic but true that when the monkey sees the flesh of the gun, it lets go.
+
+408
+37:25,718 --> 37:27,508
+Okay.
+
+409
+37:30,158 --> 37:37,588
+And now comes the question, is the monkey safe or is this the last day of the monkey?
+
+410
+37:40,678 --> 37:43,658
+I ask the following question.
+
+411
+37:44,818 --> 37:50,668
+This would be the trajectory with no gravity.
+
+412
+37:51,298 --> 37:55,998
+And this is the trajectory with gravity. We can both agree on that.
+
+413
+37:57,678 --> 38:07,408
+At a certain moment T1, let us assume that the golf ball would have been here without gravity.
+
+414
+38:08,338 --> 38:11,178
+Then I know exactly where it is with gravity.
+
+415
+38:11,928 --> 38:17,838
+It must be exactly here because
+
+416
+38:18,158 --> 38:24,478
+the exposition XT1 is the same because the horizontal velocity is the same.
+
+417
+38:25,078 --> 38:31,878
+That's independent of whether there is gravity or not. There is no acceleration in the X direction.
+
+418
+38:32,778 --> 38:36,618
+And so, they are both exactly at the same exposition.
+
+419
+38:39,288 --> 38:41,788
+What is this difference?
+
+420
+38:42,418 --> 38:46,828
+Well, that is the difference between the equation with gravity and without gravity.
+
+421
+38:48,028 --> 39:09,818
+And Y as a function of time, you can look at equation number three there if you can still see it, equals V0 Y which is V0 sin alpha times t minus 12 GT squared.
+
+422
+39:13,718 --> 39:18,408
+Well, if there is no gravity, this term doesn't exist.
+
+423
+39:19,498 --> 39:22,768
+So that's this straight line.
+
+424
+39:24,178 --> 39:27,728
+With gravity, it's the same thing, but you have to subtract this.
+
+425
+39:28,708 --> 39:39,518
+Therefore, this distance is 12 G T1 square. That is this distance, because this curve is lower by this amount.
+
+426
+39:41,698 --> 39:46,528
+Now comes the time that the golf ball hits point P.
+
+427
+39:46,958 --> 40:03,838
+When its position is XT2, the time here is T2, that means if there had been no gravity, the golf ball would have been there. They must have the same position in X at this catastrophic moment.
+
+428
+40:05,348 --> 40:16,868
+So what now is the distance between the monkey and the golf ball, the distance between the two trajectories, one trajectory, no gravity, the other with gravity.
+
+429
+40:17,128 --> 40:22,468
+This distance equals 1/2 G T2 squared.
+
+430
+40:22,818 --> 40:24,168
+For that same reason.
+
+431
+40:25,668 --> 40:41,258
+And we all know that if the monkey at time T equals zero let go that in T2 seconds, it will have fallen exactly over a distance 1/2 G T2 squared.
+
+432
+40:41,818 --> 40:44,818
+Exactly. This couldn't be more tragic.
+
+433
+40:45,898 --> 40:47,908
+And he will be killed.
+
+434
+40:50,128 --> 41:01,928
+You may say, well, yeah, but you have manipulated the speed of that gun just so nicely. Oh, no. Oh, no.
+
+435
+41:02,688 --> 41:12,268
+I can shoot that with a higher speed at the same angle alpha, and the trajectory would be this, and the monkey would be killed there.
+
+436
+41:13,828 --> 41:19,788
+I can do it with a lower speed, and the monkey would be killed here.
+
+437
+41:20,048 --> 41:22,698
+It's independent of the speed of the bullet.
+
+438
+41:23,408 --> 41:30,898
+Because always this part here is always exactly the distance that the monkey falls in that time.
+
+439
+41:31,778 --> 41:40,178
+However, if the speed is very low, that it hits the ground before the monkey hits the ground, well, okay, then the monkey is safe.
+
+440
+41:40,888 --> 41:44,618
+So the only thing that is very, very critical is alpha.
+
+441
+41:45,248 --> 41:48,818
+It must be precisely aimed at the monkey.
+
+442
+41:49,408 --> 41:54,628
+If that's not the case, then the monkey will be safe.
+
+443
+41:55,998 --> 42:01,968
+Now before we will witness this classic and rather tragic drama,
+
+444
+42:01,968 --> 42:07,598
+I want to look at this from a somewhat different point of view, namely from the point of view of the monkey.
+
+445
+42:08,028 --> 42:14,468
+The monkey sits there, looks at the gun, and the golf ball comes to the monkey.
+
+446
+42:14,948 --> 42:24,258
+And I will put them both in a room, which is an elevator, and the elevator is in free fall, and they don't even know that.
+
+447
+42:25,218 --> 42:28,788
+They both fall with the acceleration G.
+
+448
+42:30,488 --> 42:33,918
+Here is the monkey tree.
+
+449
+42:35,948 --> 42:37,538
+And here is the gun.
+
+450
+42:41,978 --> 42:49,498
+The velocity of that bullet is V zero.
+
+451
+42:51,338 --> 42:56,728
+And so the monkey will see that bullet comes straight at him.
+
+452
+42:57,128 --> 42:58,798
+There's no such thing as an arc.
+
+453
+42:59,578 --> 43:06,938
+They both fall in this falling in this falling elevator, and so the bullet comes
+
+454
+43:07,608 --> 43:11,758
+The monkey happens to be a very intelligent monkey.
+
+455
+43:12,368 --> 43:16,218
+And the monkey says to himself, how long do I have to live?
+
+456
+43:17,478 --> 43:20,258
+And the monkey makes the following calculation.
+
+457
+43:23,018 --> 43:24,328
+If this distance is D,
+
+458
+43:25,278 --> 43:27,098
+and this is H,
+
+459
+43:27,498 --> 43:33,778
+then the monkey says, aha, this is the square root of D squared plus h squared.
+
+460
+43:34,468 --> 43:48,778
+So from the monkey point of view, the time for the kill will be the square root of D squared plus h squared divided by V zero.
+
+461
+43:49,118 --> 43:51,538
+That's how many seconds he has to live.
+
+462
+43:53,118 --> 43:55,318
+But you people are also quite smart.
+
+463
+43:56,068 --> 43:57,718
+And you look at this diagram.
+
+464
+43:58,508 --> 44:01,878
+And you said, no, no way.
+
+465
+44:02,588 --> 44:04,258
+If this distance is D,
+
+466
+44:05,378 --> 44:11,928
+then the speed to reach this point is V0 cosine alpha.
+
+467
+44:12,718 --> 44:25,508
+In other words, the time that it takes for this object to reach this value of X. So for 26100 MIT students, T kill
+
+468
+44:26,218 --> 44:33,688
+equals D divided by V0 cosine alpha.
+
+469
+44:34,588 --> 44:36,828
+But what is the cosine of alpha?
+
+470
+44:37,828 --> 44:45,848
+That is D divided by the square root of D squared plus h squared.
+
+471
+44:46,378 --> 44:51,898
+So I can replace this cosine alpha by D divided by the square root.
+
+472
+44:52,368 --> 45:01,138
+So I can replace this cosine alpha by D divided by the square root.
+
+473
+45:01,908 --> 45:09,198
+And you and the monkey agree exactly on the amount of time that the monkey has to live.
+
+474
+45:09,198 --> 45:10,458
+It better be that way.
+
+475
+45:10,968 --> 45:14,998
+Because this could not depend on which reference frame you work in.
+
+476
+45:15,368 --> 45:19,428
+The falling reference frame or for that matter,
+
+477
+45:20,168 --> 45:23,088
+the reference frame of 26100.
+
+478
+45:24,588 --> 45:31,028
+The monkey will be placed at about 3 meters above the table.
+
+479
+45:31,528 --> 45:37,758
+We all know that it takes about 0.8 seconds. We've done many experiments at 3 meters, takes about 0.8 seconds.
+
+480
+45:37,998 --> 45:43,808
+So the whole thing will go very fast. We were going to put the monkey up there.
+
+481
+45:45,218 --> 45:56,768
+I want you to first see the trajectory of that golf ball before we bring the monkey, I mean, it is already so painful for this monkey. You don't want him to pre-experience what's going to happen.
+
+482
+45:57,668 --> 46:09,068
+So, we will do this in the absence of the monkey, and we will let you, I will let you see
+
+483
+46:10,598 --> 46:12,188
+what roughly
+
+484
+46:12,188 --> 46:13,778
+the trajectory
+
+485
+46:13,778 --> 46:15,538
+of that bullet will be.
+
+486
+46:15,538 --> 46:16,038
+Okay.
+
+487
+46:16,038 --> 46:17,358
+Three, two, one, zero.
+
+488
+46:17,358 --> 46:18,088
+Okay.
+
+489
+46:18,088 --> 46:19,888
+So it will hit somewhere here.
+
+490
+46:21,018 --> 46:22,198
+That's that point P.
+
+491
+46:22,728 --> 46:31,668
+So when you're going to see the drama in action, this is where the monkey will reach when the two hit each other.
+
+492
+46:33,938 --> 46:41,498
+Now, you can imagine that this is a very painful day for the monkey.
+
+493
+46:41,768 --> 46:43,938
+And I'm going to get the monkey.
+
+494
+46:44,838 --> 46:55,588
+He's behind here and I hope that you would pay some respect to Robert. His name is Robert. And it may take me a minute.
+
+495
+46:56,788 --> 46:58,188
+Okay.
+
+496
+47:38,658 --> 47:40,028
+Here he is.
+
+497
+47:40,368 --> 47:41,618
+Here is Robert.
+
+498
+47:49,078 --> 47:50,808
+I thought
+
+499
+47:57,148 --> 48:00,868
+I thought it was appropriate to change for the occasion.
+
+500
+48:01,688 --> 48:08,938
+I don't go on monkey hunts too often, but when I do it, I'd like to do it in style.
+
+501
+48:13,678 --> 48:18,288
+Here is Robert, and we're going to put Robert up here.
+
+502
+48:19,688 --> 48:39,198
+Robert has in his head a metal plate so that when we activate the electromagnet, that we can stick him on there.
+
+503
+48:40,008 --> 48:44,368
+And when we take the current off, then Robert will fall.
+
+504
+48:45,578 --> 48:49,318
+So this is the activation of the electromagnet.
+
+505
+48:50,628 --> 48:51,028
+Okay.
+
+506
+48:51,358 --> 48:53,028
+Okay.
+
+507
+48:55,808 --> 48:57,868
+So here we go.
+
+508
+48:58,328 --> 49:03,088
+I can see Robert is nervous and you can't blame him.
+
+509
+49:03,408 --> 49:06,508
+This is not the greatest day of his life.
+
+510
+49:07,948 --> 49:10,368
+Oh, by the way, I want you to know.
+
+511
+49:10,738 --> 49:12,748
+I mean, we are not cruel here.
+
+512
+49:13,248 --> 49:15,248
+He's wearing a bulletproof vest.
+
+513
+49:19,898 --> 49:20,598
+Oh boy.
+
+514
+49:21,178 --> 49:24,378
+I can I can feel he's shaking all over his body.
+
+515
+49:24,768 --> 49:27,088
+He's very nervous.
+
+516
+49:27,768 --> 49:29,948
+Robert, don't let go yet.
+
+517
+49:31,478 --> 49:32,078
+Oh.
+
+518
+49:32,228 --> 49:43,008
+Let me show you, it's important that you know that we have done everything we can to aim this gun as accurately as we can at Robert.
+
+519
+49:45,138 --> 49:47,018
+Okay.
+
+520
+49:54,418 --> 49:57,248
+Robert, don't let go yet.
+
+521
+49:58,128 --> 50:02,098
+We're going to first cock the gun. Hold it now. Hold it, Robert.
+
+522
+50:06,368 --> 50:08,528
+This happens always with Robert.
+
+523
+50:17,058 --> 50:18,748
+Okay.
+
+524
+50:28,038 --> 50:33,998
+Okay, he just promised me that he will not let go again.
+
+525
+50:35,078 --> 50:36,008
+Okay.
+
+526
+50:45,368 --> 51:05,568
+When I cock the gun, if I can find the golf ball, it's here, then the electric circuit takes over, and now the current will be disconnected when the gun is fired.
+
+527
+51:09,908 --> 51:11,878
+Even I even I'm nervous.
+
+528
+51:11,878 --> 51:13,908
+I admit it, you know, this is a terrible thing to do.
+
+529
+51:17,248 --> 51:18,428
+Terrible thing to do.
+
+530
+51:20,998 --> 51:21,708
+You ready?
+
+531
+51:22,928 --> 51:25,328
+Three, two, one, zero.
+
+532
+51:25,328 --> 51:27,528
+Okay.
+
+533
+51:46,158 --> 51:47,878
+Poor monkey.
+
+534
+51:52,768 --> 51:53,708
+See you Friday.

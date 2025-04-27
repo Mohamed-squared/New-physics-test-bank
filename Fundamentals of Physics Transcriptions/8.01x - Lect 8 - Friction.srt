@@ -1,0 +1,1739 @@
+1
+00:00:00,488 --> 00:00:05,268
+Today we're going to talk about friction.
+
+2
+00:00:06,388 --> 00:00:09,408
+Something Please.
+
+3
+00:00:10,438 --> 00:00:12,838
+I have a terrible cold. My voice is down.
+
+4
+00:00:13,798 --> 00:00:16,698
+Help me to get through this with my voice.
+
+5
+00:00:16,928 --> 00:00:17,648
+Thank you.
+
+6
+00:00:18,208 --> 00:00:20,848
+We're going to talk about friction, which we have never dealt with.
+
+7
+00:00:22,338 --> 00:00:25,678
+Friction is a tricky thing. Not as easy as you may think.
+
+8
+00:00:26,918 --> 00:00:30,768
+I have an object on a horizontal surface.
+
+9
+00:00:31,798 --> 00:00:35,638
+The object has a mass M, gravitational force mg.
+
+10
+00:00:37,878 --> 00:00:39,698
+This is the Y direction.
+
+11
+00:00:41,478 --> 00:00:42,998
+This could be the X direction.
+
+12
+00:00:44,518 --> 00:00:52,498
+There must be a force pushing upwards from the surface to cancel out mg because there is no acceleration in the Y direction.
+
+13
+00:00:53,038 --> 00:01:01,758
+We normally call that the normal force because it's normal to this surface, and it must be the same as mg, otherwise there would be an acceleration in the Y direction.
+
+14
+00:01:02,758 --> 00:01:09,118
+Now, I am going to push on this object with a force force Walter Lewin.
+
+15
+00:01:09,558 --> 00:01:13,588
+And we know that the object in the beginning will not start accelerating.
+
+16
+00:01:14,048 --> 00:01:14,968
+Why is that?
+
+17
+00:01:14,968 --> 00:01:22,748
+That's only possible because there is a frictional force which adjusts itself to exactly counter my force.
+
+18
+00:01:23,668 --> 00:01:31,588
+I push harder and harder and harder, and there comes a time that I win, and the object begins to accelerate.
+
+19
+00:01:32,198 --> 00:01:40,388
+It means that the frictional force, which is growing all the time as I push harder, reaches a maximum value which it cannot exceed.
+
+20
+00:01:41,178 --> 00:01:47,908
+And that maximum value that the friction can achieve, this is an experimental fact,
+
+21
+00:01:48,788 --> 00:01:55,738
+is what's called the friction coefficient mu, which has no dimension, times this normal force.
+
+22
+00:01:56,868 --> 00:02:02,888
+We make a distinction between static friction coefficient and kinetic.
+
+23
+00:02:03,618 --> 00:02:06,528
+This is to break it loose, to get it going.
+
+24
+00:02:07,278 --> 00:02:10,828
+This is to keep it going when it already has a certain velocity.
+
+25
+00:02:11,238 --> 00:02:14,398
+The static is always larger than the kinetic.
+
+26
+00:02:14,868 --> 00:02:16,848
+for reasons that are quite obvious.
+
+27
+00:02:16,848 --> 00:02:22,298
+It's a little harder to break it loose. Once it's going, it's easier to keep it going.
+
+28
+00:02:23,788 --> 00:02:30,978
+It is fairly easy to measure a friction coefficient by putting an object on an incline
+
+29
+00:02:31,858 --> 00:02:39,138
+and by changing the angle of the incline, increasing it. This is the angle alpha.
+
+30
+00:02:40,018 --> 00:02:44,688
+You increase it to the point that the object start to slide down.
+
+31
+00:02:45,688 --> 00:02:47,318
+Here is the object.
+
+32
+00:02:47,958 --> 00:02:50,948
+This is the gravitational force mg
+
+33
+00:02:51,958 --> 00:03:04,538
+which I will decompose in two forces, one in the Y direction, which I always choose perpendicular to the surface, and another one in an X direction.
+
+34
+00:03:05,268 --> 00:03:11,478
+You're free to choose this plus or this plus. I will now choose this the plus direction.
+
+35
+00:03:12,348 --> 00:03:13,918
+I'm going to decompose them.
+
+36
+00:03:14,328 --> 00:03:23,648
+So I have one component here, and this component equals mg times the cosine of alpha.
+
+37
+00:03:24,408 --> 00:03:33,608
+And I have a component in the X direction which is mg sin alpha.
+
+38
+00:03:34,758 --> 00:03:44,088
+There is no acceleration in the Y direction, so I can be sure that the surface pushes back with a normal force N.
+
+39
+00:03:44,688 --> 00:03:52,948
+And that normal force N must be exactly mg cosine alpha because those are the only two forces in the Y direction and there is no acceleration in the Y direction.
+
+40
+00:03:53,678 --> 00:03:58,508
+So this one must be mg cosine alpha.
+
+41
+00:03:59,758 --> 00:04:02,598
+Now, this object wants to slide downhill.
+
+42
+00:04:03,048 --> 00:04:05,108
+Friction prevents it from doing so.
+
+43
+00:04:05,848 --> 00:04:09,278
+So there's going to be a frictional force in this direction.
+
+44
+00:04:10,268 --> 00:04:19,368
+And as I increase the tilt, this frictional force will get larger and larger and larger, and then there comes a time that the object will start to slide.
+
+45
+00:04:20,138 --> 00:04:25,318
+Let us evaluate that very moment that it's just about to break loose.
+
+46
+00:04:25,998 --> 00:04:36,288
+I'm applying Newton's second law. In this direction now, the acceleration is still zero, but the frictional force has now just reached the maximum value.
+
+47
+00:04:36,798 --> 00:04:50,738
+Because I increase alpha, so this component will get larger, and this component will get larger, this component will get larger, this component is still holding its own, but then all of a sudden it can't grow any further and it starts to accelerate.
+
+48
+00:04:51,558 --> 00:05:02,518
+So Newton's second law tells me that mg sin alpha minus FF maximum at this point is zero.
+
+49
+00:05:03,448 --> 00:05:11,418
+And this one is mu static times N, which is mg cosine alpha.
+
+50
+00:05:12,118 --> 00:05:17,658
+This one is mg sin alpha is equal zero.
+
+51
+00:05:18,168 --> 00:05:24,288
+I lose my mg and you see that mu of S equals the tangent of alpha.
+
+52
+00:05:24,638 --> 00:05:26,028
+It's that easy to measure.
+
+53
+00:05:26,658 --> 00:05:30,478
+So you increase the tilt, we will do that later, until it starts to slip.
+
+54
+00:05:31,378 --> 00:05:37,548
+And then at that critical angle that it starts to slip, you have a value for mu of S for the static friction coefficient.
+
+55
+00:05:38,508 --> 00:05:46,088
+It is very non-intuitive that this friction coefficient is completely independent of the mass. The mass has disappeared.
+
+56
+00:05:46,978 --> 00:05:49,178
+Think about that. It's very non-intuitive.
+
+57
+00:05:49,898 --> 00:05:55,398
+If you double the mass, the angle would be the same, given the fact that you have the same kind of object.
+
+58
+00:05:55,728 --> 00:06:03,058
+The friction coefficient only depends on the materials that you have, the materials that are rubbing over each other.
+
+59
+00:06:03,888 --> 00:06:10,738
+It's also independent of the surface area that is in contact with this incline, which is equally non-intuitive.
+
+60
+00:06:11,828 --> 00:06:13,668
+It's very non-intuitive.
+
+61
+00:06:14,188 --> 00:06:18,978
+But we will see that that's quite accurate within the uncertainties that we can measure it.
+
+62
+00:06:20,378 --> 00:06:28,948
+If you have a a car and you park your car, you throw it on the brakes and you put it at an angle and you increase the angle of the slope,
+
+63
+00:06:29,178 --> 00:06:35,318
+the friction coefficient for rubber on concrete is about one, so the tangent is one, so the angle is about 45 degrees.
+
+64
+00:06:35,708 --> 00:06:39,948
+So if the road were 45 degrees, the car would start to slide.
+
+65
+00:06:41,048 --> 00:06:43,788
+Independent of the mass of the car.
+
+66
+00:06:44,308 --> 00:06:50,228
+No matter whether it's a truck or whether it is a small car, independent of the width of the tires, doesn't enter into it.
+
+67
+00:06:50,488 --> 00:06:52,088
+Even though you may think it does.
+
+68
+00:06:52,548 --> 00:07:00,738
+They would both start to slide at the same angle, given the fact, of course, the same road and the same kind of rubber.
+
+69
+00:07:02,448 --> 00:07:08,768
+I first want to show you some of this which is at first very qualitative.
+
+70
+00:07:09,378 --> 00:07:12,468
+I don't want it to become quantitative yet.
+
+71
+00:07:13,448 --> 00:07:25,988
+The difficulty with these experiments are, I'm going to use this plank here, that the moment that my fingers touch this plank or touch the bottom of any of the objects that I'm going to slide,
+
+72
+00:07:26,648 --> 00:07:28,188
+then all hell breaks loose.
+
+73
+00:07:28,188 --> 00:07:32,598
+A little bit of water on the plank would locally make the friction coefficient large larger.
+
+74
+00:07:33,208 --> 00:07:34,858
+My fingers have chalk on them.
+
+75
+00:07:35,028 --> 00:07:39,348
+A little bit of chalk on a local place would make the friction coefficient go down.
+
+76
+00:07:40,188 --> 00:07:43,458
+That's why at this point we'll keep it a little qualitative.
+
+77
+00:07:44,238 --> 00:07:52,508
+The first thing I want to show you is if I take a rubber puck and I put the rubber puck on this incline,
+
+78
+00:07:53,228 --> 00:07:57,948
+and I have a plastic bin, which is quite smooth, I put it on here,
+
+79
+00:07:58,428 --> 00:08:04,348
+that it's immediately intuitive that the friction coefficient of this plastic bin will be lower than of the rubber puck.
+
+80
+00:08:04,758 --> 00:08:11,018
+So when I increase the angle, you expect that first the plastic bin will start to slide and then the rubber puck.
+
+81
+00:08:11,358 --> 00:08:16,438
+And if I gave you the angles at which that happened, you could actually calculate the two values for the friction coefficient.
+
+82
+00:08:16,888 --> 00:08:19,248
+Which I will not do now, but I will do that later.
+
+83
+00:08:19,818 --> 00:08:26,158
+So all I want you to see, I hope, that this one will go earlier than that one.
+
+84
+00:08:26,818 --> 00:08:28,778
+I'm going to increase the tilt.
+
+85
+00:08:31,078 --> 00:08:38,258
+I do it very slowly. I try not to rock the boat too much.
+
+86
+00:08:39,588 --> 00:08:49,378
+Very slowly. We must be approaching the critical angle for the plastic. Boy, it's holding on to itself. There it goes.
+
+87
+00:08:50,378 --> 00:08:52,318
+And the rubber goes a little later.
+
+88
+00:08:54,338 --> 00:09:02,268
+The rubber can be made rough by rubbing it on one side, in which case the angle will be even larger.
+
+89
+00:09:03,678 --> 00:09:08,858
+I told you that the friction coefficient is independent of the mass of the object.
+
+90
+00:09:09,118 --> 00:09:11,318
+I have two identical bins here.
+
+91
+00:09:12,358 --> 00:09:16,468
+Well, as far as they can be identical. Maybe one at the bottom is a little rougher than the other.
+
+92
+00:09:16,938 --> 00:09:21,248
+But in one, I'm going to put 200 grams, which is about five times the weight of the bin.
+
+93
+00:09:22,108 --> 00:09:26,148
+And then, when I tilt them, they will go at the same angle.
+
+94
+00:09:26,598 --> 00:09:28,328
+Because it's independent of the mass.
+
+95
+00:09:29,648 --> 00:09:38,398
+So let's try that again and see how close they are. It may be off by half a degree or 1 degree, of course, because the plank is not uniform everywhere.
+
+96
+00:09:39,868 --> 00:09:48,918
+I'm now at 18 degrees, 19 and 1/2, 20, 20 and 1/2, 21, and the other one is 21.2.
+
+97
+00:09:49,268 --> 00:09:57,688
+So they almost go at the same time. So you've seen that apparently the mass has a very small if any effect.
+
+98
+00:09:58,818 --> 00:10:05,278
+Now comes something that I always find very, very non-intuitive, and that is surface area.
+
+99
+00:10:05,898 --> 00:10:08,178
+I have two pieces of wood
+
+100
+00:10:08,438 --> 00:10:09,828
+and they're identical.
+
+101
+00:10:09,998 --> 00:10:13,888
+Whatever that means identical. You can never make them exactly the same in terms of roughness.
+
+102
+00:10:14,578 --> 00:10:23,658
+This surface we prepared as well as we prepared this bottom surface, but this bottom surface here is four times smaller an area than this surface here, the flat part.
+
+103
+00:10:24,308 --> 00:10:28,328
+I'm going to put the flat one here.
+
+104
+00:10:29,678 --> 00:10:34,668
+And I am going to put the same object but with its small area here.
+
+105
+00:10:35,338 --> 00:10:43,698
+If indeed the friction coefficient is independent of surface area, then when I tilt them, they should start to slide roughly at the same angle.
+
+106
+00:10:44,908 --> 00:10:46,038
+There we go.
+
+107
+00:10:47,868 --> 00:10:53,568
+14 degrees, 16,
+
+108
+00:10:54,608 --> 00:10:56,928
+18, one goes,
+
+109
+00:10:57,408 --> 00:10:58,838
+and the other one follows within two tenths of a degree.
+
+110
+00:59,748 --> 01:04,578
+And the reason why there's always some difference, of course, the plank is not exactly uniform.
+
+111
+01:04,708 --> 01:08,468
+Have to be careful that I don't touch the critical surfaces.
+
+112
+01:09,078 --> 01:19,088
+So you have seen difference in friction coefficients and you have seen there is almost no effect on surface area and there is no effect on uh on the mass.
+
+113
+01:19,808 --> 01:21,948
+And that is both very non-intuitive.
+
+114
+01:22,448 --> 01:25,458
+The width of the tires of your car does not matter.
+
+115
+01:26,148 --> 01:34,708
+And that I I ask you the question to explain in your assignment number three, why race cars have very wide tires. There must be a reason for that.
+
+116
+01:35,168 --> 01:36,518
+I want you to think about that.
+
+117
+01:38,508 --> 01:51,038
+There is another way that one can measure the friction coefficient, which is way more complicated and really that's not the reason why I want you to see it.
+
+118
+01:51,648 --> 01:59,638
+The reason why I want you to go with me through these arguments is that you begin to see how subtle and how really difficult friction is.
+
+119
+02:00,888 --> 02:08,558
+I am going to put an object now on an incline again, as we did before.
+
+120
+02:09,368 --> 02:18,328
+And instead of having it sit on its own, I'm going to attach to it a string.
+
+121
+02:19,208 --> 02:20,878
+So here is that object.
+
+122
+02:22,908 --> 02:29,398
+And here is a string and a pulley and here is string.
+
+123
+02:29,988 --> 02:35,948
+And here is an object mass M2, and this object has mass M1.
+
+124
+02:36,578 --> 02:40,578
+And the angle here alpha.
+
+125
+02:41,938 --> 02:45,468
+I'm looking for my green chalk. I want to use the same color convention.
+
+126
+02:45,998 --> 02:50,018
+Now, let's look at all the forces that we can think of.
+
+127
+02:50,468 --> 02:52,368
+Here is M1 G.
+
+128
+02:53,628 --> 03:02,758
+Let's decompose that in Y and X direction. And I will call this direction Y as I always do perpendicular to the surface.
+
+129
+03:03,438 --> 03:04,608
+So we call this Y.
+
+130
+03:07,328 --> 03:11,378
+And I will call this direction now the positive X direction.
+
+131
+03:12,258 --> 03:14,388
+You're free to choose it any way you want to.
+
+132
+03:16,478 --> 03:22,278
+The force here is M2g.
+
+133
+03:27,428 --> 03:29,248
+And now comes a major problem.
+
+134
+03:29,838 --> 03:42,858
+The biggest problem is that you do not know in advance whether this system will start to accelerate in this direction or whether it will start to accelerate in this direction, or whether it will not accelerate at all.
+
+135
+03:42,988 --> 03:43,868
+It's quite possible.
+
+136
+03:44,788 --> 03:51,958
+And all these three cases, as you will see, have to be dealt with independently. You cannot do it with one equation, as you will see.
+
+137
+03:53,008 --> 03:56,768
+Let's first decompose this force as we did before,
+
+138
+03:57,458 --> 03:59,218
+in the Y direction.
+
+139
+03:59,948 --> 04:05,448
+So this one equals M1g cosine alpha.
+
+140
+04:06,698 --> 04:16,468
+And this one, the X component, which is in the minus X direction now, equals M1 g sin alpha.
+
+141
+04:17,728 --> 04:28,108
+Clearly, this one, M1g cosine alpha, we never have to worry about. There is no acceleration in the Y direction. So this normal force N will kill this one,
+
+142
+04:28,748 --> 04:32,248
+and this is M1 g cosine alpha.
+
+143
+04:32,698 --> 04:38,738
+So you never have to worry about the Y direction. We know there's no acceleration. We only deal with forces in the X direction that are of interest.
+
+144
+04:39,278 --> 04:44,088
+There is a tension in this string.
+
+145
+04:45,178 --> 04:46,528
+And now comes the problem.
+
+146
+04:46,918 --> 04:50,438
+I do not know in what direction the frictional force is.
+
+147
+04:50,938 --> 05:00,838
+If this object has the tendency to go uphill, which I don't know yet, then the frictional force is in this direction, because it opposes always the direction which the object wants to go.
+
+148
+05:01,148 --> 05:07,038
+If, however, this object wants to go in this direction, which I do not know, then the frictional force has to be put in this direction.
+
+149
+05:07,678 --> 05:10,218
+And I don't know that.
+
+150
+05:11,058 --> 05:21,298
+The only thing I do know is that the maximum value of the friction will be mu static times N, which is what we had there.
+
+151
+05:21,298 --> 05:31,218
+Remember that's the maximum value that the friction can have times M1 g cosine alpha.
+
+152
+05:31,758 --> 05:32,518
+That I know.
+
+153
+05:33,678 --> 05:41,048
+So now, if I want to deal with this, I have to look at three complete different situations.
+
+154
+05:41,658 --> 05:51,018
+Acceleration in this direction, in which the friction is pointing here, acceleration in this direction, in which the friction is pointing there, or no acceleration at all.
+
+155
+05:52,748 --> 05:54,748
+There is also, of course, the tension here.
+
+156
+05:57,188 --> 06:01,848
+And this tension is exactly the same as that tension. We discussed that last time.
+
+157
+06:01,848 --> 06:13,868
+I will not go over that because this is an ideal, and of course an unphysical situation. The pulley has no mass, the pulley is completely frictionless, and the string has no mass. It's a massless string.
+
+158
+06:14,758 --> 06:20,378
+And I argued last time that therefore the tension here must be the same as the tension there.
+
+159
+06:20,948 --> 06:22,208
+We even know the tension.
+
+160
+06:22,978 --> 06:31,078
+I'm going to evaluate for now only situations that the system is at rest. It's not yet moving.
+
+161
+06:31,538 --> 06:36,808
+If the system is at rest, T must be M2g, because this object is not being accelerated.
+
+162
+06:37,438 --> 06:48,318
+So we already know that all situations where the system is at rest, T must be M2 G. That's non-negotiable. It's this T as well as that T.
+
+163
+06:49,048 --> 06:54,258
+Now I have to start splitting in the following situation.
+
+164
+06:54,738 --> 07:05,098
+My first option is that I make the assumption that the system is just, just about to start accelerating upwards.
+
+165
+07:05,668 --> 07:07,198
+It isn't doing it yet.
+
+166
+07:07,688 --> 07:09,698
+It is just about to do that.
+
+167
+07:10,428 --> 07:19,198
+If that's the case, then I know that the frictional force will be in this direction and it will have reached the maximum value.
+
+168
+07:19,918 --> 07:22,178
+with the static friction coefficient.
+
+169
+07:22,658 --> 07:26,968
+Now I can write down in the X direction Newton's second law.
+
+170
+07:27,988 --> 07:37,018
+Now I have T which is in the positive direction minus M1g sin alpha
+
+171
+07:37,968 --> 07:44,258
+minus FF max that now has to be zero.
+
+172
+07:45,268 --> 07:50,878
+Just at the moment that it is just about to change its mind and start accelerating.
+
+173
+07:51,848 --> 08:08,328
+Now I know what T is that is M2g. So M2g equals M1 g sin alpha plus the maximum frictional force, which is this value.
+
+174
+08:09,838 --> 08:16,328
+So this is just at the moment that it wants to start sliding.
+
+175
+08:16,828 --> 08:24,028
+Therefore, if I make mass M2 a hair larger, just a hair, it will go.
+
+176
+08:24,758 --> 08:34,388
+And therefore, the moment that I make this a larger sign, I know that it's going to accelerate uphill. That's the criterion for going uphill.
+
+177
+08:35,888 --> 08:38,418
+Now I look at situation two.
+
+178
+08:39,348 --> 08:48,918
+Now I make the assumption that the object, still standing still, is just about to start accelerating downhill.
+
+179
+08:49,148 --> 08:49,778
+Aha.
+
+180
+08:50,158 --> 08:57,858
+If that's the case, I know that the maximum force is now pointing upwards, the same magnitude, but it has now a different direction.
+
+181
+08:58,458 --> 09:04,598
+So now I can write down Newton's second law. So the frictional force is now helping T.
+
+182
+09:05,558 --> 09:12,438
+So now we get T plus FF max minus M1 g
+
+183
+09:13,318 --> 09:19,918
+sin alpha equals zero.
+
+184
+09:21,588 --> 09:24,238
+We know that this is M2g.
+
+185
+09:24,888 --> 09:36,328
+So M2g equals M1 g sin alpha minus FF max.
+
+186
+09:37,108 --> 09:39,768
+Notice the difference, there's a plus sign here, there's a minus sign here.
+
+187
+09:41,018 --> 09:54,078
+This is the object is still not moving, but if I make M2g a hair less, just a teeny little less, it will definitely start to accelerate downwards.
+
+188
+09:54,468 --> 10:00,938
+So, if I make this a smaller than sign, the object will start accelerating downhill.
+
+189
+10:01,838 --> 10:05,348
+This is condition one, this is condition two.
+
+190
+10:06,008 --> 10:10,568
+If the condition is neither one nor two,
+
+191
+10:10,828 --> 10:15,258
+what do you think will happen then?
+
+192
+10:15,828 --> 10:18,798
+It's very possible that you don't meet any one of these two conditions.
+
+193
+10:19,678 --> 10:22,818
+What do you think will happen?
+
+194
+10:23,518 --> 10:24,538
+Can't hear you.
+
+195
+10:25,728 --> 10:27,478
+It won't move. A is zero.
+
+196
+10:28,108 --> 10:36,058
+Because this these both cases is going to accelerate. So in all other cases, the acceleration equals zero.
+
+197
+10:36,678 --> 10:48,528
+And the frictional force in this case will adjust itself just the right way so that Newton's second law in the X direction will give you for the force a zero.
+
+198
+10:49,498 --> 10:57,068
+Let us take a very simple example so that you see this at work.
+
+199
+10:58,258 --> 11:13,138
+So we have an example here. And in my example, I have M1 = 1 kg, M2 = 2 kg. Can't pick the can't make the numbers much simpler.
+
+200
+11:13,678 --> 11:16,968
+I take alpha equal 30 degrees.
+
+201
+11:17,668 --> 11:29,478
+I take a static friction coefficient which is 0.5 and I take a kinetic friction coefficient which is a little less, which is 0.4.
+
+202
+11:31,058 --> 11:38,798
+The question is now, is it going accelerated uphill or accelerated downhill or no acceleration at all?
+
+203
+11:39,218 --> 11:43,958
+What it comes down to is that we have to evaluate these three terms.
+
+204
+11:44,588 --> 11:52,418
+Let's first take M2g. M2g equals 20. We'll just take for g 10, that is just easier.
+
+205
+11:53,658 --> 11:57,638
+M1g sin alpha. The sin of alpha is a half.
+
+206
+11:58,378 --> 12:00,408
+So that is five.
+
+207
+12:00,968 --> 12:06,378
+M1g sin alpha equals 5.
+
+208
+12:07,238 --> 12:10,978
+And what is FF maximum?
+
+209
+12:11,908 --> 12:21,268
+I have to use for my friction coefficient 0.5. I have to use for M1 1, here a 10 and have the cosine for 30 degrees.
+
+210
+12:21,838 --> 12:32,188
+And what I find, you have to take my word for it, that this is about 4.33. And I want to remind you, I have used the static friction coefficient.
+
+211
+12:32,558 --> 12:39,038
+This is in Newtons. I never put a capital N for Newtons because that is very confusing with this normal force.
+
+212
+12:39,218 --> 12:43,828
+All my units are always in SI units. So the force is always in Newtons.
+
+213
+12:44,908 --> 12:46,868
+Aha. We're well on our way.
+
+214
+12:47,608 --> 12:50,328
+Let's first test whether condition one is met.
+
+215
+12:50,958 --> 12:57,768
+Is 20 larger than 5 + 4.33?
+
+216
+12:59,518 --> 13:02,428
+And the answer is yes, it is.
+
+217
+13:03,098 --> 13:08,168
+So we know that it's going to be accelerated uphill. That is non-negotiable.
+
+218
+13:09,468 --> 13:17,528
+So now I could ask you a simple question. What is the acceleration and what is the tension in the string?
+
+219
+13:18,208 --> 13:22,068
+And so you will think, oh well, that is within arm reach.
+
+220
+13:22,718 --> 13:23,758
+Not quite.
+
+221
+13:24,458 --> 13:27,058
+Because things are now going to change.
+
+222
+13:28,598 --> 13:42,088
+If it is going to be accelerated uphill, then at least I know one thing, which I'm going to put in this drawing now. I know that this is the maximum friction possible,
+
+223
+13:42,728 --> 13:53,658
+which now becomes mu kinetic times M1 times g times cosine alpha.
+
+224
+13:54,868 --> 13:57,288
+So that is already one change. It is moving.
+
+225
+13:57,708 --> 14:02,658
+For sure, it's going to be accelerated. So the frictional force is in this direction has this value.
+
+226
+14:03,768 --> 14:08,328
+So let's write down now Newton's second law in the X direction.
+
+227
+14:09,528 --> 14:16,378
+So we have T in the positive direction minus M1g sin alpha
+
+228
+14:17,838 --> 14:27,998
+minus this maximum force, minus mu K M1 g cosine alpha.
+
+229
+14:28,658 --> 14:35,718
+And that now, according to Newton's law, must be M1 * A, if A is the acceleration uphill.
+
+230
+14:36,938 --> 14:42,048
+One equation with two unknowns. You don't know A and you don't know T.
+
+231
+14:43,868 --> 14:45,008
+Or do you know T?
+
+232
+14:45,958 --> 14:47,948
+What is T? What is the tension?
+
+233
+14:48,928 --> 14:50,268
+What is the tension?
+
+234
+14:50,948 --> 14:56,078
+What is the tension when that thing is being accelerated uphill?
+
+235
+14:56,638 --> 14:58,868
+Anyone has the courage to try?
+
+236
+14:59,688 --> 15:03,698
+You think M2G. You couldn't be more wrong.
+
+237
+15:04,888 --> 15:07,308
+It's now moving, it's being accelerated.
+
+238
+15:07,968 --> 15:11,208
+That means this object is going to be accelerated down.
+
+239
+15:11,978 --> 15:15,758
+And if this force is the same as this, it can never accelerate down.
+
+240
+15:16,838 --> 15:18,488
+This T must get smaller.
+
+241
+15:19,078 --> 15:26,508
+Remember, an object in an elevator being accelerated down loses weight. It's losing weight.
+
+242
+15:27,728 --> 15:32,168
+This object must be accelerated down. We have to take that into account.
+
+243
+15:32,518 --> 15:51,408
+So the tension once it start accelerating will go down. So I have a second equation for object number two, I call this the plus direction. So for object number two, I have M2 g - T = M2 * A.
+
+244
+15:51,718 --> 15:54,958
+It is very important that you see that the tension will change.
+
+245
+15:56,278 --> 15:58,538
+Now I have two equations with two unknowns.
+
+246
+15:59,208 --> 16:01,378
+And now I can solve.
+
+247
+16:01,968 --> 16:06,448
+It's very easy. You just add them. And I leave you with that. I'll just give you the results.
+
+248
+16:07,518 --> 16:20,498
+I find that the acceleration A equals plus, I think 3.85, that is correct. + 3.85 m/s squared.
+
+249
+16:21,058 --> 16:27,778
+And I find that the tension equals 12.3 Newtons.
+
+250
+16:29,498 --> 16:31,668
+I want to dwell on this a little bit.
+
+251
+16:32,248 --> 16:34,618
+I find for the acceleration a plus sign.
+
+252
+16:35,058 --> 16:42,438
+Had I found a minus sign, I would, I'm sure I would have made a mistake. Why is it mandatory that I find a plus sign?
+
+253
+16:43,238 --> 16:44,918
+Absolutely mandatory.
+
+254
+16:45,498 --> 16:46,948
+Who wants to try that one?
+
+255
+16:47,698 --> 16:48,518
+Yeah.
+
+256
+16:48,828 --> 16:54,918
+Well you put the friction in the direction to oppose uphill acceleration, so the acceleration direction you found the friction is the other direction.
+
+257
+16:55,508 --> 16:58,948
+Yeah. You say, you say it well, I would have said it slightly differently.
+
+258
+16:59,468 --> 17:02,278
+We know that the acceleration is in this direction. We derive that.
+
+259
+17:02,938 --> 17:08,568
+Therefore the acceleration, since I call that the plus X direction, that was my plus sign, must come out plus.
+
+260
+17:08,988 --> 17:12,108
+So if this comes out negative, you've made a mistake.
+
+261
+17:12,768 --> 17:16,488
+I also want this number to be less than 20.
+
+262
+17:17,168 --> 17:22,198
+If not, I've made a mistake. Why does that number have to be less than 20?
+
+263
+17:23,898 --> 17:26,778
+Mass two is pulling down so the weight has to be less than 20.
+
+264
+17:26,778 --> 17:27,348
+Exactly.
+
+265
+17:27,848 --> 17:29,638
+This object is going down.
+
+266
+17:30,118 --> 17:32,908
+To put it the way we put it last time, it lost weight.
+
+267
+17:33,358 --> 17:40,568
+It's accelerated downwards. This MTG, which is 20, better wins it from T, otherwise it would never be accelerated down.
+
+268
+17:40,858 --> 17:43,898
+So this plus sign is a must, and this is a must.
+
+269
+17:44,218 --> 17:50,598
+And if you find not a plus sign but a minus sign, you have to go back to your calculation because you've made a mistake.
+
+270
+17:52,358 --> 17:58,838
+Now, we take the same situation. I leave everything unchanged, but I make the second mass M2
+
+271
+17:59,758 --> 18:04,308
+I make it 0.4 kg.
+
+272
+18:05,758 --> 18:14,138
+So now all the numbers remain the same that we have there, except that M2g now becomes four.
+
+273
+18:15,308 --> 18:17,268
+Now I'm going to test again.
+
+274
+18:18,028 --> 18:30,918
+Is M2g, which is four, is that larger than 5 + 4.33?
+
+275
+18:32,188 --> 18:33,378
+The answer is no.
+
+276
+18:34,158 --> 18:35,998
+Going to test for my second case.
+
+277
+18:36,488 --> 18:43,908
+Is M2g smaller than 5 - 4.33?
+
+278
+18:44,488 --> 18:45,968
+The answer is no.
+
+279
+18:46,578 --> 18:47,968
+So what do we conclude?
+
+280
+18:48,818 --> 18:49,438
+Doesn't move.
+
+281
+18:49,848 --> 18:51,868
+What must be our conclusion?
+
+282
+18:52,558 --> 18:55,488
+Condition one is not met. Condition two is not met.
+
+283
+18:56,128 --> 18:56,838
+Doesn't move.
+
+284
+18:57,268 --> 19:00,468
+Conclusion is A is zero.
+
+285
+19:01,008 --> 19:04,568
+The object will not be accelerated.
+
+286
+19:06,488 --> 19:14,458
+And the frictional force is going to adjust along the X direction so that the acceleration indeed is zero.
+
+287
+19:15,178 --> 19:16,968
+How does the frictional force do that?
+
+288
+19:17,378 --> 19:24,048
+This is that slope. Here is that object. I will only put in the forces along the X direction.
+
+289
+19:24,598 --> 19:32,028
+I don't bother about the Y direction. I know that there is M1g sin alpha. And that one is five.
+
+290
+19:33,368 --> 19:37,188
+So we have here the component of gravity,
+
+291
+19:37,768 --> 19:43,948
+which is the M1 g sin alpha, and we know that that is five. We had it there.
+
+292
+19:44,828 --> 19:59,558
+I also know that we have tension here and the tension must be M2g because the object is not being accelerated. We're back where we were. Number two is not being accelerated. The tension is four.
+
+293
+20:00,808 --> 20:04,168
+5 Newtons downhill, 4 Newtons uphill.
+
+294
+20:04,588 --> 20:07,668
+What will the friction be? How large and in what direction?
+
+295
+20:08,728 --> 20:09,628
+Uphill?
+
+296
+20:10,268 --> 20:12,558
+How large? One. Exactly.
+
+297
+20:13,868 --> 20:20,648
+The friction will adjust itself so that there is equilibrium, that nothing is going.
+
+298
+20:21,918 --> 20:30,158
+All right. I now would like to do a few demonstrations whereby I want you to calculate the friction coefficients for me.
+
+299
+20:30,678 --> 20:47,528
+So we're going to put a particular object on that incline. And I first going to raise the angle until it breaks loose. So you should be able to calculate what the friction coefficient is using the equation tangent alpha equals muS.
+
+300
+20:48,018 --> 20:54,868
+And the object that I use for that is this this box.
+
+301
+20:55,528 --> 21:02,458
+In this box is a little weight. That's not very important. It makes the whole thing 361 g.
+
+302
+21:03,228 --> 21:09,988
+So I want you to know that the weight of this object is 300 at 61 g. I'll write it down for you here.
+
+303
+21:12,448 --> 21:19,648
+So the mass of the object is 361. I'm sure that the uncertainty is at least 1 g.
+
+304
+21:21,518 --> 21:23,918
+You have to trust me when I give you the angles.
+
+305
+21:24,388 --> 21:33,458
+I'm going to increase the incline and there comes a moment that it will start to slide. I'll give you the angle and I want you to calculate that friction coefficient.
+
+306
+21:34,008 --> 21:34,978
+So we'll do that first.
+
+307
+21:35,888 --> 21:36,748
+There we go.
+
+308
+21:38,668 --> 21:41,298
+Now 10 degrees.
+
+309
+21:41,958 --> 21:42,958
+11.
+
+310
+21:43,998 --> 21:46,848
+12 and 1/2, 13.
+
+311
+21:47,348 --> 21:48,808
+14, 15.
+
+312
+21:49,978 --> 21:59,238
+16, 17, 17 and 1/2, 18, 19, 19 and 1/2, 20.
+
+313
+22:00,258 --> 22:00,948
+20 degrees.
+
+314
+22:01,408 --> 22:04,818
+It starts to slide at about 20 degrees. Write that down.
+
+315
+22:06,538 --> 22:17,218
+Now, I'm going to do exactly this experiment, put a rope over it with a pulley and put M2 on this side.
+
+316
+22:17,808 --> 22:23,958
+And now I'm going to load down M2 to the point that it starts to slide uphill.
+
+317
+22:24,678 --> 22:28,978
+That should allow you to also calculate the friction coefficient.
+
+318
+22:29,458 --> 22:39,298
+You have all the tools for it because once you know that it is just at the point of breaking and going uphill, you know that that equal sign of that equation holds.
+
+319
+22:39,948 --> 22:43,988
+And so you should be able to calculate the static friction coefficient.
+
+320
+22:44,428 --> 22:48,818
+Would you find exactly the same number as you find from this experiment? Not very likely.
+
+321
+22:50,048 --> 22:52,848
+You have to think about that for yourself. Wood has grain.
+
+322
+22:53,698 --> 23:01,748
+And the grain in this direction could be very different from the grain in this direction. But it would be interesting to compare the two numbers to see how much they're off.
+
+323
+23:02,878 --> 23:10,738
+So I'm going to put here this rope over here and I'm going to set the angle now at a given value.
+
+324
+23:11,248 --> 23:19,698
+So this is now non-negotiable. I set it at 20.
+
+325
+23:20,668 --> 23:26,388
+Again, you see it wants to go. We just saw that at 20 degrees it wants to go.
+
+326
+23:26,928 --> 23:34,728
+So I prevent it from going. And so I'm going to put a little weight on here.
+
+327
+23:35,418 --> 23:40,598
+Now there is 100 grams and it's not going. It's happy and it's sitting there.
+
+328
+23:41,828 --> 23:42,638
+A is zero.
+
+329
+23:43,178 --> 23:57,358
+That condition isn't met and this condition isn't met. So now you must write down in your notebook that alpha now, it's an independent experiment, equals 20.0 maybe plus or minus one.
+
+330
+23:58,588 --> 24:01,868
+I think it's about one degree accuracy that I can do.
+
+331
+24:02,798 --> 24:11,508
+Okay, I'm going to load here more weight, more mass, I should say, at M2, and I'll give you the numbers and when it breaks loose, you will see it, I'll give you the number.
+
+332
+24:12,018 --> 24:14,888
+Now, I've done this many times, believe me.
+
+333
+24:15,698 --> 24:23,328
+And the breaking point is not always at the same mass. The mass could differ by 20, 25 grams easily.
+
+334
+24:23,838 --> 24:33,708
+So whatever number we're going to find for M2, I would say you should at least allow an uncertainty of about something like 25 grams.
+
+335
+24:34,948 --> 24:44,368
+Just because I've done it many times and I know, it could even be worse at times. The humidity could change in the room and that could change the friction coefficient.
+
+336
+24:45,128 --> 24:47,168
+Okay, we have 100 grams on it.
+
+337
+24:48,148 --> 24:49,668
+We have 200 grams on it.
+
+338
+24:50,648 --> 24:51,708
+250.
+
+339
+24:53,248 --> 24:54,368
+260.
+
+340
+24:55,378 --> 24:58,738
+270. And it goes at 270. Did you see it go?
+
+341
+24:59,858 --> 25:01,768
+started to slide at 270.
+
+342
+25:02,308 --> 25:09,508
+So at 270 grams, I met exactly that condition with an equal sign.
+
+343
+25:09,888 --> 25:18,518
+That should allow you to calculate the static friction coefficient, and you'll get a chance to do that in your third assignment.
+
+344
+25:19,998 --> 25:29,068
+When I had this thing up here and when I was loading this down, making it heavier and heavier, I hope you realize that at first it wanted to slide in this direction.
+
+345
+25:29,828 --> 25:32,648
+So at first the friction was in this direction.
+
+346
+25:33,328 --> 25:44,248
+As I loaded it down more and more, the friction became less and less and less. There comes even a time that the friction becomes zero.
+
+347
+25:44,908 --> 25:49,058
+I loaded it more and more and more, the friction flips over to the other side.
+
+348
+25:49,428 --> 25:55,788
+The friction the friction grows and grows and grows, fights a heroic battle to not make it go uphill.
+
+349
+25:56,278 --> 26:02,528
+Loses the battle at one point, reaches the maximum value, I put a little bit more on here, and it goes.
+
+350
+26:03,198 --> 26:14,608
+So this frictional force is really having a rough time, starting off in this direction, slowly becoming less, becoming zero, changing direction, reaching a maximum, and finally losing the battle.
+
+351
+26:15,308 --> 26:17,888
+Friction is often a pain in the neck, as we all know.
+
+352
+26:18,568 --> 26:27,518
+Friction causes wear, it causes tear, and it costs fuel. It's a car, there's a lot of friction with the road. You pay for that.
+
+353
+26:27,888 --> 26:34,558
+And people try to reduce friction with bearings and with lubrication, oil.
+
+354
+26:35,278 --> 26:37,448
+Water is an amazing lubricant.
+
+355
+26:38,918 --> 26:48,198
+If it starts raining and there is a little bit of dust on the road, the friction coefficient between your tires and the road can become so low that you begin to hydroplane.
+
+356
+26:48,628 --> 26:53,248
+and that you literally that your friction coefficient goes almost to zero.
+
+357
+26:54,118 --> 26:55,908
+It happened to me once and it's no fun.
+
+358
+26:56,498 --> 27:07,378
+Can happen instantaneously, particularly when the rain begins, in the very early part of the rain when the road is dusty. So you get the water with a little bit of dust mixed. That's a very dangerous situation.
+
+359
+27:08,848 --> 27:11,488
+At home, I have a pan.
+
+360
+27:11,968 --> 27:17,548
+This is my pan at home. Actually, I have more than one pans at home, believe me. But this is a very special pan.
+
+361
+27:18,028 --> 27:23,148
+And what is special about it is something that I discovered purely by accident.
+
+362
+27:23,978 --> 27:28,618
+And I want to share with you this um remarkable pan.
+
+363
+27:32,598 --> 27:40,058
+You see, when I rotate this cover, there's a lot of friction. You can hear it. And it stops.
+
+364
+27:41,148 --> 27:42,468
+You can hear it, right?
+
+365
+27:43,468 --> 27:52,718
+And so one evening I was boiling potatoes and I was looking at this pan and I walked up to it because I wanted to check the potatoes, and I touched this thing,
+
+366
+27:53,698 --> 27:55,138
+and there was no friction.
+
+367
+27:55,618 --> 27:57,458
+It just went spinning and spinning and spinning.
+
+368
+27:57,718 --> 28:01,588
+I couldn't believe my eyes until I realized what is happening.
+
+369
+28:02,128 --> 28:11,328
+Water had accumulated in the rim of this pan, and the cover was beginning to hydroplane.
+
+370
+28:15,978 --> 28:18,018
+I'm putting water in it now.
+
+371
+28:22,378 --> 28:25,748
+You almost don't hear it anymore.
+
+372
+28:27,068 --> 28:28,118
+Isn't that amazing?
+
+373
+28:31,558 --> 28:32,818
+Almost frictionless.
+
+374
+28:33,388 --> 28:44,338
+So now the water acts like a lubricant, and you try it with your pen, it won't work because you need just the right shape, you need the right edge to um be able to lubricate it that way.
+
+375
+28:46,278 --> 28:56,428
+In there are many experiments that are done and many attempts have been made by people to reduce friction.
+
+376
+28:57,218 --> 29:01,968
+You try, if you can, to avoid contact between two surfaces.
+
+377
+29:02,538 --> 29:04,538
+That you can do by putting a lubricant in between.
+
+378
+29:05,068 --> 29:12,328
+But even better it would be if you could separate the objects completely and only have air in between them.
+
+379
+29:12,888 --> 29:17,668
+Because air has much less friction than a liquid.
+
+380
+29:18,578 --> 29:21,568
+And that has been done with great success.
+
+381
+29:22,198 --> 29:30,988
+People use hovercrafts. So they blow air out from below, so the craft lifts itself up, and now it's no longer in contact with the water.
+
+382
+29:31,338 --> 29:38,588
+It's above the water. So if it moves now, all it has to overcome is the air friction, and that's it. And that helps tremendously.
+
+383
+29:39,688 --> 29:47,918
+You will be seeing in this lecture hall many demonstrations that I will be doing in the future with what is what I call an an air track.
+
+384
+29:48,198 --> 29:49,538
+I will show it to you in a minute.
+
+385
+29:50,138 --> 29:58,118
+It is a long call it a bar for now. Cross section is a triangular shape,
+
+386
+29:58,588 --> 29:59,868
+and there are holes in here.
+
+387
+30:01,288 --> 30:03,618
+And we blow air out of that.
+
+388
+30:04,258 --> 30:12,968
+And on top of that are devices which have been specially designed to perfectly fit this triangle.
+
+389
+30:13,738 --> 30:18,288
+And when you start blowing the air, they are lifted up, so they float.
+
+390
+30:18,808 --> 30:26,718
+And so now when you give them a little tap, they can move almost, not quite, but almost without friction.
+
+391
+30:28,028 --> 30:29,518
+Here is one.
+
+392
+30:32,428 --> 30:33,898
+Lot of friction.
+
+393
+30:35,518 --> 30:37,298
+Now I'll turn on the air.
+
+394
+30:41,588 --> 30:47,928
+Look at the difference. Isn't that amazing? It's floating on its own air cushion.
+
+395
+30:58,188 --> 31:05,398
+And if I turn it off, the moment that the air stops, you will see stops.
+
+396
+31:07,318 --> 31:15,368
+So this is a technique that is often used to do demonstrations if you have to do them with a minimum of friction.
+
+397
+31:16,338 --> 31:25,438
+Of course, you could do experiments in the shuttle very well where you have again, only air around you. But that's of course a very expensive way.
+
+398
+31:25,758 --> 31:33,568
+In 26100, we will use the air track when we start colliding objects and try to see what happens before and after the collision.
+
+399
+31:34,538 --> 31:47,578
+There is another device which is very intriguing and that also acts on the idea that it lifts itself up as a result of gas which is flowing out.
+
+400
+31:48,168 --> 31:57,458
+In this case, it's a container of carbon dioxide. Carbon dioxide in here, which is solid.
+
+401
+31:57,458 --> 31:58,288
+And there is a small opening here.
+
+402
+31:58,988 --> 32:05,298
+And this is an extremely
+
+403
+32:05,298 --> 32:06,818
+well machined flat surface.
+
+404
+32:07,138 --> 32:07,738
+Very flat.
+
+405
+32:08,138 --> 32:12,428
+And the whole thing rests on an extremely flat surface.
+
+406
+32:13,068 --> 32:20,978
+Because of the room temperature, the carbon dioxide will start to evaporate and will start to flow out.
+
+407
+32:21,888 --> 32:38,718
+And therefore under this thing comes a film, very thin layer of carbon dioxide. And now you can move this around in two dimensions. You're not stuck like you are there to one dimension only going back and force on what we call the air track, but now you can move it around over this whole surface.
+
+408
+32:39,178 --> 32:47,528
+And that allows you to do very interesting things as I want to show you next.
+
+409
+32:48,408 --> 32:49,738
+First make it dark.
+
+410
+32:58,819 --> 33:03,149
+And we filled that can with dry ice, that is solid carbon dioxide.
+
+411
+33:04,749 --> 33:12,339
+Now you know solid carbon dioxide is very cold. This white stuff is just frost that's gathered on the outside of the can.
+
+412
+33:13,719 --> 33:21,919
+Now as the can absorbs heat from the room, the carbon dioxide evaporates and turns into a gas.
+
+413
+33:22,519 --> 33:31,789
+The gas takes up more room than the solid, so it has to go somewhere. Can't come out the top. So it comes out a little hole here in the bottom of the disc.
+
+414
+33:33,129 --> 33:42,769
+Now you can't see it coming out the hole, but if I make a flame, I think you can see that there's gas coming out and blowing the flame.
+
+415
+33:44,669 --> 34:05,399
+Now if we put the disc with its stream of gas coming out the bottom, down on our table top, which is made of a very smooth piece of plate glass, we can wait a moment while the gas coming out builds up pressure underneath, which it has to do in order to escape.
+
+416
+34:07,249 --> 34:12,489
+By now the disc is floating on this film of escaping gas.
+
+417
+34:15,659 --> 34:29,309
+That film is so thin that I'm sure you can't see it from out there. I can scarcely see the the see a space between the disc and the glass myself. But if you'll come and look over my shoulder, I think I can show you that there is a space
+
+418
+34:30,469 --> 34:36,739
+by slipping underneath the disc this piece of tin foil I took off a chewing gum wrapper.
+
+419
+34:37,319 --> 34:52,919
+Now we'll slip the tin foil between the disc and the plate glass top of the table, showing that there is indeed a space, a thin film of gas between the disc and the glass upon which it's resting.
+
+420
+34:54,679 --> 35:01,899
+The purpose of this is simply to reduce the friction to a point where we won't have to worry about it or measure it in our experiments today.
+
+421
+35:02,649 --> 35:04,929
+It's fun to play with this thing. Let me show you.
+
+422
+35:06,189 --> 35:11,339
+I'll give it a little push, just a little one.
+
+423
+35:12,329 --> 35:17,499
+And there it goes, moving sedately, no sign of slowing up.
+
+424
+35:18,269 --> 35:19,369
+Come on back.
+
+425
+35:21,429 --> 35:22,919
+Same thing the other direction.
+
+426
+35:25,019 --> 35:30,119
+It takes only a very tiny force to start it in motion. Let me show you that.
+
+427
+35:30,686 --> 35:31,386
+You take a feather.
+
+428
+35:31,866 --> 36:09,356
+(Music playing)
+
+429
+36:09,356 --> 36:33,766
+(Music playing)
+
+430
+36:33,766 --> 37:14,566
+(Music playing)
+
+431
+37:14,566 --> 37:39,486
+(Music playing)
+
+432
+37:39,486 --> 37:43,956
+(Music playing)
+
+433
+37:44,288 --> 37:45,828
+So you see, fleas are good for something.
+
+434
+37:46,528 --> 37:48,818
+Have a good weekend. See you Monday.
+
+435
+37:49,518 --> 37:56,868
+(Applause and indistinct chatter)

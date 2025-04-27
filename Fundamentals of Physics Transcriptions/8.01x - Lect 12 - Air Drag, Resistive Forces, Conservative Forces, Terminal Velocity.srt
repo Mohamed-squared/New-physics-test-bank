@@ -1,0 +1,2131 @@
+1
+00:00:01,363 --> 00:00:05,463
+We're going to discuss today resistive forces and drag forces.
+
+2
+00:00:06,573 --> 00:00:13,863
+When you move an object through a medium, whether it's a gas or whether it's a liquid, it experiences a drag force.
+
+3
+00:01:40,00 --> 00:01:40,000
+
+
+4
+00:00:14,143 --> 00:00:22,913
+This drag force depends on the shape of the object, the size of the object, the medium through which you move it, and the speed of the object.
+
+5
+00:00:23,433 --> 00:00:25,313
+The medium is immediately obvious.
+
+6
+00:00:25,813 --> 00:00:30,733
+If it's air and you move through air, you feel the wind through your hair. That's a drag force.
+
+7
+00:00:31,363 --> 00:00:33,743
+If you swim in water, you feel this drag force.
+
+8
+00:00:34,373 --> 00:00:37,443
+In oil, the drag force would be even larger.
+
+9
+00:00:38,413 --> 00:00:49,003
+This drag force, this resistive force is very, very different from the friction that we've discussed earlier when two surfaces move relative to each other.
+
+10
+00:00:49,393 --> 00:00:55,753
+There, the kinetic friction coefficient remains constant independent of the speed.
+
+11
+00:00:56,193 --> 00:01:02,713
+With the drag forces and the resistive forces, they are not at all independent of the speed.
+
+12
+00:01:03,473 --> 00:01:21,833
+In very general terms, the resistive force can be written as K1 times the velocity plus K2 times the velocity squared.
+
+13
+00:01:22,693 --> 00:01:26,373
+And always in the opposite direction of the velocity vector.
+
+14
+00:01:26,663 --> 00:01:36,133
+This V here is a speed. So all these signs, K1, V and K2, and obviously V squared, they all are positive values.
+
+15
+00:01:36,373 --> 00:01:43,213
+And the K values depend on the shape and the size of the object and on the kind of medium that I have.
+
+16
+00:01:43,893 --> 00:01:48,353
+Today I will restrict myself exclusively to spheres.
+
+17
+00:01:48,733 --> 00:02:11,613
+And when we deal with spheres, we're going to get that the the force, the magnitude of the force, so that it's this part equals C1 times R times the speed plus c2 times R squared times V squared.
+
+18
+00:02:12,563 --> 00:02:16,523
+And again, it's always opposing the velocity vector.
+
+19
+00:02:17,633 --> 00:02:24,133
+C1 in our units is kilograms per meter per second.
+
+20
+00:02:24,533 --> 00:02:29,803
+And C2 has the dimension of density, kilogram per cubic meters.
+
+21
+00:02:31,643 --> 00:02:39,113
+We call this the viscous term and we call this the pressure term.
+
+22
+00:02:40,003 --> 00:02:45,253
+The viscous term has to do with the stickiness of the medium.
+
+23
+00:02:46,203 --> 00:02:56,273
+If you take for instance liquids, water, and oil and tar, there is a huge difference in stickiness. Physicists also refer to that as viscosity.
+
+24
+00:02:56,693 --> 00:03:03,503
+If you have a high viscosity, it's very sticky, then this number C1 will be very high.
+
+25
+00:03:04,003 --> 00:03:06,513
+So this we call the viscous term.
+
+26
+00:03:07,443 --> 00:03:12,263
+And this we call the pressure term.
+
+27
+00:03:14,083 --> 00:03:17,493
+The C1 is a strong function of temperature.
+
+28
+00:03:17,773 --> 00:03:25,693
+We all know that if you take tar and you heat it, that the viscosity goes down. It is way more sticky when it is cold.
+
+29
+00:03:26,223 --> 00:03:30,533
+C2 is not very dependent on the temperature.
+
+30
+00:03:31,823 --> 00:03:37,303
+It's not so easy to see why this pressure term here has a V square.
+
+31
+00:03:37,303 --> 00:03:43,573
+Later in the course when we deal with transfer of momentum, we will understand why there is a V square term there.
+
+32
+00:03:44,023 --> 00:04:08,603
+But the R square is very easy to see because if you have a sphere and there is some fluid, gas or liquid streaming onto it, then this has a cross-sectional area which is proportional to R squared. And so it's easy to see that the force that this object experience, we call it the pressure term, is proportional to R squared. So that's easy to see.
+
+33
+00:04:08,603 --> 00:04:23,153
+Two liquids with the very same density would have, they could have very different values for C1. They could differ by 10 orders, not 10, by four or five orders of magnitude.
+
+34
+00:04:23,503 --> 00:04:29,133
+But if they have the same density, the liquids, then the C2 is very much the same.
+
+35
+00:04:29,323 --> 00:04:39,593
+C2 is almost the density row of the liquid, not quite, but almost. But there is a very strong correlation between the C2 and the density.
+
+36
+00:04:40,783 --> 00:04:47,683
+If I drop an object and I just let it go, I take an object and I let it fall.
+
+37
+00:04:47,683 --> 00:04:50,083
+We're only dealing with spheres today.
+
+38
+00:04:50,453 --> 00:04:53,093
+Then what you will see, I have a mass M.
+
+39
+00:04:53,793 --> 00:04:58,123
+And so there is a force mg, that is gravity.
+
+40
+00:04:58,643 --> 00:05:08,113
+And as it picks up speed, the resistive force will grow, and it will grow, and it will grow.
+
+41
+00:05:08,283 --> 00:05:15,023
+And there comes a time, because the speed increases, so the resistive force will grow, and there comes a time that the two are equal.
+
+42
+00:05:15,573 --> 00:05:21,433
+And when the two are equal, then there is no longer acceleration, so the object has a constant speed.
+
+43
+00:05:21,783 --> 00:05:24,603
+And we call that the terminal velocity.
+
+44
+00:05:25,173 --> 00:05:39,213
+And that will be the case when mg equals C1 RV plus C2 R squared V squared.
+
+45
+00:05:39,563 --> 00:05:46,423
+And then we have here terminal velocity.
+
+46
+00:05:49,243 --> 00:06:08,043
+If you know what M is, the mass of an object, the radius, and you know the values for C1 or C2 of that medium in which you move it, then you can calculate what the terminal velocity is. It is a quadratic equation, so you get two solutions, of which one of them is non-physical.
+
+47
+00:06:08,363 --> 00:06:10,223
+So you can reject that one.
+
+48
+00:06:11,643 --> 00:06:22,453
+Very often will we work in a domain, in a regime whereby this viscous term is dominating.
+
+49
+00:06:22,743 --> 00:06:32,723
+I call that regime one, but it also happens, and I will show you examples today, that we're working in a regime where really this force is dominating.
+
+50
+00:06:32,873 --> 00:06:35,593
+I call that regime two.
+
+51
+00:06:38,073 --> 00:06:46,503
+Where one and two are the same, where the force due to the viscous force and the pressure force are the same,
+
+52
+00:06:46,753 --> 00:06:58,353
+we can make these terms the same. So you get C1 RV equals C2 R square V squared, and that velocity we call the critical velocity,
+
+53
+00:06:58,503 --> 00:07:07,933
+even though there is nothing critical about it. It's not critical at all. It's simply the speed at which the two terms are equal. That's all it means.
+
+54
+00:07:08,383 --> 00:07:13,233
+And that is of course then equal C1 divided by C2 divided by R.
+
+55
+00:07:14,753 --> 00:07:21,203
+Now we're going to make a clear distinction between the domains one and two, the regimes one and two.
+
+56
+00:07:22,253 --> 00:07:30,653
+Regime one is when the speed is much, much less than the critical velocity.
+
+57
+00:07:31,313 --> 00:07:40,083
+So we then have that mg equals C1 RV terminal.
+
+58
+00:07:40,633 --> 00:07:49,043
+And therefore, the terminal velocity equals mg divided by C1R.
+
+59
+00:07:49,813 --> 00:08:08,723
+If you take objects of the same material, that means they have the same density, the density of the objects that you drop in the liquid or that you drop in the gas, so that M equals 4/3 pi rho R cubed.
+
+60
+00:08:09,033 --> 00:08:21,363
+This is now the rho, the density of the object, it's not the density of the medium, then you can immediately see since you get an r cube here, that this is proportional to the square of the radius.
+
+61
+00:08:21,363 --> 00:08:27,083
+If you drop objects in there with the same density.
+
+62
+00:08:27,793 --> 00:08:33,223
+Regime two is the case when V is much larger than V critical.
+
+63
+00:08:33,663 --> 00:08:40,423
+So then mg equals c2 r squared V squared.
+
+64
+00:08:40,753 --> 00:08:51,293
+If this is the terminal velocity, So the terminal velocity is then the square root of mg divided by C2 R squared.
+
+65
+00:08:51,793 --> 00:08:55,503
+mg divided by C2 R squared.
+
+66
+00:08:55,763 --> 00:09:06,223
+And if you take objects with the same density and you compare their radii, M is proportional to r cubed, so this is now proportional to the square root of R.
+
+67
+00:09:07,643 --> 00:09:19,793
+So this separates these two regimes, and we will see examples of that that sometimes you really work exclusively in one, and sometimes you work in the other.
+
+68
+00:09:22,133 --> 00:09:30,133
+I have for you a view graph that is on the on the web, so you do not have to copy it.
+
+69
+00:09:30,463 --> 00:09:33,183
+It summarizes what I have just told you.
+
+70
+00:09:33,473 --> 00:09:35,253
+It has all the key equations.
+
+71
+00:09:35,773 --> 00:09:40,193
+You see there on top the resistive force, the magnitude of the resistive force.
+
+72
+00:09:40,683 --> 00:09:50,743
+You see then the critical velocity. There's nothing critical about it. It's just the speed at which this term has the same magnitude as this term.
+
+73
+00:09:51,163 --> 01:00:00,053
+Then you see the condition here, which I called equation one for terminal speed. And then
+
+74
+01:00:00,053 --> 01:01:56,413
+we have regime one whereby the speed is way less than the critical speed, and then you get the terminal velocity, as you see on the blackboard, which then is proportional to r squared, if you only look at objects which have a particular given density. And if the velocity, if the speed is way larger than the critical speed, you are in regime two, and then you have a dependence with the square root of R.
+
+75
+01:02:88,143 --> 01:04:42,993
+I'm going to do a demonstration and some measurements with ball bearings, which have very precise radii, very well known, which I'm going to drop into syrup.
+
+76
+01:04:48,993 --> 01:04:95,353
+And we have chosen for that Caro light corn syrup.
+
+77
+01:05:07,3 --> 01:05:64,13
+It may interest you that two tablespoons is 180 calories.
+
+78
+01:05:72,13 --> 01:10:31,93
+I needed to know more for this demonstration, and so I had to do my own homework on it.
+
+79
+01:10:43,193 --> 01:10:91,53
+But at least you see here what this Caro syrup can do for you.
+
+80
+01:10:95,73 --> 01:11:38,43
+You see 180 calories per two tablespoons or per tablespoon.
+
+81
+01:11:42,43 --> 01:11:87,43
+It's very low fat and the rest may interest you before you use it.
+
+82
+01:11:84,43 --> 01:13:01,83
+I had to know C1, which I calculated, I measured it. In fact, what the kind of demonstration we and I will be doing today, you can derive it, but it's very strongly temperature dependent.
+
+83
+01:13:11,83 --> 01:13:31,33
+could be different yesterday from today.
+
+84
+01:13:37,83 --> 01:13:69,33
+Um, I measured C2 to a reasonable accuracy.
+
+85
+01:13:74,33 --> 01:14:59,43
+Notice that the density of the syrup in terms of kilograms per cubic meter is very close to C2. I mentioned that earlier.
+
+86
+01:14:65,43 --> 01:14:91,93
+They're very close, not exactly, but very close.
+
+87
+01:14:96,33 --> 01:15:58,83
+These steel ball bearings have a density of about 7,800 kilograms per cubic meter.
+
+88
+01:15:61,83 --> 01:20:89,33
+And I'm going to drop in that caro syrup four ball bearings, and they have diameters of an 8th of an inch, 5/32nds, 3/16ths, and a quarter of an inch.
+
+89
+01:21:06,33 --> 01:21:91,93
+And what I calculated was the terminal velocity as a function of radius of these ball bearings.
+
+90
+01:22:02,13 --> 01:22:19,63
+All of this is on the web.
+
+91
+01:22:39,43 --> 01:23:28,83
+And so what you see here, it is a logarithmic plot. This is the log scale and this is a log scale. Here you see the speed, and here you see the radius in meters of the ball bearings.
+
+92
+01:23:39,93 --> 01:24:43,33
+And this is my solution to equation number one, when I substitute various values of R in there, I get the terminal speed like this.
+
+93
+01:24:55,13 --> 01:25:04,73
+And this is the critical speed, which is has a one over R relationship.
+
+94
+01:25:06,13 --> 01:25:91,53
+If you look at this black dot here, then the terminal speed is 10 times larger here than the critical speed.
+
+95
+01:25:93,93 --> 01:31:20,83
+And so notice that when you are at speeds above that, that you are exclusively in domain two, and your terminal speed is proportional to the square root of the radius of the ball bearings.
+
+96
+01:31:20,83 --> 01:31:59,93
+This black dot is a factor of 10 below the critical speed.
+
+97
+01:31:61,93 --> 01:32:72,83
+And so you see when you are at lower speeds, when you work here, again, you see that you fall into exclusively in domain one, and you see that the terminal speed is proportional to r squared.
+
+98
+01:32:76,83 --> 01:33:42,43
+This slope here is plus two in this diagram and this slope here is plus one half.
+
+99
+01:33:48,33 --> 01:34:29,13
+Our ball bearings are all here. And so we are exclusively operating in regime one where the viscous term dominates.
+
+100
+01:34:36,13 --> 01:35:11,93
+Now you could say, well, what is the meaning of this critical speed here? If they never reach that speed anyhow.
+
+101
+01:35:14,33 --> 01:41:71,63
+Well, this critical speed for a small ball bearing would be some 100 m per second, that's about 200 miles per hour. There is nothing wrong with injecting a ball bearing with 400 miles per hour into this syrup. In which case, if you injected it with 400 miles per hour, you would be above the critical speed. And so for a short while would the motion be controlled by the pressure term.
+
+102
+01:41:71,63 --> 01:42:14,13
+But of course, when gravity takes over, then you ultimately end up in regime one.
+
+103
+01:42:24,73 --> 01:43:21,83
+But that's the meaning of the critical velocity. If you could give the ball bearing such a high speed, then the two terms are equal. That's all it means.
+
+104
+01:43:37,33 --> 01:44:37,53
+Very well. Now we are going to look at the various ball bearings, the various sizes. And I'll show you how we do the experiment.
+
+105
+01:44:48,23 --> 01:45:34,23
+You will shortly see a on the screen there seven marks which are 1 cm apart.
+
+106
+01:45:41,73 --> 01:45:81,23
+They are in the liquid, 1, 2, 3, 4, 5, 6, 7. So here is the liquid.
+
+107
+01:45:92,73 --> 01:50:23,13
+And the ball bearings are dropped from above. When it reaches this line, I will start my timer.
+
+108
+01:50:73,73 --> 01:51:24,13
+And when it crosses 1, 2, 3, 4, when it crosses this line, I will stop my timer.
+
+109
+01:51:35,13 --> 01:51:95,83
+And each mark is about 1 centimeter apart. So this is a journey of about 4 centimeters.
+
+110
+01:52:10,43 --> 01:52:53,93
+And we will measure the time that it takes to go from here to here.
+
+111
+01:52:57,43 --> 01:53:35,53
+And the terminal velocity is given, it's clearly regime one, so you see the terminal velocity right there.
+
+112
+01:53:49,33 --> 01:54:75,53
+Now the time that it will take is of course this distance, let me call it H, that the ball bearings travel divided by the terminal velocity.
+
+113
+01:54:80,43 --> 01:55:34,83
+And that is proportional since you're in regime one by 1 over R squared.
+
+114
+01:55:43,33 --> 01:50:22,33
+And now I will give you the not the radii, but I will give you the diameters of these ball bearings. That's the way they come.
+
+115
+01:50:26,63 --> 01:51:03,53
+So we're going to get a list here of the diameters of the ball bearings and their diameters is in inches.
+
+116
+01:51:08,53 --> 01:51:33,73
+My smallest one has a diameter of an 8th of an inch.
+
+117
+01:51:38,13 --> 01:51:92,43
+Then I have 530 seconds. I have 3/16ths.
+
+118
+01:51:95,63 --> 01:52:50,93
+All these things come in inches. That's one of those things. And I have 1 quarter inch diameter.
+
+119
+01:52:73,13 --> 01:53:96,63
+If I plot here or plot, if I give you here the diameter in terms of 130 seconds of an inch, then this is 4, 5, 6, and 8. Easy numbers.
+
+120
+01:54:12,63 --> 01:55:05,33
+Clearly, if the time that it takes is proportional to 1/ r squared, it will also be proportional to 1/ d squared. Of course, that's the same.
+
+121
+01:55:14,43 --> 02:00:70,83
+What I am going to plot is not 1 over d squared, but to get some nice numbers, I'm going to plot for you 100 over d squared, whereby d is then in these units 130 seconds of an inch.
+
+122
+02:00:76,33 --> 02:02:45,13
+And that gives me some nice numbers. Then I get a 6.25 here. I get a 4.00 here. You can see 100 divided by 25 is exactly 4. I get 2.78 here and my last number is 1.56.
+
+123
+02:02:48,43 --> 02:02:68,93
+And now I'm going to time it.
+
+124
+02:02:72,23 --> 02:03:29,13
+And my timing uncertainty is of course dictated by my reaction time.
+
+125
+02:03:32,33 --> 02:03:62,73
+That should be at least 0.1 second.
+
+126
+02:03:66,23 --> 02:04:61,83
+However, you will see when I reach the quarter inch ball bearing, that it goes so fast that my error could well be 2/10 of a second. It goes in a flash.
+
+127
+02:04:65,53 --> 02:05:52,53
+So I would allow here two/10 of a second, and here I really don't know, maybe 1/10, maybe two/10 of a second.
+
+128
+02:05:56,23 --> 02:10:33,33
+You may ask me, why didn't you give us the error in the diameter, which ultimately, of course, translates into the error in the mass.
+
+129
+02:10:33,33 --> 02:11:43,33
+The reason is that these are so precise the way you buy them, that the uncertainty is completely negligible compared to the timing error that I make. So I won't even take that into account.
+
+130
+02:11:64,53 --> 02:12:14,83
+All right, so now we can start the demonstration.
+
+131
+02:12:14,83 --> 02:12:70,83
+And I'll have to switch to this unit here.
+
+132
+02:12:77,33 --> 02:13:44,43
+Here is this container with the caro syrup.
+
+133
+02:13:44,43 --> 02:13:78,93
+It is very sticky indeed.
+
+134
+02:14:12,93 --> 02:15:85,83
+You see there are seven marks and just for my own convenience, I have put there two black marks so that I can easily see the moment that I have to start my timer and the moment that I stop it. There are so many lines, I may get confused if I don't do that.
+
+135
+02:15:91,53 --> 02:10:21,33
+And we are going to time this together.
+
+136
+02:10:32,33 --> 02:10:92,43
+And we'll see how these objects how long it takes for them to go through.
+
+137
+02:10:92,43 --> 02:11:25,43
+I will start with my 18 of an inch diameter.
+
+138
+02:11:40,13 --> 02:11:70,13
+I have one here, tweezer.
+
+139
+02:11:94,13 --> 02:12:10,43
+I release it at zero.
+
+140
+02:12:15,53 --> 02:12:40,33
+Three, oh, oh, you can't see that. You should see that.
+
+141
+02:12:46,83 --> 02:12:69,93
+3, 2, 1, zero.
+
+142
+02:12:77,43 --> 02:13:43,63
+Look how beautiful. It's working its way through. You see it's building up. See that see that nice air bubble at the top.
+
+143
+02:13:53,13 --> 02:14:02,43
+It's going very slowly, but just wait when it has broken through the surface. There it goes.
+
+144
+02:14:06,63 --> 02:14:22,13
+Now.
+
+145
+02:14:32,73 --> 02:14:80,63
+1 centimeter, 2 centimeter, 3 centimeter. Now.
+
+146
+02:14:84,93 --> 02:15:01,33
+Okay, what is that?
+
+147
+02:15:06,93 --> 02:15:13,93
+Nothing.
+
+148
+02:15:17,83 --> 02:15:30,13
+What happened?
+
+149
+02:15:35,63 --> 02:15:52,13
+5.93
+
+150
+02:15:58,43 --> 02:15:79,33
+I didn't see it. I want to do another one.
+
+151
+02:15:94,63 --> 02:20:33,33
+What? Did I did I clean did I erase it?
+
+152
+02:20:39,73 --> 02:20:48,93
+How much was it?
+
+153
+02:20:57,23 --> 02:20:80,73
+5.93
+
+154
+02:21:09,3 --> 02:21:43,23
+Keep that in mind. It's nice to see whether they reproduce, actually.
+
+155
+02:21:67,13 --> 02:21:82,73
+Okay, there it goes.
+
+156
+02:21:93,13 --> 02:22:00,73
+Now,
+
+157
+02:22:06,33 --> 02:22:55,53
+1 centimeter, 2 centimeter, 3 centimeter. Now.
+
+158
+02:22:61,63 --> 02:22:98,83
+5.66. You that shows you the uncertainty in my timing.
+
+159
+02:23:01,73 --> 02:23:57,73
+So we had a 5.93 and we have now a 5.66.
+
+160
+02:23:61,73 --> 02:24:12,13
+It's not so bad. 5.9, 5.7, timing error 10 of a second.
+
+161
+02:24:15,83 --> 02:24:53,63
+My timing error could be a little bit larger than the 10 of a second. You don't have very much time.
+
+162
+02:24:58,13 --> 02:25:03,73
+So now we go to the 5:30 seconds.
+
+163
+02:25:31,13 --> 02:25:39,73
+Okay.
+
+164
+02:25:46,73 --> 02:25:61,83
+5:30 seconds.
+
+165
+02:30:07,13 --> 02:30:84,53
+takes some time to break through the surface, isn't that funny? Because a thin film has formed on the surface of the syrup due to its exposure to air.
+
+166
+02:30:89,23 --> 02:31:25,73
+Wonderful, huh? Let's us wait patiently, but now it goes.
+
+167
+02:31:28,93 --> 02:31:84,53
+There it goes. Now, one, two, three. Now.
+
+168
+02:31:93,43 --> 02:32:11,53
+3.80.
+
+169
+02:32:16,33 --> 02:32:33,43
+Is that what you have?
+
+170
+02:32:62,83 --> 02:32:89,53
+You're going to be tougher and tougher for me.
+
+171
+02:32:96,13 --> 02:33:18,73
+3/16 of an inch.
+
+172
+02:33:33,3 --> 02:33:82,93
+It's actually a good thing that it stays for a while at the surface so that I can get ready.
+
+173
+02:34:24,13 --> 02:34:43,83
+Really that really helps, doesn't it?
+
+174
+02:34:58,23 --> 02:34:91,33
+If you do this in water, it goes You don't even see it.
+
+175
+02:35:14,93 --> 02:35:35,13
+Come on. Here we go. Now.
+
+176
+02:35:47,93 --> 02:35:64,73
+No.
+
+177
+02:35:68,43 --> 02:40:11,53
+So you see that's very hard for me and so I could easily have a substantial error. 2.69.
+
+178
+02:40:47,23 --> 02:41:00,13
+And now we have the quarter inch the real big one.
+
+179
+02:41:45,23 --> 02:41:64,23
+I have to do that again.
+
+180
+02:41:68,23 --> 02:42:08,63
+I don't trust this at all. It went it went through the surface too fast.
+
+181
+02:43:05,13 --> 02:43:14,13
+I can't do it very accurately. What was the first number by the way?
+
+182
+02:43:36,53 --> 02:43:61,83
+1 point 68.
+
+183
+02:43:66,53 --> 02:43:80,13
+And this is 1.40.
+
+184
+02:43:84,83 --> 02:44:10,83
+So 1.68 and 1.40.
+
+185
+02:44:10,83 --> 02:44:74,73
+So you see I wasn't kidding when I said that my uncertainty could easily be 0.2. Now comes the acid test.
+
+186
+02:44:98,3 --> 02:45:54,43
+And the acid test is that if I'm if the measurements were done correctly and if we really work in that regime, then if I plot 100 divided by D squared versus T on linear paper, then it should be a straight line.
+
+187
+02:46:21,23 --> 02:46:90,63
+Here I have a plot which I prepared and I'm going to put these numbers in there.
+
+188
+02:46:98,13 --> 02:48:17,13
+So first, we're going to get 6.5 5. let's put in 5.8 seconds for the smallest ball bearing.
+
+189
+02:48:17,13 --> 02:49:32,23
+This is the smallest one. Don't be misled because this is 100 divided by d squared. So this is the smallest one.
+
+190
+02:49:38,63 --> 02:49:99,63
+5.8.
+
+191
+02:50:21,73 --> 02:50:84,13
+So we are here on this line and we are at 5.8 somewhere here.
+
+192
+02:50:84,13 --> 02:51:19,13
+That's it.
+
+193
+02:51:44,63 --> 02:51:69,63
+Notice, the point is lower than where I expected it.
+
+194
+02:51:75,13 --> 02:52:33,13
+And the reason is the temperature went up. And if the temperature went up, then the viscosity goes down and they go faster.
+
+195
+02:52:36,63 --> 02:52:49,63
+But that's okay. That doesn't worry me.
+
+196
+02:52:54,13 --> 02:52:78,13
+The next one, 3.80.
+
+197
+02:53:05,93 --> 02:53:28,33
+4 3.80.
+
+198
+02:53:39,23 --> 02:53:54,13
+Ah! You see that?
+
+199
+02:53:63,63 --> 02:53:82,43
+I predicted that straight line.
+
+200
+02:53:96,33 --> 02:54:20,93
+Isn't that a straight line?
+
+201
+02:54:47,83 --> 02:54:69,13
+It's not a straight line?
+
+202
+02:54:78,33 --> 02:54:89,13
+What's wrong?
+
+203
+02:55:18,63 --> 02:55:35,43
+Okay, we'll put in the third point.
+
+204
+02:55:40,73 --> 02:55:65,93
+2.69
+
+205
+02:55:84,23 --> 02:56:46,43
+2. This is 2.7, 2.69.
+
+206
+02:56:51,53 --> 02:57:26,73
+I can't hardly put in the error of the timing because it is not much larger than the size of my dot.
+
+207
+02:57:32,23 --> 02:57:98,73
+And now we have the last one, 1 point, let's take the average, 1.55.
+
+208
+02:58:07,63 --> 02:58:29,33
+1.55.
+
+209
+02:58:38,13 --> 02:59:31,73
+With an error of about two tenth of a second, and this has an error of about two tenth of a second.
+
+210
+02:59:41,33 --> 03:00:13,33
+All right, there we go.
+
+211
+03:00:18,63 --> 03:00:48,43
+Now, is this a straight line or is it not?
+
+212
+03:00:68,63 --> 03:00:94,53
+Gorgeous straight line.
+
+213
+03:00:94,53 --> 03:01:60,83
+And so you see you are really working here in the regime where the terminal velocity is proportional to the radius squared.
+
+214
+03:01:67,43 --> 03:01:92,73
+Okay, we'll give you your lights back.
+
+215
+03:02:18,43 --> 03:03:37,23
+Now comes a question which is relevant to this experiment, and that is, how long does it take for the terminal speed to be reached?
+
+216
+03:03:64,63 --> 03:04:26,93
+Well, the object has a certain mass, so there is a gravitational force on it.
+
+217
+03:04:60,63 --> 03:05:18,23
+And the gravitational force equals mg. And then there is a resistive force
+
+218
+03:05:24,73 --> 03:06:89,53
+which in the case because we are operating in regime one exclusively, that resistive force equals C1 RV in terms of magnitude because we deal with regime one.
+
+219
+03:06:96,23 --> 03:07:85,83
+And so, if I call this the increasing value of Y, the second Newton's second law would give me MA equals mg - C1R times V.
+
+220
+03:07:85,83 --> 03:08:48,93
+And this equals MdVDT. So I have here a differential equation in V.
+
+221
+03:08:94,93 --> 03:09:71,23
+And that can be solved. And you are going to solve it on your assignment number four.
+
+222
+03:09:95,93 --> 03:11:17,63
+What you're going to see is that the speed as a function of time is going to build up to a maximum value. This is the to a maximum value which is the terminal velocity, or you may want to call it terminal speed. and it's going to build up in some fashion,
+
+223
+03:11:17,63 --> 03:11:42,33
+and then it going asymptotically approach the terminal speed.
+
+224
+03:11:51,83 --> 03:12:10,83
+And this is what I'm asking you on your third on your fourth assignment to calculate that.
+
+225
+03:12:13,33 --> 03:12:64,53
+If there were no drag force at all, I hope you realize that the velocity would increase linearly.
+
+226
+03:12:70,3 --> 03:13:15,3
+So you would get something like this. So there's no drag.
+
+227
+03:13:51,23 --> 03:13:99,53
+So the behavior is extremely different due to the drag.
+
+228
+03:14:08,73 --> 03:15:33,23
+And I calculated already something that is part of your assignment, how long does it take for the quarter inch ball bearing,
+
+229
+03:15:33,23 --> 03:16:26,63
+how long does it take in time to reach a speed which is about 99% of the terminal speed.
+
+230
+03:16:26,63 --> 03:17:36,73
+And I calculated that, and you will go through the calculation for yourself, that is only 9 milliseconds.
+
+231
+03:17:45,3 --> 03:18:86,3
+In other words, once it has broken through the surface, that takes a while because of the thin film, then in 9 milliseconds will I already be at 99% of the terminal speed.
+
+232
+03:18:86,3 --> 03:19:82,3
+And so there was no problem at all when I waited for the object to cross the first mark,
+
+233
+03:19:82,3 --> 03:20:18,43
+it was already clearly going at the terminal speed.
+
+234
+03:20:18,43 --> 03:20:42,53
+So that was fine.
+
+235
+03:20:59,3 --> 03:21:25,73
+Now I want to turn to air.
+
+236
+03:21:47,93 --> 03:22:83,33
+Air, of course, behaves in an extremely different way. The principle is the same, but the values for C1 and C2 are vastly difference.
+
+237
+03:22:83,33 --> 03:24:56,43
+If we take air at one atmosphere and we take it at room temperature,
+
+238
+03:24:63,3 --> 03:25:29,83
+then C1 is about 3.1 * 10 to the -4 in our units and C2 is about 0.85.
+
+239
+03:25:75,83 --> 03:27:54,93
+This is very close to the density of air, which is about 1 kg per cubic meter, which I told you earlier, C2 and row are very strongly related.
+
+240
+03:27:96,93 --> 03:29:17,33
+And so the critical speed which is c1 divided by c2 by r
+
+241
+03:29:17,33 --> 03:30:16,53
+is about 3.7 times 10 to the minus 4 divided by r meters per second.
+
+242
+03:30:46,83 --> 03:31:43,93
+And that is about 400 times lower than the critical speed in syrup, in the caro syrup for the same value of R.
+
+243
+03:31:81,43 --> 03:33:82,83
+So if I compare the quarter inch ball bearing and I drop it in the caro syrup, then the terminal velocity in the caro syrup is way below the critical velocity of the caro syrup.
+
+244
+03:33:82,83 --> 03:34:92,93
+The critical velocity of the caro syrup would be 100 miles per hour for a quarter inch ball bearing. So it's way below.
+
+245
+03:35:02,43 --> 03:37:36,93
+Here in air, the critical velocity is something like 11 cm per second. This is 11 cm in 1 second.
+
+246
+03:37:36,93 --> 03:39:55,73
+And we know when you drop a 1 quarter inch ball bearing in air that the speed is way larger. And therefore,
+
+247
+03:39:55,73 --> 03:41:43,33
+in the case of air, a quarter inch ball bearing would have a speed way above the critical speed,
+
+248
+03:41:43,33 --> 03:42:26,93
+and so you are now exclusively in regime two. That's the regime two.
+
+249
+03:42:48,63 --> 03:43:61,33
+Almost all spheres that you drop in air
+
+250
+03:43:61,3 --> 03:44:48,3
+operate exclusively in regime two.
+
+251
+03:44:86,43 --> 03:45:54,3
+Whether it is a raindrop
+
+252
+03:45:71,93 --> 03:46:36,93
+or whether it is a baseball that you hit or a golf ball.
+
+253
+03:46:88,93 --> 03:47:66,83
+or even a beach ball,
+
+254
+03:47:89,93 --> 03:49:17,23
+or you throw a pebble of a high building,
+
+255
+03:49:40,43 --> 03:50:81,33
+or whether you jump out of an airplane with or without a parachute, makes no difference. You're always dominated by the pressure term, by the V squared term.
+
+256
+03:50:81,3 --> 03:52:76,33
+and you always are in a range whereby the terminal speed is proportional to the square root of radius
+
+257
+03:52:76,33 --> 03:53:28,63
+for a given density of the object.
+
+258
+03:53:68,3 --> 03:55:38,43
+If you take a pebble with a radius of about 1 cm and you throw it off a high building,
+
+259
+03:55:38,43 --> 03:57:17,43
+it will reach a speed which will not exceed 75 miles per hour
+
+260
+03:57:17,43 --> 03:57:65,33
+because of the air drag.
+
+261
+03:57:90,93 --> 04:00:62,43
+If you jump out of a plane and you have no parachute,
+
+262
+04:00:62,43 --> 04:02:12,53
+and I make the assumption that your mass
+
+263
+04:02:12,53 --> 04:03:38,83
+is about 70 kg.
+
+264
+04:03:80,13 --> 04:05:09,33
+I want rough numbers. If I can approximate you by a sphere
+
+265
+04:05:09,3 --> 04:07:18,73
+with a radius of about 40 cm, that's also an approximation.
+
+266
+04:07:18,73 --> 04:09:80,53
+You're not really like a sphere, but I want to get some some rough numbers.
+
+267
+04:09:80,53 --> 04:11:38,3
+Then the terminal velocity
+
+268
+04:11,38,3 --> 04:12,99,93
+is 150 miles per hour.
+
+269
+04:13,14,13 --> 04:14,85,83
+So if you jump out of a plane and you have no parachute,
+
+270
+04:14,85,83 --> 04:16,58,53
+you will not go much faster than 150 miles per hour.
+
+271
+04:16,15,23 --> 04:18,48,73
+I just read an article yesterday about skydivers
+
+272
+04:18,48,73 --> 04:21,95,93
+who jump out of planes and they want to open the parachute at the very last possible,
+
+273
+04:21,95,93 --> 04:25,91,33
+and they reach terminal velocities of 120 miles per hour,
+
+274
+04:25,91,33 --> 04:28,50,53
+which doesn't surprise me. It's very close to this rough number that I calculated.
+
+275
+04:28,50,53 --> 04:30,99,23
+Of course, then they open the parachute and then the air drag
+
+276
+04:31,17,3 --> 04:33,31,33
+increases enormously, and then they slow down
+
+277
+04:33,31,33 --> 04:33,70,53
+even further.
+
+278
+04:33,79,33 --> 04:35,39,33
+I told you a raindrop,
+
+279
+04:35,39,33 --> 04:38,91,83
+almost all raindrops operate in regime two when they fall. So the terminal velocity is dictated by the V square term.
+
+280
+04:39,32,43 --> 04:43,11,93
+However, if you make the drops exceedingly small, there comes a time that you really enter regime one.
+
+281
+04:43,47,3 --> 04:45,67,83
+And on assignment number four, I've asked you to calculate
+
+282
+04:45,67,83 --> 04:47,27,33
+where that happens.
+
+283
+04:47,27,33 --> 04:50,11,33
+And I can't do it for water because the radius of that water drop will be so small
+
+284
+04:50,11,33 --> 04:52,90,53
+that it would evaporate immediately.
+
+285
+04:52,90,53 --> 04:54,13,73
+So I chose oil for that.
+
+286
+04:54,48,3 --> 04:59,88,13
+So I'm asking you in assignment four, take an oil drop, make it smaller and smaller and smaller and smaller,
+
+287
+04:59,88,13 --> 05:01,89,83
+and there comes a time that you begin to enter
+
+288
+05:01,89,83 --> 05:02,91,13
+regime one.
+
+289
+05:03,23,53 --> 05:06,81,13
+And I want you to calculate where that crossover is
+
+290
+05:06,81,13 --> 05:08,89,33
+between these two domains.
+
+291
+05:09,20,3 --> 05:12,34,13
+I have here
+
+292
+05:12,34,13 --> 05:13,23,83
+a a ball.
+
+293
+05:13,23,83 --> 05:16,71,53
+You may call it a balloon, but I call it a ball because there's no helium in it.
+
+294
+05:16,84,93 --> 05:18,83,93
+And this
+
+295
+05:19,11,73 --> 05:21,68,53
+ball
+
+296
+05:21,68,53 --> 05:23,23,63
+weighs
+
+297
+05:23,23,63 --> 05:25,90,73
+approximately 34 grams.
+
+298
+05:26,22,23 --> 05:28,82,23
+So, let me
+
+299
+05:28,82,23 --> 05:30,89,33
+erase some here
+
+300
+05:30,89,33 --> 05:32,65,33
+because I want
+
+301
+05:32,65,33 --> 05:33,35,33
+Yeah.
+
+302
+05:33,89,83 --> 05:35,19,33
+So we know the mass.
+
+303
+05:35,52,43 --> 05:36,28,33
+And we know the radius.
+
+304
+05:36,51,13 --> 05:38,42,93
+The mass is about 34 grams.
+
+305
+05:38,42,93 --> 05:41,23,43
+And the radius is about 35 cm.
+
+306
+05:41,23,43 --> 05:42,79,33
+It's about 70 cm across.
+
+307
+05:43,44,3 --> 05:45,24,33
+I can calculate what the terminal
+
+308
+05:45,24,33 --> 05:48,96,33
+velocity is, better name would be terminal speed.
+
+309
+05:48,96,33 --> 05:50,55,73
+I know I'm definitely going to be in this regime.
+
+310
+05:50,55,73 --> 05:53,45,73
+So I know the mass, I know C2 which in air is 0.85,
+
+311
+05:53,45,73 --> 05:55,43,33
+I know the radius and I know G.
+
+312
+05:55,43,33 --> 05:58,29,13
+And so I find that I find about 1.
+
+313
+05:58,29,13 --> 05:59,93,33
+8 meters per second.
+
+314
+06:00,32,3 --> 06:02,16,13
+So if I drop it from a height of 3 m,
+
+315
+06:02,16,13 --> 06:03,42,23
+which I'm going to do,
+
+316
+06:03,42,23 --> 06:07,59,3
+then you would think that the time that it takes to hit the floor would be about my 3 m
+
+317
+06:07,59,3 --> 06:10,39,13
+divided by 1.8 m per second, which is about 1.
+
+318
+06:10,39,13 --> 06:11,68,43
+7 seconds.
+
+319
+06:12,11,3 --> 06:12,61,53
+That's not bad.
+
+320
+06:12,99,63 --> 06:14,38,43
+That's not a bad approximation.
+
+321
+06:14,76,3 --> 06:16,21,13
+However, it will of course take longer.
+
+322
+06:16,73,13 --> 06:18,52,23
+And the reason why it will take longer is
+
+323
+06:18,52,23 --> 06:21,30,13
+that the terminal velocity, the terminal speed is not achieved
+
+324
+06:21,30,13 --> 06:21,90,93
+instantaneously.
+
+325
+06:22,46,83 --> 06:24,58,23
+With the ball bearings, it was within 9 milliseconds.
+
+326
+06:24,58,23 --> 06:26,38,93
+I can assure you that here it will take a lot longer.
+
+327
+06:26,95,53 --> 06:30,43,73
+Now, if you want to calculate the time that it takes
+
+328
+06:30,43,73 --> 06:32,35,83
+to get close to the terminal speed,
+
+329
+06:32,35,83 --> 06:33,83,83
+that is not an easy task
+
+330
+06:33,83,83 --> 06:35,35,53
+because
+
+331
+06:35,35,53 --> 06:37,17,83
+you are going to end up with a
+
+332
+06:37,17,83 --> 06:38,71,63
+nasty differential equation.
+
+333
+06:38,71,63 --> 06:39,88,43
+You're going to get mg.
+
+334
+06:39,88,43 --> 06:43,66,83
+You're going to get the acceleration, which is the result of let's go which equation we have.
+
+335
+06:44,3,3 --> 06:46,68,83
+You see we have MA
+
+336
+06:46,68,83 --> 06:49,24,13
+equals mg
+
+337
+06:49,24,13 --> 06:51,60,3
+and then we get minus
+
+338
+06:51,60,3 --> 06:53,36,3
+the resistive force.
+
+339
+06:53,46,93 --> 06:56,70,43
+And the resistive force has a term in V
+
+340
+06:56,70,43 --> 06:58,20,13
+and has a term in V squared.
+
+341
+06:58,58,3 --> 06:59,93,3
+You see V and V squared.
+
+342
+06:59,93,3 --> 07:01,41,53
+And so this cannot be solved analytically.
+
+343
+07:01,85,3 --> 07:05,62,33
+But I've asked my graduate student Dave Pulley, who is one of your instructors,
+
+344
+07:05,62,33 --> 07:07,69,63
+to solve this for me numerically.
+
+345
+07:08,53,3 --> 07:11,59,73
+And I'm going to show you the results that he prepared.
+
+346
+07:11,59,73 --> 07:14,93,33
+He has a nice view graph and you can see the effect of time
+
+347
+07:14,93,33 --> 07:17,73,33
+on the ball if you drop it from
+
+348
+07:18,14,23 --> 07:19,14,3
+3 meters.
+
+349
+07:19,47,53 --> 07:20,53,3
+Here it is.
+
+350
+07:20,53,3 --> 07:22,59,53
+All the numbers are there. This is on the web, so don't copy anything.
+
+351
+07:22,59,53 --> 07:27,16,33
+Uh, you have the values for C1 and C2 are given at the top. You may not be able to see them from your seat, but they are there.
+
+352
+07:27,16,33 --> 07:32,13,53
+And what you see here is the height above the ground as a function of time.
+
+353
+07:32,13,53 --> 07:34,19,23
+This is 1 second, this is one and a half second. This is the 3 meter mark.
+
+354
+07:34,56,73 --> 07:38,63,53
+If there were no air drag, remember we dropped an apple early on from 3 m, it will hit the floor
+
+355
+07:38,63,53 --> 07:40,58,43
+at about 780 milliseconds.
+
+356
+07:41,53,3 --> 07:44,46,33
+However, with the air drag, it will be about 1 second later,
+
+357
+07:44,46,33 --> 07:45,94,33
+more like 1.8 seconds.
+
+358
+07:46,39,43 --> 07:48,29,93
+So the 1.7 wasn't bad as you see.
+
+359
+07:48,29,93 --> 07:51,47,63
+But if you look here at how the speed
+
+360
+07:51,47,63 --> 07:53,77,33
+builds up as a function of time, you see it takes about three,
+
+361
+07:53,77,33 --> 07:55,18,83
+40 of a second to build up
+
+362
+07:55,18,83 --> 07:59,15,43
+to that terminal speed, which is the 1.8 m per second that you have there.
+
+363
+08:00,36,13 --> 08:04,32,93
+And needless to say, of course, that the acceleration due to gravity does not remain constant,
+
+364
+08:04,32,93 --> 08:08,41,3
+but goes down very quickly. And when the acceleration
+
+365
+08:08,41,3 --> 08:10,94,33
+reaches approaches zero, then you have terminal speed,
+
+366
+08:10,94,33 --> 08:12,41,33
+and then there is no longer any change
+
+367
+08:12,41,33 --> 08:13,47,93
+in the velocity.
+
+368
+08:13,79,3 --> 08:14,65,63
+So let's try this.
+
+369
+08:14,65,63 --> 08:15,45,23
+Give more light.
+
+370
+08:15,90,23 --> 08:18,43,73
+And we're going to throw this object and
+
+371
+08:18,43,73 --> 08:21,7,83
+I don't think you're going to get 1.8 seconds. You may get something that is larger than 1.8 seconds.
+
+372
+08:21,7,83 --> 08:24,38,23
+And the reasons are the following. Number one,
+
+373
+08:24,38,23 --> 08:25,79,33
+this is not a perfect sphere.
+
+374
+08:26,35,3 --> 08:28,78,3
+And only for spheres do these calculations hold.
+
+375
+08:28,78,3 --> 08:29,39,33
+That's number one.
+
+376
+08:29,39,33 --> 08:32,20,43
+Number two, this thing is very springy.
+
+377
+08:32,20,43 --> 08:35,21,93
+So the moment that I let it go, it probably goes in some kind of oscillation.
+
+378
+08:35,21,93 --> 08:37,14,93
+That doesn't help either. That will probably also slow it down.
+
+379
+08:37,72,43 --> 08:41,21,3
+Because what causes, of course, this slowdown in regime 2 is really turbulence.
+
+380
+08:41,21,3 --> 08:43,22,13
+Turbulence is extremely hard to understand and predict.
+
+381
+08:43,57,13 --> 08:46,76,13
+And so almost anything I do, I will only add turbulence.
+
+382
+08:46,76,13 --> 08:50,52,63
+And therefore I predict that the time that it will take from 3 m will be probably larger than 1.8 seconds.
+
+383
+08:50,88,13 --> 08:54,24,13
+But it will be substantially larger than the 780 milliseconds,
+
+384
+08:54,57,43 --> 08:56,44,93
+which is what you would have seen if you drop an apple.
+
+385
+08:56,88,73 --> 08:59,68,43
+So let's see how close we are.
+
+386
+09:00,20,43 --> 09:02,10,93
+Turn on this timer.
+
+387
+09:02,57,43 --> 09:03,98,33
+Make sure I zero it. I did.
+
+388
+09:04,47,33 --> 09:05,18,63
+And
+
+389
+09:05,18,63 --> 09:10,96,93
+It's not too easy to release it, by the way, and start the timer at the same moment.
+
+390
+09:11,31,43 --> 09:13,52,83
+And it's not even so easy for me to see when it hits the ground.
+
+391
+09:13,88,83 --> 09:15,95,83
+So there's a huge uncertainty in this
+
+392
+09:16,20,23 --> 09:17,10,3
+experiment.
+
+393
+09:17,54,3 --> 09:18,11,83
+Okay.
+
+394
+09:18,68,3 --> 09:19,63,33
+3 2 1 0
+
+395
+09:21,68,43 --> 09:22,36,13
+What do we see?
+
+396
+09:23,48,3 --> 09:24,41,13
+2.06
+
+397
+09:24,41,13 --> 09:25,52,83
+Did I see something? 2.0, it's not bad.
+
+398
+09:26,71,83 --> 09:28,24,83
+The prediction was 1.8, you get 2.0.
+
+399
+09:28,24,83 --> 09:31,74,43
+That's not bad. So this takes the air drag into account and it is not even an approximation.
+
+400
+09:31,74,43 --> 09:35,25,33
+It uses the entire term linear in V as well as in V squared, but it's almost exclusively dominated by the V squared term.
+
+401
+09:35,78,93 --> 09:40,71,33
+I also asked Dave to show me what happens when I throw a pebble of the Empire State building.
+
+402
+09:40,71,33 --> 09:45,71,13
+And the pebble that we chose was had a radius of 1 centimeter. It's a kind of pebble that all of us could find.
+
+403
+09:45,71,13 --> 09:47,63,73
+I know roughly the density of pebbles.
+
+404
+09:47,99,3 --> 09:52,33,53
+And if we throw it off the Empire State building, we reach a terminal speed
+
+405
+09:52,33,53 --> 09:55,82,73
+of about 75 miles per hour.
+
+406
+09:56,19,3 --> 09:58,72,93
+Without the air drag, we would have reached 200
+
+407
+09:58,72,93 --> 10:01,37,43
+and 25 miles per hour.
+
+408
+10:01,89,73 --> 10:03,26,53
+So I want to show you that too.
+
+409
+10:08,31,73 --> 10:13,52,33
+So now you see the Empire state building which has a height of 475 m.
+
+410
+10:14,47,43 --> 10:15,91,23
+So that's where you start at T0.
+
+411
+10:15,91,23 --> 10:18,86,33
+This is 1 second, 5 seconds, 10 seconds, 5 seconds,
+
+412
+10:18,86,33 --> 10:20,12,43
+15 seconds.
+
+413
+10:20,65,3 --> 10:25,81,53
+And if there had been no air drag, it would hit the ground a little less than 10 seconds.
+
+414
+10:25,81,53 --> 10:29,74,13
+But now it will hit the ground more like 16, 17 seconds.
+
+415
+10:30,29,53 --> 10:33,76,23
+And you see that the terminal speed builds up
+
+416
+10:33,76,23 --> 10:35,71,53
+in about 5, 6 seconds.
+
+417
+10:35,71,53 --> 10:38,30,73
+It's very close to the final value.
+
+418
+10:38,30,73 --> 10:41,98,13
+And if there had been no air drag, then the speed at which it would hit the ground,
+
+419
+10:41,98,13 --> 10:44,58,53
+it would of course grow linearly. and when it hits the ground,
+
+420
+10:44,58,53 --> 10:48,20,73
+it would be somewhere here, which is 225 miles
+
+421
+10:48,20,73 --> 10:49,32,33
+per hour.
+
+422
+10:49,32,33 --> 10:50,88,93
+So you see there's even a pebble.
+
+423
+10:50,88,93 --> 10:55,82,33
+You wouldn't expect to be to have a very large effect on air drag, it is huge
+
+424
+10:55,82,33 --> 10:59,69,53
+provided that you throw it from a high building.
+
+425
+11:00,74,93 --> 11:07,31,63
+Now you may remember that we dropped an apple from 3 meters
+
+426
+11:07,31,63 --> 11:14,15,3
+and that we calculated the gravitational acceleration given the time that it takes to fall.
+
+427
+11:14,15,3 --> 11:16,93,13
+That was one of your, one of the things you did in your assignment.
+
+428
+11:17,49,33 --> 11:19,62,93
+We had 781 milliseconds, I think.
+
+429
+11:19,96,33 --> 11:22,10,13
+And out of that, you can calculate G.
+
+430
+11:22,61,3 --> 11:25,90,63
+Right? Because you know that 3 m is 1/2 GT squared.
+
+431
+11:26,35,83 --> 11:28,87,23
+So I give you the three with an uncertainty, I give you the time,
+
+432
+11:28,87,23 --> 11:31,32,83
+781 millisecond
+
+433
+11:31,60,93 --> 11:34,97,53
+with an uncertainty of 2 millisecond, which we allowed out pops G.
+
+434
+11:35,75,93 --> 11:39,84,53
+So I asked Dave, what is the effect of air drag on this apple?
+
+435
+11:39,84,53 --> 11:44,53,83
+Is it was it a responsible thing for us to ignore that?
+
+436
+11:45,60,43 --> 11:52,46,43
+The apple has a mass of 134 grams.
+
+437
+11:52,98,83 --> 11:54,17,53
+It's easy to weigh, of course.
+
+438
+11:54,56,73 --> 11:57,31,73
+So this was our apple during our first lecture.
+
+439
+11:57,99,93 --> 12:00,59,13
+M is 134 grams.
+
+440
+12:01,55,3 --> 12:06,78,43
+It's almost a sphere, really, not quite, but almost a sphere, and the radius is about 3 cm.
+
+441
+12:08,22,83 --> 12:12,91,33
+And that leads to a terminal velocity which you can calculate if you want to,
+
+442
+12:12,91,33 --> 12:14,81,63
+using the V squared term,
+
+443
+12:14,81,63 --> 12:17,98,3
+but I was not interested in that.
+
+444
+12:18,35,93 --> 12:22,93,83
+I wanted to know how many milliseconds is the touchdown delayed because of the air drag.
+
+445
+12:23,34,93 --> 12:27,48,13
+And Dave made the calculations and he found
+
+446
+12:27,48,13 --> 12:31,38,93
+that that is 2 milliseconds from 3 meters.
+
+447
+12:31,38,93 --> 12:33,12,13
+From one and a half meters, it's almost nothing.
+
+448
+12:33,55,43 --> 12:37,98,23
+And the reason why it's almost nothing from one and a half meters, you see,
+
+449
+12:37,98,23 --> 12:41,50,83
+when you throw an apple in air,
+
+450
+12:41,50,83 --> 12:42,85,33
+it's really in regime two.
+
+451
+12:43,25,13 --> 12:45,89,23
+So you really dominated by the speed
+
+452
+12:45,89,23 --> 12:47,48,73
+square term.
+
+453
+12:47,88,83 --> 12:52,4,83
+And the first one and a half meters it doesn't get a very high speed yet. The speed
+
+454
+12:52,4,83 --> 12:58,73,73
+grows linearly and so it is the last portion where you really get hit by the air drag by the V squared term.
+
+455
+12:59,28,3 --> 13:00,98,63
+2 milliseconds
+
+456
+13:01,31,43 --> 13:02,73,3
+from 3 meters.
+
+457
+13:02,73,3 --> 13:06,63,13
+So if H is 3 m, there is a 2 millisecond,
+
+458
+13:06,63,13 --> 13:08,93,53
+let's call it delay.
+
+459
+13:09,95,63 --> 13:14,68,53
+So we were on the hairy edge of being lucky and unlucky.
+
+460
+13:15,20,53 --> 13:24,1,3
+If you really want to recalculate the gravitational acceleration using our data, you should really subtract the 2 milliseconds from the time.
+
+461
+13:24,1,3 --> 13:31,9,43
+On the other hand, since we allowed a 2 millisecond uncertainty, we really weren't too far off.
+
+462
+13:32,94,73 --> 13:40,83,83
+Now comes my last part and that is how does air drag influence trajectories?
+
+463
+13:41,20,23 --> 13:46,84,93
+And that is also part of your assignment, but I'm going to help you a little bit with that.
+
+464
+13:47,46,33 --> 13:54,73,23
+In your assignment number four, I'm asking you to evaluate quantitatively
+
+465
+13:55,73,3 --> 14:00,26,13
+the motion of an an object in liquid,
+
+466
+14:00,26,13 --> 14:07,7,23
+but I give that object an initial speed in the X direction.
+
+467
+14:07,80,23 --> 14:11,64,93
+And then there's the liquid below. Then gravity is there and there is that initial speed.
+
+468
+14:12,8,3 --> 14:16,21,43
+If there were no drag, then this of course would be a parabola.
+
+469
+14:16,70,3 --> 14:21,71,43
+And the horizontal velocity would always be the same. There would never be any change.
+
+470
+14:22,46,3 --> 14:23,90,53
+But that's not the case now.
+
+471
+14:24,57,93 --> 14:31,41,33
+Because of the resistive forces, because of the drag by the liquid, the object is going to
+
+472
+14:31,41,33 --> 14:39,29,33
+get a velocity in this direction, so there's going to be a component of the resistive force opposing it.
+
+473
+14:39,74,33 --> 14:46,99,3
+It has a speed in this direction, so there's also going to be a component of the resistive force in this direction.
+
+474
+14:47,34,63 --> 14:51,44,3
+And that will decrease this speed, this component in the X direction.
+
+475
+14:51,84,3 --> 14:56,89,33
+And so you can already see that the curve that you're going to see is very different one.
+
+476
+14:57,27,3 --> 15:01,32,63
+It's going to look something like this.
+
+477
+15:01,93,93 --> 15:18,39,53
+And then ultimately, there is nothing left of this component, and ultimately, when you go vertically down, you have the terminal speed that you can find from dropping an object just into the liquid vertically.
+
+478
+15:18,81,43 --> 15:22,62,63
+So that's something you're going to deal with in your assignment number four,
+
+479
+15:22,62,63 --> 15:29,24,33
+and this is exclusively done in regime one because we have an object with liquid.
+
+480
+15:29,24,33 --> 15:33,23,43
+And with liquid you almost always work with regime one.
+
+481
+15:35,24,3 --> 15:39,82,23
+Suppose I take a tennis ball and I throw up a tennis ball in 26 100.
+
+482
+15:40,17,3 --> 15:42,81,13
+There is air drag on that tennis ball.
+
+483
+15:43,51,3 --> 15:47,51,13
+In the absence of any air drag, I would get a nice parabola
+
+484
+15:47,51,13 --> 15:51,77,13
+which would be completely symmetric.
+
+485
+15:52,79,63 --> 15:56,85,73
+I throw it up with a certain initial speed
+
+486
+15:57,32,53 --> 16:00,97,73
+V call it V0, I don't care.
+
+487
+16:01,54,13 --> 16:04,95,93
+And the horizontal component would never change.
+
+488
+16:05,38,83 --> 16:08,57,73
+This would be V0 X would always be the same.
+
+489
+16:08,57,73 --> 16:17,57,73
+But now with air drag, you're going to see that there's going to be a force, an air drag force in the Y direction.
+
+490
+16:17,57,73 --> 16:21,22,63
+If the object goes up in this direction, then there will be
+
+491
+16:21,22,63 --> 16:26,16,93
+a resistive force component in the Y direction.
+
+492
+16:26,16,93 --> 16:28,45,73
+And since it has a speed in this direction,
+
+493
+16:28,45,73 --> 16:33,99,3
+there will also be a resistive force in the X direction.
+
+494
+16:33,99,3 --> 16:36,69,33
+So this speed is going to be eaten up.
+
+495
+16:36,69,33 --> 16:40,47,33
+In the same way that this component was going to be eaten up.
+
+496
+16:40,77,13 --> 16:44,50,13
+This component is going to suffer. It will not stay constant throughout.
+
+497
+16:44,95,33 --> 16:52,90,13
+And as a result of that, you're going to get a trajectory that looks more like this.
+
+498
+16:53,58,73 --> 16:54,89,33
+It's asymmetric.
+
+499
+16:55,38,93 --> 17:00,96,53
+Clearly, you don't reach the highest point that you would have reached without air drag,
+
+500
+17:01,14,3 --> 17:06,69,93
+for the reason that this resistive force in the Y direction will not allow it to go as high,
+
+501
+17:06,69,93 --> 17:07,44,73
+that's obvious.
+
+502
+17:07,78,53 --> 17:10,63,33
+You don't go as far as you would without air drag,
+
+503
+17:10,63,33 --> 17:15,80,13
+for obvious reasons that this resistive force is going to kill this speed,
+
+504
+17:15,80,13 --> 17:22,13,23
+but you also will get asymmetry in the curvature. And I want you to see that.
+
+505
+17:22,66,23 --> 17:27,39,33
+I call this point O, this point P, and let's call this point S.
+
+506
+17:27,39,33 --> 17:30,73,73
+So what I will do is I will throw up a tennis ball,
+
+507
+17:31,1,23 --> 17:33,57,33
+and then I will throw up a styrofoam ball.
+
+508
+17:33,86,93 --> 17:38,40,33
+And the styrofoam ball has very closely the same radius as the tennis ball.
+
+509
+17:38,72,23 --> 17:43,82,53
+That means the resistive force is the same on both, because the resistive force
+
+510
+17:44,14,83 --> 17:49,54,33
+is only dictated by r squared and by V. R square V squared, remember?
+
+511
+17:49,54,33 --> 17:53,94,33
+However, this has a way larger mass than this one.
+
+512
+17:54,35,43 --> 18:01,34,33
+And even though the resistive forces will be closely the same if I throw them up with the same initial speed, it has a way larger effect on a smaller mass than on a larger mass.
+
+513
+18:01,34,33 --> 18:17,61,23
+F equals MA, right? So on a very large mass, the resistive force will have a much lower effect than on the smaller mass, even though the resistive forces are about the same.
+
+514
+18:17,94,93 --> 18:22,73,73
+So, try to see that the tennis ball is very close to an ideal parabola.
+
+515
+18:22,73,73 --> 18:26,8,33
+You will not even see any effect of asymmetry. It will not be the case for the starfoam though.
+
+516
+18:26,8,33 --> 18:31,63,53
+So look at the tennis ball first.
+
+517
+18:34,42,73 --> 18:36,12,33
+I should really do it here.
+
+518
+18:37,10,23 --> 18:38,49,83
+Did it look more or less symmetric?
+
+519
+18:38,80,33 --> 18:40,18,83
+Okay, now I'll try this one.
+
+520
+18:42,12,3 --> 18:43,57,33
+Did it look asymmetric?
+
+521
+18:44,20,43 --> 18:45,69,83
+Could you see it?
+
+522
+18:46,33,73 --> 18:48,78,23
+Are you just saying yes or you really saw it?
+
+523
+18:49,16,63 --> 18:51,12,33
+Let me do it once more. I can throw it back.
+
+524
+18:52,59,3 --> 18:56,16,33
+So now it should curve like this and then sort of come down like that. You ready?
+
+525
+18:58,46,13 --> 19:01,15,23
+You see the asymmetry?
+
+526
+19:02,93,3 --> 19:04,53,93
+Okay, now comes my last question.
+
+527
+19:04,88,73 --> 19:07,51,13
+I'm going to ask you the following, and there is a unique answer to that.
+
+528
+19:07,51,13 --> 19:13,15,23
+I want you to think about it and I want you to be able to give that answer with total 100% confidence.
+
+529
+19:13,93,33 --> 19:18,83,93
+When this object goes from O to P, that takes a certain amount of time.
+
+530
+19:19,57,73 --> 19:25,41,63
+When it goes from P to S back to the ground, that takes also a certain amount of time.
+
+531
+19:26,58,93 --> 19:28,83,33
+Is this time the same as this time?
+
+532
+19:29,73,13 --> 19:34,17,43
+Or is this time longer than this time? Or is this time shorter?
+
+533
+19:34,91,3 --> 19:37,70,93
+Think about it. See you Friday.

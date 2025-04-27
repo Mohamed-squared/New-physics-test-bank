@@ -1,0 +1,1504 @@
+1
+00:00:01,768 --> 00:06,078
+The exam on Wednesday
+will cover our first
+
+2
+00:06,078 --> 00:12,668
+five lectures and the first two homework assignments.
+
+3
+00:13,128 --> 00:17,888
+And so I list here the topics, the way we discussed them.
+
+4
+00:18,818 --> 00:27,648
+Of course, it is not possible to discuss all of them today, but I will make a selection.
+
+5
+00:28,888 --> 00:33,208
+I recall that we discussed scaling
+
+6
+00:33,918 --> 00:38,428
+and we used the interesting example of Galileo Galilei.
+
+7
+00:39,448 --> 00:42,838
+animal and the animal has legs.
+
+8
+00:43,878 --> 00:51,838
+And we defined the overall size of the animal as say big. We call that S.
+
+9
+00:52,818 --> 00:57,588
+And then we said, well, there is here the femur.
+
+10
+00:58,938 --> 01:03,278
+And the femur has length L and thickness D.
+
+11
+01:04,278 --> 01:15,228
+It was completely reasonable to say, well, that L will have to be proportional to S. If an animal is 10 times larger than another, legs will be typically 10 times longer.
+
+12
+01:16,768 --> 01:28,298
+Since the mass of the animal must be proportional to its size to the power three, will also be proportional to the length of the femur to the power three.
+
+13
+01:28,298 --> 01:36,948
+And then came in this key argument, namely, you don't want the bones to be crushed, which is called yielding in physics.
+
+14
+01:37,718 --> 01:44,338
+If I take a piece of concrete, a block of concrete, and I put too much pressure on it, it starts to crumble.
+
+15
+01:44,638 --> 01:47,858
+And that's what Galileo Galilei may have had in mind.
+
+16
+01:48,748 --> 01:59,218
+And in order to protect animals who get bigger and bigger and bigger against this crushing, we argued, and I will not go through that argument now anymore,
+
+17
+01:59,518 --> 02:05,888
+that the mass will have to be proportional to D squared, which is the cross section of the femur.
+
+18
+02:06,818 --> 02:17,718
+And so, you see immediately that D square has to be proportional to L to the third, so D must be proportional to the length of the femur to the power 1 and 1/2.
+
+19
+02:18,348 --> 02:30,948
+So this would mean that if you compare an elephant with a mouth, the elephant overall size is about 100 times larger than a mouth, you would expect the femur to be about 100 times larger, which is true.
+
+20
+02:31,678 --> 02:38,218
+But you would then expect the femur to be about 1 thousand times thicker, and that turns out to be not true, as we have seen.
+
+21
+02:38,628 --> 02:45,688
+In fact, the femur of the elephant is only 100 times thicker. So it scales just as the size.
+
+22
+02:46,478 --> 02:48,628
+So that was a scaling argument.
+
+23
+02:49,748 --> 02:57,978
+And let's now talk about dot products. If I look there, I scan a little bit in a random way over my topics.
+
+24
+02:58,418 --> 03:01,968
+So let's now talk about dot products.
+
+25
+03:03,798 --> 03:18,528
+I have a vector A Ax * X roof, which is the unit vector in the X direction, plus Ay Y roof plus AZ Z roof.
+
+26
+03:19,118 --> 03:26,728
+So these are the three unit vectors in the XY and Z direction, and these are the X component, Y and the Z component of the vector A.
+
+27
+03:27,498 --> 03:40,678
+I have another vector B, B of X X roof, B of Y Y roof, B of Z Z roof.
+
+28
+03:41,928 --> 03:58,028
+Now the dot product A dot B, also called the scalar product, is the same as B. A and it is defined as AX BX
+
+29
+03:58,688 --> 04:08,638
+plus A B Y plus A Z B of Z.
+
+30
+04:08,638 --> 04:09,628
+It is a number.
+
+31
+04:10,268 --> 04:12,488
+It is a scalar, it is simple number.
+
+32
+04:13,038 --> 04:21,538
+And so this number can be larger than zero, can be positive, it can be equal to zero, but it can also be smaller than zero.
+
+33
+04:22,178 --> 04:24,438
+We just dump numbers.
+
+34
+04:25,308 --> 04:33,808
+There is another way that you can define, you can call this method number one, if you if you prefer that.
+
+35
+04:34,068 --> 04:40,018
+There is another way that you can find the dot product, which gives you exactly the same result.
+
+36
+04:40,698 --> 04:44,498
+If you have a vector A
+
+37
+04:45,148 --> 04:51,598
+and you have the vector B and the angle between them is theta,
+
+38
+04:52,308 --> 04:56,928
+then you can project B on A or A on B for that matter, it makes no difference.
+
+39
+04:57,678 --> 05:06,388
+And that projection, the length of this projection is then of course B cosine theta.
+
+40
+05:07,738 --> 05:11,988
+And so A. B
+
+41
+05:12,488 --> 05:26,418
+and that is exactly the same, you may want to go through a proof of that, it is the length of A times the length of B times cosine of theta.
+
+42
+05:27,528 --> 05:29,828
+And that will give you precisely the same result.
+
+43
+05:31,058 --> 05:45,088
+What is interesting about this formulation, which this lacks, that you can immediately see that if the two are at 90 degree angles or 270 degrees for that matter, then the dot product is zero.
+
+44
+05:45,878 --> 05:51,748
+So that's a an insight that you get through this one, which you lack through that other method.
+
+45
+05:53,228 --> 05:59,538
+Let us take a down-to-earth example of a dot product.
+
+46
+06:00,538 --> 06:12,628
+Suppose A equals 3x and B equals 2x + 2y.
+
+47
+06:13,808 --> 06:15,678
+And I'm asking you what is the dot product.
+
+48
+06:16,838 --> 06:24,608
+Well, you could use method number one, which in this case is by far the fastest, believe me.
+
+49
+06:25,238 --> 06:29,088
+AX is 3 and BX is 2, so that gives me a 6.
+
+50
+06:33,468 --> 06:38,228
+There is no A Y, there is no A Z, so this is the answer. It's just six.
+
+51
+06:39,488 --> 06:40,638
+That's the dot product.
+
+52
+06:41,448 --> 06:49,078
+You could have done it that way, it's a little bit more complicated, but I certainly want to show you that it works.
+
+53
+06:50,768 --> 06:58,928
+If this is the X direction, and this is the Y direction, we don't have to look into the Z direction because there is no Z component.
+
+54
+06:59,678 --> 07:08,558
+Then this would be vector A and this point would be at three.
+
+55
+07:10,938 --> 07:20,018
+B, this would be two, and this would be two. And so this would be the vector B.
+
+56
+07:24,568 --> 07:28,348
+And it's immediately clear now that this angle 45 degrees.
+
+57
+07:28,688 --> 07:31,748
+That follows from the two and the two.
+
+58
+07:32,128 --> 07:38,448
+So if we now apply method number two, A. B.
+
+59
+07:39,258 --> 07:42,128
+First the length of A, that's three.
+
+60
+07:43,488 --> 07:49,228
+Times the length of B, that is two times the square root of 2.
+
+61
+07:50,268 --> 07:59,038
+This is two, this is two, this is two square root 2 times the cosine of 45 degrees, which is 1/2 square root 2.
+
+62
+07:59,038 --> 07:59,848
+And the answer is six.
+
+63
+08:00,308 --> 08:05,268
+Notice that this square root of 2 and this square root of 2 eat up this two and you get six.
+
+64
+08:05,598 --> 08:06,698
+You get the same answer, of course.
+
+65
+08:07,208 --> 08:12,488
+But it would be a dumb thing to do it since it can be done so much easier.
+
+66
+08:14,068 --> 08:22,038
+Uh on cross products, I don't want to go through the formalism of cross products the way we did that with the determinant.
+
+67
+08:22,518 --> 08:33,778
+I just want to remind you that if you have a cross product of two vectors, that is minus B cross A.
+
+68
+08:35,848 --> 08:50,058
+And that the the magnitude of C is the length of A times the length of B times the sign of the angle
+
+69
+08:50,818 --> 08:51,748
+between them.
+
+70
+08:55,288 --> 09:04,408
+The vector C, the dot product, the cross product is always perpendicular to both A and perpendicular to B.
+
+71
+09:04,988 --> 09:08,998
+In other words, it's perpendicular to the plane of the two vectors.
+
+72
+09:10,768 --> 09:15,028
+Now, if it's perpendicular to the plane, then in that case, it's perpendicular to the blackboard.
+
+73
+09:15,028 --> 09:20,548
+You have two choices. It's either coming at you perpendicular or it's coming straight into the blackboard.
+
+74
+09:20,938 --> 09:30,088
+And now everyone has so his own way of doing it. I taught you what's called the right hand cork screw rule.
+
+75
+09:30,468 --> 09:37,798
+You take the first one that is mentioned, in this case A, and you rotate it over the shortest angle to B.
+
+76
+09:38,628 --> 09:55,368
+When you do that, you rotate your cork screw seen from where you're sitting counterclockwise, then the cork screw comes to you, and so the direction of the vector is such that you will see the tip of the vector, so it's coming straight out of the blackboard.
+
+77
+09:55,368 --> 09:56,378
+And so that gives you then
+
+78
+09:56,678 --> 09:57,258
+the direction.
+
+79
+10:03,048 --> 10:20,428
+Now I will give you the position X of an object as a function of time, and then we're going to ask ourselves a lot of questions about velocities, accelerations,
+
+80
+10:20,968 --> 10:25,418
+sort of everything you can think of, everything we have covered, speeds.
+
+81
+10:25,778 --> 10:27,788
+And I will cover here four seconds of time.
+
+82
+10:28,008 --> 10:33,398
+So this is the time axis in seconds.
+
+83
+10:34,378 --> 10:36,148
+And we will cover 4 seconds.
+
+84
+10:37,178 --> 10:44,118
+So let this be one, two, three, four.
+
+85
+10:46,098 --> 10:52,848
+And let the object be at position plus six.
+
+86
+10:53,838 --> 10:59,298
+This is my X-axis. This is where the object is actually moving.
+
+87
+11:00,588 --> 11:02,638
+And this is three.
+
+88
+11:03,868 --> 11:08,998
+And here is minus three. And this let's say is in meters.
+
+89
+11:11,218 --> 11:22,708
+Let's make a little grid so that it's easier for me to put in the the curve.
+
+90
+11:24,758 --> 11:28,458
+Okay.
+
+91
+11:32,238 --> 11:32,918
+All right.
+
+92
+11:33,748 --> 11:37,528
+So now comes X as a function of T.
+
+93
+11:39,938 --> 11:49,048
+At time T equals T seconds,
+
+94
+11:50,948 --> 12:00,998
+And this part is a parabola, and this parabola here is horizontal.
+
+95
+12:01,978 --> 12:11,698
+It's important that you have to know that. So this is a parabola, and this here is horizontal.
+
+96
+12:13,498 --> 12:19,538
+So the object goes from +6 to 3, then it goes to -3.
+
+97
+12:20,138 --> 12:29,238
+Then it stays there for one second, and then it goes back in one second to +6.
+
+98
+12:30,448 --> 12:37,748
+It's a one-dimensional problem, the motion is only in the X axis along the X direction.
+
+99
+12:38,778 --> 12:42,798
+Let's analyze all these different seconds that occur.
+
+100
+12:43,758 --> 12:50,848
+Let's first take the first second during the first second.
+
+101
+12:51,748 --> 12:56,128
+Since this is a parabola, you know that the acceleration is constant.
+
+102
+12:56,918 --> 13:02,018
+So, I hope you will conclude immediately that A must be a constant.
+
+103
+13:02,018 --> 13:17,338
+If A is a constant, the position X as a function of time should change as follows, X0 + V0t + 12 A T square.
+
+104
+13:19,698 --> 13:22,248
+I expect you to know this equation.
+
+105
+13:23,698 --> 13:32,968
+Very often do I give you equations at the exam, and that may well happen during the second and the third exam, but it will not be the case this time.
+
+106
+13:33,368 --> 13:39,078
+The equations are all very fundamental, and you have to make them part of your world.
+
+107
+13:39,398 --> 13:43,778
+So this is an equation that you will have to remember.
+
+108
+13:44,908 --> 13:49,858
+All right. What is the velocity here?
+
+109
+13:51,018 --> 13:53,878
+The velocity starts out to be zero.
+
+110
+13:54,828 --> 13:58,358
+And the velocity here is not zero anymore.
+
+111
+14:00,528 --> 14:04,018
+If I look at time T equals 1,
+
+112
+14:05,628 --> 14:08,718
+then I have here X0 was 6.
+
+113
+14:09,668 --> 14:11,908
+It starts out with velocity zero, that's a given.
+
+114
+14:12,908 --> 14:18,788
+And I get + 12 times square, but this is only 1 second.
+
+115
+14:21,688 --> 14:37,578
+And so when it is at three, I have 6 + 12 A * 1 squared, and so you'll find that A equals - 6 m per second square.
+
+116
+14:37,578 --> 14:43,958
+So during this first second, the acceleration is - 6 m per second squared.
+
+117
+14:44,948 --> 15:00,408
+And the velocity V as a function of time is the derivative of this one is V0 + AT. V0 was zero, and so that is minus 6 * T.
+
+118
+15:00,408 --> 15:04,488
+So the velocity is changing in a linear fashion.
+
+119
+15:05,838 --> 15:11,278
+What do I know about the end of the first second?
+
+120
+15:11,988 --> 15:14,128
+Well, I can say that X is 3.
+
+121
+15:17,438 --> 15:22,518
+What do I know about the velocity? Well, the velocity is minus 6.
+
+122
+15:27,218 --> 15:28,738
+What do I know about A?
+
+123
+15:30,468 --> 15:31,438
+I don't.
+
+124
+15:32,168 --> 15:33,898
+I don't know about A.
+
+125
+15:34,848 --> 15:49,408
+It's true that during this first second, A is - 6 m per second square, but it changes abruptly at this point, so it's ill defined at that point. In fact, it's actually non-physical. So I really don't know exactly at the end what the acceleration is.
+
+126
+15:53,768 --> 15:55,988
+Let's now go to the second second.
+
+127
+15:56,668 --> 16:00,108
+And let's see what happens there.
+
+128
+16:03,528 --> 16:06,018
+Second, second.
+
+129
+16:07,638 --> 16:12,708
+And first, let's look during.
+
+130
+16:13,478 --> 16:15,768
+And then we'll look at situation at the end.
+
+131
+16:16,848 --> 16:30,818
+During the second second, it is clear since this is a straight line that the velocity remains constant and it remains minus 6 m per second. That is exactly what it was at this point at the end.
+
+132
+16:30,948 --> 16:42,518
+You can see it goes 6 m from + 3 to - 3 in 1 second. So the velocity is minus 6 m per second.
+
+133
+16:44,038 --> 16:47,158
+The acceleration is therefore zero.
+
+134
+16:47,738 --> 16:56,878
+You see that the acceleration changes abruptly from - 6 m per second square to zero. So I can't tell you what it is exactly at this moment in time.
+
+135
+16:58,538 --> 17:04,198
+So that's the situation during the second second.
+
+136
+17:04,458 --> 17:10,248
+And what is the situation at the end of the second section, second, second?
+
+137
+17:11,928 --> 17:15,338
+At the end, I know that x equals - 3.
+
+138
+17:16,778 --> 17:19,708
+What is the velocity? I don't know.
+
+139
+17:20,638 --> 17:27,408
+Because it changes abruptly here from minus 6 to zero. So I don't know exactly what it is at that point. It's a non physical thing. It's a very abrupt change.
+
+140
+17:29,688 --> 17:36,088
+And the acceleration, yeah, that's also a very tricky thing.
+
+141
+17:36,418 --> 17:50,878
+Because if the velocity is minus 6 on this side of the two seconds and here becomes zero, and if that happens at in a split second, there must be a huge acceleration just at that point, which is non-physical.
+
+142
+17:51,968 --> 17:54,608
+So I would also put a question mark at the A.
+
+143
+17:54,608 --> 17:55,838
+I don't know what the A is.
+
+144
+17:57,738 --> 17:59,208
+So we go to the third second.
+
+145
+18:00,588 --> 18:01,938
+This part.
+
+146
+18:04,248 --> 18:08,108
+Let's first look during the third second.
+
+147
+18:08,828 --> 18:18,278
+Well, the object isn't going anywhere, just sitting there. X remains minus 3.
+
+148
+18:19,588 --> 18:25,508
+And the velocity is zero and A is zero. We can agree on that.
+
+149
+18:26,838 --> 18:33,068
+What is the situation at the end of the third second? That means T equals 3.
+
+150
+18:33,828 --> 18:36,038
+Well, all I know is that x is minus 3.
+
+151
+18:36,348 --> 18:37,438
+That's non-negotiable.
+
+152
+18:38,678 --> 18:45,788
+What the velocity is, I don't know, because it's changing abruptly from zero to a positive value.
+
+153
+18:46,248 --> 18:50,108
+So that's ill defined. And the same is true for the acceleration.
+
+154
+18:50,108 --> 18:54,848
+There is a sudden change in velocity, that means there must be a huge acceleration.
+
+155
+18:55,408 --> 19:01,858
+It's unknown, ill-defined, because this curve is of course not very physical.
+
+156
+19:02,988 --> 19:07,108
+Let's now look at the last second. It's the fourth second.
+
+157
+19:09,498 --> 19:10,818
+First during.
+
+158
+19:12,828 --> 19:24,068
+Well, it's going from minus three to plus six and it's a straight line, so the velocity is constant. If the velocity is constant, then you can immediately conclude that A is zero, there's no acceleration.
+
+159
+19:24,528 --> 19:33,478
+And it goes 9 m in a time span of 1 second. But it's now plus plus 9 m per second.
+
+160
+19:34,188 --> 19:54,768
+So the object first went from positive values of X to zero and to negative values for X. During all that time, the velocity was negative by our sign convention. And now the velocity, it goes back to +6. The velocity becomes plus 9 m per second.
+
+161
+19:56,158 --> 19:58,458
+What is the story at the end of the four second?
+
+162
+19:59,258 --> 20:02,508
+Well, all I can say is that x equals + 6.
+
+163
+20:03,058 --> 20:09,528
+I don't know much more. I don't know what the velocity is, neither do I know what the acceleration is. The plot stops there anyhow.
+
+164
+20:13,898 --> 20:23,268
+Now, I would think that it is reasonable to ask the following question, what is the average velocity, for instance, between time zero and time four?
+
+165
+20:23,808 --> 20:25,388
+Average velocity.
+
+166
+20:25,908 --> 20:35,098
+We define average velocity as the position at time 4 seconds minus the position at time zero divided by four.
+
+167
+20:35,098 --> 20:36,778
+That is our definition.
+
+168
+20:37,298 --> 20:41,418
+At zero it is at plus six, at four it is at plus six.
+
+169
+20:41,748 --> 20:43,208
+So the upstairs is zero.
+
+170
+20:43,668 --> 20:48,898
+So the average velocity during this four second trip is zero.
+
+171
+20:49,678 --> 20:51,108
+You may not like that.
+
+172
+20:51,488 --> 20:57,698
+It may go against your intuition. Of course, I couldn't agree more with you, but that's the way we define velocity.
+
+173
+20:57,938 --> 21:03,588
+Speed is defined differently. Speed is the magnitude of the velocity vector.
+
+174
+21:03,978 --> 21:15,328
+And the speed therefore always has a positive value. And I will show you now what is the average speed between time 0 and four.
+
+175
+21:16,208 --> 21:19,578
+That is the distance that it has traveled in these four seconds.
+
+176
+21:20,668 --> 21:27,578
+Well let's first go through the first second. It goes from plus c 6 to plus 3. So it already travels 3 m.
+
+177
+21:28,688 --> 21:34,838
+Then in the second second, it goes from plus 3 to minus 3. So it travels another 6 m.
+
+178
+21:35,658 --> 21:48,338
+And then in the third second, it's lazy, it doesn't do anything. So the distance traveled is zero. And then in the last one second, it gets very active and it travels 9 m.
+
+179
+21:49,278 --> 21:53,858
+Notice you only see plus signs here. There are no minus signs that would make no sense.
+
+180
+21:54,618 --> 21:57,678
+And this occurs in 4 seconds.
+
+181
+21:58,518 --> 22:05,028
+So that is about 4 and 1/2 meters per second.
+
+182
+22:05,028 --> 22:11,468
+So the average speed is 4 and 1/2 meters per second, but the average velocity is zero.
+
+183
+22:13,718 --> 22:31,018
+We could now make a plot of the velocity as a function of time. Let me put here the 4 and 1/2 so that I just have enough room here
+
+184
+22:31,378 --> 22:33,818
+to make the velocity plot.
+
+185
+22:34,578 --> 22:35,668
+I'll make a new one.
+
+186
+22:37,348 --> 22:39,538
+This is my time axis.
+
+187
+22:41,888 --> 22:46,078
+And this is the velocity.
+
+188
+22:47,708 --> 22:48,588
+This is zero.
+
+189
+22:49,758 --> 22:55,358
+One second, two second, three second, four seconds.
+
+190
+22:56,728 --> 23:00,588
+And this velocity is in meters per second.
+
+191
+23:04,678 --> 23:17,888
+I go up here to + 10 and here is - 5, here is - 6.
+
+192
+23:19,688 --> 23:21,328
+So, what do I do now?
+
+193
+23:21,328 --> 23:25,818
+I know that the velocity during the first second is minus 6t.
+
+194
+23:26,348 --> 23:27,788
+So it's linear.
+
+195
+23:29,298 --> 23:38,268
+And so the during the first second, this is the velocity
+
+196
+23:38,518 --> 23:46,198
+as a function of time. It starts at zero, you can see that. And when it is here, it has a velocity of minus 6 m per second.
+
+197
+23:47,788 --> 23:53,308
+During the second second, it remains minus 6 m per second.
+
+198
+23:54,188 --> 24:02,898
+So during the second second, the velocity is not changing, stays there.
+
+199
+24:03,978 --> 24:11,808
+During the third second, the velocity jumps all of a sudden to zero. You see how non-physical that is.
+
+200
+24:12,588 --> 24:20,408
+And so all of a sudden during the third second, it becomes zero. So there has to be somehow a connection of course between the two to make this physical.
+
+201
+24:20,838 --> 24:26,808
+So in a very small amount of time, that will have to occur. That's why you get a huge acceleration here at that point.
+
+202
+24:28,448 --> 24:33,188
+Of course you also get an acceleration here at this point because there's also a change in the velocity.
+
+203
+24:33,428 --> 24:42,308
+And then during the fourth second, the velocity is plus 9 m per second and so we jump up.
+
+204
+24:42,928 --> 24:49,468
+Let's make this plus nine.
+
+205
+24:50,958 --> 24:56,648
+And so we have here during the last second.
+
+206
+24:56,648 --> 25:00,888
+And again, this is non-physical, so there has to be somehow a transition.
+
+207
+25:01,738 --> 25:05,488
+And so here you see the velocity as a function of time.
+
+208
+25:05,958 --> 25:07,458
+Now comes an interesting question.
+
+209
+25:08,558 --> 25:17,678
+Is it possible if I gave you this, so this is a given, you can't see that. Could you convert this back to that?
+
+210
+25:19,158 --> 25:36,358
+And the answer is yes, provided that I tell you what the position is at T0 at T equals 0, X equals + 6, and that is sufficient for you to use this information and to reconstruct that.
+
+211
+25:37,388 --> 25:42,298
+It's an interesting thing to do, and if you feel like it, I would say give it a shot.
+
+212
+25:44,918 --> 25:51,768
+All right, so far about speeds and average velocities and accelerations.
+
+213
+25:52,558 --> 25:56,308
+Let's now go to trajectories.
+
+214
+25:57,318 --> 26:00,188
+Three-dimensional trajectories.
+
+215
+26:00,188 --> 26:07,888
+Trajectories, thank goodness, are almost never three-dimensional, they're always two-dimensional.
+
+216
+26:07,888 --> 26:11,048
+Because the trajectory itself is in a vertical plane.
+
+217
+26:11,408 --> 26:20,908
+And so we normally, when we throw up an object in a gravitational field, you have the trajectory in a plane.
+
+218
+26:25,358 --> 26:29,938
+So we'll going to have one trajectory.
+
+219
+26:31,028 --> 26:34,068
+Let this be the X direction.
+
+220
+26:35,428 --> 26:39,238
+And let this be the Y direction.
+
+221
+26:39,238 --> 26:44,518
+increasing values of Y, increasing values of X.
+
+222
+26:46,178 --> 26:53,938
+I take an object and I throw it up with an initial velocity V0.
+
+223
+26:54,268 --> 26:56,338
+And what is the object going to do?
+
+224
+26:56,768 --> 27:04,208
+You're going to get a parabola under the influence of gravity and it comes down here again.
+
+225
+27:06,168 --> 27:13,808
+And when we have this kind of a problem, we will decompose it in two one-dimensional motions.
+
+226
+27:13,808 --> 27:18,128
+One in the X direction and one in the Y direction.
+
+227
+27:19,808 --> 27:38,938
+We already decompose right away the velocity at time T equals zero into a component which I call V0 X and that of course is V0 times the cosine of alpha, if the angle is alpha.
+
+228
+27:39,698 --> 27:52,738
+And the velocity in the Y direction at time T equals zero, I will call that V0 in the Y direction, and that is V0 times the sign of alpha.
+
+229
+27:54,578 --> 28:04,578
+And now I have to know how the object moves in the X direction as a function of time and how it behaves as a function of time in the Y direction.
+
+230
+28:04,988 --> 28:09,698
+So here come the equations for the X direction.
+
+231
+28:09,988 --> 28:17,188
+X as a function of time equals X0 + V0x * t.
+
+232
+28:17,188 --> 28:19,078
+That's all, there is no acceleration.
+
+233
+28:22,048 --> 28:30,408
+The velocity in the X direction as a function of time is simply V0 X. It never changes.
+
+234
+28:30,748 --> 28:32,958
+So that's the X direction.
+
+235
+28:35,078 --> 28:36,758
+Now we take the Y direction.
+
+236
+28:39,478 --> 28:50,818
+Y as a function of time equals Y0 + V0 Yt + 1/2 a T2.
+
+237
+28:51,998 --> 29:02,178
+My G value that I'm going to use is always positive, either 9.8 meters per second square or sometimes I make it easy to use it 10.
+
+238
+29:02,638 --> 29:03,918
+Mine is always positive.
+
+239
+29:04,518 --> 29:15,798
+And since in this case, I have chosen this to be the increasing value of Y, that's the only reason why I would now have to put in minus one half GT square.
+
+240
+29:15,798 --> 29:26,958
+Not as some of you think because the acceleration is down. That's not a reason because I could have called this direction increasing Y, then it would have been plus one half GT squared.
+
+241
+29:27,228 --> 29:43,218
+So the consequence of my choosing this, the direction in which Y increases, therefore, the plus 1/2 AT squared that you would normally see, I'm going to replace that now by minus 1/2 GT squared.
+
+242
+29:44,968 --> 29:54,468
+Then the velocity in the Y direction as a function of time would be this derivative, that is V0 Y minus GT.
+
+243
+29:55,008 --> 29:57,808
+And the acceleration equals minus G.
+
+244
+29:58,248 --> 30:03,538
+So these are the three equations that govern the motion in the Y direction.
+
+245
+30:07,718 --> 30:13,018
+This only holds if there is no air drag, no friction of any kind.
+
+246
+30:13,338 --> 30:31,848
+That is very unrealistic if we are near earth, but when we are farther away from earth, as we were with the KC 135, which was flying at an altitude of about 30,000 feet, that of course is a little bit more realistic.
+
+247
+30:32,268 --> 30:56,878
+And therefore the example that I have picked to throw up an object is the one whereby the KC 135 at an altitude somewhere around 25 or 30,000 feet comes in at a speed of 425 mph, turns the engines off, and then for the remaining, whatever it was, about 30 seconds, everyone, including the airplane, has no weight.
+
+248
+30:56,988 --> 31:01,518
+So that's the case that I now want to work out quantitatively with you.
+
+249
+31:01,998 --> 31:13,798
+In the case of the KC 35, we'll take an angle for alpha of 45 degrees, and we'll take V0, which was about 425 mph.
+
+250
+31:13,798 --> 31:16,308
+You may remember that from that lecture.
+
+251
+31:16,728 --> 31:25,768
+425 mph translate into about 189 meters per second.
+
+252
+31:27,118 --> 31:47,808
+And so that means that the velocity V0 Y and V0 X are both the same because of the 45 degree angle. And that is of course the 189 divided by the square root of 2, and that is about 133 meters per second.
+
+253
+31:47,808 --> 31:49,558
+Both are positive.
+
+254
+31:49,938 --> 31:54,568
+Keep that in mind, because this is what I call the increasing value for Y. And this is the increasing value for X.
+
+255
+31:54,568 --> 31:57,808
+Both positive values. Signs do matter.
+
+256
+31:58,938 --> 32:02,968
+So this is given now. And now comes the first question that I could ask you on an exam.
+
+257
+32:03,698 --> 32:15,998
+When is the plane at its highest point of his trajectory, and how high is it above the point where it started when it turned the engines off, when it went into free fall?
+
+258
+32:16,768 --> 32:20,948
+So when is it here and what is this distance?
+
+259
+32:21,698 --> 32:28,088
+Well, when is it there? That's when the velocity in the Y direction becomes zero.
+
+260
+32:28,308 --> 32:34,018
+It is positive, gets smaller and smaller because of the gravitational acceleration, comes to a halt and becomes zero.
+
+261
+32:34,448 --> 32:49,418
+So I ask this equation, when are you zero? This is the one I pick. And so I say zero equals + 133 - 10 * t.
+
+262
+32:51,048 --> 33:08,478
+You may think that the gravitational acceleration at an altitude of 30,000 feet could be substantially less than the canonical number of 10. It is a little less, because you're a little bit further away from the earth, but it's only 0.3% less. And so we'll just accept the 10, too easy to work with.
+
+263
+33:08,858 --> 33:15,648
+And so when is it at the highest point? That is when T equals 13.3 seconds.
+
+264
+33:17,408 --> 33:26,888
+So that's about how long it takes to get there. When I gave the lecture last time, I said it's about 15 seconds because I made the numbers I rounded them off.
+
+265
+33:26,888 --> 33:28,488
+It's about 30.3 seconds.
+
+266
+33:28,728 --> 33:36,108
+And what is this distance h now? Ah, now I have to go to this equation.
+
+267
+33:36,838 --> 33:46,428
+I say h equals 0 because I'm going to define the point where the plane starts its trajectory, I call that Y00, I'm free to do that.
+
+268
+33:47,188 --> 34:06,638
+H = 0 + 133, that is the speed times 13.3 seconds minus 12 * G, that is 5 * 13.3 squared.
+
+269
+34:07,618 --> 34:10,648
+That is what H must be.
+
+270
+34:11,138 --> 34:15,688
+And that turns out to be about 885 m.
+
+271
+34:16,808 --> 34:20,228
+I think I told you last time it's about 900, it's close enough.
+
+272
+34:21,798 --> 34:27,698
+So we know now how long it takes to reach P and we know what the vertical distance is.
+
+273
+34:27,948 --> 34:45,448
+And the whole trip back to this starting point, if we call this sort of the starting point, the starting altitude, this whole trip will take twice the amount of time to get back to this point when the engines are restarted is about 26 and a half, 27 seconds.
+
+274
+34:46,528 --> 34:50,738
+How far has the plane traveled then in horizontal direction?
+
+275
+34:51,578 --> 34:55,218
+Well, now I go back to this equation.
+
+276
+34:56,248 --> 35:35,108
+So now I say, aha, X then, when it is back at this point, must be X0, which I conveniently choose zero, plus 133 m per second, which is the velocity in the X direction, which never changes. When the plane is here, that velocity in the X direction is the same 133 m per second as it was here, which by the way is about 300 mph. That never changes if there is no air drag or air friction of any kind. So we get plus 133 times the time. The whole trip takes 26.6 seconds.
+
+277
+35:35,108 --> 35:39,688
+And that if you convert that to kilometers is about 3 and 1/2 km.
+
+278
+35:42,978 --> 35:53,608
+Now you could ask yourself the question, what is the velocity of that plane when it is at that point S?
+
+279
+35:54,878 --> 36:23,078
+And now you may want to abandon now this one-dimensional idea of X and Y. You may say, well, look, this is a parabola and it is completely symmetric. If the plane comes up here with 425 mph at an angle of 45 degrees, then obviously, it comes down here at an angle of 45 degrees and the speed must again be 425 mph. And you would score 100%, of course, it's clear.
+
+280
+36:24,038 --> 36:42,538
+I want you to appreciate, however, that I could continue to think of this as two one-dimensional motions, and I can therefore calculate what the velocity in the X direction is at S and what the velocity in the Y direction is at S.
+
+281
+36:46,838 --> 36:51,808
+So what is the velocity in the X direction at point S?
+
+282
+36:52,708 --> 36:57,048
+I go to equation the second equation there. That is V0 X.
+
+283
+36:57,048 --> 37:02,488
+That is plus 133 meters per second.
+
+284
+37:03,158 --> 37:10,788
+What is the velocity in the Y direction? Ah, I have to go to this equation now. V0y - GT.
+
+285
+37:11,988 --> 37:20,968
+So I get plus 133 - 10 times the 26.6 seconds to reach that point S.
+
+286
+37:23,178 --> 37:28,998
+And what do I find? minus 133 meters per second.
+
+287
+37:29,688 --> 37:40,128
+The velocity in the Y direction started off plus 133, but now it is minus 133. You see, this is sign sensitive. This is wonderful. That's the great thing about treating it that way.
+
+288
+37:42,878 --> 37:59,058
+So you now know that it comes in with a velocity of 133 in the X direction, positive, 133 in the minus Y direction.
+
+289
+37:59,058 --> 38:09,488
+And so what is the the net the sum of the two vectors, that of course is this vector.
+
+290
+38:09,798 --> 38:12,218
+And no surprise, this angle is 45 degrees.
+
+291
+38:12,888 --> 38:19,988
+And this one is the square root of 2 * 133, and that of course gives you back your 189 ms per second.
+
+292
+38:20,698 --> 38:29,438
+189 ms per second. And that is 425 mph.
+
+293
+38:30,858 --> 38:41,858
+I'm not recommending that you would do this, of course. It is perfectly reasonable to immediately come to that conclusion because of the symmetry of the parabola.
+
+294
+38:44,878 --> 38:49,718
+Let's now turn to uniform circular motion.
+
+295
+38:51,578 --> 39:08,098
+In uniform circular motion occurs when an object goes around in a circle and when the speed never changes.
+
+296
+39:08,518 --> 39:17,478
+If the speed doesn't change, then the velocity, of course, does change because the direction changes all the time.
+
+297
+39:17,818 --> 39:18,468
+But
+
+298
+39:19,038 --> 39:19,848
+the speed does not.
+
+299
+39:20,378 --> 39:27,538
+So here we have our circle. That this be radius R.
+
+300
+39:28,298 --> 39:35,398
+And at this moment in time, the object is here, has a certain velocity.
+
+301
+39:36,448 --> 39:37,678
+This is 90 degrees.
+
+302
+39:38,168 --> 39:47,318
+And at later in time, the object is here. The speed is the same, but the direction has changed. 90 degrees.
+
+303
+39:47,998 --> 39:51,588
+So these vectors should have the same length.
+
+304
+39:52,928 --> 40:08,588
+In a situation like this that we have uniform circular motion. So it's uniform circular motion.
+
+305
+40:09,078 --> 40:18,768
+We first identify what we call the period T in seconds, that's the time to go around.
+
+306
+40:19,898 --> 40:27,138
+Then we identify what we call the frequency, that is how many times it goes around per second.
+
+307
+40:28,218 --> 40:33,728
+I prefer the letter F, but our book uses the Greek letter nu.
+
+308
+40:34,148 --> 40:38,938
+I find the nu often very confusing with the V of velocity, and that's why I prefer the F.
+
+309
+40:39,918 --> 40:40,958
+It is 1 over T.
+
+310
+40:41,998 --> 40:48,118
+And so the units are second minus one, but most physicist would call that Hertz.
+
+311
+40:48,488 --> 40:52,318
+10 Hertz means to go 10 times around per second.
+
+312
+40:53,298 --> 41:07,828
+And then we identify Omega, the angular velocity Omega, which is in radians per second.
+
+313
+41:09,418 --> 41:17,568
+Since it takes T seconds to go around 2 pi radians, Omega is 2 pi divided by T.
+
+314
+41:19,118 --> 41:36,208
+Now then we have the speed, which we can also think of as a linear velocity, how many meters per second is linear as opposed to how many radians per second, which is angular velocity. So this is a linear velocity, this is an angular velocity.
+
+315
+41:36,778 --> 41:50,218
+And that linear velocity, which in this case is really a speed, is of course the circumference of the circle divided by how many seconds it takes to go around.
+
+316
+41:50,498 --> 41:52,408
+And that is also Omega R.
+
+317
+41:52,728 --> 41:53,748
+And that is now in meters per second.
+
+318
+41:55,128 --> 42:01,908
+All this is only possible if there is an acceleration.
+
+319
+42:02,488 --> 42:05,878
+And the acceleration is called the centripetal acceleration.
+
+320
+42:06,668 --> 42:10,628
+It is always pointed towards the center.
+
+321
+42:12,428 --> 42:18,488
+A centripetal, A centripetal.
+
+322
+42:19,458 --> 42:27,308
+And the centripetal acceleration, the magnitude is V2 divided by R.
+
+323
+42:27,818 --> 42:34,548
+Which is therefore also omega square R. And that of course is in meters per second square.
+
+324
+42:40,768 --> 42:59,548
+I want to work out a specific example and the example that I have chosen is the human centrifuge that is used by NASA in Houston for experiments
+
+325
+42:59,898 --> 43:07,238
+on humans to see how they deal with strong accelerations.
+
+326
+43:08,118 --> 43:15,568
+This is that centrifuge.
+
+327
+43:17,118 --> 43:28,598
+The radius from the axis of rotation, the axis of rotation is here, and the distance from here to here, though you may not think so, is about 15 m.
+
+328
+43:28,858 --> 43:32,678
+So the astronauts go in here, and then this thing goes around.
+
+329
+43:33,748 --> 43:39,738
+And so I would like to work out this with some some numbers.
+
+330
+43:42,298 --> 43:43,078
+Okay.
+
+331
+43:44,758 --> 43:46,138
+All right.
+
+332
+43:47,138 --> 43:54,338
+The radius R, I'll give you light back, because that may be nicer for you.
+
+333
+43:55,058 --> 44:01,328
+The radius is 15 m. Depends of course a little bit on where the person is located in that sphere.
+
+334
+44:01,858 --> 44:14,198
+It goes around 24 revolutions per minute, and that translates into 0.4 hertz.
+
+335
+44:14,878 --> 44:20,108
+So the period to go around for one rotation is 2 and 1/2 seconds.
+
+336
+44:20,948 --> 44:23,608
+thing goes around once in 2 and 1/2 seconds.
+
+337
+44:24,668 --> 44:39,368
+So the angular velocity omega, which is 2 pi divided by T, if you take 2 pi and divide it by 2 and 1/2, it just comes out to be roughly 2 and 1/2, which is purely accident, but that's the way it is.
+
+338
+44:39,578 --> 44:46,818
+Don't ever think that that has to be the same, of course. It just happens to come out that way for these dimensions.
+
+339
+44:46,818 --> 44:49,858
+So omega is about 2 and 1/2 radians per second.
+
+340
+44:50,248 --> 45:10,528
+And the speed, the linear speed, tangential speed, if you want to call it, is omega R. That comes out to be about 35 37.7 m per second.
+
+341
+45:11,308 --> 45:16,378
+And that translates into about 85 mph. So it's a sizable speed.
+
+342
+45:18,188 --> 45:39,778
+What of course the goal is for NASA, what is the centripetal acceleration, that is omega square R, or if you prefer to take V square divided by R, you find of course exactly the same answer if you haven't made a slip, and that is 95 m per second squared.
+
+343
+45:40,378 --> 45:46,368
+And that is about 10 times the gravitational acceleration on Earth, which is really phenomenal.
+
+344
+45:47,098 --> 45:57,168
+If you add to the fact that the direction is changing all the time when you go around, so you feel the 10 G in this direction, and then you feel it in a different direction.
+
+345
+45:57,168 --> 46:03,268
+I can't imagine how people can actually survive that. I mean, not faint.
+
+346
+46:03,878 --> 46:17,618
+Most people like you and me, if we were to be accelerated along a straight line, not even a circle where the direction changes, but along a straight line, most of us faint when we get close to 6G.
+
+347
+46:18,088 --> 46:26,218
+And there is a reason for that. Uh you get problems with your blood circulation and uh not enough oxygen goes to your brains. And that's why you faint.
+
+348
+46:27,268 --> 46:33,108
+How these astronauts can do it at 10G and the direction changing all the time, it beats me.
+
+349
+46:33,648 --> 46:35,858
+If you take a Boeing 747,
+
+350
+46:36,468 --> 46:41,268
+it takes 30 seconds from the moment that it starts on the runway until it takes off.
+
+351
+46:41,268 --> 46:42,738
+You should time that when you get a chance.
+
+352
+46:42,738 --> 46:44,378
+It's very close to 30 seconds.
+
+353
+46:44,728 --> 46:49,848
+And by that time, the plane has reached a speed of about 150 mph.
+
+354
+46:50,778 --> 46:59,448
+And if you calculate, if you assume that the acceleration is constant, it's an easy calculation, it turns out that the acceleration is only 2 meters per second squared.
+
+355
+46:59,838 --> 47:02,778
+There's only 1/5th of the gravitational acceleration.
+
+356
+47:03,208 --> 47:14,238
+It feels sort of good, right? It's very comfortable when you're sort of taking off, but it's only 2 meters per second square. These poor people, men and women, 95 meters per second square.
+
+357
+47:19,488 --> 47:27,618
+I would like to address something that is not part of the exam, but that is something that I want you to think about, something that is fun.
+
+358
+47:28,258 --> 47:31,608
+And it's always nice to do something that is fun.
+
+359
+47:32,878 --> 47:34,718
+It has to do with my last lecture.
+
+360
+47:35,128 --> 47:42,858
+I have to clean my hands first for it to work quite well.
+
+361
+47:43,468 --> 47:45,948
+I have a a yard stick here.
+
+362
+47:46,688 --> 47:53,688
+And I'm going to put the yard stick on my hands, on my two fingers, which I hold in front of me.
+
+363
+47:54,178 --> 47:55,438
+Here it is.
+
+364
+47:57,138 --> 47:59,138
+It's resting on my two fingers.
+
+365
+48:00,728 --> 48:05,568
+And I'm going to move my two fingers towards each other.
+
+366
+48:06,368 --> 48:10,848
+One of them begins to slide first. Of course, I can't tell you which one.
+
+367
+48:11,368 --> 48:14,188
+But something very strange will happen.
+
+368
+48:15,768 --> 48:24,088
+If this one starts to slide first, it comes to a stop, and then the other one starts to slide and it comes to a stop, and then this one starts to slide, and so on.
+
+369
+48:24,808 --> 48:25,918
+And that is very strange.
+
+370
+48:26,288 --> 48:32,948
+This is something you should be able to explain, certainly after the lecture we had last time.
+
+371
+48:33,378 --> 48:34,608
+Look at this.
+
+372
+48:38,098 --> 48:45,048
+Did you see the alternation? I'll do it a little faster. Left is going, right is going, left is going, right is going, left is going. Once more.
+
+373
+48:45,988 --> 48:51,748
+Look at it. Left is going, right is going, left is going, right is going. They alternate.
+
+374
+48:52,668 --> 48:54,278
+Give this some thought.
+
+375
+48:54,928 --> 49:05,088
+And you know, Pivot has an option that you can discuss problems with other students. So make use of this discussion button and see whether you can come to an explanation.
+
+376
+49:05,628 --> 49:09,188
+Good luck on your exam. See you next Friday.

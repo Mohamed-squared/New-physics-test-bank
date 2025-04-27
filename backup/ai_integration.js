@@ -15,7 +15,7 @@ try {
 }
 
 // *** REVERTED to client-side model name ***
-const MODEL_NAME = "gemini-1.5-flash"; // Or another suitable client-compatible model
+const MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Or another suitable client-compatible model
 
 /**
  * Gets an AI explanation for a given question context using the client-side SDK.

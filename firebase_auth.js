@@ -1,12 +1,10 @@
 // firebase_auth.js
 import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
-// MODIFIED: Added loadGlobalCourseDefinitions
 import { initializeUserData, loadUserData, loadGlobalCourseDefinitions } from './firebase_firestore.js';
 import { showLoginUI, hideLoginUI, fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink, displayContent } from './ui_core.js';
 import { updateAdminPanelVisibility } from './script.js';
-// MODIFIED: Import showMyCoursesDashboard (new file) or fallback
-import { showMyCoursesDashboard } from './ui_course_dashboard.js';
+// REMOVED: showMyCoursesDashboard import - rely on global assignment in script.js
 import { showHomeDashboard } from './ui_home_dashboard.js';
 
 // --- Authentication Functions ---
@@ -208,28 +206,27 @@ export function setupAuthListener() {
                 await loadUserData(user.uid); // Load user appData AND course progress
                 console.log("loadUserData (including onboarding check) finished.");
 
-                // Check if onboarding UI is displayed. If not, hide login and show appropriate dashboard.
+                // Check if onboarding UI is displayed. If not, hide login and show default dashboard.
                 if (!document.getElementById('onboarding-container')) {
                     hideLoginUI();
-                    // Show My Courses Dashboard if enrolled, else Home
-                    if (userCourseProgressMap && userCourseProgressMap.size > 0) {
-                        showMyCoursesDashboard();
-                    } else {
-                        showHomeDashboard();
-                    }
+                    // Default to showHomeDashboard after login
+                    showHomeDashboard();
                 }
-                hideLoading(); // Hide loading indicator AFTER everything is loaded
+                // Onboarding UI hides loading itself when complete.
+                // If onboarding was already done, hide loading here.
+                if (!document.getElementById('onboarding-container')) {
+                    hideLoading();
+                }
+
             } catch (loadError) {
                 console.error("Error during loadUserData call:", loadError);
-                // Check error message for permission issues
                 let alertMessage = `Critical error loading user data: ${loadError.message}. Please try signing out and back in.`;
                 if (loadError.message && (loadError.message.toLowerCase().includes('permission') || loadError.message.toLowerCase().includes('missing or insufficient permissions'))) {
                     alertMessage = "Critical error loading user data: Permission denied. This often indicates a Firestore Security Rules issue. Please check the rules or contact support, then try signing out and back in.";
                 }
-                alert(alertMessage); // Display the specific or generic error
-                hideLoading(); // Ensure loading is hidden on error
-                signOutUser(); // Attempt sign out
-                // showLoginUI() will be called by sign out listener
+                alert(alertMessage);
+                hideLoading();
+                signOutUser();
             }
         } else {
             console.log("User signed out.");

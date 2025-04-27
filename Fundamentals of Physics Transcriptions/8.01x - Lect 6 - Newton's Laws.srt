@@ -1,0 +1,1724 @@
+1
+00:00:00,901 --> 00:00:01,851
+Last time,
+
+2
+00:00:04,344 --> 00:00:13,024
+we discussed that an acceleration is caused by a push or by a pool.
+
+3
+00:00:13,858 --> 00:00:20,928
+Today we will express this more quantitatively in three laws which are called Newton's laws.
+
+4
+00:00:21,508 --> 00:00:32,808
+The first law really goes back to the first first part of the 17th century, which was Galileo who expressed what he called the law of inertia.
+
+5
+00:00:32,808 --> 00:00:34,948
+And I will read you this law.
+
+6
+00:00:37,068 --> 00:00:52,528
+A body at rest remains at rest, and a body in motion continues to move at constant velocity along a straight line unless acted upon by an external force.
+
+7
+00:00:53,478 --> 00:00:59,458
+And now I will read to you Newton's own words in his famous book Principia.
+
+8
+01:00,848 --> 01:19,868
+Everybody perseveres in its state of rest or of uniform motion in a right line unless it is compelled to change that state by forces impressed upon it.
+
+9
+01:20,718 --> 01:24,738
+Now Newton's first law is clearly against our daily experiences.
+
+10
+01:24,978 --> 01:27,878
+Things that move don't move along a straight line.
+
+11
+01:28,248 --> 01:31,438
+And don't continue to move. And the reason is there's gravity.
+
+12
+01:31,698 --> 01:36,818
+And there is another reason, even if you remove gravity, then there is friction.
+
+13
+01:37,258 --> 01:38,068
+There's air drag.
+
+14
+01:38,558 --> 01:40,508
+And so things will always come to a halt.
+
+15
+01:40,938 --> 01:53,928
+But we believe though that in the absence of any forces, indeed an object, if it had a certain velocity, would continue along a straight line forever and ever and ever.
+
+16
+01:55,458 --> 02:01,918
+Now this law, this very fundamental law does not hold in all reference frames.
+
+17
+02:02,418 --> 02:07,858
+For instance, it doesn't hold in a reference frame which itself is being accelerated.
+
+18
+02:08,848 --> 02:12,368
+Imagine that I accelerate myself right here.
+
+19
+02:13,088 --> 02:21,478
+I either jump on my horse, or I take my bicycle, or my motorcycle or my car, and you see me being accelerated in this direction.
+
+20
+02:22,198 --> 02:23,398
+And you sit there.
+
+21
+02:23,818 --> 02:27,468
+And you say, aha, his velocity is changing.
+
+22
+02:27,758 --> 02:31,828
+Therefore, according to the first law, there must be a force on on him.
+
+23
+02:32,088 --> 02:34,788
+And you say, hey there, do you feel that force?
+
+24
+02:34,968 --> 02:38,698
+And I said, yeah, I do. I really feel that I feel someone's pushing me.
+
+25
+02:38,998 --> 02:40,738
+Consistent with the first law.
+
+26
+02:41,048 --> 02:42,988
+Perfect. The first law works for you.
+
+27
+02:43,538 --> 02:44,538
+Now I'm here.
+
+28
+02:44,918 --> 02:46,848
+I'm being accelerated in this direction.
+
+29
+02:47,238 --> 02:51,968
+And you all come towards me being accelerated in this direction, I say, aha, the first law should work.
+
+30
+02:53,528 --> 02:56,808
+So, these people should feel a push.
+
+31
+02:57,068 --> 02:59,278
+I say, hey there, do you feel the push?
+
+32
+02:59,278 --> 03:02,688
+And you say, I feel nothing. There is no push, there is no pull.
+
+33
+03:02,688 --> 03:08,888
+Therefore, the first law doesn't work from my frame of reference if I'm being accelerated towards you.
+
+34
+03:09,918 --> 03:15,318
+So, now comes the question, when does the first law work?
+
+35
+03:15,318 --> 03:22,598
+Well, the first law works when the frame of reference is what we call an inertial frame of reference.
+
+36
+03:22,948 --> 03:28,948
+And an inertial frame of reference would then be a frame in which there are no accelerations of any kind.
+
+37
+03:30,378 --> 03:31,398
+Is that possible?
+
+38
+03:31,578 --> 03:35,988
+Is 26 100, is this lecture hall an inertial reference frame?
+
+39
+03:36,778 --> 03:42,638
+For one, the Earth rotates about its own axis and 26 100 goes with it.
+
+40
+03:42,638 --> 03:44,238
+That gives you a centripetal acceleration.
+
+41
+03:44,708 --> 03:47,578
+Number two, the Earth goes around the sun.
+
+42
+03:48,378 --> 03:53,818
+That gives it an centripetal acceleration, including the Earth, including you, including 26 100.
+
+43
+03:54,348 --> 03:58,098
+The sun goes around the Milky Way and you can go on and on.
+
+44
+03:58,098 --> 04:04,768
+So clearly, 26 100 is not an inertial reference frame.
+
+45
+04:06,228 --> 04:16,138
+We can try to make an estimate on how large these accelerations are that we experience here in 26 100.
+
+46
+04:16,398 --> 04:19,868
+And let's start with the one that is due to the Earth rotation.
+
+47
+04:20,308 --> 04:21,538
+So here's the Earth.
+
+48
+04:23,628 --> 04:26,078
+rotating with angular velocity omega.
+
+49
+04:26,888 --> 04:32,508
+And here is the equator and the Earth has a certain radius.
+
+50
+04:34,018 --> 04:36,138
+Radius of the Earth.
+
+51
+04:36,138 --> 04:37,548
+This is the symbol for Earth.
+
+52
+04:38,098 --> 04:43,528
+Now I know that 26 100 is here, but let's just take the worst case that you're on the equator.
+
+53
+04:44,028 --> 04:45,108
+You're die.
+
+54
+04:46,088 --> 04:55,448
+If you go around like this, and in order to do that, you need a centripetal acceleration, AC, which, as we have seen last time, equals omega square R.
+
+55
+04:56,618 --> 04:57,878
+How large is that one?
+
+56
+04:58,288 --> 05:07,418
+Well, the period of rotation for the Earth is 24 hours times 3600 seconds.
+
+57
+05:08,268 --> 05:18,688
+So omega equals 2 pi divided by 24 times 3600 and that would then be in radians per second.
+
+58
+05:19,448 --> 05:29,548
+And so you can calculate now what omega square R Earth is, if you know that the radius of the Earth is about 6, 400 kilometers.
+
+59
+05:30,158 --> 05:33,778
+Make sure you convert this to meters, of course.
+
+60
+05:34,498 --> 05:45,648
+And you will find then that the centripetal acceleration at the equator, which is the worst case, it's less here is 0.034 meters per second squared.
+
+61
+05:46,158 --> 05:47,918
+And this is way, way less.
+
+62
+05:48,528 --> 05:55,578
+This is 300 times smaller than the gravitational acceleration that you experience here on Earth.
+
+63
+05:56,018 --> 06:02,058
+And if we take the motion of the earth around the sun, then it is an additional factor of five times lower.
+
+64
+06:02,618 --> 06:15,648
+In other words, these accelerations, even though they're real and they can be measured easily with today's high-tech instrumentation, they are much, much lower than what we are used to, which is the gravitational acceleration.
+
+65
+06:15,648 --> 06:28,788
+And therefore, in spite of these accelerations, we will accept this hole as a reasonably good inertial frame of reference in which the first law then should hold.
+
+66
+06:30,268 --> 06:32,658
+Can Newton's law be proven?
+
+67
+06:33,258 --> 06:42,428
+The answer is no, because it's impossible to be sure that your reference frame is without any accelerations.
+
+68
+06:42,738 --> 06:44,608
+Do we believe in this? Yes, we do.
+
+69
+06:45,278 --> 06:53,508
+We believe in it since it is consistent within the uncertainty of the measurements with all experiments that have been done.
+
+70
+06:55,008 --> 07:00,918
+Now we come to the second law. Newton's second law.
+
+71
+07:02,768 --> 07:04,268
+I have a spring.
+
+72
+07:06,328 --> 07:11,658
+Forget gravity for now, you can do this somewhere in outer space.
+
+73
+07:11,658 --> 07:16,768
+This is the relaxed length of the spring and I extend the spring.
+
+74
+07:17,588 --> 07:22,748
+I extend it over a certain amount, certain distance. important how much.
+
+75
+07:22,998 --> 07:28,988
+And I know that when I do that, that there will be a pool non-negotiable.
+
+76
+07:30,588 --> 07:40,988
+I put a mass M1 here and I measure the acceleration that this pool causes on this mass immediately after I release. I can measure that.
+
+77
+07:41,588 --> 07:43,928
+So I measure an acceleration A1.
+
+78
+07:44,888 --> 07:58,098
+Now I replace this object by mass M2, but the extension is the same. So the pool must be the same. The spring doesn't know what the mass is at the other end, right?
+
+79
+07:58,098 --> 08:03,758
+So the pool is the same. I put M2 there, different mass and I measure new acceleration A2.
+
+80
+08:04,478 --> 08:13,308
+It is now an experimental fact that M1 A1 equals M2 A2.
+
+81
+08:14,798 --> 08:22,448
+And this product MA, we call the force. That is our definition of force.
+
+82
+08:23,718 --> 08:31,428
+So the same pool on a 10 times larger mass would give a 10 times lower acceleration.
+
+83
+08:33,698 --> 08:36,028
+The second law, I will read to you.
+
+84
+08:37,498 --> 08:48,348
+A force action on a body gives it an acceleration which is in the direction of the force, that's also important. Acceleration is in the direction of the force.
+
+85
+08:49,148 --> 08:51,338
+And has a magnitude given by MA.
+
+86
+08:52,168 --> 08:56,928
+MA is the magnitude and the direction is the direction of the force.
+
+87
+08:57,268 --> 09:16,488
+And so now we will write this in all glorious detail, this is the second law by Newton, perhaps the most important law in all of physics, but certainly in all of 801.
+
+88
+09:17,098 --> 09:19,208
+F equals MA.
+
+89
+09:20,138 --> 09:32,788
+The units of this force are kilograms times meters per second squared in honor of the great man, we call that one Newton.
+
+90
+09:35,408 --> 09:40,798
+Like the first law, the second law only holds in inertial reference frames.
+
+91
+09:42,338 --> 09:45,288
+Can the first law, the second law be proven?
+
+92
+09:46,048 --> 09:46,568
+No.
+
+93
+09:47,408 --> 09:49,068
+Do we believe in it? Yes.
+
+94
+09:49,668 --> 09:50,938
+Why do we believe in it?
+
+95
+09:51,538 --> 10:01,548
+Because all experiments and all measurements within the uncertainty of the measurements are in agreement with the second law.
+
+96
+10:03,668 --> 10:09,478
+Now you may object and you may say, this is strange what you've been doing.
+
+97
+10:09,938 --> 10:14,598
+How can you ever determine a mass if there is no force somewhere?
+
+98
+10:14,968 --> 10:22,518
+Because if you want to determine the mass, maybe you put it on a scale. And when you put it on a scale to determine the mass, you make use of the gravitational force.
+
+99
+10:22,518 --> 10:25,338
+So, isn't that some kind of a circuital argument that you're using?
+
+10:00:25,338 --> 10:00:27,508
+And the answer is no.
+
+10:00:28,518 --> 10:00:31,998
+I can be somewhere in outer space where there is no gravity.
+
+10:00:32,448 --> 10:00:34,678
+I have two pieces of cheese.
+
+10:00:34,678 --> 10:00:36,408
+They are identical in size.
+
+10:00:36,408 --> 10:00:37,868
+This is cheese without holes by the way.
+
+10:00:38,178 --> 10:00:40,198
+They are identical in size.
+
+10:00:41,038 --> 10:00:43,948
+The sum of the two has double the mass of one.
+
+10:00:44,568 --> 10:00:47,848
+Mass is determined by how many molecules, how many atoms I have.
+
+10:00:47,998 --> 10:00:50,878
+I don't need gravity to have a relative scale of masses.
+
+10:00:51,088 --> 10:00:55,878
+So I can determine the relative scale of these masses without ever using a force.
+
+10:00:56,488 --> 10:01:04,778
+So, this is a very legitimate way of checking up on the second law.
+
+11:04:778 --> 11:04:838
+law.
+
+11:06,558 --> 11:18,648
+Since all objects in this lecture hall and near Earth fall with the constant acceleration which is G,
+
+11:19,398 --> 11:28,098
+we can write down that the gravitational force would be M times this acceleration G.
+
+11:28,098 --> 11:34,888
+I would normally write an A for it, but I make an exception now because of gravity, I call it gravitational force.
+
+11:34,888 --> 11:44,038
+And so you see that the gravitational force due to the earth on a particular mass is linearly proportional with the mass.
+
+11:44,458 --> 11:51,498
+If the mass becomes 10 times larger, then the force due to gravity goes up by a factor of 10.
+
+11:53,818 --> 11:57,858
+Suppose I have here this softball in my hand.
+
+11:58,808 --> 12:04,808
+In the reference frame of 26 100, we we will accept to be an inertial reference frame.
+
+12:05,718 --> 12:08,148
+It's not being accelerated in our reference frame.
+
+12:08,768 --> 12:12,508
+That means the force on it must be zero.
+
+12:13,318 --> 12:16,078
+So here is that ball.
+
+12:16,948 --> 12:27,718
+And we know if it has mass M, which in this case is about half a kilogram, that there must be a force here, mg, which is about 5 Newton.
+
+12:28,348 --> 12:29,818
+For half a kilogram.
+
+12:30,218 --> 12:32,678
+But the net force is zero.
+
+12:33,438 --> 12:48,098
+Therefore, it is very clear that I, Walter Lewin must push up with a force from my hand onto the ball, which is about of course the same, which is exactly the same 5 Newtons.
+
+12:48,098 --> 12:51,928
+Only now is there no acceleration.
+
+12:52,388 --> 13:02,308
+So I can write down that the force of water ruin plus the force of gravity equals zero.
+
+13:02,978 --> 13:10,638
+Because it's a one-dimensional problem, you could say that the force of Walter Lewin equals minus mg.
+
+13:14,878 --> 13:16,518
+F equals MA.
+
+13:17,068 --> 13:23,408
+Notice that there is no statement made on velocity or speed.
+
+13:23,928 --> 13:28,988
+As long as you know F, and as long as you know M, A is uniquely specified.
+
+13:29,228 --> 13:31,958
+No information is needed on the speed.
+
+13:32,838 --> 13:40,798
+So that would mean if we take gravity and an object was falling down with 5 meters per second, that the law would hold.
+
+13:41,618 --> 13:46,548
+If it would fall down with 5,000 meters per second,
+
+13:47,118 --> 13:48,478
+it would also hold.
+
+13:48,978 --> 13:50,668
+Will it always hold?
+
+13:51,298 --> 13:52,018
+No.
+
+13:53,118 --> 14:02,908
+Once your speed approaches the speed of light, then Newtonian mechanics no longer works, then you have to use Einstein's theory of special relativity.
+
+14:03,638 --> 14:11,818
+So this is only valid as long as we have speeds that are substantially smaller, say than the speed of light.
+
+14:13,738 --> 14:17,548
+Now we come to Newton's third law.
+
+14:19,198 --> 14:29,348
+If one object exerts a force on another, the other exerts the same force in opposite direction on the one.
+
+14:30,868 --> 14:31,908
+I read it again.
+
+14:31,908 --> 14:42,168
+If one object exerts a force on another, the other exerts the same force in opposite direction on the one.
+
+14:42,988 --> 14:59,818
+And I normally summarize that as follows, the third law as action equals minus reaction.
+
+15:00,788 --> 15:04,558
+And the minus sign indicates then that it opposes.
+
+15:04,558 --> 15:05,968
+So you sit on your seats,
+
+15:06,838 --> 15:09,128
+and you pull down on your seats,
+
+15:09,868 --> 15:11,208
+because of gravity.
+
+15:12,328 --> 15:16,468
+And the seats will push back on you with the same force.
+
+15:16,978 --> 15:18,898
+Action equals minus reaction.
+
+15:19,488 --> 15:21,218
+I held the baseball in my hand.
+
+15:22,978 --> 15:25,738
+The baseball pushes on my hand with a certain force.
+
+15:26,068 --> 15:28,938
+I push on the baseball with the same force.
+
+15:30,288 --> 15:33,538
+I push against the wall with a certain force.
+
+15:33,918 --> 15:38,098
+The wall pushes back in the opposite direction with exactly the same force.
+
+15:38,658 --> 15:45,828
+The third law always holds whether the objects are moving or accelerated makes no difference.
+
+15:46,488 --> 15:59,708
+At all moments in time, the force, we call it actually the contact force between two objects, one on the other is always the same as the other on one, but in the opposite direction.
+
+16:01,758 --> 16:06,308
+Let us work out a very simple example.
+
+16:07,208 --> 16:12,988
+We have an object which has a mass M1.
+
+16:13,708 --> 16:15,038
+This is object number one.
+
+16:15,708 --> 16:18,658
+And M1 is 5 kg.
+
+16:18,978 --> 16:27,578
+And here, attached to it is an object two, and M2 equals 15 kg.
+
+16:28,718 --> 16:30,178
+There is a force.
+
+16:30,908 --> 16:34,028
+And the force is coming in from this direction.
+
+16:34,488 --> 16:35,498
+This is the force.
+
+16:36,108 --> 16:39,248
+And the magnitude of the force is 20 Newtons.
+
+16:40,218 --> 16:42,958
+What is the acceleration of this system?
+
+16:43,908 --> 16:44,968
+F equals MA.
+
+16:47,698 --> 16:52,358
+Clearly, the mass is the sum of the two, this force acts on both.
+
+16:52,868 --> 16:57,568
+So we get M1 plus M2 times A.
+
+16:58,528 --> 16:59,588
+This is 20.
+
+17:00,828 --> 17:01,618
+This is 20.
+
+17:02,508 --> 17:08,248
+So A equals 1 ms per second squared in the same direction as F.
+
+17:09,118 --> 17:12,508
+So the whole system is being accelerated with 1 ms per second squared.
+
+17:13,618 --> 17:15,228
+Now watch me closely.
+
+17:15,748 --> 17:22,858
+Now I single out this object. Here it is.
+
+17:23,648 --> 17:24,548
+Object number two.
+
+17:25,698 --> 17:34,108
+Object number one, while this acceleration takes place, must be pushing on object number two, otherwise object number two could never be accelerated.
+
+17:35,028 --> 17:42,448
+I call that force F12, the force that one exerts on two.
+
+17:44,078 --> 17:48,588
+I know that number two has an acceleration of one, that's a given already.
+
+17:50,878 --> 17:53,558
+So here comes F equals MA.
+
+17:53,918 --> 17:58,178
+F12 equals M2 times A.
+
+17:58,738 --> 18:00,968
+We know A is 1.
+
+18:01,688 --> 18:03,548
+We know M2 is 15.
+
+18:04,118 --> 18:10,958
+So we see that the magnitude of the force 12 is 15 Newtons.
+
+18:12,348 --> 18:14,768
+This force is 15.
+
+18:16,808 --> 18:20,798
+Now I'm going to isolate number one out.
+
+18:22,668 --> 18:24,028
+Here is number one.
+
+18:27,388 --> 18:33,588
+Number one experiences this force F, which was the 20.
+
+18:34,608 --> 18:38,608
+And it must experience a contact force from number two.
+
+18:40,708 --> 18:46,548
+Somehow, number two must be pushing on number one, if one is pushing on number two.
+
+18:47,008 --> 18:50,768
+And I call that force F 21.
+
+18:52,618 --> 18:55,818
+I know that number one is being accelerated.
+
+18:56,058 --> 18:58,968
+And I know the magnitude, it's 1 meter per second square.
+
+18:58,968 --> 18:59,938
+That's non-negotiable.
+
+19:01,278 --> 19:11,838
+And so we have that F this one plus F 21 must be M1 times A.
+
+19:12,928 --> 19:13,668
+This is one.
+
+19:14,398 --> 19:15,658
+This is five.
+
+19:16,318 --> 19:17,228
+This is 20.
+
+19:17,748 --> 19:22,348
+And so this one, you can already see is minus 15.
+
+19:22,848 --> 19:30,678
+F21 is in this direction and the magnitude is exactly the same as F12.
+
+19:31,388 --> 19:43,398
+So you see, one is pushing on two with 15 Newtons in this direction, two is pushing back on one with 15 Newtons and the whole system is being accelerated with 1 meter per second squared.
+
+19:47,728 --> 20:06,638
+Now in these two examples, the one whereby I had the baseball on my hand, you saw that it was consistent with the third law. In this example, you also see that it's consistent with the third law. The contact force from one on the other is the same as from the other on one but in opposite signs.
+
+20:06,908 --> 20:09,038
+Is this a proof? No.
+
+20:09,808 --> 20:12,728
+Can the third law be proven? No.
+
+20:13,468 --> 20:15,408
+Do we believe in it? Yes.
+
+20:16,078 --> 20:17,488
+Why do we believe in it?
+
+20:17,778 --> 20:26,398
+Because all measurements, all experiments within the uncertainties are consistent with the third law.
+
+20:29,738 --> 20:34,508
+Action equals minus reaction. It is something that you experience every day.
+
+20:36,528 --> 20:47,558
+I remember I had a garden hose in the lawn and I would open the faucet and the garden hose would start to snake backwards. Why?
+
+20:48,438 --> 20:49,968
+Water squirts out.
+
+20:50,538 --> 20:52,928
+The garden hose pushes onto the water in this direction.
+
+20:53,238 --> 20:56,888
+The water pushes back onto the garden hose and it snakes back.
+
+20:57,158 --> 20:59,948
+Action equals minus reaction.
+
+21:00,868 --> 21:01,898
+You take a balloon.
+
+21:04,258 --> 21:08,128
+You take a balloon and you blow up the balloon.
+
+21:08,488 --> 21:09,638
+And you let the air out.
+
+21:09,948 --> 21:14,178
+The balloon pushes onto the air, the air must push onto the balloon.
+
+21:14,678 --> 21:21,038
+And therefore, when you let it go, the balloon will go in this direction, which is the basic idea behind the rocket.
+
+21:23,978 --> 21:24,208
+shh
+
+21:26,398 --> 21:30,488
+I love to play with balloons, don't you?
+
+21:31,158 --> 21:36,138
+So, if I do it like this and I let it go, the air will come out in this direction.
+
+21:36,598 --> 21:41,888
+And so then that means the balloon is pushing on the air in this direction, the air must be pushing on the balloon in this direction.
+
+21:42,198 --> 21:43,038
+There it goes.
+
+21:43,918 --> 21:48,998
+Didn't make it to the moon, but you saw the the idea of a rocket.
+
+21:49,968 --> 21:53,618
+Action equals minus reaction.
+
+21:56,238 --> 21:58,018
+If you fire a gun,
+
+21:58,508 --> 22:02,748
+the gun exerts a force on the bullet.
+
+22:02,998 --> 22:06,538
+The bullet exerts an equal force on the gun, which is called the recoil.
+
+22:06,948 --> 22:07,768
+You feel that.
+
+22:08,438 --> 22:10,378
+In your hands, in your shoulder.
+
+22:12,538 --> 22:19,908
+I have here a marvelous device which is a beautiful example of action equals minus reaction.
+
+22:19,908 --> 22:25,118
+I show you from above what it looks like, you'll see more details later.
+
+22:25,848 --> 22:27,918
+This rotates about this axis.
+
+22:28,668 --> 22:30,958
+rather freely, the axis is vertical.
+
+22:31,258 --> 22:39,138
+And we have here a reservoir of water which we will heat up, turns into steam, and these are hollow tubes and the steam will square it out.
+
+22:39,698 --> 22:44,728
+And so when the steam square out in this direction,
+
+22:45,478 --> 22:49,968
+the tube exerts a force on the steam in this direction.
+
+22:50,598 --> 22:57,738
+So the steam exerts an equal force but opposite direction and so the thing will start to rotate like this.
+
+22:58,608 --> 23:01,928
+And I would like to demonstrate that.
+
+23:12,358 --> 23:15,908
+You can see it now there, with a little bit of luck, there you see it.
+
+23:17,388 --> 23:19,558
+So, we're going to heat it.
+
+23:24,378 --> 23:25,478
+Walking.
+
+23:26,488 --> 23:29,888
+When you walk, you push against the floor.
+
+23:30,508 --> 23:32,428
+The floor pushes back at you.
+
+23:32,988 --> 23:38,008
+And if the floor wouldn't push back at you, you couldn't even walk, you couldn't go forward.
+
+23:40,698 --> 23:44,928
+If you walk on ice, very slippery, you can't go anywhere.
+
+23:45,878 --> 23:48,938
+Because you can't push on the ice, so the ice won't push back on you.
+
+23:50,678 --> 23:54,088
+That's another example where you see action equals minus reaction.
+
+23:56,418 --> 23:58,828
+This engine is called Hero's engine.
+
+23:59,678 --> 24:07,798
+Hero, according to the Greek legend, was a priestess of Aphrodite.
+
+24:08,668 --> 24:09,878
+Let's first look at it.
+
+24:19,728 --> 24:22,728
+She was a priestess of Aphrodite.
+
+24:24,118 --> 24:30,808
+And her lover Leander would swim across the Hellespont every night to be with her.
+
+24:30,808 --> 24:37,728
+And then one night, the poor guy drowned and Hero threw herself into the sea.
+
+24:38,548 --> 24:43,348
+Very romantic thing to do, but of course, also not very smart thing to do.
+
+24:44,168 --> 24:50,728
+On the other hand, it must have been a smart lady if she invented really this engine.
+
+24:51,678 --> 24:57,548
+Yesterday, I looked at the web ask.com.
+
+24:57,998 --> 24:58,808
+It's wonderful.
+
+24:58,808 --> 25:03,978
+You can ask any question. You can say, how old am I? Now, you may not get the right answer, but you can ask any question.
+
+25:04,868 --> 25:07,588
+And I typed in Hero's engine.
+
+25:08,058 --> 25:15,238
+And out popped a very nice high-tech version of Hero's engine.
+
+25:16,678 --> 25:18,098
+A soda can.
+
+25:18,668 --> 25:22,588
+You pop four holes in the soda can at the bottom.
+
+25:22,868 --> 25:24,788
+So here's your soda can.
+
+25:25,658 --> 25:27,008
+You pop four holes in here.
+
+25:27,008 --> 25:32,508
+But when you put the nail in there, you bend every time the nail to the same side, so the holes are slanted.
+
+25:33,688 --> 25:39,058
+You put in water, you lift it out of water and you have an Hero's engine.
+
+25:39,428 --> 25:41,728
+And I made it for you. It took me only five minutes.
+
+25:42,378 --> 25:47,588
+I went to one of MIT's machines, got myself soda.
+
+25:48,698 --> 25:50,348
+Put the holes in it.
+
+25:50,848 --> 25:51,758
+And here it is.
+
+25:51,998 --> 25:52,948
+It's in the water there.
+
+25:53,778 --> 25:56,998
+When I lift it out, you'll see the water squirt. There it goes.
+
+25:58,778 --> 26:01,538
+High-tech version of Hero's Engine.
+
+26:04,998 --> 26:07,828
+It also makes a bit of a mess, but okay.
+
+26:08,818 --> 26:09,658
+All right.
+
+26:14,218 --> 26:18,598
+Try to make one, it's fun. And it's very quick. It doesn't take much time at all.
+
+26:27,268 --> 26:32,738
+There are some bizarre consequences of these laws.
+
+26:33,838 --> 26:37,108
+Imagine that an object is falling towards the earth.
+
+26:37,878 --> 26:38,958
+An apple.
+
+26:39,628 --> 26:46,158
+It's falling towards the earth from a height say of um let's say 100 m.
+
+26:47,728 --> 26:54,298
+Now let's calculate how long it takes for this apple to hit the earth, which should for you be trivial, of course.
+
+26:55,508 --> 26:56,828
+So here's the earth.
+
+26:59,768 --> 27:07,888
+The mass of the earth is about 6 * 10 to the 24 kg.
+
+27:09,668 --> 27:19,358
+And here at a distance H for which we will take 100 m, is this apple M which say has a mass of half a kilogram.
+
+27:20,908 --> 27:25,358
+There is a force from the earth onto the apple.
+
+27:25,858 --> 27:37,618
+And this is that force, and the magnitude of that force is mg and that is 5 Newton. I take g 10 just round it off a little.
+
+27:39,668 --> 27:46,358
+Now, how long does it take this object to hit the earth?
+
+27:47,188 --> 27:58,008
+So we know that 12 GT squared equals h.
+
+27:58,128 --> 27:58,968
+doesn't start with any initial speed.
+
+27:59:0 --> 27:59,478
+So that is 100.
+
+27:59:478 --> 28:02,158
+G is 10, this is 5, so T squared is 20.
+
+28:03,408 --> 28:07,178
+So T is about 4 and 1/2 seconds.
+
+28:08,138 --> 28:11,288
+So after 4 and 1/2 seconds, it hits the earth. So far so good.
+
+28:11,978 --> 28:21,888
+But now, according to the third law, the Earth must experience exactly the same force as the apple does, but in opposite direction.
+
+28:22,748 --> 28:32,608
+So therefore, the Earth will experience this same force F 5 Newton in this direction.
+
+28:33,418 --> 28:35,438
+What is the earth going to do?
+
+28:35,758 --> 28:39,048
+Well, the earth is going to fall towards the apple.
+
+28:39,448 --> 28:41,048
+F equals MA.
+
+28:41,928 --> 28:49,528
+So the force on the earth is the mass of the earth times the acceleration of the earth.
+
+28:50,328 --> 28:52,358
+The force we know is five.
+
+28:52,688 --> 28:54,998
+We know the mass, 6 * 10 to the 24.
+
+28:55,678 --> 29:08,988
+So the acceleration will be 5 divided by 6 * 10 to the 24 which is about 8 * 10 to the minus 25 meters per second squared.
+
+29:11,688 --> 29:14,118
+How long will the earth fall?
+
+29:14,298 --> 29:18,868
+Well, the earth will fall roughly 4 and 1/2 seconds before they collide.
+
+29:19,838 --> 29:23,968
+How far does the earth move in the 4 and 1/2 seconds?
+
+29:24,318 --> 29:31,828
+Well, it moves 1 half A Earth T squared.
+
+29:32,228 --> 29:33,968
+It's a distance that it moves.
+
+29:33,968 --> 29:39,048
+We know A and we know T squared, which is 20.
+
+29:39,048 --> 29:46,488
+1/2 * 20 is 10. So that means this distance becomes that number times 10 is about 8 * 10 to the minus 24 m.
+
+29:47,288 --> 29:51,908
+The Earth moves 8 * 10 to the minus 24 m.
+
+29:52,658 --> 29:55,968
+That, of course, is impossible to measure.
+
+29:56,888 --> 29:58,198
+But just imagine.
+
+29:58,828 --> 30:01,488
+What a wonderful concept this is.
+
+30:03,808 --> 30:14,388
+When this ball falls back to me, the earth and you and I and MIT
+
+30:14,888 --> 30:15,878
+are falling towards the ball.
+
+30:16,308 --> 30:19,588
+Every time that the ball comes down, we're falling towards the ball.
+
+30:19,588 --> 30:23,118
+Imagine the power I have over you and over the earth.
+
+30:24,388 --> 30:27,058
+But, you may want to think about this.
+
+30:27,478 --> 30:35,588
+If I throw the ball up, going to be away from the earth, I bet you anything that the earth will also go away from the ball.
+
+30:36,168 --> 30:42,528
+So as I do this, casually playing, believe me, man, what a gorgeous feeling it is.
+
+30:43,068 --> 30:45,808
+Earth is going down, Earth is coming towards the ball.
+
+30:45,988 --> 30:47,748
+The earth is going down and I'm part of the earth.
+
+30:47,978 --> 30:53,608
+And I'm shaking this earth up and down by simply playing with this ball.
+
+30:54,148 --> 31:04,138
+That is the consequence of Newton's third law, even though the amount by which the earth moves is of course too small to be measured.
+
+31:06,628 --> 31:19,308
+I now want to work out with you a rather detailed example of something in which we combine what we have learned today.
+
+31:19,988 --> 31:27,808
+A down-to-earth problem, the kind of a problem that you might see on an exam or on an assignment.
+
+31:28,648 --> 31:34,168
+We hang an object on two strings.
+
+31:36,668 --> 31:42,788
+And one string makes an angle of 60 degrees
+
+31:44,638 --> 31:49,258
+with the vertical and the other makes an angle of 45 degrees with the vertical.
+
+31:49,538 --> 31:50,528
+So this is the one
+
+31:53,238 --> 31:59,658
+that makes an angle Oh, 60 degrees with the horizon, 30 degrees with the vertical.
+
+31:59,908 --> 32:02,478
+And this one, 45 degrees.
+
+32:04,998 --> 32:07,428
+Let's assume that the strings have negligible mass.
+
+32:08,668 --> 32:10,728
+So they're attached here to the ceiling.
+
+32:12,568 --> 32:15,208
+And I hang here an object M.
+
+32:16,248 --> 32:17,088
+Well,
+
+32:17,728 --> 32:24,078
+If there's an object M, for sure, there will be a force
+
+32:24,798 --> 32:26,718
+mg gravitational force.
+
+32:28,148 --> 32:31,498
+This object is hanging there, it's not being accelerated.
+
+32:31,768 --> 32:34,488
+So the net acceleration must be zero.
+
+32:35,238 --> 32:42,338
+And so one string must be pulling in this direction and the other string must be pulling in this direction so that the net force on the system is zero.
+
+32:44,158 --> 32:49,728
+Let's call this pool for now T1. We call that the tension in this string.
+
+32:51,118 --> 32:56,178
+And we call the tension in this string T2.
+
+32:57,928 --> 33:02,658
+And the question now is how large is T1 and how large is T2.
+
+33:03,788 --> 33:06,178
+There are various ways you can do this.
+
+33:06,718 --> 33:09,258
+One way that's always works pretty safe.
+
+33:10,418 --> 33:12,968
+You call this the X direction.
+
+33:13,238 --> 33:16,618
+You may choose which direction you call plus, I call this plus.
+
+33:17,768 --> 33:19,448
+I call this negative.
+
+33:19,928 --> 33:25,818
+And you could call this the Y direction and you may call this plus and this negative.
+
+33:27,338 --> 33:39,938
+I know from Newton's second law F equals MA that there is no acceleration, so this must be zero.
+
+33:40,558 --> 33:45,048
+So the sum of all forces on that mass must be zero.
+
+33:46,488 --> 33:49,488
+These three forces must eat each other up so to speak.
+
+33:50,758 --> 33:58,598
+Well, if that's the case, then the sum of all forces in the X direction must also be zero because there's no acceleration in the X direction.
+
+33:58,598 --> 34:02,758
+And the sum of all forces in the Y direction must be zero.
+
+34:02,758 --> 34:12,508
+And so I'm going to decompose them, something we have done before, I'm going to decompose the forces into an X and into a Y direction.
+
+34:14,338 --> 34:15,048
+So,
+
+34:15,898 --> 34:28,098
+here comes the X component of T1 and its magnitude is T1 times the cosine of 60 degrees.
+
+34:29,918 --> 34:30,398
+Yeah.
+
+34:34,748 --> 34:37,768
+Now, I want to know what this one is.
+
+34:43,458 --> 34:51,988
+This one is T1 times the sign of 60 degrees.
+
+34:55,298 --> 34:57,878
+This projection
+
+34:59,388 --> 35:04,928
+T2 cosine 45 degrees.
+
+35:06,068 --> 35:13,558
+And the Y component T2 times the sign of 45 degrees.
+
+35:14,908 --> 35:17,368
+So, we go into the X direction.
+
+35:18,948 --> 35:33,988
+In the X direction, I have T1 cosine 60 degrees minus T2 cosine 45 degrees equals 0. That's one equation.
+
+35:36,538 --> 35:46,488
+The cosine of 60 degrees is 1/2 and the cosine of 45 degrees is 1/2 square root 2.
+
+35:48,188 --> 35:49,918
+Now I go to the Y direction.
+
+35:51,008 --> 35:53,478
+This is plus, this is minus.
+
+35:54,238 --> 36:07,708
+So we get one component here which is T1 times the sign of 60 degrees plus T2 times the sign of 45 degrees.
+
+36:08,398 --> 36:12,348
+minus mg is in the opposite direction must be zero.
+
+36:13,218 --> 36:14,618
+That's my second equation.
+
+36:15,108 --> 36:26,018
+The sign of 60 degrees equals 1/2 square root 3
+
+36:26,598 --> 36:30,908
+and the sign of 45 degrees is the same as the cosine 1/2 square root 2.
+
+36:31,708 --> 36:36,808
+Notice, I have two equations with two unknowns. If you tell me what M is, I should be able to solve for T1 and for T2.
+
+36:41,338 --> 37:07,248
+In fact, if we add them up, it's going to be very easy because we lose this, because we have both 1/2 square root 2. And so you see immediately here that 1/2 * T1 + 1/2 square root 3 * T1 = mg
+
+37:07,668 --> 37:16,108
+And so you find that the tension one equals 2 mg divided by 1 plus the square root of 3.
+
+37:16,758 --> 37:18,798
+I can go back now to this equation.
+
+37:19,788 --> 37:30,218
+T1 * 1/2 equals T2 * 1/2 square√ of 2.
+
+37:30,748 --> 37:36,908
+I lose my half, and so T2 equals T1 divided by the square√ of 2.
+
+37:37,558 --> 37:42,588
+So the bottom line is, you tell me what M is, I tell you what T1 is and I'll tell you what T2 is.
+
+37:43,888 --> 37:56,418
+Suppose we take a mass of 4 kg. mg is about 40 if we make g10 for simplicity.
+
+37:57,008 --> 38:03,198
+Then T1, if you put in the numbers, is about 29.3.
+
+38:03,768 --> 38:13,308
+And T2 29.3 Newtons and T2 is about 20.7 Newtons, I believe.
+
+38:16,348 --> 38:22,248
+It's very difficult to rig this up as an experiment, but I've I've tried that.
+
+38:22,538 --> 38:23,788
+I'll show you in a minute.
+
+38:25,948 --> 38:39,988
+I want you to know that there is another method which is perhaps even more elegant and which you may consider in which there is no decomposition in the two directions.
+
+38:43,048 --> 38:44,418
+Here is MG.
+
+38:46,058 --> 38:47,568
+That's a given.
+
+38:48,628 --> 38:53,198
+And we know that the other directions are also given.
+
+38:53,198 --> 38:57,888
+This angle is 30 degrees here, and this angle 45 degrees.
+
+38:58,818 --> 39:01,978
+If these two forces must cancel out this one,
+
+39:02,388 --> 39:04,658
+why don't I flip this one over?
+
+39:05,088 --> 39:06,168
+Here it comes.
+
+39:08,508 --> 39:10,018
+I flip it over.
+
+39:11,278 --> 39:12,278
+There it is.
+
+39:13,028 --> 39:17,858
+T1 and T2 now together must add up to this one.
+
+39:18,208 --> 39:19,228
+Then the problem is solved.
+
+39:19,388 --> 39:20,968
+Then the net force is zero.
+
+39:21,278 --> 39:22,228
+Well, that's easy.
+
+39:22,438 --> 39:23,408
+I do this.
+
+39:28,708 --> 39:38,038
+And now I have constructed a complete fair construction of T1 and of T2.
+
+39:39,158 --> 39:40,878
+It's no physics anymore, now it's all over.
+
+39:41,368 --> 39:43,408
+You know this angle here, 45 degrees.
+
+39:43,618 --> 39:44,698
+So this is 45 degrees.
+
+39:44,848 --> 39:46,168
+This is 30, this is 30.
+
+39:46,168 --> 39:57,588
+You know all the angles and you know this magnitude is MD, so it's a high school problem. You have a triangle with all the angles and one side, you can calculate the other sides and you should find exactly the same answer, of course.
+
+39:58,888 --> 40:02,688
+We made an attempt to rig it up.
+
+40:03,088 --> 40:09,018
+How do we measure tension? Well, we put in these lines scales, tension meters.
+
+40:09,018 --> 40:11,938
+And that is problematic, believe me.
+
+40:12,398 --> 40:18,678
+We put in here a tension meter, we put in here a tension meter, and the bottom one, we hang
+
+40:19,908 --> 40:26,118
+on a string with a tension meter and then here we put 4 kg.
+
+40:27,078 --> 40:29,848
+These scales are not massless.
+
+40:30,508 --> 40:31,918
+That's already problematic.
+
+40:31,918 --> 40:33,868
+The scales are not very accurate.
+
+40:34,528 --> 40:38,078
+So, we may not even come close to these numbers.
+
+40:38,608 --> 40:46,278
+For sure, if I put 4 kg here, then I would like this one to read 40 Newtons or somewhere in that neighborhood.
+
+40:46,578 --> 40:50,008
+Depending upon how accurate my my meters are.
+
+40:50,008 --> 40:51,608
+These are springs.
+
+40:52,228 --> 40:57,688
+And the springs extend, and when the springs extend, you see a handle, a hand go.
+
+40:58,688 --> 41:09,978
+You can clearly see how that works, because if there is a force on that bottom scale in this direction, which is mg,
+
+41:10,498 --> 41:15,298
+and it's not being accelerated, then the string must pull upwards.
+
+41:15,858 --> 41:18,458
+And so, in order to make the net force zero.
+
+41:18,458 --> 41:26,708
+And if you have a pull down here and you have a pull up here, and you have in here a spring, then you see you have a way of measuring that force.
+
+41:26,948 --> 41:30,898
+We often do that. We measure with springs the tension in strings.
+
+41:31,768 --> 41:36,378
+For whatever it's worse, I will show you what we rigged up.
+
+41:36,378 --> 41:41,818
+Now, a measurement without knowledge of uncertainties is meaningless. I told you that.
+
+41:42,318 --> 41:46,768
+So maybe this is meaningless what I'm going to do now. Let me do something meaningless for once.
+
+41:47,418 --> 41:53,238
+And remember, when I show it, you can always close your eyes so that you haven't seen it.
+
+41:54,098 --> 41:58,548
+So, we have here something that approaches this 60 degrees.
+
+41:59,168 --> 42:01,348
+And this approaches the 45 degrees.
+
+42:02,238 --> 42:05,338
+And we're going to hang 4 kg at the bottom.
+
+42:09,298 --> 42:10,378
+And there it is.
+
+42:11,028 --> 42:12,408
+And here it is.
+
+42:13,008 --> 42:14,958
+All right, this one's not too far from 40.
+
+42:15,328 --> 42:16,808
+It's not an embarrassment.
+
+42:17,048 --> 42:19,818
+This one is not too far from 20.7.
+
+42:20,258 --> 42:22,858
+This one is a bit on the low side. Maybe I can push it up a little.
+
+42:23,288 --> 42:25,558
+See it gets close to 30, it's not bad.
+
+42:26,088 --> 42:31,298
+So you see, it's very difficult to get these angles right, but it's not too far off.
+
+42:32,378 --> 42:36,878
+So let's remove this again because this will block your view.
+
+42:37,448 --> 42:41,998
+These scales were calibrated in Newtons as you could see.
+
+42:45,858 --> 42:50,708
+Now we come to something very delicate.
+
+42:51,798 --> 42:56,858
+Now I need your alertness and I need your help.
+
+42:58,698 --> 43:04,898
+I have a block, you see it there, and that block weighs 2 kg.
+
+43:05,918 --> 43:07,428
+That red block.
+
+43:08,518 --> 43:09,598
+So here it is.
+
+43:10,898 --> 43:11,758
+It's red.
+
+43:13,088 --> 43:14,448
+And I have two strings.
+
+43:15,708 --> 43:19,848
+It's hanging from a black string here and a black string there.
+
+43:19,848 --> 43:22,098
+Ignore that red string, that is just a safety.
+
+43:22,678 --> 43:26,778
+But there's a very thin thread here and here.
+
+43:27,478 --> 43:31,848
+And they are as close as we can make them the same. They come from the same batch.
+
+43:33,668 --> 43:39,248
+This one has a mass of 2 kg and this spring string has no mass.
+
+43:39,798 --> 43:41,068
+This is 2 kg.
+
+43:43,138 --> 43:51,068
+So what will be the tension in the upper string, which is string number one. This is string number two.
+
+43:51,638 --> 43:56,358
+Well, this string must be able to carry this 2 kg, so the tension has to be 20 Newtons.
+
+43:57,068 --> 43:58,908
+So you will find here tension
+
+43:59:808 --> 44:02,978
+call it T1 which is about 20 Newtons.
+
+44:04,348 --> 44:05,488
+Force equals MA.
+
+44:06,908 --> 44:18,228
+So, it's pulling up on this object. It's also pulling down from the ceiling by the way, think about it. It's pulling as pushing pulling from the ceiling.
+
+44:18,608 --> 44:21,038
+The tension is here, 20 Newtons.
+
+44:21,368 --> 44:26,038
+We could put in here one of these scales and you would see approximately 20 Newtons.
+
+44:26,748 --> 44:31,758
+What is the tension here? Well, the tension here is very close to zero.
+
+44:32,218 --> 44:36,738
+There's nothing hanging on it and the string has no weight, so there's no tension there. You can see that.
+
+44:39,628 --> 44:44,828
+Now I am going to pull on here.
+
+44:45,748 --> 44:54,418
+And I'm going to increase the tension on the bottom one until one of the two breaks.
+
+44:55,918 --> 45:02,008
+So this tension goes up and up.
+
+45:02,348 --> 45:11,758
+And therefore, since this object is not being accelerated, you're going to get a force down now on this object, this tension must increase, right?
+
+45:12,898 --> 45:13,728
+You see that.
+
+45:14,278 --> 45:20,198
+If I have a force on this one, so there is a force here.
+
+45:21,028 --> 45:23,688
+And there is mg.
+
+45:23,978 --> 45:28,158
+Then of course this string must now be mg plus this force.
+
+45:28,468 --> 45:32,448
+So the tension will go up here and the tension will go up here.
+
+45:32,888 --> 45:36,738
+The strings are as identical as they can be.
+
+45:37,318 --> 45:39,838
+Which of the strings will break first?
+
+45:40,248 --> 45:41,398
+What do you think?
+
+45:42,228 --> 45:42,818
+The bottom.
+
+45:44,158 --> 45:44,978
+Excuse me?
+
+45:45,938 --> 45:48,918
+I can't hear you. The one on top.
+
+45:49,238 --> 45:51,728
+Who is in favor of the one on top?
+
+45:53,168 --> 45:56,818
+Who says no, the bottom one?
+
+45:58,598 --> 46:02,258
+Who says they won't break at all?
+
+46:03,278 --> 46:04,088
+Okay.
+
+46:04,898 --> 46:06,278
+Let's take a look at it.
+
+46:06,958 --> 46:08,828
+The one on top.
+
+46:10,618 --> 46:12,928
+That's the most likely, right? 3, 2, 1, 0.
+
+46:17,298 --> 46:18,938
+The bottom one broke.
+
+46:20,678 --> 46:22,138
+My goodness.
+
+46:22,688 --> 46:27,908
+Newton's second law is at stake, Newton's third law is at stake, the whole world is at stake.
+
+46:28,858 --> 46:30,788
+Something is not working.
+
+46:32,278 --> 46:36,928
+I increased tension here. This one didn't break.
+
+46:36,928 --> 46:38,518
+Is this one stronger perhaps?
+
+46:38,518 --> 46:40,798
+No, I don't cheat on you. I'm not a magician.
+
+46:40,988 --> 46:42,168
+I want to teach you physics.
+
+46:44,218 --> 46:46,548
+Did we overlook something?
+
+46:46,788 --> 46:48,858
+You know, I'll give you a second chance.
+
+46:48,858 --> 46:49,948
+We'll do it again.
+
+46:50,598 --> 46:51,958
+Let's have another vote.
+
+46:52,928 --> 46:55,418
+So I'll give you a chance to change your mind.
+
+46:55,418 --> 46:58,688
+There's nothing wrong in life changing your mind. It's one of the greatest things that you can do.
+
+47:01,958 --> 47:04,358
+What do you think will happen now?
+
+47:07,308 --> 47:10,988
+Who is in favor still of the top one? Seeing is believing.
+
+47:11,168 --> 47:12,248
+You still insist on the top one.
+
+47:12,248 --> 47:13,768
+Who is now in favor of the bottom one?
+
+47:14,278 --> 47:16,528
+Ah, many of you got converted, right?
+
+47:17,328 --> 47:18,018
+Okay.
+
+47:18,418 --> 47:20,428
+There we go. 3, 2, 1, 0.
+
+47:21,918 --> 47:25,008
+The top one broke.
+
+47:25,818 --> 47:27,458
+So some of you were right.
+
+47:27,848 --> 47:29,178
+Now I'm getting so confused.
+
+47:30,248 --> 47:31,958
+I can't believe it anymore.
+
+47:32,268 --> 47:36,008
+First we argued that the top one should break, but it didn't. The bottom one broke.
+
+47:36,988 --> 47:40,548
+Then we had another vote, and then the top one broke.
+
+47:40,938 --> 47:42,528
+Is someone pulling our leg?
+
+47:43,228 --> 47:45,078
+I suggest we do it one more time.
+
+47:46,208 --> 47:50,748
+I suggest we do it one more time and whatever is going to happen, that's the winner.
+
+47:51,388 --> 47:53,958
+If the top one breaks, that's the winner.
+
+47:54,748 --> 47:58,228
+The bottom one breaks, well, then we have to accept that.
+
+47:58,558 --> 48:01,138
+But I want you to vote again.
+
+48:01,988 --> 48:11,228
+I want you to vote again on this decisive measurement whether the top one will break first or the bottom one.
+
+48:12,418 --> 48:14,228
+Who is in favor of the top one?
+
+48:16,928 --> 48:20,118
+Many of you are scared, right? You're not voting anymore.
+
+48:20,888 --> 48:22,678
+I can tell you're not voting.
+
+48:22,938 --> 48:24,748
+Who is in favor of the bottom one?
+
+48:26,518 --> 48:28,648
+Only 10 people are voting.
+
+48:29:968 --> 48:33,618
+Let's do this in an undemocratic way.
+
+48:34,088 --> 48:35,878
+You may decide. What's your name?
+
+48:36:798 --> 48:37:488
+Elisa?
+
+48:38:328 --> 48:39:848
+Georgia, close enough.
+
+48:41,738 --> 48:46,178
+You may decide whether the top one or the bottom one will break.
+
+48:46,488 --> 48:49,788
+Isn't that great? Doesn't give you a fantastic amount of power?
+
+48:52,788 --> 48:54,028
+The bottom one.
+
+48:55,168 --> 48:56,268
+The bottom one.
+
+48:57,828 --> 48:58,718
+We're ready?
+
+48:59:448 --> 49:02,598
+3, 2, 1, 0. one broke.
+
+49:03,108 --> 49:03,958
+You were right.
+
+49:04,248 --> 49:05,588
+You will pass this course.
+
+49:06,068 --> 49:09,938
+Thank you and see you Wednesday. By the way, think about this.
+
+49:10:778 --> 49:11,818
+Think about this.

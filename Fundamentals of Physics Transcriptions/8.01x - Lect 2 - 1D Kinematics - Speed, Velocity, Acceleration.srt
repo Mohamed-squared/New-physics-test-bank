@@ -1,0 +1,1895 @@
+1
+00:00:01,459 --> 00:00:04,429
+We will discuss velocities and acceleration.
+
+2
+00:00:06,030 --> 00:00:08,070
+I'll start with something simple.
+
+3
+00:00:08,630 --> 00:00:15,250
+I have a motion of an object along a straight line. We call that one-dimensional motion.
+
+4
+00:00:15,860 --> 00:00:22,370
+And I'll tell you that the object is here at time T1, at time T2 it's here, at time T3 it's there.
+
+5
+00:00:22,820 --> 00:00:27,160
+Time T4 it's here and at time T5 it's back where it was at T1.
+
+6
+00:00:27,600 --> 00:00:35,340
+And here you see the positions in X where it is located at that moment in time.
+
+7
+00:00:37,270 --> 00:00:42,590
+I will define this to be the increasing value of X.
+
+8
+00:00:42,960 --> 00:00:45,700
+It's my free choice, but I've chosen this now.
+
+9
+00:00:47,320 --> 00:00:52,360
+Now, we will introduce what we call the average velocity.
+
+10
+00:00:53,230 --> 00:01:09,330
+I put a bar over it, that stands for average, between time T1 and time T2. That we define in physics at X as time T2 minus X at time T1 divided by T2 minus T1.
+
+11
+00:01:10,060 --> 00:01:12,150
+That is our definition.
+
+12
+00:01:12,530 --> 00:01:20,080
+In our case, because of the way that I defined the increasing value of X, this is larger than zero.
+
+13
+00:01:21,260 --> 00:01:29,350
+However, if I take the average velocity between T1 and T5, that would be zero because
+
+14
+00:01:29,610 --> 00:01:34,280
+because they are at the same position. So the upstairs is zero.
+
+15
+00:01:34,680 --> 00:01:47,530
+If I had chosen T4 and T2, average velocity between time T2 and T4, you would have seen that that is negative because the upstairs is negative.
+
+16
+00:01:48,570 --> 00:01:53,520
+Notice that I haven't told you where I choose my zero on my X-axis.
+
+17
+00:01:53,910 --> 00:01:58,860
+It's completely unimportant for the average velocity. It makes no difference.
+
+18
+00:01:59,350 --> 00:02:08,220
+However, if I had chosen this to be the direction of increasing X, then, of course, the signs would flip.
+
+19
+00:02:08,660 --> 00:02:12,010
+Then this would have been negative and this would have been positive.
+
+20
+00:02:12,580 --> 00:02:16,560
+So the direction that you are free to choose determines the signs.
+
+21
+00:02:16,870 --> 00:02:23,180
+The location where you put your zero is not important, but signs in physics do matter.
+
+22
+00:02:23,760 --> 00:03:33,640
+Signs are important. Whether you owe me money or I owe you money, the difference is only a minus sign, but I think it's important for you.
+
+23
+00:03:34,619 --> 00:04:44,769
+Now, I will give you not only the positions as I did here on the X-axis at discrete moments in time, but I'm going to tell you exactly where the object is at any moment in time.
+
+24
+00:04:50,631 --> 00:05:52,611
+Here you see an XT diagram. So you see that at T1, the object is at position XT1.
+
+25
+00:05:58,681 --> 00:06:02,481
+This is the road of the object. This is the straight line where it's moving.
+
+26
+00:06:02,741 --> 00:06:08,851
+It starts here, then it goes to this position, it goes to this one, it comes back to T4 and it comes back here.
+
+27
+00:06:09,231 --> 00:07:14,811
+I will tell you now every moment in time in between.
+
+28
+00:07:15,591 --> 00:08:25,731
+(Drawing sound) Voila.
+
+29
+00:08:26,261 --> 00:09:32,171
+This is now information that is way more. You have the information at any moment in time.
+
+30
+00:09:32,621 --> 00:10:36,711
+Notice that I now did choose X = 0.
+
+31
+00:10:37,431 --> 00:11:39,111
+I chose it somewhere here. But I could have chosen it at any other point.
+
+32
+00:11:42,231 --> 00:12:48,791
+For whatever follows, you will see that it makes no difference. So I have chosen a zero point so that I can make a graph.
+
+33
+00:12:49,481 --> 00:13:54,411
+And now we will look at the average velocity in a somewhat different way.
+
+34
+00:13:54,861 --> 00:15:05,711
+Say I choose my time T2 and T3, I draw here now this line.
+
+35
+00:15:06,391 --> 00:16:07,581
+(Drawing sound)
+
+36
+00:16:08,691 --> 00:17:11,161
+And this angle I call alpha.
+
+37
+00:17:12,401 --> 00:18:22,531
+And this part here, I call delta X and this here is delta T.
+
+38
+00:18:23,551 --> 00:19:34,611
+And so you could write now, if you careful about your sign convention, you could write down now that the average velocity equals delta X divided by delta T.
+
+39
+00:19:35,431 --> 00:20:43,391
+But be careful, if the angle is positive, I call this a positive angle, then the average velocity is positive.
+
+40
+00:20:44,091 --> 00:21:50,041
+But if I have a negative angle, then the average velocity would be negative.
+
+41
+00:21:50,481 --> 00:23:05,291
+For instance, between T4 and T5, if I draw this line, then this angle here is negative, and so the average velocity between T4 and T5 is now negative.
+
+42
+00:23:07,071 --> 00:24:19,501
+Again, if I had changed the zero point, you would have found the same values for the average velocity, the only difference would have been the position of the curve in that plot.
+
+43
+00:24:21,271 --> 00:25:27,231
+There is a very big difference in physics between speed and velocity.
+
+44
+00:25:28,111 --> 00:26:35,721
+The average velocity between time T1 and T5 is zero, but the average speed is not.
+
+45
+00:26:36,541 --> 00:27:49,581
+The average speed is defined as the distance traveled divided by the time that it takes to travel that distance.
+
+46
+00:27:50,421 --> 00:28:56,621
+Now what is the distance that the object traveled between time T1 and time T5?
+
+47
+00:28:57,511 --> 00:30:03,451
+Well, the object started at a position here on this X-axis.
+
+48
+00:30:03,741 --> 00:31:14,481
+And then it went up, reached the highest point here. So I'll make a drawing for you here. Reached the highest point here, then it went down.
+
+49
+00:31:15,391 --> 00:32:22,341
+And then when it went here, it went up again, and it comes down again, and it's back.
+
+50
+00:32:22,711 --> 00:33:32,421
+And in order to find the average speed, you would now have to know exactly what this distance is, add up this distance, add up this distance, and this distance.
+
+51
+00:33:32,731 --> 00:34:49,571
+And if that distance all together were for instance 300 m, and if the time between T1 and T5 were 3 seconds, then the average speed would be 300 m divided by 3 seconds, that would be 100 m per second.
+
+52
+00:34:49,851 --> 00:35:56,361
+So the average speed would be 100 m per second, yet the average velocity would be zero.
+
+53
+00:35:57,941 --> 00:37:10,211
+If you look at the location T3 and T2, and I bring T3 closer and closer to T2,
+
+54
+00:37:10,731 --> 00:38:13,581
+then this angle of alpha will increase.
+
+55
+00:38:14,261 --> 00:39:20,231
+And I can go to the extreme that I bring T3 almost right at T2.
+
+56
+00:39:20,621 --> 00:40:25,451
+The angle of alpha will then be tangential to this point.
+
+57
+00:40:26,261 --> 00:41:30,681
+(Drawing sound) This will then be my angle of alpha.
+
+58
+00:41:31,491 --> 00:42:39,171
+And now you will understand how we define the instantaneous velocity at time T.
+
+59
+00:42:39,491 --> 00:43:44,611
+Which is different from an average velocity between two time intervals.
+
+60
+00:43:44,951 --> 00:45:09,011
+The instantaneous velocity V, and I pick a random time T equals the limiting case for X measured at time T + delta T - X measured at time T divided by delta T and I do that for delta T goes to zero.
+
+61
+00:45:09,401 --> 00:46:28,831
+So think this, think of this as being T3 and this as T2, I bring T3 closer and closer and closer to T2 and the time between them then goes to zero. And this is something that you undoubtedly recognize, that's the first derivative of the position versus time.
+
+62
+00:46:29,381 --> 00:47:40,381
+And now comes an equation which is one of the very few that I want you to remember in in 801 V equals dX dt.
+
+63
+00:47:40,781 --> 00:48:47,541
+This is one that you must remember not only in 801, but for the rest of your time at MIT.
+
+64
+00:48:47,851 --> 00:49:52,371
+And this could be larger than zero, this could be zero, and this could be smaller than zero.
+
+65
+00:49:52,821 --> 01:00:09,461
+If the angle of alpha, the tangential is positive, then it is a positive value. If it is negative, however, when you're here, then it is a negative velocity. And if the angle of alpha is zero, then it the velocity is zero.
+
+66
+01:00:09,831 --> 01:01:15,561
+So if we now look at this plot, we can search for the times that the velocity is zero.
+
+67
+01:01:15,961 --> 01:02:22,331
+So you have to look for the derivative being zero, that means the angle alpha being zero.
+
+68
+01:02:22,581 --> 01:03:25,181
+Clearly here, the velocity is zero.
+
+69
+01:03:25,661 --> 01:04:30,331
+Right here at this turning point, that means when the object is here, it is zero.
+
+70
+01:04:30,761 --> 01:05:38,171
+When the object is here, it is again zero at this moment in time. Again, the angle is zero, and it is again zero here.
+
+71
+01:05:38,391 --> 01:06:41,251
+So those are the times that the velocity is zero.
+
+72
+01:06:41,501 --> 01:07:45,041
+What are the times that the velocity is positive? Well, it's positive here.
+
+73
+01:07:45,441 --> 01:08:54,551
+Velocity is positive here, still positive, positive, becomes negative, negative, positive, zero, negative.
+
+74
+01:08:55,341 --> 01:09:59,961
+So that's the definition of the instantaneous velocity.
+
+75
+01:10:01,421 --> 01:11:04,011
+What is the instantaneous speed?
+
+76
+01:11:04,531 --> 01:12:08,221
+Well, speed is not sign sensitive.
+
+77
+01:12:09,021 --> 01:13:17,641
+Suppose that the velocity here, just I call that V1, suppose that was + 30 m/s.
+
+78
+01:13:17,951 --> 01:14:20,471
+I just grabbed this number out of the blue.
+
+79
+01:14:20,731 --> 01:15:29,221
+And suppose here somewhere, it was, I call that V2, suppose that was - 100 m/s.
+
+80
+01:15:29,591 --> 01:16:32,001
+This is negative, and this is positive.
+
+81
+01:16:32,311 --> 01:17:42,631
+Then we would have to say in physics, whether you like it or not, it's not very pleasing, but you would have to say that this velocity is lower than that one, because minus 100 is lower than plus 30.
+
+82
+01:17:43,031 --> 01:21:05,321
+But the speed, of course, is higher here, because the speed is the magnitude of the velocity and is not sign sensitive. So this has the highest speed of 100 m per second and this has a lower speed, but this has the lowest velocity. It's just an algebraic game, but very important when you make your calculations.
+
+83
+01:21:06,341 --> 01:22:15,401
+I have always wondered what the average speed or the average velocity is of a bullet.
+
+84
+01:22:15,751 --> 01:23:19,011
+Now, I want you to realize I'm not a fan of guns at all.
+
+85
+01:23:19,341 --> 01:24:20,871
+But it always intrigued me.
+
+86
+01:24:21,211 --> 01:26:25,911
+How can I measure the average speed of a bullet?
+
+87
+01:26:26,301 --> 01:28:32,721
+And I've discussed it with some people here and we came up with an easy way to do that.
+
+88
+01:28:33,141 --> 01:29:37,821
+We have a wire which goes into the blackboard.
+
+89
+01:29:37,981 --> 01:30:48,361
+Wire one, and we have another wire that goes into the blackboard, wire two. And the separation is D meters. We have to measure that.
+
+90
+01:30:48,711 --> 01:31:50,141
+The setup is here.
+
+91
+01:31:50,511 --> 01:32:55,791
+So this is wire number one and this is wire number two.
+
+92
+01:32:57,151 --> 01:34:05,611
+So, you will see the coming in like this. So I'll make this a one and I'll make this a two. That's the way it's set up.
+
+93
+01:34:06,371 --> 01:35:12,431
+And we fire a bullet which breaks this wire. At that moment, the timer starts.
+
+94
+01:35:13,031 --> 01:36:17,601
+And then it breaks this wire and that's when the timer stops.
+
+95
+01:36:18,271 --> 01:38:26,571
+Now, I told you, a measurement is meaningless without knowledge of the uncertainty in your measurement.
+
+96
+01:38:27,421 --> 01:40:32,961
+So there are two uncertainties involved, the distance and the timing uncertainty.
+
+97
+01:40:33,541 --> 01:42:39,351
+This distance, I will measure for you D.
+
+98
+01:42:39,651 --> 01:44:43,611
+I have here a large ruler.
+
+99
+01:44:44,581 --> 01:45:47,401
+Here is one wire. Here's the other wire.
+
+100
+01:45:48,341 --> 01:50:59,251
+I cannot do that any better, really, than maybe even half a centimeter, because the situation is not all that stable. I don't know what happens when the bullet will hit the wire.
+
+101
+01:50:59,511 --> 02:07:761
+So I would say it is 148 and 1/2 cm, but I cannot guarantee it to better than half a centimeter.
+
+102
+02:08,131 --> 02:14,761
+Rolling 148 and 1/2 plus or minus 0.5 cm.
+
+103
+02:16,091 --> 02:21,601
+I want you to appreciate that this is a very small percentage error.
+
+104
+02:21,921 --> 02:30,211
+This is only five parts out of 1500, that is one out of 300. So that is only a 1/3% error.
+
+105
+02:30,411 --> 02:33,211
+That's very small. That's what we call the relative error.
+
+106
+02:33,881 --> 02:42,621
+Then I ask myself the question, I want to measure the accuracy of the speed of the bullet to about 2%.
+
+107
+02:43,171 --> 02:44,511
+That was my goal.
+
+108
+02:45,261 --> 02:47,561
+How accurate should I do the timing?
+
+109
+02:48,191 --> 03:00,731
+Well, I had to make an estimate very roughly how fast the speed of the bullet is. And I would think it is probably lower than the speed of sound. The speed of sound is 340 m/s.
+
+110
+03:01,031 --> 03:09,171
+I don't know whether it's 200 or 300, but it got to be somewhere in that ballpark of the kind of bullets that we have, 200 or 300 m/s.
+
+111
+03:09,681 --> 03:14,591
+Let us assume that the speed is 300 m/s, just a wild guess.
+
+112
+03:15,331 --> 03:21,311
+Then it would take 5 milliseconds for this bullet to cross from here to here.
+
+113
+03:21,731 --> 03:30,221
+And if I want to make a measurement to 2% accuracy, I have to know this timing to about 1/10th of a millisecond.
+
+114
+03:30,451 --> 03:36,241
+Because 1/10th of a millisecond is about 2% of five.
+
+115
+03:36,471 --> 03:40,661
+So that sets the accuracy that I need to make the time measurements.
+
+116
+03:41,021 --> 03:49,231
+And so we do have a timer. It is about accurate to about a 10th of a millisecond. And so now I can measure that time.
+
+117
+03:49,461 --> 03:58:151
+So I'm going to have here some time that we measure plus or minus 0.1 and we'll do the whole thing in milliseconds.
+
+118
+03:58:151 --> 04:06,541
+But our final answer will be in meters per second.
+
+119
+04:07,871 --> 04:17,411
+All right. I always have to think hard when I do this, because when we deal with bullets, that is no kid stuff.
+
+120
+04:18,071 --> 04:23,551
+And as I said, I have really no experience firing guns.
+
+121
+04:24,501 --> 04:25,631
+This is the bolt.
+
+122
+04:26,471 --> 04:32,231
+(Grunting noises as he lifts something heavy) Let it go.
+
+123
+04:32,821 --> 04:35,111
+Here is the bolt.
+
+124
+04:36,121 --> 04:37,861
+There we go.
+
+125
+04:38,641 --> 04:43,681
+(Clanking sounds) It's in place.
+
+126
+04:44,231 --> 04:46,311
+Before I do that, I want to check check the circuit.
+
+127
+04:46,541 --> 04:51,441
+I want to make sure that the electronic circuit is properly working.
+
+128
+04:51,881 --> 04:54,231
+You see the timing here, right?
+
+129
+04:54,731 --> 04:58,131
+So I do a small test just to see whether the circuit is working.
+
+130
+04:58,431 --> 05:02,661
+(Beeping sounds) Yeah. Should be working.
+
+131
+05:04,171 --> 05:05,781
+Here comes the bullet.
+
+132
+05:06,331 --> 05:10,711
+(Mechanical sounds)
+
+133
+05:11,881 --> 05:14,191
+You ready? I'm ready.
+
+134
+05:14,651 --> 05:16,791
+3, 2, 1, 0.
+
+135
+05:17,221 --> 05:17,901
+(Gunshot)
+
+136
+05:18,561 --> 05:19,531
+What do we see?
+
+137
+05:20,891 --> 05:24,401
+5.8 milliseconds.
+
+138
+05:26,191 --> 05:30,741
+5.8. Is that what you see? Yeah.
+
+139
+05:31,411 --> 05:38,701
+5.8 milliseconds plus or minus 0.1.
+
+140
+05:39,691 --> 05:46,131
+So out comes the average call it speed or call it velocity, it's the same thing in this case.
+
+141
+05:46,871 --> 05:54,821
+148.5 5.8 and I have to convert it to meters per second.
+
+142
+05:54,981 --> 06:03,451
+That brings it at 256 plus or minus. Now you come in here with your plus or minuses.
+
+143
+06:03,911 --> 06:06,791
+This is a 1 point a 1/3% error.
+
+144
+06:06,981 --> 06:12,061
+It's negligible to this one. 1 out of 58 is about 1.7%.
+
+145
+06:12,341 --> 06:17,041
+So this is the only one we have to worry about. So the uncertainty in there is about 1.7%.
+
+146
+06:17,291 --> 06:23,421
+It's less than two, that's what I wanted. And that gives me an error of about 4 meters per second.
+
+147
+06:23,801 --> 06:34,741
+And so this is the result and you see it's only meaningful because we have a good idea about the uncertainties in the measurement.
+
+148
+06:36,971 --> 06:46,941
+Just as we introduced average accele- average velocity, now I'm going to introduce average acceleration.
+
+149
+06:47,581 --> 06:53,641
+Notice that the velocity changes here throughout time.
+
+150
+06:54,621 --> 07:12,921
+And that brings me to the next part, the logical part, namely, that we're going to introduce an average acceleration. And with a little bit of imagination, you can probably guess what that looks like.
+
+151
+07:13,521 --> 07:34,171
+The average acceleration between time T1 and time T2 would then be the velocity at time T2 minus the velocity at time T1 divided by T2 minus T1 and the dimension is length per second per time squared, so it's meters per second square.
+
+152
+07:34,441 --> 07:37,511
+This is then for a one-dimensional situation.
+
+153
+07:37,941 --> 07:43,091
+This number can be larger than zero, it can be equal to zero, and it can be smaller than zero.
+
+154
+07:44,421 --> 07:48,351
+In our case, T1 to T2, here,
+
+155
+07:48,691 --> 08:04,201
+notice the velocity is zero as a start, and it begins to increase because this angle of alpha increases. It's the angle that matters. The angle increases, so in our case, from T1 to T2, the average acceleration is larger
+
+156
+08:04,541 --> 08:05,391
+than zero.
+
+157
+08:05,831 --> 08:07,341
+Look at the angle.
+
+158
+08:07,971 --> 08:16,581
+However, if you take the average acceleration between T1 and T5, that is smaller than zero.
+
+159
+08:17,321 --> 08:20,631
+Because here the velocity is zero.
+
+160
+08:20,971 --> 08:23,511
+But here the velocity is negative.
+
+161
+08:24,201 --> 08:30,641
+So if you substitute that in there, you get an average acceleration which is smaller than zero.
+
+162
+08:30,951 --> 08:39,641
+So the signs in the velocity and the signs in average acceleration depend crucially on how I have defined my increasing value of X.
+
+163
+08:39,641 --> 08:41,731
+Not where I choose my zero point.
+
+164
+08:42,161 --> 08:48,391
+If I reverse the direction of increasing X, then all my signs will change.
+
+165
+08:48,881 --> 08:58,901
+So you can also write down then that average acceleration, if you like that, is delta V divided by delta T, but you must be careful because the delta V is sign sensitive.
+
+166
+08:58,901 --> 09:02,361
+You must obey your sign convention.
+
+167
+09:03,591 --> 09:06,201
+I have here a tennis ball.
+
+168
+09:06,731 --> 09:11,151
+And I can bounce this tennis ball, I can throw it down.
+
+169
+09:11,531 --> 09:18,041
+And let us assume, just for simplicity, that it hits the floor at about 5 m/s.
+
+170
+09:18,341 --> 09:27,321
+And that it's a very, very good tennis ball, and that it also bounces back with a speed of about 5 m/s.
+
+171
+09:27,731 --> 09:36,151
+I will choose this to be my increasing value of X. And so it hits the floor like this.
+
+172
+09:36,811 --> 09:43,321
+That means the velocity at which it hits the floor is - 5 m/s.
+
+173
+09:43,771 --> 09:50,561
+It bounces off, and there it comes, and it goes up with + 5 m/s.
+
+174
+09:50,961 --> 09:54,701
+I call this V1 and I call this V2.
+
+175
+09:55,501 --> 10:07,801
+So what now is the average acceleration? Well, I would have to know the time that it takes for this change in direction. In other words, we call that the impact time.
+
+176
+10:08,341 --> 10:14,661
+I would say in this case, the impact time delta T is probably about a hundreds of a second.
+
+177
+10:15,621 --> 10:31,811
+And so my average acceleration would be V2 - V1, that is + 5 - - 5, that is 10 divided by 10 to the minus 2, and that is + 1,000 m per second squared.
+
+178
+10:32,701 --> 10:35,551
+I have I've observed carefully the signs.
+
+179
+10:35,861 --> 10:42,501
+If now, I say, aha, I don't like this, I want to call this the value of increasing X.
+
+180
+10:42,871 --> 10:49,141
+No big deal. This would become a plus, this would become a minus, and then this would become a minus.
+
+181
+10:49,391 --> 10:53,561
+So then the acceleration is minus 1000 m per second square.
+
+182
+10:54,431 --> 11:04,751
+I have also here a tomato, and I have here some eggs.
+
+183
+11:06,101 --> 11:17,141
+Now, imagine now that I throw the tomato down or for that matter the egg, and that they hit the floor at 5 m/s.
+
+184
+11:17,541 --> 11:18,931
+I could do that.
+
+185
+11:19,341 --> 11:24,201
+They would not come back up. They would go (splatting sound).
+
+186
+11:24,701 --> 11:34,021
+So therefore, the change in velocity would not be 10, apart from the sign that you have to think about, but it would only be five meters per second.
+
+187
+11:34,651 --> 11:41,731
+The impact time would probably be much longer, maybe a quarter of a second.
+
+188
+11:41,981 --> 11:55,431
+So therefore, the average acceleration during the impact would then be only 5 divided by 1/4, would be something like 20 m per second square.
+
+189
+11:56,091 --> 12:03,651
+Now, whether you call it plus or whether you call it minus 20 m per second square, depends on your convention of what you call increasing X.
+
+190
+12:04,341 --> 12:09,501
+But the eggs and the tomatoes don't care what you call minus and what you call plus.
+
+191
+12:09,751 --> 12:17,251
+Whether the acceleration is minus 20 m per second square or plus 20 m per second square, you better believe it, the egg will break.
+
+192
+12:17,631 --> 12:29,351
+So it's only in your convention that it matters, but of course, the physics will not change. The eggs couldn't care less what you have chosen for your sign convention.
+
+193
+12:29,851 --> 12:36,551
+Something breaks because the magnitude of acceleration becomes too high. That's why something breaks.
+
+194
+12:37,291 --> 12:40,851
+A few days ago, I saw a Sherlock Holmes movie.
+
+195
+12:41,431 --> 12:46,241
+And there was a guy who fell on the floor, a marble floor.
+
+196
+12:46,531 --> 12:50,551
+Hit his head, was lying there motionless.
+
+197
+12:51,091 --> 12:52,671
+And he was Watson.
+
+198
+12:53,271 --> 12:55,751
+And Watson said to Sherlock Holmes, what happened?
+
+199
+12:56,551 --> 13:04,261
+Sherlock Holmes walks over to the guy, touches him, and he says, he crushed his skull.
+
+200
+13:04,591 --> 13:07,281
+He looked very intelligent, I must say when he said that. He crushed his skull.
+
+201
+13:07,621 --> 13:12,581
+And I said, gee, that's really physics in action. It's 801 all the way.
+
+202
+13:13,451 --> 13:17,301
+A modest, a really modest velocity when he hits the floor.
+
+203
+13:17,671 --> 13:22,201
+But he hit the floor like a billiard ball. The guy was bald for one thing.
+
+204
+13:22,531 --> 13:25,481
+And so the impact time was very short.
+
+205
+13:25,711 --> 13:31,341
+And when the impact time is short, even if you hit the floor with a modest speed, the acceleration is high.
+
+206
+13:31,581 --> 13:37,111
+And that was too much. And so that's why his skull was crushed.
+
+207
+13:38,891 --> 13:43,211
+So what matters is the change in velocity and the impact time.
+
+208
+13:44,401 --> 13:56,331
+We now want to make one last step from average acceleration, we want to go to the acceleration at any moment in time.
+
+209
+13:56,531 --> 13:59,651
+Just the way we did that with velocity.
+
+210
+14:00,221 --> 14:19,711
+And that now is a natural step. The acceleration at any moment in time would be the limit for delta T goes to zero for V measured at T + delta T - VT divided by delta T.
+
+211
+14:20,801 --> 14:34,301
+So that is the instantaneous acceleration. And this, you will recognize, is the first derivative of velocity versus time, which is also the second derivative of position versus time.
+
+212
+14:34,741 --> 14:49,811
+And so here comes the second equation that I really want you to remember forever and ever and ever that the acceleration is dVdT, which is also d2x dt squared.
+
+213
+14:50,211 --> 14:52,981
+(Drawing sound)"
+
+214
+14:54,991 --> 15:11,011
+We can go to our plot and we can ask ourselves the question now, where is the acceleration zero, where is it larger than zero, and where is it smaller than zero? Because this value can be larger than zero, equal to zero, and smaller than zero.
+
+215
+15:11,481 --> 15:17,541
+And now you have to be very careful when you try to derive that from this plot.
+
+216
+15:17,861 --> 15:23,151
+You have to be very careful. Because you and I have no good feeling for second derivative.
+
+217
+15:23,421 --> 15:26,331
+Velocity is easy. All you have to do is looking at alpha."
+
+218
+15:26,681 --> 15:31,401
+But when it comes to the second derivative, you have to see how alpha is changing.
+
+219
+15:31,881 --> 15:41,961
+Well, right here, the velocity is not changing. So the acceleration everywhere here must be zero.
+
+220
+15:42,651 --> 15:49,471
+Here the velocity is increasing. So the acceleration must be larger than zero here.
+
+221
+15:50,381 --> 15:55,741
+Here, the velocity is almost constant. It's almost a straight line.
+
+222
+15:56,261 --> 15:59,951
+What does that mean for the acceleration? Zero.
+
+223
+16:00,311 --> 16:00,951
+Exactly.
+
+224
+16:01,301 --> 16:07,511
+Here when it makes this rounding curve, the velocity is positive here, but on this side it's negative.
+
+225
+16:07,801 --> 16:10,991
+So what does that mean for the acceleration? Negative. You got it.
+
+226
+16:11,511 --> 16:21,281
+And so you can now roughly find where the acceleration is positive, where it's negative and where it is zero.
+
+227
+16:23,141 --> 16:38,551
+That's do a straightforward example the way that you could expect it on an assignment or if you're extraordinarily lucky, you might even get something like that on an exam.
+
+228
+16:38,971 --> 16:49,211
+Very straightforward. I'm going to give you the position X as a function of time and then ask you lots of questions about it.
+
+229
+16:49,801 --> 17:03,841
+So this example is a working example X = 8 - 6t + t^2.
+
+230
+17:04,601 --> 17:08,441
+So this tells you where the where the object is at any moment in time.
+
+231
+17:08,651 --> 17:10,501
+And let this be in meters.
+
+232
+17:11,531 --> 17:14,701
+What now is the velocity at any moment in time?
+
+233
+17:15,261 --> 17:19,091
+Well, that's the derivative dX dt.
+
+234
+17:19,561 --> 17:34,511
+And I use the following X equals t to the power n, then, as most of you should know, dX dt is then n * t to the power n - 1.
+
+235
+17:34,801 --> 17:36,601
+That's all I'm using.
+
+236
+17:37,341 --> 17:41,451
+So the derivative of 8 is 0. I get here - 6.
+
+237
+17:41,921 --> 17:45,111
+I get here plus 2t.
+
+238
+17:45,661 --> 17:48,091
+This would be in meters per second.
+
+239
+17:48,421 --> 17:54,111
+And the acceleration, I have to take the derivative of the velocity, I get + 2.
+
+240
+17:54,651 --> 18:02,521
+So notice that the acceleration is constant in time, is not changing, but the velocity is changing.
+
+241
+18:03,971 --> 18:14,061
+Well, at time T = 0, just I'll start to probe a little bit. I want to get a feeling for what this object is doing.
+
+242
+18:14,451 --> 18:26,671
+At time T = 0, X is + 8. The velocity is - 6 meters per second and the acceleration equals + 2.
+
+243
+18:27,191 --> 18:36,381
+I can also ask myself, at what time is X = 0? What are the times that X is zero?
+
+244
+18:36,381 --> 18:51,391
+Well, I have to solve this second order equation, which is something that you've all done in high school, and you will find that that's the case when the time is + 2 and when the time is + 4.
+
+245
+18:51,751 --> 19:04,441
+Take the + 2, that makes this 4. 4 + 8 is 12 - 6 * 2, that's zero. So you see the two works and you check that the four also works.
+
+246
+19:05,981 --> 19:14,181
+Just for my curiosity, when is the velocity zero? Oh, that's easy. That's when this equation is zero, so that's when T equals 3.
+
+247
+19:15,171 --> 19:18,751
+What is at that moment the position?
+
+248
+19:18,751 --> 19:26,581
+Oh, I substitute t = 3 in here and that gives me -1. X equals -1.
+
+249
+19:27,721 --> 19:34,181
+So now I'm ready to plot X as a function of T. It's of course a parabola.
+
+250
+19:34,491 --> 19:38,521
+And I use this information that we have just derived.
+
+251
+19:39,011 --> 19:45,941
+So here comes my plot.
+
+252
+19:46,461 --> 19:51,621
+Let this be increasing value of X. Let this be 8.
+
+253
+19:52,561 --> 19:56,251
+And let this be -1.
+
+254
+19:56,891 --> 19:58,441
+This is the time axis.
+
+255
+19:58,711 --> 20:01,321
+I have a zero here.
+
+256
+20:01,901 --> 20:08,181
+And so I want to cover, let's say, about 6 seconds.
+
+257
+20:07,501 --> 20:17,661
+So I have 1, 2, 3, 4, 5, 6.
+
+258
+20:18,611 --> 20:28,721
+Now I'm going to use this information in order to give you a curve which is similar to that one, except this is a simple one. This is just a parabola.
+
+259
+20:29,071 --> 20:34,581
+So I know that at time t = 0, the object is at position 8.
+
+260
+20:35,601 --> 20:47,551
+I know that X is 0 at the time 2 and at the time 4. So the object is here at this time and at this time.
+
+261
+20:48,481 --> 20:56,261
+And I know that at time t = 3, it is at position minus 1.
+
+262
+20:56,621 --> 21:02,121
+And I also know that the velocity is zero, so we can check that.
+
+263
+21:02,621 --> 21:11,321
+And so if I make this plot now, then we would get a curve that sort of like this.
+
+264
+21:11,841 --> 21:17,311
+And yes, indeed, notice the velocity here is zero. The angle alpha equals zero.
+
+265
+21:18,051 --> 21:27,511
+The object starts out at T = 0 with a negative velocity.
+
+266
+21:27,811 --> 21:29,181
+You can see that.
+
+267
+21:29,601 --> 21:32,321
+The object at T = 0 is here. This is where the object is."
+
+268
+21:32,581 --> 21:35,391
+I hope you realize that the object is never here.
+
+269
+21:35,661 --> 21:39,761
+This is the road. This is the one-dimensional track on which the object is sitting.
+
+270
+21:39,991 --> 21:43,441
+The object is here and it starts going in this direction.
+
+271
+21:43,771 --> 21:49,711
+If it starts going in this direction, the velocity must be less than zero. And indeed it is, it's - 6.
+
+272
+21:50,671 --> 21:55,521
+But there is the acceleration, which is + 2. It's in this direction.
+
+273
+21:55,781 --> 22:01,061
+The acceleration says, I don't want you to go down. I want you to go up.
+
+274
+22:01,481 --> 22:07,401
+Well, the velocity says, sorry, all I can do is slowly, slowly change. And that's what it's doing.
+
+275
+22:07,721 --> 22:12,601
+It's slowly changing the velocity, and there comes a time that the velocity is zero.
+
+276
+22:12,911 --> 22:21,301
+So the object goes down. The velocity changes. And when it is at position minus 1, it has come to a grinding halt.
+
+277
+22:21,701 --> 22:23,211
+And now it is returning.
+
+278
+22:23,461 --> 22:27,951
+This positive value of A is now increasing the velocity. And that's what you see.
+
+279
+22:28,411 --> 22:42,211
+I therefore bet you a nickel that if you substitute in that equation, T equals 4, that the velocity better be positive. It has changed from a minus sign to a plus sign because of this positive acceleration.
+
+280
+22:42,621 --> 22:44,281
+I bet you a nickel.
+
+281
+22:44,661 --> 22:46,551
+T equals 4.
+
+282
+22:47,391 --> 22:49,111
+What is X? Uh what is V?
+
+283
+22:49,381 --> 22:51,321
+We want to know V.
+
+284
+22:51,721 --> 22:54,681
+8 minus 6, plus 2 m per second.
+
+285
+22:55,211 --> 22:57,001
+You see, physics works.
+
+286
+22:57,321 --> 22:59,691
+V is now plus 2 m per second.
+
+287
+23:00,431 --> 23:05,231
+So all that information is in there, but I want you to be able to also digest it.
+
+288
+23:05,471 --> 23:11,751
+Don't look at that curve at just some dumb parabo- some dumb curve. Try to imagine what is happening.
+
+289
+23:12,371 --> 23:18,761
+And only then do you get some insight, then you really begin to get it in your brains.
+
+290
+23:20,181 --> 23:49,511
+I now would like to write down in most general form, the equation for the position and the velocity as a function of time for a one-dimensional motion whereby the acceleration is constant. So it's going to be one dimensional again, and we have A is going to be a constant.
+
+291
+23:45,201 --> 23:49,511
+And so the equation that I write down is the most general way that I can write it down.
+
+292
+23:49,891 --> 24:01,801
+So we're going to get X equals some number c1 plus some c2 * T plus some c3 * T squared.
+
+293
+24:01,961 --> 24:06,561
+And notice, oh, I already erased my example. My example is gone.
+
+294
+24:06,561 --> 24:17,661
+But you would have seen this was an eight before, and here we had uh what did we have minus 6t and we had plus 1 t squared.
+
+295
+24:18,251 --> 24:30,511
+So you recognize these three. I can now take the derivative and so I get C2 + 2 C3 T.
+
+296
+24:31,811 --> 24:37,601
+And then I get the acceleration equals 2 C3.
+
+297
+24:38,051 --> 24:43,971
+And now we get some insight into these these quantities.
+
+298
+24:44,481 --> 24:54,431
+Clearly, X1 C1 is the position of X at time T = 0, for which we often write an X0.
+
+299
+24:54,801 --> 24:58,471
+Because when T is zero, that is where X is.
+
+300
+24:59,701 --> 25:09,741
+C2 is really the velocity at time T = 0, because when T is zero, that's when C2 is V.
+
+301
+25:10,511 --> 25:21,681
+And the acceleration is not changing with time is 2 C3. Therefore C3 is half the acceleration.
+
+302
+25:22,221 --> 25:28,171
+So this gives you some insight in the meaning of these quantities and you can see you can read now some some physics in there.
+
+303
+25:28,591 --> 25:41,491
+C1, C2 and C3 can independently be either zero or larger than zero or negative, makes no difference, each one of these combinations is a valid possibility in physics.
+
+304
+25:43,641 --> 25:52,591
+When we have gravity, an object is influenced by the gravitational acceleration.
+
+305
+25:53,251 --> 25:56,951
+And the gravitational acceleration is a constant.
+
+306
+25:57,321 --> 26:02,871
+And we write often for that gravitational acceleration, the letter G.
+
+307
+26:03,231 --> 26:18,331
+Whether I drop an object or throw it vertically up or I throw it vertically down, it's all one dimensional. It becomes two dimensional when I throw it at an angle, I keep it one dimensional, the acceleration is always the same.
+
+308
+26:18,841 --> 26:27,511
+And that G, the gravitational acceleration in Boston is 9.80 m per second square.
+
+309
+26:27,511 --> 26:31,301
+And it varies a little bit for different places on Earth.
+
+310
+26:31,951 --> 26:54,411
+This gravitational acceleration is independent of the mass of the object that I drop, of the speed of the object, of the chemical composition of the object, of the size of the object, and of the shape of the object, assuming that we have no air drag, assuming that these experiments are done in in vacuum.
+
+311
+26:54,971 --> 27:02,241
+Is it obvious that the gravitational acceleration is independent of all these quantities?
+
+312
+27:02,501 --> 27:03,251
+By no means.
+
+313
+27:03,751 --> 27:06,351
+Is it true? We think so.
+
+314
+27:06,731 --> 27:13,021
+But I want you to appreciate that it is not obvious and it cannot be proven from first principle.
+
+315
+27:15,391 --> 27:24,341
+Remember last time, we dropped an apple from 3 meters and we dropped another one from 1 and 1/2 meters.
+
+316
+27:24,831 --> 27:39,981
+And in your second assignment, which you haven't seen yet, I'm asking you to calculate the gravitational acceleration for me using these both experiments, and of course, I want you to also tell me what the uncertainty is in your final answer.
+
+317
+27:40,391 --> 27:56,241
+And I'd like to help you a little bit to set it up and also to get these equations in terms of gravity. Whenever we deal with gravity, we get the G in there.
+
+318
+27:56,611 --> 28:01,361
+So suppose here is the object at time T = 0.
+
+319
+28:01,771 --> 28:13,821
+It was the apple, and I call that position X0, I call that zero. I'm free to choose my zero position, and I drop it at zero speed. I just let it go because that's the way we did it in class.
+
+320
+28:14,181 --> 28:17,791
+The object goes down, and it hits the floor.
+
+321
+28:18,481 --> 28:29,241
+Well, the general equations now, which deal in gravity, if I call this the increasing value of X,
+
+322
+28:29,681 --> 28:33,881
+You can choose it differently. This is my choice today.
+
+323
+28:34,221 --> 28:46,101
+is the following. X equals X0 + V0t + 1/2 gt squared.
+
+324
+28:46,381 --> 28:53,461
+And g now is 9.80 m/s square.
+
+325
+28:54,201 --> 29:00,951
+The velocity at any moment in time equals V0 plus GT.
+
+326
+29:01,261 --> 29:05,151
+And the acceleration is constant is simply G.
+
+327
+29:06,081 --> 29:12,191
+Now, in my case, I have chosen t = 0, x0 is 0 and I've chosen this zero.
+
+328
+29:12,471 --> 29:13,531
+So these go.
+
+329
+29:14,641 --> 29:26,291
+And so you see that when the object is here, which is 3 meters below this point, and you know the time how long it took to get there, that you can now calculate G.
+
+330
+29:26,711 --> 29:29,571
+Because X would be then 3 meters, that's when it's here.
+
+331
+29:30,161 --> 29:36,711
+We made a measurement in class, how long it took, so you know the time, and so you can come up with a value for G.
+
+332
+29:36,711 --> 29:45,751
+And you can do that for both measurements, and of course, I want you to tell me also what the uncertainty is in those measurements.
+
+333
+29:46,401 --> 29:56,671
+Remember that we derived last time that C that the time that it takes for the apple to fall was C times the square root of h over G.
+
+334
+29:56,941 --> 29:58,861
+And we never knew what that C was.
+
+335
+29:59,351 --> 30:04,011
+I did a demonstration to show you that the time is proportional to the square root of h. We never knew what that C was.
+
+336
+30:05,371 --> 30:12,171
+Now you know, because now you have the equations here, and you'll see that that C simply was the square root of 2.
+
+337
+30:12,561 --> 30:16,471
+But I could not derive that from my dimensional analysis.
+
+338
+30:19,961 --> 30:28,371
+Now, I want you to relax and at the same time get a little bit alert for a change.
+
+339
+30:29,601 --> 30:33,401
+Look at this situation, V equals GT.
+
+340
+30:34,251 --> 30:41,331
+That means when I drop an apple, and I'm going to drop another one today, that the velocity increases with time.
+
+341
+30:41,931 --> 30:54,111
+So if I strobe this apple while it was falling, I would see the separation when it strobes to increase with time because the velocity goes up with time.
+
+342
+30:55,461 --> 31:02,991
+I have here an apple or I'm going to put an apple up about 3 meters from the floor.
+
+343
+31:03,881 --> 31:10,801
+3 meters. So the height is 3 meters approximately.
+
+344
+31:11,121 --> 31:21,351
+We know from last time, remember we did it, it was about 780 milliseconds to hit the floor. I will just round it off and I think about it about 8/10 of a second.
+
+345
+31:21,891 --> 31:23,111
+Just to get an idea.
+
+346
+31:24,191 --> 31:37,491
+If I flash, if I strobe it twice per second, we call that 2 hertz. So my strobe is two times per second.
+
+347
+31:38,871 --> 31:44,581
+Then I should hit that ball when it's falling twice with my strobe light.
+
+348
+31:45,271 --> 31:51,301
+I don't know where it is though. Because when we strobe it and when I let the apple go, the two are not synchronized.
+
+349
+31:51,561 --> 31:57,341
+So maybe the first time that the light blinks, it may be here, and the second time it may be here.
+
+350
+31:57,581 --> 32:01,771
+But it's also possible that the first time it's here, and the second time is there.
+
+351
+32:02,401 --> 32:08,071
+And so the first thing I want to do is to test your alertness. We will blink."
+
+352
+32:08,511 --> 32:10,661
+You will tell me where you see them.
+
+353
+32:11,121 --> 32:13,171
+But we will take a picture.
+
+354
+32:13,801 --> 32:17,701
+We will take a picture which will show us exactly where those two balls were.
+
+355
+32:18,161 --> 32:26,441
+So that's the first alertness test. So get ready for this and then we will do a second one which is even more intriguing.
+
+356
+32:26,961 --> 32:39,461
+So now I have to first lower this velvet so that we get a nice dark background.
+
+357
+32:39,641 --> 32:41,171
+(Mechanical sounds)
+
+358
+32:41,171 --> 32:48,761
+There we go.
+
+359
+32:48,761 --> 33:00,541
+(Mechanical sounds) Wow. With my fingerprints on it, it's not so black anymore.
+
+360
+33:00,861 --> 33:01,771
+There it is.
+
+361
+33:02,111 --> 33:03,541
+That's the background.
+
+362
+33:03,921 --> 33:19,501
+(Loud mechanical sounds) Oh, what am I doing? I need the ladder again. I have to bring the apple up. Friday is always a bad day for me.
+
+363
+33:19,841 --> 33:20,731
+Okay.
+
+364
+33:21,841 --> 33:28,191
+So now I'm going to bring the apple up. There is some metal here, it's an electromagnet.
+
+365
+33:28,441 --> 33:32,961
+And so I throw a switch here so that the electromagnet is activated.
+
+366
+33:33,561 --> 33:35,821
+Very similar to what we did last time.
+
+367
+33:36,211 --> 33:38,181
+We have to put the apple up.
+
+368
+33:38,891 --> 33:40,801
+And the apple is hanging there.
+
+369
+33:41,221 --> 33:42,191
+There we go.
+
+370
+33:42,661 --> 33:51,091
+(Mechanical sounds)
+
+371
+33:51,601 --> 34:02,881
+So now I have to start the uh the strobe.
+
+372
+34:03,241 --> 34:09,201
+(Rhythmic beeping sound) That's about 2 Hz. That's about two flashes per second.
+
+373
+34:09,741 --> 34:12,141
+And I'm going to make it pitch black.
+
+374
+34:12,431 --> 34:17,191
+(Sound of lights turning off)
+
+375
+34:17,351 --> 34:26,461
+(Beeping continues)"
+
+376
+34:26,461 --> 34:28,931
+I will countdown 3210.
+
+377
+34:29,391 --> 34:34,331
+And Bob there, who is behind the camera, will open the shutter when I say one.
+
+378
+34:35,321 --> 34:38,201
+And when I say zero, the ball will fall.
+
+379
+34:38,681 --> 34:44,301
+So you may always see the ball in its highest position. That may not count there, of course.
+
+380
+34:44,491 --> 34:50,391
+Because it makes two flashes in the time that the shutter is open and that I drop it.
+
+381
+34:50,941 --> 34:53,861
+Okay, if you're ready? I'm ready.
+
+382
+34:54,091 --> 34:56,291
+Make it as dark as we can.
+
+383
+34:56,861 --> 34:58,251
+Bob, are you ready?
+
+384
+34:58,351 --> 34:58,791
+Ready.
+
+385
+34:59,071 --> 35:01,811
+Class ready?
+
+386
+35:01,811 --> 35:02,271
+Yeah.
+
+387
+35:02,471 --> 35:03,511
+Everyone ready?
+
+388
+35:03,941 --> 35:05,531
+You don't look ready.
+
+389
+35:05,801 --> 35:06,921
+(Laughter) Okay.
+
+390
+35:07,561 --> 35:11,081
+3, 2, 1,
+
+391
+35:11,501 --> 35:13,401
+(Clicking sound) That was zero.
+
+392
+35:14,321 --> 35:17,591
+So let's look at this again in slow motion.
+
+393
+35:18,211 --> 35:22,121
+(Beeping sound)"
+
+394
+35:22,121 --> 35:29,811
+So, now we are developing that picture, and I would like you to tell me where you saw the balls.
+
+395
+35:30,231 --> 35:31,981
+(Murmuring from audience)"
+
+396
+35:32,591 --> 35:34,271
+Where were they roughly?
+
+397
+35:34,591 --> 35:35,701
+Where was the first one?
+
+398
+35:35,931 --> 35:39,051
+How much, how much below the highest point?
+
+399
+35:39,561 --> 35:40,731
+Only this much?
+
+400
+35:40,731 --> 35:43,201
+(Audience response) Yeah."
+
+401
+35:42,401 --> 35:43,201
+The first one?
+
+402
+35:43,881 --> 35:46,401
+And then the second one was pretty low then."
+
+403
+35:46,401 --> 35:47,001
+Yeah.
+
+404
+35:47,431 --> 35:47,991
+Okay.
+
+405
+35:48,571 --> 35:51,101
+Sounds interesting. We'll take a look.
+
+406
+35:51,511 --> 35:59,501
+While the picture is developing, I'm now going to test your real alertness.
+
+407
+36:00,441 --> 36:16,461
+I'm going to strobe it with an unknown frequency, unknown to you. I will tell you a secret, it's a higher frequency. You're going to see more balls on the way down.
+
+408
+36:16,741 --> 36:19,881
+I'm not going to ask you where they are exactly.
+
+409
+36:20,251 --> 36:24,191
+All I want you to tell me afterwards, how many you saw.
+
+410
+36:24,541 --> 36:25,191
+That's all.
+
+411
+36:25,681 --> 36:31,721
+So count them as it falls. You know, you have only 0.8 seconds to count.
+
+412
+36:32,061 --> 36:33,081
+(Laughter)
+
+413
+36:33,491 --> 36:35,381
+Bob, how did the picture come out?
+
+414
+36:35,381 --> 36:35,851
+Good.
+
+415
+36:36,161 --> 36:36,591
+Good.
+
+416
+36:36,971 --> 36:40,721
+(Slide projector sound) Wow, you're good.
+
+417
+36:40,951 --> 36:41,851
+Oh!
+
+418
+36:42,161 --> 36:48,611
+You're good. It was very high actually, the first uh the first flash, very high.
+
+419
+36:49,101 --> 36:52,091
+(Audience murmuring)
+
+420
+36:52,491 --> 36:58,461
+You see, it's you did very well.
+
+421
+36:58,461 --> 37:03,921
+We are going to start now with the second part.
+
+422
+37:04,231 --> 37:10,341
+(Mechanical sounds)"
+
+423
+37:12,291 --> 37:15,121
+Is the audio restored?
+
+424
+37:15,511 --> 37:17,021
+Should be.
+
+425
+37:17,501 --> 37:20,371
+So, I uh activated the magnet again.
+
+426
+37:20,591 --> 37:22,361
+(Mechanical sounds)
+
+427
+37:22,901 --> 37:27,861
+There it is.
+
+428
+37:28,371 --> 37:39,461
+(Loud mechanical sounds) Oh, my goodness.
+
+429
+37:39,461 --> 37:41,021
+(Beeping sound)"
+
+430
+37:41,411 --> 37:43,211
+(Mechanical sounds)
+
+431
+37:43,541 --> 37:45,241
+Working?
+
+432
+37:45,241 --> 37:45,901
+Working.
+
+433
+37:46,141 --> 37:47,481
+Okay, thank you, Bob.
+
+434
+37:47,781 --> 37:53,861
+Okay, Bob, if you're ready? I'm ready. Going to make it as dark as we can.
+
+435
+37:54,281 --> 37:58,211
+So all I want you to tell me how many balls will you see.
+
+436
+37:58,441 --> 37:59,471
+All right, ready?
+
+437
+37:59,751 --> 38:01,081
+Bob, you okay?
+
+438
+38:01,081 --> 38:01,521
+Okay.
+
+439
+38:01,861 --> 38:05,471
+3, 2, 1,
+
+440
+38:05,721 --> 38:06,491
+(Clicking sound)
+
+441
+38:06,631 --> 38:09,031
+(Audience response)"
+
+442
+38:09,501 --> 38:10,411
+Well.
+
+443
+38:10,721 --> 38:13,141
+(Audience response)"
+
+444
+38:13,581 --> 38:14,861
+Who saw three?
+
+445
+38:15,201 --> 38:16,931
+Four.
+
+446
+38:16,931 --> 38:18,151
+(Audience response)"
+
+447
+38:17,741 --> 38:18,151
+Four.
+
+448
+38:18,491 --> 38:20,081
+Five.
+
+449
+38:20,081 --> 38:21,741
+(Audience response)"
+
+450
+38:21,271 --> 38:22,501
+Four. I want to know four.
+
+451
+38:22,821 --> 38:24,411
+Five.
+
+452
+38:24,411 --> 38:26,011
+(Audience response)"
+
+453
+38:25,701 --> 38:26,601
+Five. Here is a five.
+
+454
+38:26,831 --> 38:27,821
+There is a five.
+
+455
+38:28,661 --> 38:31,051
+Another five?
+
+456
+38:31,321 --> 38:31,921
+Who saw six?
+
+457
+38:32,021 --> 38:33,761
+(Audience response) Wow."
+
+458
+38:33,861 --> 38:34,741
+Seven.
+
+459
+38:34,741 --> 38:35,731
+(Audience response)"
+
+460
+38:35,731 --> 38:36,311
+Eight.
+
+461
+38:36,891 --> 38:37,771
+Nine.
+
+462
+38:37,771 --> 38:39,051
+(Audience response)"
+
+463
+38:39,051 --> 38:39,611
+10.
+
+464
+38:40,291 --> 38:41,071
+11.
+
+465
+38:41,831 --> 38:44,711
+Who's just saw a blur?
+
+466
+38:44,711 --> 38:46,111
+(Laughter)"
+
+467
+38:46,871 --> 38:48,641
+Those are the real winners, I think."
+
+468
+38:48,911 --> 39:02,061
+Well, I'll tell you, it was 10 Hz. Since it is 0.8 seconds, depending upon where you hit it, how lucky you are. I will show you, you will either see seven or maybe eight balls.
+
+469
+39:02,721 --> 39:04,231
+But it was a good test.
+
+470
+39:04,841 --> 39:13,221
+And for those of you who thought that it was only that only saw five,
+
+471
+39:13,521 --> 39:15,361
+There you see them. Let's count them.
+
+472
+39:15,911 --> 39:17,521
+Let's count them together.
+
+473
+39:18,251 --> 39:28,641
+One, this is one, two, three, four, five, six, seven. This is a bounce.
+
+474
+39:29,031 --> 39:35,441
+So for those of you who saw five, I would say take some rest this weekend, you'll need it. And I'll need it too. See you Monday.

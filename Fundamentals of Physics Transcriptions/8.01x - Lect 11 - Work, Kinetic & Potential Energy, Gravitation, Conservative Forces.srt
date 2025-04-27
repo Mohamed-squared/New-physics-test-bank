@@ -1,0 +1,1574 @@
+1
+00:00:00,851 --> 00:00:06,311
+Today we will talk exclusively about work and energy.
+
+2
+00:00:06,671 --> 00:00:10,681
+First, let's do one dimensional case.
+
+3
+00:00:11,461 --> 00:00:18,321
+The work that a force is doing when that force is moving from point A to point B,
+
+4
+00:00:18,771 --> 00:00:24,311
+one dimensional. Here's point A and here is point B.
+
+5
+00:00:24,681 --> 00:00:31,161
+And the force is along that direction or either in this direction or in this direction, but it's completely one dimensional.
+
+6
+00:00:31,361 --> 00:00:39,681
+That work is the integral in going from A to B of that force dx, if I call that the X-axis.
+
+7
+00:00:40,251 --> 00:00:44,201
+The unit of work, you can see is Newton meters.
+
+8
+00:00:44,581 --> 00:00:49,021
+So work is Newton meters
+
+9
+00:00:49,331 --> 00:00:53,431
+for which we we call that joule.
+
+10
+00:00:54,591 --> 00:01:04,661
+If there's more than one force in this direction, you have to add these forces in this direction vectorially, and then this is the work that the forces do together.
+
+11
+00:01:05,551 --> 00:01:07,171
+Work is a scalar.
+
+12
+00:01:07,531 --> 00:01:12,671
+So this can be larger than zero, it can be zero, or it can be smaller than zero.
+
+13
+00:01:12,951 --> 00:01:18,961
+If the force and the direction in which it moves are an opposite direction, then it is smaller than zero.
+
+14
+00:01:19,271 --> 00:01:25,571
+If they are in the same direction, either this way or that way, then the work is larger than zero.
+
+15
+00:01:26,471 --> 00:01:28,161
+F equals MA.
+
+16
+00:01:29,231 --> 00:01:42,411
+So therefore, I can also write for this M DVDT and I can write down for DX, I can write down VDT.
+
+17
+00:01:43,211 --> 00:01:48,151
+I substitute that in there. So the work in going from A to B
+
+18
+00:01:48,471 --> 00:02:00,541
+is the integral from A to B times the force, which is M DVDT. The X, which is V DT.
+
+19
+00:02:00,851 --> 00:02:08,281
+And look what I can do. I can eliminate time and I can now go to a integral over velocity.
+
+20
+00:02:08,641 --> 00:02:19,161
+The velocity A to the velocity B and I get M times V times DV.
+
+21
+00:02:19,351 --> 00:02:38,481
+That's a very easy integral. That is 1/2 M V squared, which I have to evaluate between VA and VB. And that is 1/2 M VB squared - 1/2 M VA squared.
+
+22
+00:02:39,531 --> 00:02:46,491
+1/2 MV squared is what we call in physics kinetic energy.
+
+23
+00:02:47,121 --> 00:02:50,131
+Sometimes we write just a K for that.
+
+24
+00:02:50,441 --> 00:02:52,661
+It's the energy of motion.
+
+25
+00:02:53,811 --> 00:03:01,051
+And so the work that is done when a force moves from A to B
+
+26
+00:03:01,701 --> 00:03:14,391
+is the kinetic energy in point B, you see that here, minus the kinetic energy in point A. And this is called the work energy theorem.
+
+27
+00:03:15,861 --> 00:03:21,021
+If the work is positive, then the kinetic energy increases when you go from A to B.
+
+28
+00:03:21,381 --> 00:03:31,381
+If the work is smaller than zero, then the work, then the kinetic energy decreases. If the work is zero, then there is no change in kinetic energy.
+
+29
+00:03:32,531 --> 00:03:38,771
+Let's do a simple example applying this work energy theorem.
+
+30
+00:03:39,451 --> 00:03:43,501
+I have an object that I want to move from A to B.
+
+31
+00:03:44,471 --> 00:03:52,741
+I let gravity do that. I give it a velocity. Here is the velocity V of A.
+
+32
+00:03:53,591 --> 00:03:56,441
+And let the separation be H.
+
+33
+00:03:56,821 --> 00:04:02,261
+And this could be my increasing Y direction.
+
+34
+00:04:02,761 --> 00:04:09,381
+The object has a mass M and so there is a force gravitational force which is mg.
+
+35
+00:04:09,701 --> 00:04:17,921
+And if I want to give it a vector notation, it's mg Y roof. this is my increasing value of Y.
+
+36
+00:04:18,751 --> 00:04:27,651
+When it reaches point B, it comes to a halt. And I'm going to ask you now, what is the value of H? We've done that in the past in a different way.
+
+37
+00:04:27,651 --> 00:04:32,971
+Now we will do it purely based on the energy considerations.
+
+38
+00:04:33,621 --> 00:04:44,421
+So, I can write down that the work that gravity is doing in going from A to B, that work is clearly negative. The force is in this direction and the motion is in this direction.
+
+39
+00:04:44,761 --> 00:04:51,711
+So the work that gravity is doing in going from A to B equals minus mggh.
+
+40
+00:04:51,941 --> 00:04:55,111
+That must be the kinetic energy at that point B.
+
+41
+00:04:55,411 --> 00:05:05,441
+So that this kinetic energy at point B minus the kinetic energy at point A. This is zero because it comes to a hold here.
+
+42
+00:05:05,701 --> 00:05:14,431
+And so you find that 1/2 M VA squared equals mgh.
+
+43
+00:05:14,641 --> 00:05:26,241
+M cancels and so you'll find that the height that you reach equals VA squared divided by 2g.
+
+44
+00:05:26,611 --> 00:05:35,511
+And this is something we have seen before. It was easy for us to derive it in the past, but now we've done it purely based on energy considerations.
+
+45
+00:05:35,891 --> 00:05:39,081
+I'd like to do a second example.
+
+46
+00:05:39,601 --> 00:05:46,051
+I lift an object from A to B. I Walter Lewin.
+
+47
+00:05:46,601 --> 00:05:51,511
+I take it at A. It has no speed here. VA is zero.
+
+48
+00:05:51,931 --> 00:05:56,811
+It has no speed there. And I bring it from here to here.
+
+49
+00:05:58,361 --> 00:06:05,791
+There's a gravitational force mg in this direction. So the force where Walter Lewin must be in this direction.
+
+50
+00:06:06,461 --> 00:06:11,301
+So the motion and my force are in the same direction.
+
+51
+00:06:11,591 --> 00:06:16,101
+So the work that I'm doing is clearly plus MGH.
+
+52
+00:06:16,411 --> 00:06:23,101
+So the work that Walter Lewin is doing is plus MGH when the object goes from A to B.
+
+53
+00:06:23,411 --> 00:06:34,781
+The work that gravity was doing was minus MGH, we just saw that. So the net work that is done is zero and you see there is indeed no change in kinetic energy.
+
+54
+00:06:35,211 --> 00:06:40,711
+There was no kinetic energy here to start with and there's no kinetic energy there.
+
+55
+00:06:41,531 --> 00:06:48,071
+If I take my briefcase and I bring it up here, I've done positive work.
+
+56
+00:06:48,571 --> 00:06:51,231
+If I bring it down, I've done negative work.
+
+57
+00:06:51,531 --> 00:06:55,021
+If I bring it up, I do again positive work.
+
+58
+00:06:55,231 --> 00:06:57,591
+When I do positive work, gravity does negative work.
+
+59
+00:06:57,811 --> 00:07:02,431
+When I do negative work, like I do now, gravity does positive work.
+
+60
+00:07:02,731 --> 00:07:06,941
+And I can do that a whole day and the net amount of work that I have done is zero.
+
+61
+00:07:07,191 --> 00:07:11,961
+Positive work, negative work, positive work, negative work.
+
+62
+00:07:12,341 --> 00:07:16,651
+I will get very tired. Don't confuse getting tired with doing work.
+
+63
+00:07:17,081 --> 00:07:20,621
+I would have done no work and I would be very tired.
+
+64
+00:07:20,921 --> 00:07:26,961
+I think we would all agree that if I stand here 24 hours like this, that I would get very tired.
+
+65
+00:07:27,211 --> 00:07:33,331
+I haven't done any work. I might as well put it here and let the table just hold that briefcase for me.
+
+66
+00:07:33,561 --> 00:07:38,521
+So it's clear that you can get very tired without having done any work.
+
+67
+00:07:39,401 --> 00:07:42,951
+So this is the way we define work in physics.
+
+68
+00:07:43,471 --> 00:07:46,861
+Now let's go from one dimensions to three dimensions.
+
+69
+00:07:47,161 --> 00:07:49,631
+It is not very much different as you will see.
+
+70
+00:07:51,031 --> 00:07:56,941
+I go in three dimensions from point A to point B.
+
+71
+00:07:57,211 --> 00:08:07,341
+And I now have a force which could be pointing not just along the X direction, but in general in all directions.
+
+72
+00:08:07,481 --> 00:08:16,511
+Now the work that the force is doing in going from A to B is F.dr.
+
+73
+00:08:17,131 --> 00:08:25,651
+R is the position in three-dimensional space where the force is at that moment and DR is a small displacement.
+
+74
+00:08:25,961 --> 00:08:31,351
+So, if this is from A to B,
+
+75
+00:08:32,211 --> 00:08:42,331
+then DR here, if you go in this direction, this would be the little vector DR. and here, that would be a little vector DR.
+
+76
+00:08:42,551 --> 00:08:49,011
+And the force itself could be like this here, and the force could be like this there.
+
+77
+00:08:50,311 --> 00:08:54,821
+The force can obviously change along this path.
+
+78
+00:08:56,071 --> 00:09:01,071
+So let the force be
+
+79
+00:09:01,841 --> 00:09:11,811
+f(x) X roof + f(y) Y roof + f(z) Z roof.
+
+80
+00:09:12,171 --> 00:09:16,371
+I'll move this A up a little, put it here.
+
+81
+00:09:16,671 --> 00:09:31,231
+And let dr, the general notation for vector dr, equals dx X roof + dy Y roof + dz Z roof.
+
+82
+00:09:31,471 --> 00:09:33,721
+Cannot be anymore general.
+
+83
+00:09:34,101 --> 00:09:41,201
+So the work that this force is doing when it moves from A to B
+
+84
+00:09:41,581 --> 00:09:49,071
+is the integral of Fdr.
+
+85
+00:09:49,451 --> 00:09:54,561
+Let's first take a small displacement over DR.
+
+86
+00:09:55,031 --> 00:09:57,671
+Then I get DW that is simply
+
+87
+00:09:57,671 --> 00:10:12,881
+f(x) times dx, it's a scalar, because this is a dot product, plus f(y) dy plus f(z) dz.
+
+88
+00:10:13,451 --> 00:10:22,361
+That is little bit amount of work if the force is displaced over a distance DR.
+
+89
+00:10:22,671 --> 00:10:28,611
+Now I have to do the integral over the entire path to get W.
+
+90
+00:10:29,151 --> 00:10:31,461
+from A to B.
+
+91
+00:10:32,691 --> 00:10:35,701
+That's an integral going from A to B.
+
+92
+00:10:36,011 --> 00:10:39,051
+Integral going from A to B.
+
+93
+00:10:39,611 --> 00:10:44,441
+I don't need this anymore.
+
+94
+00:10:45,101 --> 00:10:48,351
+Integral going from A to B.
+
+95
+00:10:48,601 --> 00:10:51,591
+Integral going from A to B.
+
+96
+00:10:52,251 --> 00:10:55,221
+Now we're home free because we already did this.
+
+97
+00:10:55,531 --> 00:11:01,341
+This is a one dimensional problem and the one dimensional problem, we already know the outcome.
+
+98
+00:11:01,661 --> 00:11:14,421
+The integral F dx, we found that is 1/2 m Vb2 - m V2, which in this case is obviously the velocity in the X direction because this is a one dimensional problem.
+
+99
+00:11:15,061 --> 00:11:22,311
+And the one dimensional problem indicates that the velocity that I'm dealing with is the component in this direction.
+
+100
+00:11:22,631 --> 00:11:35,301
+So we have that this is 1/2 M V b squared and it's the X component minus V squared and that is the X component.
+
+101
+00:11:35,511 --> 00:11:42,441
+This is also a one dimensional problem now, except that now I deal with the component with the Y component of the velocity.
+
+102
+00:11:42,441 --> 00:12:03,381
+So I get 1/2 M times VB Y squared - VA Y squared + 1/2 M VB Z squared - VA Z squared.
+
+103
+00:12:03,811 --> 00:12:05,151
+And now we're home free.
+
+104
+00:12:05,611 --> 00:12:19,671
+Because what you see here is you see V squared in the X direction, V squared Y component, V squared Z component. And if you add those three up, you get exactly the square of the velocity. You get the square of the speed.
+
+105
+00:12:20,091 --> 00:12:28,001
+So if you add up these three terms, you get up, you get VB squared.
+
+106
+00:12:28,271 --> 00:12:31,041
+Oh, I lost my M. I put my M in there.
+
+107
+00:12:31,291 --> 00:12:36,141
+1/2 M times VB squared. And here you see
+
+108
+00:12:36,821 --> 00:12:47,201
+AX squared, AY squared, AZ squared - VA squared. And you get exactly the same result that you had before.
+
+109
+00:12:47,481 --> 00:12:52,161
+Namely that the work done is the difference in kinetic energy.
+
+110
+00:12:52,751 --> 00:12:56,821
+You can always think of these as speeds.
+
+111
+00:12:57,351 --> 00:13:02,241
+velocity squared is the speed. It's the magnitude squared of the velocity.
+
+112
+00:13:04,641 --> 00:13:05,781
+All right.
+
+113
+00:13:06,541 --> 00:13:13,841
+I'd like to return to gravity and work on a three-dimensional situation.
+
+114
+00:13:15,181 --> 00:13:23,841
+We have here. Let this be X, this be Y, and this be Z.
+
+115
+00:13:24,581 --> 00:13:28,121
+And there is here, this is the increasing value of Y.
+
+116
+00:13:28,451 --> 00:13:33,731
+And there is here point A in three dimensions like this.
+
+117
+00:13:34,181 --> 00:13:39,171
+And there is here point B.
+
+118
+00:13:40,021 --> 00:13:48,681
+So you get a rough idea about the three dimensions. And Y of B - Y of A equals h.
+
+119
+00:13:48,681 --> 00:13:52,601
+That's a given. So there's a high difference between A and between B.
+
+120
+00:13:53,971 --> 00:13:58,661
+There is a gravitational force. The object moves from A to B. Suppose it moves in some crazy way.
+
+121
+00:14:00,271 --> 00:14:04,671
+Of course, gravity alone could not do that. There has to be another force if it goes in a strange way.
+
+122
+00:14:05,021 --> 00:14:10,271
+But I'm only calculating now the work that's going to be done by gravity. The other forces I ignore for now.
+
+123
+00:14:10,561 --> 00:14:13,501
+I only want to know the work that gravity is doing.
+
+124
+00:14:14,001 --> 00:14:20,341
+The object has a mass M and so there is a force mg.
+
+125
+00:14:20,831 --> 00:14:26,571
+And I can write down this force in vector notation. It's in this direction.
+
+126
+00:14:27,321 --> 00:14:41,641
+So now I notice that there is only a value for f of y, but there is no value for f of x and there is no value for f x. They are zero.
+
+127
+00:14:42,241 --> 00:14:46,161
+And so f of y equals - mg.
+
+128
+00:14:46,611 --> 00:14:57,641
+And so if I calculate now the work in going from A to B, which is the integral in going from A to B of f.dr.
+
+129
+00:14:58,071 --> 00:15:10,551
+Then the only term that I have is the one that deals with the Y direction. So it is the integral in going from A to B of f dy.
+
+130
+00:15:11,121 --> 00:15:26,231
+And that equals - mg because we have the - mg times Y of B - Y of A. So that is - mg times h.
+
+131
+00:15:26,831 --> 00:15:39,671
+And what you see here that it is completely independent of the path that I have chosen. Doesn't matter how I move. The only thing that matters is the difference in height between point A and point B.
+
+132
+00:15:40,101 --> 00:15:44,231
+H could be larger than zero if B is above A.
+
+133
+00:15:44,231 --> 00:15:50,821
+It could be smaller than zero if B is below A. It could be equal to zero if B has the same height as A.
+
+134
+00:15:51,311 --> 00:16:02,881
+Whenever the work that is done by a force is independent of its path, is only determined by the starting point and the endpoint, that force is called a conservative force.
+
+135
+00:16:03,651 --> 00:16:19,221
+It's a very important concept in physics. I will repeat it. Whenever the work that is done by a force in going from one point to another is independent of the path, it's only determined by the starting point and the endpoint, we call that a conservative force.
+
+136
+00:16:19,401 --> 00:16:22,671
+Gravity is a conservative force. It's very clear.
+
+137
+00:16:23,981 --> 00:16:24,771
+Suppose
+
+138
+00:16:25,541 --> 00:16:41,201
+that I do the work that I go from A to B in some very strange way, then it is very clear that the work that I would have done would be plus MGH because my force of course
+
+139
+00:16:41,761 --> 00:16:45,821
+is exactly in the opposite direction as gravity.
+
+140
+00:16:46,161 --> 00:16:51,381
+So whenever gravity is doing positive work, I would be doing negative work.
+
+141
+00:16:51,381 --> 00:16:57,681
+If I hold it in my hand, when I'm doing positive work, gravity is doing negative work.
+
+142
+01:02:371 --> 01:07,281
+Again, I'm going to concentrate now on a case where we deal with gravity only.
+
+143
+01:08,051 --> 01:14,681
+When there's only gravity, then we have that minus mgh
+
+144
+01:15,601 --> 01:21,521
+is the work done in going from A to B equals
+
+145
+01:21,861 --> 01:38,501
+- mg * Y of B - Y of A. And that now is the kinetic energy at point B minus the kinetic energy at point A. This is the work energy theorem.
+
+146
+01:39,251 --> 01:46,071
+Look closely here. I can rearrange this and I can bring the B's on one side. I can bring the A's on one side.
+
+147
+01:46,421 --> 01:55,271
+I then get mg * Y of B plus the kinetic energy at point B equals
+
+148
+01:55,321 --> 02:02,081
+mg * Y of A plus the kinetic energy at point A.
+
+149
+02:02,441 --> 02:04,651
+And this is truly an amazing result.
+
+150
+02:07,031 --> 02:23,961
+We call MGY, we give that a name, and we call that gravitational potential energy. Often we write for that PE, or we write for that a U.
+
+151
+02:24,871 --> 02:40,651
+And what you're seeing here is that the sum of potential energy at point B and the kinetic energy at point B is the same as the potential energy at A and the kinetic energy at point A.
+
+152
+02:41,231 --> 02:56,191
+One can be converted into the other and it can be converted back. kinetic energy can be converted back to potential energy and potential energy can be converted back, but the sum of them, which we call mechanical energy is conserved.
+
+153
+02:56,641 --> 03:02,491
+And mechanical energy is only conserved if the force is a conservative force.
+
+154
+03:03,011 --> 03:06,361
+It's extremely useful. We will use it many times, but you have to be very careful.
+
+155
+03:07,181 --> 03:13,811
+It's a dangerous tool because it's only true when the force is conservative.
+
+156
+03:14,531 --> 03:17,041
+Spring forces are also conservative.
+
+157
+03:17,361 --> 03:21,541
+But for instance, friction is not a conservative force.
+
+158
+03:21,851 --> 03:29,051
+If I move an object from here to here,
+
+159
+03:29,381 --> 03:32,141
+suppose I move this object.
+
+160
+03:32,511 --> 03:37,851
+And I go along a straight line, then the friction is doing negative work. I am doing positive work.
+
+161
+03:38,141 --> 03:42,511
+But now suppose I go from here to here through this routing.
+
+162
+03:43,491 --> 03:47,541
+You can see that the work I have to do is much more.
+
+163
+03:50,121 --> 03:52,451
+Friction is not a conservative force.
+
+164
+03:52,451 --> 04:07,111
+The frictional force remains constant depending on the friction, the kinetic friction coefficient is always the same, the frictional force which I have to overcome as I move and so if I go all the way here and then all the way back to this point where I wanted to be, then I have done a lot more work than if I go along the shortest distance.
+
+165
+04:07,111 --> 04:12,221
+So friction is a classic example of a force that is not conservative.
+
+166
+04:18,101 --> 04:32,681
+If I look at this result, the sum of gravitational potential energy and kinetic energy is conserved for gravitational force, then it is immediately obvious where we put the zero of kinetic energy.
+
+167
+04:33,141 --> 04:38,181
+The zero of kinetic energy is when the object has no velocity because kinetic energy
+
+168
+04:38,521 --> 04:42,341
+equals 1/2 M V squared.
+
+169
+04:42,641 --> 04:46,161
+So if the object has no velocity, then there is no kinetic energy.
+
+170
+04:46,821 --> 04:49,061
+How about potential energy?
+
+171
+04:49,611 --> 05:01,131
+Well, you will say, sure, potential energy must be zero when Y is zero because that's the way that we defined it. You see, mgY is gravitational potential energy.
+
+172
+05:01,131 --> 05:07,291
+So you would think that U is zero when Y is zero. Not an unreasonable thing to think.
+
+173
+05:07,741 --> 05:09,501
+But where is Y is zero?
+
+174
+05:10,371 --> 05:12,441
+Is Y zero at the surface of the earth?
+
+175
+05:13,151 --> 05:16,201
+Or is Y zero at the floor of 26 100? Or is Y zero here?
+
+176
+05:16,791 --> 05:19,421
+Or is Y zero the roof?
+
+177
+05:19,791 --> 05:26,541
+Well, you are completely free to choose where you put U equals zero.
+
+178
+05:26,781 --> 05:37,841
+It doesn't matter. As long as point A and point B are close enough together that the gravitational acceleration G is very closely the same for both points.
+
+179
+05:38,381 --> 05:53,171
+The only thing what matters then is how far they are separated vertically. The only thing that matters is that UB - UA would be MGH.
+
+180
+05:53,451 --> 06:02,541
+It's only the H that matters. And so you can then simply choose U zero anywhere you want to.
+
+181
+06:03,131 --> 06:04,041
+It's easy to see.
+
+182
+06:04,561 --> 06:10,551
+Suppose I have here point A and I have here point B.
+
+183
+06:11,241 --> 06:15,111
+And suppose this separation was h.
+
+184
+06:16,131 --> 06:23,141
+Well, if you prefer to call zero potential energy at A, I have no problems with that.
+
+185
+06:23,941 --> 06:27,381
+So we can call this U equals zero here.
+
+186
+06:28,471 --> 06:33,411
+Then you would have to call this U, you have to call it plus MGH.
+
+187
+06:34,081 --> 06:37,501
+If you say, no, I don't want to do that. I want to call this zero. That's fine.
+
+188
+06:38,211 --> 06:41,481
+Then this becomes minus MGH.
+
+189
+06:42,051 --> 06:52,501
+If you prefer to call this zero, that's fine too, then this will have a positive gravitational potential energy, and this will have one that is higher than this one by this amount.
+
+190
+06:52,801 --> 06:56,501
+If you say, really, I'd like to call this zero, of course, the same holds.
+
+191
+06:56,871 --> 07:07,211
+What matters is what the difference between potential energy is, that is what we need when we apply the conservation of mechanical energy. That is what we need in order to evaluate how the object changes its kinetic energy.
+
+192
+07:07,481 --> 07:14,491
+So where you choose your zero is completely up to you.
+
+193
+07:16,261 --> 07:24,621
+As long as A and B are close enough so that there is no noticeable difference in the gravitational acceleration G.
+
+194
+07:25,071 --> 07:34,911
+Uh, before the end of this hour, I will also evaluate the situation that G is changing when you go far away from the earth, G is changing.
+
+195
+07:35,411 --> 07:44,531
+So let us first do look at a consequence of the conservation of mechanical energy.
+
+196
+07:46,591 --> 07:53,301
+Very powerful concept, and as long as we deal with gravity, you can always use it.
+
+197
+07:53,791 --> 07:57,751
+You see here on the desk something that looks like a roller coaster.
+
+198
+07:58,381 --> 08:05,401
+And I'm going to slide an object
+
+199
+08:06,021 --> 08:07,391
+from this direction.
+
+200
+08:07,811 --> 08:10,471
+Let's clean it a little bit better.
+
+201
+08:13,481 --> 08:15,661
+Here is that roller coaster.
+
+202
+08:16,301 --> 08:22,101
+This is a circle and then it goes up again.
+
+203
+08:22,781 --> 08:25,951
+So let the circle have a radius R.
+
+204
+08:26,291 --> 08:27,701
+This point be A.
+
+205
+08:28,101 --> 08:34,321
+I release it with zero speed. I assume that there is no friction for now.
+
+206
+08:34,901 --> 08:37,001
+This point B B.
+
+207
+08:38,851 --> 08:47,691
+And I define here Y = 0 or what is even more important, I define that U equals zero.
+
+208
+08:48,071 --> 08:51,371
+And this is the direction positive direction of Y.
+
+209
+08:51,901 --> 08:56,531
+At A, the object has no velocity, no speed.
+
+210
+08:57,021 --> 09:02,401
+At B, of course, it does. It has converted some potential energy to kinetic energy.
+
+211
+09:02,701 --> 09:16,671
+At this point C is had reached the maximum velocity that it can ever have because all the potential energy has been converted to kinetic energy and at this point D, if it ever reaches that point,
+
+212
+09:18,131 --> 09:21,651
+that will be the velocity, say.
+
+213
+09:23,171 --> 09:31,311
+Okay, I start off point A is at a different at a distance H above this level.
+
+214
+09:31,691 --> 09:34,581
+And so I apply now the conservation of mechanical energy.
+
+215
+09:35,511 --> 09:57,721
+So I know that U at A plus the kinetic energy at A, which is zero, must be U at B plus kinetic energy at B, must be U at C plus kinetic energy at C, must be U at D plus kinetic energy at D. If there is no friction, if there are no other forces, only gravity. So we lose no no energy goes lost in terms of friction.
+
+216
+10:03,301 --> 10:09,191
+We know that this high difference is 2 R.
+
+217
+10:12,331 --> 10:18,011
+And so now I can write this in general terms of Y. point say take this
+
+218
+10:18,501 --> 10:24,241
+this point B. think of that being at a location Y above the zero line.
+
+219
+10:24,611 --> 10:35,461
+Then I can write down now that UA which is MGH, that was a given when I started, that was all the energy I had, that was my total mechanical energy. If I call this U zero, which is free choice I have,
+
+220
+10:37,571 --> 10:48,181
+equals U of B, which is now mg Y plus 12 M V squared at that position Y.
+
+221
+10:48,411 --> 10:52,581
+This should hold what you see there should hold for every point that I have here.
+
+222
+10:52,581 --> 10:55,401
+It should hold for A, for B, for C, for D, for any point.
+
+223
+10:56,051 --> 10:57,881
+I lose my M.
+
+224
+10:59,221 --> 11:11,381
+And so you find here that V squared equals 2g times h - Y.
+
+225
+11:12,841 --> 11:14,991
+So this should hold for all these points.
+
+226
+11:15,351 --> 11:17,621
+Therefore it should also hold for point D.
+
+227
+11:18,321 --> 11:29,521
+However, at point D, there is something very important. There is a requirement. There is a requirement that there is a centripetal acceleration which is in this direction,
+
+228
+11:31,651 --> 11:33,571
+a centripetal
+
+229
+11:33,841 --> 11:40,211
+and that centripetal acceleration is a must for this object to reach that point D.
+
+230
+11:40,581 --> 11:49,541
+And that centripetal acceleration, as we remember from when we played with the bucket of water, that is V squared divided by R.
+
+231
+11:50,641 --> 11:56,741
+And this must be larger or equal to the gravitational acceleration G.
+
+232
+11:56,931 --> 12:02,151
+If it is not larger, the bucket of water would not have made it to that point D.
+
+233
+12:02,711 --> 12:06,301
+So this is my second equation that I'm going to use.
+
+234
+12:06,301 --> 12:12,221
+So look very carefully. So V square must be larger or equal than GR.
+
+235
+12:12,541 --> 12:25,491
+So I have here V square, which is 2g * h - Y, but Y for that point D is 2 R. So I put in a 2 R must be larger
+
+236
+12:25,771 --> 12:28,191
+or equal to GR.
+
+237
+12:29,281 --> 12:31,491
+I lose my G.
+
+238
+12:32,081 --> 12:37,981
+So 2h - 4R must be larger or equal to R.
+
+239
+12:38,241 --> 12:43,091
+So H must be larger or equal to 2 and 1/2 R.
+
+240
+12:43,561 --> 12:48,971
+This is a classic result that almost every person who has taken physics will remember.
+
+241
+12:49,521 --> 12:51,541
+It is by no means intuitive.
+
+242
+12:52,131 --> 13:03,161
+It means that if I have this a ball here, and I will show you that shortly, and I let the ball go into this roller coaster, that it will not make this point
+
+243
+13:03,651 --> 13:12,641
+unless I release it from a point that is at least two and a half times the radius of this circle above the zero level.
+
+244
+13:12,901 --> 13:15,321
+If I do it any lower, it will not make it.
+
+245
+13:16,121 --> 13:26,571
+So think about this, that is something that you could not have just easily predicted. It's a very strong result, but it is not something that you say intuitively, Oh yes, of course.
+
+246
+13:26,831 --> 13:30,991
+It follows immediately from the conservation of mechanical energy.
+
+247
+13:31,631 --> 13:36,931
+So, if I release it, that that two and 1/2 radius point, by the way, is somewhere here.
+
+248
+13:37,261 --> 13:42,701
+So if I release this object way below that, it will not make this point.
+
+249
+13:42,971 --> 13:46,401
+Let's do that. You see it didn't make it.
+
+250
+13:46,601 --> 13:48,841
+I go a little higher. Didn't make it.
+
+251
+13:49,181 --> 13:51,661
+Go a little higher. Didn't make it.
+
+252
+13:51,921 --> 13:55,441
+Go a little higher. Still didn't make it.
+
+253
+13:56,131 --> 13:58,601
+Now, I go to the two and a half mark.
+
+254
+14:00,471 --> 14:02,551
+And now it makes it.
+
+255
+14:03,081 --> 14:11,551
+2 and 1/2 times the radius conservation of mechanical energy tells you that that is the minimum it takes to just go through that point.
+
+256
+14:12,101 --> 14:18,151
+Of course, if there were no loss of energy at all, if there were no mechanical energy lost, that means if there were no friction,
+
+257
+14:18,571 --> 14:25,451
+then if I were to release it at this point, it would have to make it back to this point again with zero kinetic energy.
+
+258
+14:25,451 --> 14:32,401
+But that won't, that's not the case. There is always a little bit of friction with the track for one thing, and also, of course, with air.
+
+259
+14:32,631 --> 14:39,111
+So if I release it all the way here, you will not expect it that it will bounce up all the way to here.
+
+260
+14:39,321 --> 14:46,021
+It will probably stop somewhere there. It may not even make it to the end. We can try that. Oh, it made it somewhere to here.
+
+261
+14:46,271 --> 14:51,281
+So a little lower than that level, because there is some friction that avoidable.
+
+262
+14:53,111 --> 14:54,371
+All right.
+
+263
+14:55,141 --> 15:08,271
+This is a classic one. many exams where this problem is being given. I won't give it to you this time, but it's a classic one. You see it on the general exams of for physics and it's simply a matter of conservation of mechanical energy.
+
+264
+15:09,341 --> 15:26,041
+Let's now look at the situation whereby A and B are so far apart that the gravitational acceleration is no longer constant and so you can no longer simply say that the difference in potential energy between point B and point A is simply mggh.
+
+265
+15:27,031 --> 15:39,141
+So, now we are dealing with a very important concept and that is the gravitational force. We can think of the earth
+
+266
+15:40,051 --> 15:48,321
+acting on a mass, or you can think of the sun acting on a planet, whichever you prefer.
+
+267
+15:48,651 --> 15:53,331
+But that's what I want to deal with when the distances are now very large.
+
+268
+15:53,791 --> 15:58,771
+Let me first give you the formal definition of gravitational potential energy.
+
+269
+15:59,521 --> 16:06,521
+The formal definition is that the gravitational potential energy at a point P
+
+270
+16:07,031 --> 16:14,651
+is the work that I Walter Lewin have to do to bring that mass from infinity to that point P.
+
+271
+16:15,631 --> 16:21,291
+Now, you may say that's very strange that in physics there are definitions which where Walter Lewin comes in.
+
+272
+16:21,291 --> 16:33,431
+Well, we can change it to gravity because my force is always the same force as gravity with a minus sign. So it's also minus the work that gravity does when the object moves from infinity to that point P.
+
+273
+16:33,691 --> 16:38,691
+I just like to think of it, it's easier for me to think of it as the work that I do.
+
+274
+16:39,421 --> 16:47,741
+So, if we apply that concept, then we first have to know what is the gravitational force.
+
+275
+16:48,331 --> 16:54,991
+If this is an object capital M, and you can think of this as being the earth if you want to. And there is here an object
+
+276
+16:55,541 --> 17:01,011
+little M, then I have to know what the forces are between the two. And this now is the is Newton's
+
+277
+17:01,751 --> 17:14,511
+universal law of gravity which he postulated Universal law of gravity.
+
+278
+17:18,231 --> 17:22,361
+He says the force that little M experiences
+
+279
+17:23,251 --> 17:34,221
+this force equals I'll put a little M here and a capital M here. So it is little M experiences that force due to the presence of capital M.
+
+280
+17:34,621 --> 17:49,541
+equals little M times capital M times a constant which Newton in his days didn't know yet what that value was divided by r squared if R is the distance between the two.
+
+281
+17:51,041 --> 18:10,621
+This object, since Newton's third law holds, action equals minus reaction, this force, which is I will indicate it as capital M, little M, it is the force that this one experiences due to the presence of this one, is exactly the same in magnitude, but opposite in direction.
+
+282
+18:10,891 --> 18:14,241
+And that is the universal law of gravity.
+
+283
+18:15,001 --> 18:17,631
+Gravity is always attractive.
+
+284
+18:18,271 --> 18:24,631
+Gravity sucks. That's the way to think of it. Always attracts. There is no such thing as repelling forces.
+
+285
+18:25,051 --> 18:39,321
+The gravitational constant G is an extremely low number. 6.67 * 10 to the minus 11 in our SI units, which is Newton square meters per kilogram or something like that.
+
+286
+18:39,571 --> 18:54,141
+That's an extremely low number. It means that if I have two objects which are each 1 kg, which I have now here about 1 m apart,
+
+287
+18:54,391 --> 19:01,471
+that the force which they attract each other is only 6.67 * 10 to the minus 11 Newtons.
+
+288
+19:01,841 --> 19:05,021
+That is an extremely small force.
+
+289
+19:08,121 --> 19:14,151
+If this were the earth, and I am here, and this is my mass,
+
+290
+19:14,641 --> 19:24,451
+then I experience a force which is given by this equation. This would be then the mass of the of the earth.
+
+291
+19:24,751 --> 19:27,451
+Now F equals MA.
+
+292
+19:28,411 --> 19:32,631
+So if I am here, I experience a gravitational acceleration.
+
+293
+19:32,991 --> 19:39,601
+And the gravitational acceleration that I experience is therefore given by mg divided by r squared.
+
+294
+19:40,501 --> 19:51,321
+And so you see that the gravitational acceleration that I experience at different distances from the earth, or for that matter, at different distances from the sun, is inversely proportional with r squared.
+
+295
+19:51,321 --> 20:07,461
+We have discussed that earlier when we dealt with the planets and we dealt with uniform circular motions and we evaluated the centripetal acceleration, we came exactly to that conclusion that the gravitational acceleration falls off as 1/r squared.
+
+296
+20:07,461 --> 20:13,491
+10 times further away, the gravitational acceleration is down by a factor of 100.
+
+297
+20:14,801 --> 20:32,381
+If you are standing near the surface of the earth, then of course, the force that I will experience is my mass times the mass of the earth times the gravitational constant divided by the radius of the earth squared.
+
+298
+20:32,381 --> 20:41,801
+just like we are here in 26 100. And so this must be mg. That's the gravitational acceleration if we drop an object here.
+
+299
+20:42,081 --> 20:48,031
+And so you see that this now is our famous G and that is the famous 9.8.
+
+300
+20:48,031 --> 21:06,111
+If you substitute in there the mass of the earth, which is 6 * 10 to the 24 kg, you put in here the gravitational constant, and you put in the radius of the earth, which is 6,400 km, out pops our well-known number of 9.8 meters per second squared.
+
+301
+21:08,011 --> 21:19,321
+Okay. My goal was to evaluate for you the gravitational potential energy, the way that it is defined
+
+302
+21:20,081 --> 21:25,671
+in general, not in a special case when we are near the earth.
+
+303
+21:26,431 --> 21:37,961
+So, we now have to move an object from infinity to a point P and we calculate the work that I have to do.
+
+304
+21:38,531 --> 21:42,181
+So here is capital M.
+
+305
+21:43,461 --> 21:48,441
+And here is that point P and infinity is somewhere there.
+
+306
+21:49,181 --> 21:51,261
+It's very, very far away.
+
+307
+21:51,591 --> 21:59,931
+And I come in from infinity with that object with mass M and I finally land at point P.
+
+308
+22:01,451 --> 22:14,071
+Since gravity is a conservative force and since my force is always the same in magnitude except in opposite direction, it doesn't matter how I move in, it will always come up with the same answer.
+
+309
+22:14,581 --> 22:24,261
+So, we might as well do it in a civilized way and simply move that object in from infinity along a straight line.
+
+310
+22:25,081 --> 22:29,491
+It should make no difference because gravity is a conservative force.
+
+311
+22:30,191 --> 22:33,101
+So infinity is somewhere there.
+
+312
+22:35,001 --> 22:43,091
+The force that I will experience, that I will have to produce
+
+313
+22:43,621 --> 22:46,221
+is this force.
+
+314
+22:47,091 --> 22:49,471
+Force of gravity is this one.
+
+315
+22:49,761 --> 22:55,461
+The two are identical, except that mine is in this direction. This is increasing value of R.
+
+316
+22:55,461 --> 23:08,661
+So mine would be plus m mg divided by r squared, if I'm here at location R. And let this be at a distance capital R from this object.
+
+317
+23:10,161 --> 23:22,701
+You can already see that the gravitational potential energy, when I come from infinity with a force in this direction and I move inward, you can already see that gravitational potential energy will always be negative.
+
+318
+23:23,121 --> 23:28,531
+For all points, anywhere, doesn't matter where I am, it will always be negative.
+
+319
+23:29,211 --> 23:34,071
+And you may say, gee, that's sort of a strange thing, negative potential energy.
+
+320
+23:34,611 --> 23:36,591
+Well, that is not a problem.
+
+321
+23:37,041 --> 23:45,611
+Remember that depending upon how you define your zero level here, you also end up with negative values for potential energy.
+
+322
+23:45,611 --> 23:47,401
+So there's nothing sacred about that.
+
+323
+23:47,401 --> 23:58,611
+What is important, of course, if we get the right answer for the gravitational potential energy, that when we move away from this object, that the gravitational potential energy increases. That's all that matters.
+
+324
+23:59,001 --> 24:03,811
+whether it is negative or positive is irrelevant.
+
+325
+24:05,081 --> 24:14,451
+So, we already know it's going to be negative. And so we can now evaluate the work that I have to do when I go from infinity to that position capital R.
+
+326
+24:14,891 --> 24:28,221
+So here comes the work that Walter Lewin has to do when we go from infinity to that point which is capital R radius from this object. Think of it as the sun or the earth, either one is fine.
+
+327
+24:28,501 --> 24:33,771
+So that is the integral going from infinity to R
+
+328
+24:34,571 --> 24:46,081
+of my force, which is plus because it's increasing value of R, m mg divided by r squared dr.
+
+329
+24:46,601 --> 24:48,501
+That's a very easy integral.
+
+330
+24:49,351 --> 24:51,251
+This is -1 over R.
+
+331
+24:51,761 --> 24:59,761
+So I get mg over R with a minus sign, and that has to be evaluated between infinity and capital R.
+
+332
+25:01,071 --> 25:04,551
+When I substitute for R infinity, I get a zero.
+
+333
+25:05,151 --> 25:11,631
+And so the answer is minus mg over capital R.
+
+334
+25:12,081 --> 25:22,441
+And this is the potential gravitational potential energy at any distance capital R that you please away from this object.
+
+335
+25:24,711 --> 25:29,761
+At infinity, it's now always zero.
+
+336
+25:30,831 --> 25:37,171
+Earlier you had a choice where you chose your zero when you're near earth and when G doesn't change, you had a choice.
+
+337
+25:37,331 --> 25:38,931
+Now you no longer have a choice.
+
+338
+25:39,181 --> 25:44,711
+Now the gravitational potential energy at infinity is fixed at zero.
+
+339
+25:46,781 --> 25:54,681
+So let's look at this function and let us make a plot of this function
+
+340
+25:55,191 --> 25:56,891
+as a function of distance.
+
+341
+25:57,381 --> 26:03,011
+So the 1 over R relationship of the gravitational potential energy.
+
+342
+26:05,101 --> 26:08,351
+The force, gravitational force falls off as 1/ r squared.
+
+343
+26:12,711 --> 26:14,191
+Here is zero.
+
+344
+26:14,811 --> 26:20,011
+This is the gravitational potential energy. All these values here are negative.
+
+345
+26:20,381 --> 26:25,991
+And here I plotted as a function, I use the symbol little R now instead of capital R.
+
+346
+26:26,331 --> 26:35,311
+And so the curve would be something like this. This is proportional to 1/ R.
+
+347
+26:38,081 --> 26:54,951
+If you move an object from A to B, and this separation is H, and if A and B are very far apart, the difference in potential energy is no longer MGH,
+
+348
+26:55,691 --> 27:05,891
+but the difference in potential energy is the difference between this value and this value. And you have to use that equation to evaluate that.
+
+349
+27:06,241 --> 27:15,141
+But you can clearly see that if I go from here to here, if I take an object and go from here to here, that the potential energy will increase and that's all that matters.
+
+350
+27:15,791 --> 27:24,411
+So it increases when you go further away from the earth, if you look at the earth, or from the sun, if you look at the sun.
+
+351
+27:28,181 --> 27:36,991
+Is there any disagreement between this result that we have here and the result that we found there?
+
+352
+27:38,021 --> 27:39,311
+And the answer is no.
+
+353
+27:39,911 --> 27:42,361
+I invite you to go through the following exercise.
+
+354
+27:43,031 --> 27:50,101
+Take a point A in space which is at a distance RA from the center of the earth, say.
+
+355
+27:50,691 --> 27:57,511
+And I do that, I start at the surface of the earth itself. So the radius is the radius of the earth.
+
+356
+27:58,251 --> 28:07,041
+And I go to point B, which is a little bit further away from the center of the earth, only a distance H. And H is way, way, way smaller
+
+357
+28:07,691 --> 28:12,341
+than the radius of the earth.
+
+358
+28:13,091 --> 28:21,231
+So I can calculate now what the difference in potential energy is between point B and point A.
+
+359
+28:21,701 --> 28:24,571
+And I can use and I should use this equation.
+
+360
+28:25,211 --> 28:37,081
+And when I use that equation and you use the Taylor's expansion, the first order Taylor's expansion, you will immediately see that the result that you find collapses into this result.
+
+361
+28:37,561 --> 28:49,581
+Because the G at the two points are so close that you will see that you find then that it's approximately MGH, even though it is the difference between these two rather clumsy terms.
+
+362
+28:51,391 --> 29:11,221
+We will many, many times in the future use the 1/R relationship for gravitational potential energy. We will get very used to the idea that gravitational potential energy is negative everywhere, the way it's defined, and we will get used to the idea that at infinity, the gravitational potential energy is zero.
+
+363
+29:11,461 --> 29:28,571
+But whenever we deal with near earth situations, like in 26 100, then of course, it is way more convenient to deal with the simplification that the difference in gravitational potential energy is given by MGH.
+
+364
+29:28,571 --> 29:35,771
+I always remember that MGH, Massachusetts General Hospital, that's the best way that you can remember these simple things.
+
+365
+29:36,041 --> 29:41,401
+Now, I want to return to the conservation of mechanical energy.
+
+366
+29:42,811 --> 29:50,641
+I have here a pendulum. I have an object that weighs 15 kg and I can lift it up 1 meter, which I have done now.
+
+367
+29:51,191 --> 29:55,401
+That means I've done work. MGH is the work I have done, believe me.
+
+368
+29:55,941 --> 29:58,751
+I've increased the potential energy of this object.
+
+369
+29:59,221 --> 30:02,141
+15 * 10 is about 150 Joules.
+
+370
+30:02,651 --> 30:07,311
+If I let it fall, then that will be converted to kinetic energy.
+
+371
+30:08,001 --> 30:16,311
+If I would let it swing from 1 meter height and you would be there and it would hit you, you'd be dead.
+
+372
+30:17,011 --> 30:19,541
+150 Joules is enough to kill you.
+
+373
+30:20,451 --> 30:26,301
+They use these devices, called a wrecking ball, they use them to demolish buildings.
+
+374
+30:26,531 --> 30:41,751
+You lift up a very heavy object, even heavier than this, and then you let it go, you swing it, thereby converting gravitational potential energy into kinetic energy, and that way you can demolish a building.
+
+375
+30:42,151 --> 30:47,911
+You just let it hit and it breaks a building.
+
+376
+30:47,911 --> 30:50,811
+And that's the whole idea of wrecking.
+
+377
+30:51,521 --> 30:59,041
+So you are using then the conversion of gravitational potential energy to kinetic energy.
+
+378
+30:59,881 --> 31:12,341
+Now, I am such a strong believer of the conservation of mechanical energy that I am willing to put my life on the line.
+
+379
+31:14,211 --> 31:27,711
+If I release that bob from a certain height, then that bob can never come back to a point where the height is any larger.
+
+380
+31:28,101 --> 31:42,951
+If I release it from this height and it swings, then when it reaches here, it could not be higher. There is a conversion from gravitational potential energy to kinetic energy back to gravitational potential energy and it will come to a stop here.
+
+381
+31:43,191 --> 31:47,551
+And when it swings back, it should not be able to reach any higher.
+
+382
+31:47,881 --> 31:54,801
+Provided that I do not give this object an initial speed when I stand here.
+
+383
+31:55,881 --> 32:01,281
+I trust the conservation of mechanical energy for 100%.
+
+384
+32:01,961 --> 32:03,861
+I may not trust myself.
+
+385
+32:05,731 --> 32:16,861
+I'm going to release this object and I hope I will be able to do it at zero speed, so that when it comes back, it may touch my chin, but it may not crush my chin.
+
+386
+32:17,901 --> 32:22,441
+I want you to be extremely quiet because this is no joke.
+
+387
+32:23,061 --> 32:28,921
+If I don't succeed in giving it zero speed, then this will be my last lecture.
+
+388
+32:30,821 --> 32:33,661
+I will close my eyes. I don't want to see this.
+
+389
+32:34,321 --> 32:36,721
+So please be very quiet.
+
+390
+32:38,221 --> 32:40,131
+I almost didn't sleep all night.
+
+391
+32:41,061 --> 32:43,801
+Three, two, one, zero.
+
+392
+32:50,101 --> 32:59,431
+Physics works and I'm still alive.
+
+393
+33:00,211 --> 33:01,361
+See you Wednesday.
+
+394
+33:05,411 --> 33:06,011

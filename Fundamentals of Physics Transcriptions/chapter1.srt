@@ -1,0 +1,1051 @@
+1
+00:00:200 --> 00:03:640
+I'm Walter Lewin. I will be your lecturer this term.
+
+2
+00:04:890 --> 00:10:120
+In physics, we explore the very small to the very large.
+
+3
+00:10:210 --> 00:16:130
+The very small is a small fraction of a proton, and the very large is the universe itself.
+
+4
+00:16:680 --> 00:24:100
+They span 45 orders of magnitude. A one with 45 zeros.
+
+5
+00:25:110 --> 00:31:120
+To express measurements quantitatively, we have to introduce units.
+
+6
+00:31:440 --> 00:46:320
+And we introduce for the unit of length, the meter, for the unit of time, the second, and for the unit of mass, the kilogram.
+
+7
+00:46:890 --> 00:52:950
+And you can read in your book how these are defined and how the definition evolved historically.
+
+8
+00:53:940 --> 01:02:100
+Now, there are many derived units which we use in our daily life for convenience, and some are tailored to a specific fields.
+
+9
+01:02:710 --> 01:10:160
+We have centimeters, we have millimeters, kilometers. We have inches, feet, miles.
+
+10
+01:10:510 --> 01:20:520
+Astronomers even use the astronomical unit, which is the mean distance between the Earth and the sun, and they use light years, which is the distance that light travels in one year.
+
+11
+01:21:730 --> 01:29:30
+We have milliseconds, we have microseconds, we have days, weeks, hours, centuries, months, all derived units.
+
+12
+01:29:630 --> 01:39:800
+For the mass, we have milligrams, we have pounds, we have metric tons. So lots of derived units exist.
+
+13
+01:40:310 --> 02:05:990
+Not all of them are very easy to work with. I find it extremely difficult to work with inches and feet. It's an extremely uncivilized system. I don't mean to insult you, but think about it. 12 inches in a foot, 3 feet in a yard, that drives you nuts. I work almost exclusively decimal, and I hope you will do the same during this course, but we may make some exceptions.
+
+14
+02:06:260 --> 02:10:550
+I will now first show you a movie which is called the Powers of 10.
+
+15
+02:10:990 --> 02:18:960
+It covers 40 orders of magnitude. It was originally conceived by a Dutchman named Kees Boeke in the early 50s.
+
+16
+02:19:430 --> 02:30:190
+This is the second generation movie, and you will hear the voice of Professor Morrison, who is a professor at MIT.
+
+17
+02:30:660 --> 02:38:920
+The Powers of 10, 40 orders of magnitude. There we go.
+
+18
+02:40:470 --> 02:50:690
+I already introduced, as you see there, length, time and mass. And we call these the three fundamental quantities in physics.
+
+19
+02:51:270 --> 02:58:890
+I will give this the symbol capital L for length, capital T for time, and capital M for mass.
+
+20
+02:58:890 --> 03:04:480
+Many other quantities in physics can be derived from these fundamental quantities.
+
+21
+03:04:920 --> 03:11:240
+I give you an example. I put a bracket around here. I say speed.
+
+22
+03:11:710 --> 03:19:280
+And that means the dimensions of speed. The dimensions of speed is the dimension of length divided by the dimension of time.
+
+23
+03:19:280 --> 03:31:130
+So I can write for that bracket L divided by bracket T. Whether it's meters per second or inches per year, that's not what matters. It has the dimension length per time.
+
+24
+03:31:700 --> 03:41:280
+Volume would have the dimension of length to the power of three.
+
+25
+03:41:840 --> 03:54:210
+Density would have the dimension of mass per unit volume. So that means length to the power three.
+
+26
+03:54:770 --> 04:08:140
+All important in our course is acceleration. We will deal a lot with acceleration. Acceleration, as you will see, is length per time squared. The unit is meters per second squared.
+
+27
+04:08:550 --> 04:16:150
+So you get length divided by time squared.
+
+28
+04:16:740 --> 04:21:830
+So all other quantities can be derived from these three fundamental.
+
+29
+04:22:150 --> 04:30:230
+So now that we have agreed on the units, we have the meter, the second and the kilogram, we can start making measurements.
+
+30
+04:30:230 --> 04:39:270
+Now, all important in making measurements, which is always ignored in every college book, is the uncertainty in your measurement.
+
+31
+04:39:880 --> 04:47:100
+Any measurement that you make without any knowledge of the uncertainty is meaningless.
+
+32
+04:47:690 --> 04:59:870
+I will repeat this. I want you to hear it tonight at 3:00 when you wake up. Any measurement that you make without a knowledge of its uncertainty is completely meaningless.
+
+33
+05:01:240 --> 05:12:220
+My grandmother used to tell me that, at least she believed it, that someone who is lying in bed is longer than someone who stands up.
+
+34
+05:13:240 --> 05:18:020
+And in honor of my grandmother, I'm going to bring this today to a test.
+
+35
+05:18:620 --> 05:25:220
+I have here a setup where I can measure a person standing up and a person lying down.
+
+36
+05:25:700 --> 05:28:450
+It's not the greatest bed, but lying down.
+
+37
+05:28:790 --> 05:36:140
+I have to convince you about the uncertainty in my measurements because a measurement without knowledge of the uncertainty is meaningless.
+
+38
+05:36:480 --> 05:52:430
+And therefore, what I will do is the following. I have here an aluminum bar, and I make the reasonable plausible assumption that when this aluminum bar is sleeping, when it is horizontal, that it is not longer than when it is standing up.
+
+39
+05:52:740 --> 06:02:150
+If you accept that, we can compare the length of this aluminum bar with this setup and with this setup, at least we have some kind of calibration to start with.
+
+40
+06:02:700 --> 06:16:180
+I will measure it. You have to trust me. During these three months, we have to trust each other. So, I measure here 149.9 centimeters.
+
+41
+06:16:640 --> 06:32:300
+However, I would think that the, so this is the aluminum bar. This is in vertical position, 149.9, but I would think that the uncertainty of my measurement is probably 1 millimeter.
+
+42
+06:32:690 --> 06:35:340
+I can't really guarantee you that I did it accurately any better.
+
+43
+06:35:690 --> 06:38:150
+So that's the vertical one.
+
+44
+06:38:490 --> 06:51:460
+Now, we're going to measure the bar horizontally, for which we have a setup here. Ooh, the scale is on your side. So now I measure the length of this bar. 150.0.
+
+45
+06:53:470 --> 07:09:080
+Horizontally, 150.0, again, plus or minus 0.1 cm. So you would agree with me that I am capable of measuring plus or minus 1 millimeter. That's the uncertainty of my measurement.
+
+46
+07:10:010 --> 07:20:140
+Now, if the difference in lengths between lying down and standing up, if that were one foot, we would all know it, wouldn't we?
+
+47
+07:20:480 --> 07:25:130
+You get out of bed in the morning, you lie down, you get up and you go clunk, and you're one foot shorter.
+
+48
+07:25:320 --> 07:31:220
+And we know that that's not the case. If the difference were only 1 millimeter, we would never know.
+
+49
+07:31:820 --> 07:39:180
+Therefore, I suspect that if my grandmother was right, that it's probably only a few centimeters, maybe an inch.
+
+50
+07:39:540 --> 07:47:080
+And so I would argue that if I can measure the length of a student to 1 millimeter accuracy, that should settle the issue.
+
+51
+07:47:690 --> 07:49:120
+So, I need a volunteer.
+
+52
+07:51:010 --> 07:57:190
+You want to volunteer? Looks like you're very tall. I hope that, yeah. I hope we can I hope that we we don't run out of
+
+53
+07:57:190 --> 08:01:490
+You're not taller than 178 or so?
+
+54
+08:01:490 --> 08:04:990
+I hope not. What is your name? Rick Rider. Rick, Rick Rider.
+
+55
+08:05:490 --> 08:07:360
+You're not nervous, right? No.
+
+56
+08:08:400 --> 08:16:310
+Man. Sit down. I can't have tall guys here. Come on.
+
+57
+08:17:290 --> 08:20:460
+We need someone more modest in size.
+
+58
+08:21:720 --> 08:23:310
+Don't take it personal, Rick.
+
+59
+08:24:320 --> 08:28:260
+Okay. What is your name? Zach. Zach.
+
+60
+08:29:600 --> 08:32:160
+Nice day today, Zach. Yeah.
+
+61
+08:32:790 --> 08:35:600
+You feel all right? First lecture at MIT?
+
+62
+08:35:960 --> 08:37:590
+I don't. Okay, man.
+
+63
+08:40:460 --> 08:49:010
+Stand there. Yeah. Okay. 183.2.
+
+64
+08:49:460 --> 08:51:270
+Stay there. Stay there. Don't move.
+
+65
+08:51:650 --> 09:00:270
+Zach. Uh, this is vertical. What did I say? 183? Only one person.
+
+66
+09:02:510 --> 09:03:550
+Three.
+
+67
+09:04:740 --> 09:06:580
+Come on.
+
+68
+09:07:610 --> 09:14:070
+.2? .2. Okay. 183.2. Yeah.
+
+69
+09:14:620 --> 09:23:430
+And an uncertainty of about 1. Oh, this is centimeters. 0.1 cm.
+
+70
+09:24:040 --> 09:27:410
+And now we're going to measure him horizontally.
+
+71
+09:28:550 --> 09:46:070
+Zach, I don't want you to break your bones. So we have a little step step for you here. Put your feet there. Oh, let me remove the aluminum bar. Don't watch out for the scale, that you don't break that because then it's all over. Okay.
+
+72
+09:46:070 --> 10:03:750
+I'll come on your side. I have to do that. Yeah, yeah. Relax. Think of this as a small sacrifice for the sake of science, right? You good? You comfortable? Wonderful. Okay.
+
+73
+10:05:000 --> 10:10:460
+You ready? Yes. Okay.
+
+74
+10:12:500 --> 10:15:910
+185.7.
+
+75
+10:15:910 --> 10:28:050
+Stay where you are. 185.7. I'm sure I want to make the subtraction, right? 185.7 plus or minus 0.1 cm.
+
+76
+10:28:490 --> 10:39:240
+Oh, that is five. That is 2.5 plus or minus 0.2 cm. You're about 1 inch taller when you sleep than when you stand up. My grandmother was right.
+
+77
+10:39:560 --> 10:42:630
+She's always right. Can you get off here?
+
+78
+10:43:530 --> 10:51:170
+I want you to appreciate that the accuracy, thank you very much, Zach, that the accuracy of 1 millimeter was more than sufficient to make the case.
+
+79
+10:51:170 --> 10:58:130
+If the accuracy in my measurement would have been much less, this measurement would not have been convincing at all.
+
+80
+10:58:610 --> 11:04:580
+So whenever you make a measurement, you must know the uncertainty, otherwise it is meaningless.
+
+81
+11:05:600 --> 11:15:600
+Galileo Galilei asked himself the question, why are mammals as large as they are and not much larger.
+
+82
+11:16:510 --> 11:21:300
+He had a very clever reasoning, which I've never seen in print.
+
+83
+11:21:590 --> 11:28:410
+But it comes down to the fact that he argued that if the mammal becomes too massive, that the bones will break.
+
+84
+11:28:820 --> 11:31:480
+And he thought that that was a limiting factor.
+
+85
+11:32:380 --> 11:39:060
+Even though I've never seen his reasoning in print, I will try to reconstruct it what could have gone through his head.
+
+86
+11:39:420 --> 11:47:430
+Here is a mammal. And this is the one of the four legs of the mammal.
+
+87
+11:48:350 --> 11:57:250
+And this mammal has a size S. And what I mean by that is
+
+88
+11:57:620 --> 12:02:280
+a mouse is yay big, and a cat is yay big. That's what I mean by size.
+
+89
+12:02:790 --> 12:05:300
+Very crudely defined.
+
+90
+12:06:220 --> 12:09:000
+The mass of the mammal is M.
+
+91
+12:09:810 --> 12:22:320
+And this mammal has a thigh bone, which we call the femur, which is here. And the femur, of course, carries the body to a large extent.
+
+92
+12:22:320 --> 12:26:760
+And let's assume that the femur has a length L and has a thickness D.
+
+93
+12:27:410 --> 12:34:610
+Here is a femur. This is what a femur approximately looks like.
+
+94
+12:37:700 --> 12:43:420
+So, this would be the length of the femur.
+
+95
+12:45:160 --> 12:48:180
+And this would be the thickness D.
+
+96
+12:48:700 --> 12:54:020
+And this would be the cross-sectional area A.
+
+97
+12:55:380 --> 13:03:080
+I'm now going to take you through what we call in physics a scaling argument.
+
+98
+13:04:840 --> 13:12:180
+I would argue that the length of the femur must be proportional to the size of the animal. That's completely plausible.
+
+99
+13:12:180 --> 13:17:430
+If an animal is four times larger than another, you would need four times longer legs. That's all this is saying.
+
+100
+13:17:820 --> 13:19:140
+It's very reasonable.
+
+101
+13:21:110 --> 13:41:910
+It is also very reasonable that the mass of an animal is proportional to the third power of the size because that's related to its volume. And so if it's related to the third power of the size, it must also be proportional to the third power of the length of the femur because of this relationship.
+
+102
+13:42:690 --> 13:44:270
+Okay, that's one.
+
+103
+13:45:290 --> 14:01:360
+Now comes the argument. Pressure on the femur is proportional to the weight of the animal divided by the cross-section A of the femur.
+
+104
+14:01:660 --> 14:03:060
+That's what pressure is.
+
+105
+14:03:480 --> 14:13:440
+And that is the mass of the animal, that's proportional to the mass of the animal divided by d squared. because we want the area here. It's proportional to d squared.
+
+106
+14:14:300 --> 14:16:180
+Now follow me closely.
+
+107
+14:17:710 --> 14:24:400
+If the pressure is higher than a certain level, the bones will break.
+
+108
+14:25:270 --> 14:43:010
+Therefore, for an animal not to break its bones, when the mass goes up by a certain factor, say a factor of four, in order for the bones not to break, d squared must also go up by a factor of four. That's a key argument in the scaling here. You really have to think that through carefully.
+
+109
+14:43:410 --> 14:49:060
+Therefore, I would argue that the mass must be proportional to D squared.
+
+110
+14:49:380 --> 14:53:180
+This is the breaking argument. Now, compare these two.
+
+111
+14:53:180 --> 15:13:810
+The mass is proportional to the length of the femur to the power 3 and to the thickness of the femur to the power two. Therefore, the thickness of the femur to the power two must be proportional to the length L to the power three. And therefore, the thickness of the femur must be proportional to L to the power 3 halves.
+
+112
+15:14:200 --> 15:20:000
+A very interesting result. What is this result telling you?
+
+113
+15:20:570 --> 15:38:060
+It tells you that if I have two animals, and one is 10 times larger than the other, that S is 10 times larger, that the length of the legs are 10 times larger, but that the thickness of the femur is 30 times larger.
+
+114
+15:38:430 --> 15:57:240
+Because it is L to the power 3 halves. If I were to compare a mouse with an elephant, an elephant is about 100 times larger in size. So the length of the femur of the elephant would be 100 times larger than that of a mouse. But the thickness of the femur would have to be 1,000 times larger.
+
+115
+15:57:710 --> 16:07:000
+And that may have convinced Galileo Galilei that that's the reason why the largest animals are as large as they are.
+
+116
+16:07:000 --> 16:19:080
+Because clearly, if you increase the mass, there comes a time that the thickness of the bones is the same as the length of the bones. You're all made of bone and that is biologically not feasible.
+
+117
+16:19:450 --> 16:23:140
+And so there is a limit somewhere set by this scaling law.
+
+118
+16:25:200 --> 16:28:390
+Well, I I wanted to bring this to a test.
+
+119
+16:28:390 --> 16:34:980
+After all, I brought my grandmother's statement to a test, so why not bringing Galileo Galilei's statement to a test.
+
+120
+16:35:340 --> 16:47:590
+And so, I went to Harvard where they have a beautiful collection of femurs. And I asked them for the femur of a raccoon and a horse.
+
+121
+16:48:290 --> 17:03:660
+A raccoon is this big. A horse is about four times bigger. So the length of the femur of a horse must be about four times the length of the raccoon. Close.
+
+122
+17:03:660 --> 17:05:150
+So I was not surprised.
+
+123
+17:05:940 --> 17:19:710
+Then I measured the thickness and I said to myself, haha, if the length is four times higher, then the thickness has to be eight times higher if this holds.
+
+124
+17:19:920 --> 17:27:110
+And what I'm going to plot for you, you will see that shortly, is D divided by L versus L.
+
+125
+17:27:110 --> 17:32:300
+And that of course must be proportional to L to the power one half.
+
+126
+17:32:670 --> 17:46:380
+So, if I compare the horse and I compare the raccoon, I would argue that the thickness divided by the length of the femur for the horse must be the square root of four twice as much as that of the raccoon.
+
+127
+17:47:230 --> 17:51:400
+And so I was very anxious to plot that. And I did that.
+
+128
+17:51:940 --> 17:54:090
+And I'll show you the result.
+
+129
+17:55:040 --> 17:58:010
+Here is my first result.
+
+130
+18:01:680 --> 18:11:330
+So, we see there D over L. I explained to you why I preferred to plot it. And here you see the length. You see here the raccoon and you see the horse.
+
+131
+18:11:330 --> 18:20:120
+And if you look carefully, then the D over L for the horse is only about 1 and a half times larger than the raccoon. Well, I wasn't too disappointed.
+
+132
+18:20:630 --> 18:28:090
+1 and a half is not two, but it is in the right direction. The horse clearly have a larger value for D over L than the raccoon.
+
+133
+18:28:360 --> 18:31:060
+I realized I needed more data.
+
+134
+18:31:060 --> 18:38:070
+So I went back to Harvard. I said, look, I need smaller animal, an opossum, maybe, maybe a rat, maybe a mouse.
+
+135
+18:38:070 --> 18:42:040
+And they said, okay. They gave me three more bones.
+
+136
+18:42:700 --> 18:46:120
+They gave me an antelope, which is actually a little larger than the raccoon.
+
+137
+18:46:450 --> 18:51:030
+And they gave me an opossum, and they gave me a mouth.
+
+138
+18:52:360 --> 18:58:970
+Here is the bone of the antelope.
+
+139
+19:00:600 --> 19:05:760
+Here is the one of the raccoon.
+
+140
+19:06:220 --> 19:09:220
+Here is the one of the opossum.
+
+141
+19:09:780 --> 19:18:880
+And now you won't believe this. This is so wonderful, so romantic. There is the mouse.
+
+142
+19:20:290 --> 19:25:570
+Isn't that beautiful? Teenny weeny little mouse, it's only a teeny weeny little femur.
+
+143
+19:26:730 --> 19:28:720
+And there it is.
+
+144
+19:30:040 --> 19:40:710
+And I I made the plot. I was very curious what that plot would look like. And here it is.
+
+145
+19:45:740 --> 19:47:900
+I was shocked.
+
+146
+19:48:490 --> 19:50:800
+I was really shocked.
+
+147
+19:51:370 --> 19:56:300
+Because look, the horse is 50 times larger in size than the mouse.
+
+148
+19:56:650 --> 20:05:310
+The difference in D over L is only a factor of two. And I expected something more like a factor of seven.
+
+149
+20:05:810 --> 20:11:080
+And so, in D over L where I expect the factor of seven, I only see a factor of two.
+
+150
+20:11:450 --> 20:25:350
+So I said to myself, oh my goodness, why didn't I ask them for an elephant? The real clincher would be the elephant because if that goes way off scale, maybe we can still rescue the statement by Galileo Galilei."
+
+151
+20:25:350 --> 20:36:350
+And so I went back and they said, okay, we'll give you the femur of an elephant. They also gave me one of a moose, believe it or not. I think they wanted to get rid of me by that time to be frank of you. And here is the femur of an elephant.
+
+152
+20:40:740 --> 20:49:310
+And I measured it, the length and the thickness. And it is very heavy. It weighs a ton.
+
+153
+20:50:450 --> 20:58:080
+I plotted it. I was full of expectation. I couldn't sleep all night. And there's the elephant.
+
+154
+20:58:630 --> 21:04:640
+There is no evidence whatsoever that D over L is really larger for the elephant than for the mouth.
+
+155
+21:04:970 --> 21:19:980
+These vertical bars indicate my uncertainties in measurements of thickness, and the horizontal scale, which is a logarithmic scale, the uncertainty of the length measurements is in the thickness of the red pen, so there's no need for me to indicate that any further.
+
+156
+21:20:590 --> 21:24:270
+And here you have your measurements in case you want to check them.
+
+157
+21:24:750 --> 21:27:620
+And look again at the mouth and look at the elephant.
+
+158
+21:28:490 --> 21:46:060
+The mouth has indeed only 1 cm length of the femur, and the elephant is indeed 100 times longer. So the first scaling argument that S is proportional to L, that is certainly what you expect because an elephant is about 100 times larger in size.
+
+159
+21:46:450 --> 22:06:590
+But when you go to D over L, you see it's all over. The D over L for the mouth is really not all that different from the elephant. And you would have expected that number to be with the square root of 100, so you would expect it to be 10 times larger instead of about the same.
+
+160
+22:07:490 --> 22:14:160
+I now want to discuss with you what we call in physics dimensional analysis.
+
+161
+22:16:210 --> 22:31:900
+I want to ask myself the question, if I drop an apple from a certain height and I change that height, what will happen with the time for the apple to fall?
+
+162
+22:34:300 --> 22:44:300
+Well, I dropped the apple from an height H, and I want to know what happens with the time when it falls. And I change H.
+
+163
+22:45:720 --> 22:52:610
+So, I said to myself, well, the time that it takes must be proportional to the height to some power alpha.
+
+164
+22:52:970 --> 23:00:200
+It's completely reasonable. If I make the height larger, we all know that it takes longer for the apple to fall. That's a safe thing.
+
+165
+23:00:860 --> 23:09:060
+I said to myself, well, if the apple has a mass M, it probably is also proportional to the mass of that apple to the power beta.
+
+166
+23:09:530 --> 23:17:530
+I said to myself, Gee, yeah, if something is more massive, it will probably take more time. So, maybe M to some power beta. I don't know alpha, I don't know beta.
+
+167
+23:20:120 --> 23:39:130
+And then I said, yeah, there is also something like gravity. There is the earth's gravitational pull, the gravitational acceleration of the earth. So let's introduce that too. And let's assume that that time is also proportional to the gravitational acceleration. This is an acceleration, we'll learn a lot more about that, to the power gamma.
+
+168
+23:40:730 --> 23:47:560
+Having said this, we can now do what's called in physics a dimensional analysis.
+
+169
+23:51:780 --> 23:54:390
+On the left, we have a time.
+
+170
+23:54:890 --> 24:08:800
+And if we have a left on the left side a time, on the right side, we must also have time. You cannot have coconuts on one side and oranges on the other. You cannot have seconds on one side and meters per second on the other.
+
+171
+24:09:190 --> 24:18:320
+So the dimensions left and right have to be the same. What is the dimension here? That is T to the power 1. It's that T.
+
+172
+24:19:000 --> 24:45:530
+That must be the same as length to the power alpha times mass to the power beta times acceleration, remember it is still there on the blackboard, has dimension L divided by times squared. And the whole thing to the power gamma, so I have a gamma here, I have a gamma there.
+
+173
+24:45:990 --> 24:51:130
+This side must have the same dimension as that side. That is non-negotiable in physics.
+
+174
+24:52:030 --> 24:58:610
+Okay, there we go. There is no M here. There is only one M here. So beta must be zero.
+
+175
+25:00:350 --> 25:10:660
+There is here L to the power alpha, L to the power gamma. There is no L here. So L must disappear. So alpha plus gamma must be zero.
+
+176
+25:11:600 --> 25:19:280
+There is T to the power 1 here, and there is here t to the power minus 2 gamma. It's minus because it's downstairs.
+
+177
+25:19:690 --> 25:26:350
+So 1 must be equal to minus 2 gamma. That means gamma must be minus 1/2.
+
+178
+25:26:770 --> 25:33:450
+But if gamma is minus 1/2, then alpha equals plus 1/2.
+
+179
+25:34:720 --> 25:37:170
+End of my dimensional analysis.
+
+180
+25:37:660 --> 25:57:290
+I therefore conclude that the time that it takes for an object to fall equals some constant, which I do not know. But that constant has no dimension. I don't know what it is. times the square root of H divided by g.
+
+181
+25:58:350 --> 26:14:230
+Beta is zero. There is no mass. H to the power one half. You see that here. And g to the power minus one half. This is proportional to the square root of H because g is a given and C is a given, even though I don't know C.
+
+182
+26:14:790 --> 26:19:110
+I made no pretense that I can predict how long it will take for the apple to fall.
+
+183
+26:19:810 --> 26:38:500
+All I'm saying is, I can compare two different heights. I can drop an apple from 8 m and another one from 2 m, and the one from 8 m will take two times longer than the one from 2 m. The square root of 8 to 2, 4 over 2 will take two times longer, right?
+
+184
+26:38:820 --> 26:53:420
+If I drop one from 8 m and I drop another one from 2 m, then the difference in time will be the square root of the ratio that will be twice as long. And that I want to bring to a test today.
+
+185
+26:54:550 --> 27:17:600
+We have a setup here. We have an apple there at a height of 3 m. We know that actually the the length to an accuracy, the height to an accuracy of about 3 mm, no better. And here we have a setup whereby the apple is about 1 and 1/2 m above the ground. And we know that to about also an accuracy of no better than about 3 mm.
+
+186
+27:18:630 --> 27:31:080
+So, let's set this up. I have here something that's going to be a prediction of the time that it takes for one apple to fall divided by the time that it takes for the other apple to fall.
+
+187
+27:39:220 --> 27:47:530
+H1 is 3 m. But I claim there is an uncertainty of about 3 mm.
+
+188
+27:47:930 --> 27:58:840
+Can't do any better. And H2 equals 1.5 m. Again, with an uncertainty of about 3 mm.
+
+189
+28:00:800 --> 28:16:470
+The ratio H1 over H2 is 2.000. And now I have to come up with an uncertainty, which physicists sometimes call an error in their measurements, but it's really an uncertainty.
+
+190
+28:16:770 --> 28:36:390
+And the way you find the uncertainty is that you add the three here, and you subtract the three here, then you get the largest value possible. You can never get a larger value, and you'll find that you get 2.006. So, I would say the uncertainty is then 006.
+
+191
+28:36:870 --> 28:41:600
+This is a dimensionless number because it's length divided by length.
+
+192
+28:42:160 --> 28:55:660
+And so the time T1 divided by T2 would be the square root of H1 divided by H2. That is the dimensional analysis argument that we have there.
+
+193
+28:55:930 --> 29:06:640
+And we find, if we take the square root of this number, we find 1.414 plus or minus 0.002.
+
+194
+29:08:130 --> 29:16:960
+Here is a firm prediction. And now we're going to make an observation.
+
+195
+29:22:500 --> 29:34:030
+So we're going to measure T1, there's going to be a number. And then we're going to measure T2. There's going to be a number.
+
+196
+29:34:420 --> 29:41:260
+I have done this experiment 10 times and the numbers always reproduce within about 1 millisecond.
+
+197
+29:41:560 --> 29:44:330
+So I could just adopt an uncertainty of 1 millisecond.
+
+198
+29:44:330 --> 29:57:200
+I want to be a little bit on the safe side. Occasionally it differs by 2 milliseconds. So let us be conservative and let's assume that I can measure this to an accuracy of about 2 milliseconds.
+
+199
+29:57:540 --> 29:59:130
+That is pretty safe.
+
+200
+30:00:550 --> 30:10:760
+So, now we can measure these times. And then we can take the ratio. And then we can see whether we actually confirm that the time that it takes is proportional
+
+201
+30:13:010 --> 30:17:760
+to the height to the square root of the height.
+
+202
+30:18:550 --> 30:38:210
+So, I will make it a little more comfortable for you in the lecture hall. That's all right. We have the setup here.
+
+203
+30:38:210 --> 30:44:110
+We first do the experiment with the 3 meters. There you see the 3 meters.
+
+204
+30:44:110 --> 30:53:240
+And the time, the moment that I pull this string, the apple will fall. A contact will open, the clock will start. The moment that it hits the floor, the time will stop.
+
+205
+30:53:810 --> 30:59:190
+I have to stand on that side, otherwise the apple will fall on my hand. That's not the idea.
+
+206
+31:00:320 --> 31:04:110
+Stand here. You ready?
+
+207
+31:04:370 --> 31:05:980
+Okay, then I'm ready.
+
+208
+31:06:940 --> 31:11:490
+Everything set? Make sure that I've zeroed that button. Yes, I have.
+
+209
+31:12:540 --> 31:17:020
+Okay. 3, 2, 1, 0.
+
+210
+31:18:330 --> 31:21:750
+781 milliseconds.
+
+211
+31:22:300 --> 31:33:000
+So this number, you should write it down because you will need it for your second assignment. 781 milliseconds with an uncertainty of 2 milliseconds.
+
+212
+31:33:600 --> 31:36:260
+We ready for the second one?
+
+213
+31:39:610 --> 31:41:360
+You ready?
+
+214
+31:41:360 --> 31:42:280
+Ready?
+
+215
+31:42:640 --> 31:46:990
+Okay, nothing wrong with being ready.
+
+216
+31:48:870 --> 31:53:610
+00, right? 00? Thank you.
+
+217
+31:54:670 --> 31:58:360
+Okay. 3, 2, 1, 0.
+
+218
+32:00:420 --> 32:03:910
+551 milliseconds.
+
+219
+32:05:830 --> 32:12:530
+Boy, I'm nervous because I hope that physics works.
+
+220
+32:13:450 --> 32:23:920
+So, I take my calculator and I'm now going to take the ratio T1 over T2.
+
+221
+32:24:420 --> 32:36:450
+The uncertainty you can find by adding the two here and subtracting the two there, then that will then give you an uncertainty of, I think 0.00 0.08. Yeah.
+
+222
+32:38:800 --> 32:46:410
+0.08. You should do that for yourself. 0.008. Dimensionless number. This would be the uncertainty.
+
+223
+32:47:110 --> 32:48:830
+This is the observation.
+
+224
+32:50:110 --> 33:08:020
+781 divided by 551. 14 17.
+
+225
+33:09:170 --> 33:11:420
+Perfect agreement.
+
+226
+33:11:760 --> 33:22:560
+Look, the prediction says 1.414, but it could be 1 point could be two higher. That's the uncertainty in my height. I don't know any better.
+
+227
+33:22:990 --> 33:28:420
+And here, I could even be off by an eight, because that's the uncertainty in my timing.
+
+228
+33:28:760 --> 33:36:070
+So these two measurements confirm, they are in agreement with each other. If you see uncertainties in measurements are essential.
+
+229
+33:37:240 --> 33:43:910
+Now look at our results.
+
+230
+33:45:290 --> 33:50:090
+We have here a result which is striking.
+
+231
+33:50:720 --> 33:58:150
+We have demonstrated that the time that it takes for an object to fall is independent of its mass.
+
+232
+33:59:890 --> 34:02:920
+That is an amazing accomplishment.
+
+233
+34:04:240 --> 34:13:210
+Our grand our great grandfathers must have worried about this and argued about this for more than 300 years.
+
+234
+34:14:430 --> 34:21:820
+Were they so dumb to overlook this simple dimensional analysis?
+
+235
+34:22:090 --> 34:25:370
+Inconceivable.
+
+236
+34:26:640 --> 34:32:860
+Is this dimensional analysis perhaps not quite kosher? Maybe.
+
+237
+34:33:450 --> 34:42:100
+Is this dimensional analysis perhaps one that could have been done differently?
+
+238
+34:42:560 --> 34:43:830
+Yeah. Oh, yeah.
+
+239
+34:44:420 --> 34:46:580
+You could have done it very differently.
+
+240
+34:46:910 --> 34:57:180
+You could have said the following. You could have said, the time for an apple to fall is proportional
+
+241
+34:57:610 --> 35:05:700
+to the height that it falls from to the power alpha. Very reasonable. We all know the higher it is, the more it will take, the more time it will take.
+
+242
+35:06:540 --> 35:17:830
+And we could have said, yeah, it's probably proportional to the mass somehow. If the mass is more, it will take a little bit less time. turns out to be not so, but you can think that.
+
+243
+35:18:220 --> 35:24:260
+But you could have said, well, let's not take the acceleration of the earth, but let's take the mass of the earth itself.
+
+244
+35:24:660 --> 35:30:380
+Very reasonable, right? I would think if I increase the mass of the earth, that the apple will fall faster.
+
+245
+35:30:870 --> 35:41:100
+So now I would put in the mass of the earth here. And I start my dimensional analysis and I end up dead in the waters.
+
+246
+35:41:530 --> 35:49:700
+Because you see there is no mass here. There is a mass to the power beta here and one to the power gamma.
+
+247
+35:49:700 --> 35:56:920
+So what you would have found is beta plus gamma equals zero, and that would be end of story.
+
+248
+35:57:870 --> 36:06:790
+Now you can ask yourself the question, well, is there something wrong with the analysis that we did? Is ours perhaps better than this one?
+
+249
+36:07:530 --> 36:08:870
+Well, it's a different one.
+
+250
+36:09:580 --> 36:14:470
+We came to the conclusion that the time that it takes for the apple to fall is independent of the mass.
+
+251
+36:15:120 --> 36:17:280
+Do we believe that?
+
+252
+36:17:640 --> 36:18:820
+Yes, we do.
+
+253
+36:19:880 --> 36:44:030
+On the other hand, there are very prestigious physicists who even nowadays do very fancy experiments and they try to demonstrate that the time for an apple to fall does depend on its mass. Even though it probably is only very small if it's true, but they try to prove that. And if any of them succeeds or any one of you succeeds, that's certainly worth a Nobel prize.
+
+254
+36:44:430 --> 36:47:910
+So we do believe that it's independent of the mass.
+
+255
+36:48:350 --> 36:56:040
+However, this what I did with you was not a proof because if you do it this way, you get stuck.
+
+256
+36:56:630 --> 37:07:460
+On the other hand, I'm quite pleased with the fact that we found that the time is proportional with the square root of H. I think that's very useful. We confirmed that with experiment, and indeed it came out that way.
+
+257
+37:07:840 --> 37:14:070
+So, it was not a complete waste of time. But when you do an dimensional analysis, you better be careful.
+
+258
+37:17:500 --> 37:31:040
+I like you to think this over, the comparison between the two, at dinner, and maybe at breakfast, and maybe even while you're taking a shower, whether it's needed or not.
+
+259
+37:31:640 --> 37:45:310
+It is important that you digest and appreciate the difference between these two approaches. It will give you an insight in the power and also into the limitations of dimensional analysis.
+
+260
+37:45:710 --> 37:50:400
+This goes to the very heart of our understanding and appreciation of physics.
+
+261
+37:51:030 --> 37:53:550
+It's important that you get a feel for this.
+
+262
+37:54:550 --> 37:57:940
+You're now at MIT. This is the time.
+
+263
+37:58:450 --> 38:00:660
+Thank you. See you Friday.

@@ -1,0 +1,2123 @@
+1
+00:00:00,467 --> 00:03,767
+The bad news today is that there will be
+quite a bit of math.
+
+2
+00:04,297 --> 00:10,997
+But the good news is that we will only do it once,
+and it will only take something like half hour.
+
+3
+00:12,397 --> 00:17,427
+There are quantities in physics
+which are determined uniquely by one number.
+
+4
+00:18,037 --> 00:19,287
+Mass is one of them.
+
+5
+00:19,647 --> 00:20,957
+Temperature is one of them.
+
+6
+00:21,147 --> 00:22,287
+Speed is one of them.
+
+7
+00:22,637 --> 00:23,917
+We call those scalars.
+
+8
+00:24,387 --> 00:26,467
+There are others where you need more than one number.
+
+9
+00:26,767 --> 00:35,307
+For instance, on a one-dimensional motion,
+velocity, it has a certain magnitude,
+that's the speed, but you also have to know
+whether it goes this way or that way.
+
+10
+00:35,777 --> 00:37,517
+So there has to be a direction.
+
+11
+00:38,057 --> 00:42,667
+Velocity is a vector, and acceleration
+is a vector.
+
+12
+00:43,207 --> 00:48,427
+And today we're going to learn how to work
+with these vectors.
+
+13
+00:49,087 --> 00:58,067
+A vector has a length and a vector
+has a direction, and that's why we actually
+represent it by an arrow.
+
+14
+00:58,697 --> 01:02,197
+You all have seen this is a vector.
+
+15
+01:02,727 --> 01:04,897
+Remember this, this is a vector.
+
+16
+01:05,317 --> 01:11,027
+If you look at the vector head on, you see a dot.
+If you look at the vector from behind, you see a cross.
+
+17
+01:11,437 --> 01:17,567
+This is a vector and that will be our representation
+of vectors.
+
+18
+01:18,657 --> 01:23,347
+Imagine that I'm standing on a table in 26 100.
+
+19
+01:24,327 --> 01:26,187
+This is the table.
+
+20
+01:27,787 --> 01:32,617
+And I am standing, say at point O.
+
+21
+01:33,737 --> 01:41,407
+And I move along a straight line
+from O to point P.
+
+22
+01:42,297 --> 01:43,817
+So I move like so.
+
+23
+01:44,517 --> 01:51,477
+So that's where I am on the table and that's
+where you will see me when you look from 26 100.
+
+24
+01:52,027 --> 02:00,627
+It just so happens that someone is also going to move
+the table in that same amount of time from here to there.
+
+25
+02:01,467 --> 02:12,027
+So that means that the table will have moved down,
+and so my point P will have moved down
+exactly the same way.
+
+26
+02:12,637 --> 02:15,507
+And so you will see me now at point S.
+
+27
+02:15,827 --> 02:22,277
+You will see me at point S in 26 100, although
+I'm still standing at the same location on the table.
+
+28
+02:22,527 --> 02:24,207
+The table has moved.
+
+29
+02:24,687 --> 02:27,447
+This is now the position of the table.
+
+30
+02:28,797 --> 02:32,037
+See the whole table has shifted.
+
+31
+02:32,617 --> 02:45,417
+Now, if these two motions take place simultaneously,
+then what you will see from where you're sitting,
+you will see me move in 26 100 from O straight line to S.
+
+32
+02:45,857 --> 02:52,057
+And this holds the secret behind the adding
+of vectors.
+
+33
+02:52,527 --> 03:04,327
+We say here that the vector OS, we put an arrow over it,
+is the vector OP with an arrow over it plus PS.
+
+34
+03:05,587 --> 03:10,337
+This defines how we add vectors.
+
+35
+03:11,167 --> 03:14,167
+There are various ways that you can add vectors.
+
+36
+03:14,717 --> 03:22,397
+Suppose I have here a vector A,
+and I have here a vector B.
+
+37
+03:23,257 --> 03:30,547
+Then you can do it this way, which I call the
+head tail technique. I take B and I bring it to the head of A.
+
+38
+03:32,907 --> 03:36,817
+So this is B. This is a vector.
+
+39
+03:37,327 --> 03:40,367
+And then the net result is A + B.
+
+40
+03:42,167 --> 03:48,617
+This vector C equals A + B.
+
+41
+03:49,567 --> 03:59,357
+That's one way of doing it. Doesn't matter whether you take B
+the tail of B to the head of A or whether you take
+the tail of A and bring it to the head of B, you will get the same result.
+
+42
+03:59,897 --> 04:04,397
+There's another way you can do it,
+and I call that the parallelogram method.
+
+43
+04:05,207 --> 04:06,917
+Here you have A.
+
+44
+04:08,287 --> 04:11,257
+You bring the two tails together.
+
+45
+04:12,707 --> 04:15,807
+So here is B now. So the tails are touching.
+
+46
+04:16,297 --> 04:18,397
+And now you complete this parallelogram.
+
+47
+04:22,517 --> 04:30,467
+And now this vector C is the same sum vector
+that you have here.
+
+48
+04:31,057 --> 04:32,437
+Whichever way you prefer.
+
+49
+04:32,657 --> 04:36,307
+You see immediately that A + B is the same as B + A.
+
+50
+04:36,727 --> 04:38,147
+There is no difference.
+
+51
+04:41,777 --> 04:44,517
+What is the meaning of a negative vector?
+
+52
+04:45,367 --> 04:48,177
+Well, A - A equals zero.
+
+53
+04:48,917 --> 04:53,477
+Vector A subtract vector A equals zero.
+
+54
+04:54,177 --> 04:55,557
+So here is vector A.
+
+55
+04:57,787 --> 05:02,317
+So which vector do I have to add to get zero?
+
+56
+05:03,087 --> 05:04,717
+I have to add minus A.
+
+57
+05:05,177 --> 05:18,217
+Well, if you use the head tail technique,
+this is A, you have to add this vector
+to have zero, so this is minus A. And so minus A is nothing
+but the same as A but flipped over 180 degrees.
+
+58
+05:18,557 --> 05:20,547
+We will use that very often.
+
+59
+05:22,047 --> 05:27,057
+And that brings us to the point of
+subtraction of vectors.
+
+60
+05:27,327 --> 05:29,327
+How do we subtract vectors?
+
+61
+05:30,147 --> 05:36,567
+So A minus B equals C.
+
+62
+05:37,837 --> 05:39,387
+Here we have vector A.
+
+63
+05:43,037 --> 05:48,627
+And here we have vector B.
+
+64
+05:52,577 --> 05:54,387
+One way to look at this is the following.
+
+65
+05:54,737 --> 06:01,407
+You can say A minus B is A plus minus B.
+
+66
+06:02,107 --> 06:09,077
+And we know how to add vectors, and we know
+what minus B is. Minus B is the same vector,
+but flipped over.
+
+67
+06:09,687 --> 06:12,527
+So we put here minus B.
+
+68
+06:15,417 --> 06:20,407
+And so this vector now here equals A
+minus B.
+
+69
+06:23,777 --> 06:27,557
+This vector C is A minus B.
+
+70
+06:28,027 --> 06:38,067
+And of course, you can do it in different ways.
+You can also think of it as A plus
+as C + B is A.
+
+71
+06:38,557 --> 06:43,777
+Right? You can say, you can bring this to the other side,
+you can say C + B is A.
+
+72
+06:44,397 --> 06:51,457
+C + B is A. In other words, which
+vector do I have to add to B to get A?
+
+73
+06:51,817 --> 06:58,887
+And then you have the parallelogram technique again.
+There are many ways you can do it. The head tail technique
+is perhaps the easiest and the safest.
+
+74
+06:59,307 --> 07:12,347
+So you can add countless number of vectors,
+one plus the other, then next one,
+and you finally have the sum of five or six or seven vectors,
+which then can be represented by only one.
+
+75
+07:13,477 --> 07:19,057
+When you add scalars, for instance five and four,
+then there is only one answer that is nine.
+
+76
+07:19,667 --> 07:21,207
+5 + 4 is 9.
+
+77
+07:21,667 --> 07:31,127
+Suppose you have two vectors, you have no information
+on their direction, but you do know
+that the magnitude of one is four and the magnitude
+of the other is five, that's all you know.
+
+78
+07:31,727 --> 07:40,687
+Then the magnitude of the sum vector could be nine if they
+are both in the same direction, that's the maximum,
+or it could be one if they're in opposite direction.
+
+79
+07:41,017 --> 07:46,227
+So then you have a whole range of possibilities
+because you do not know the direction.
+
+80
+07:46,827 --> 07:52,627
+So the adding and the subtraction of vectors
+is way more complicated than just scalars.
+
+81
+07:54,467 --> 08:08,367
+As we have seen that the sum of vectors can be represented
+by one vector, equally, can we
+take one vector and we can replace it
+by the sum of others.
+
+82
+08:08,557 --> 08:11,307
+And we call that decomposition of a vector.
+
+83
+08:11,757 --> 08:19,787
+And that's going to be very important in 801,
+and I want you to follow this therefore quite
+closely.
+
+84
+08:20,927 --> 08:25,927
+I have a vector which is in three-dimensional space.
+
+85
+08:29,577 --> 08:31,277
+This is my Z axis.
+
+86
+08:34,627 --> 08:39,007
+This is my X axis, Y axis and Z axis.
+
+87
+08:39,197 --> 08:48,217
+This is the origin O and here is a point P
+and I have a vector OP.
+
+88
+08:49,797 --> 08:50,967
+That's the vector.
+
+89
+08:52,147 --> 08:57,747
+And what I do now, I project this vector
+onto the three axes, X, Y and Z.
+
+90
+08:58,647 --> 09:01,017
+So there we go.
+
+91
+09:04,777 --> 09:07,787
+Each one has its own method of doing this.
+
+92
+09:11,617 --> 09:12,547
+Okay.
+
+93
+09:16,387 --> 09:17,487
+There we are.
+
+94
+09:18,297 --> 09:21,427
+I call this vector vector A.
+
+95
+09:26,887 --> 09:32,457
+Let this angle be theta, and this angle be phi.
+
+96
+09:34,587 --> 09:40,987
+Notice that the projection of A on the Y-axis
+has here a number which I call A of Y.
+
+97
+09:41,657 --> 09:46,057
+This number is A of X, and this number here is A of Z.
+
+98
+09:46,827 --> 09:50,217
+Simply the projection of that vector onto the three axes.
+
+99
+09:51,137 --> 09:55,977
+We now introduce what we call unit vectors.
+
+100
+09:56,307 --> 10:02,877
+Unit vectors are always pointing in the direction
+of the positive axis, and the unit vector in the X direction
+
+101
+10:04,407 --> 10:11,067
+is this one, it has a length one,
+and we write for it X roof. Roof always means unit vector.
+
+102
+10:11,797 --> 10:15,587
+And this is the unit vector in the Y direction.
+
+103
+10:16,577 --> 10:22,157
+And this is the unit vector in the Z direction.
+
+104
+10:23,617 --> 10:30,677
+And now I'm going to rewrite vector A
+in terms of the three components that we have here.
+
+105
+10:31,447 --> 10:45,357
+So the vector A, I'm going to write as
+A of X times X roof plus A of Y times Y roof
+plus A of Z times Z roof.
+
+106
+10:46,107 --> 10:51,057
+And this A of X times X is really a vector
+that runs from the origin to this point.
+
+107
+10:52,007 --> 10:55,247
+So we could put in that as a vector if you want to.
+
+108
+10:55,457 --> 10:58,497
+This makes it the vector. This is that vector.
+
+109
+10:58,817 --> 11:09,337
+A of Y times Oh, sorry, it is A of X, it's this one.
+A of Y times Y roof is this one.
+And A of Z times Z roof is this one.
+
+110
+11:10,587 --> 11:17,037
+And so the three green vectors added together
+are exactly identical to the vector OP.
+
+111
+11:17,347 --> 11:21,517
+So we have decomposed one vector into three
+directions.
+
+112
+11:22,047 --> 11:26,817
+And we will see that very often this is of great use in 801.
+
+113
+11:27,437 --> 11:39,167
+The magnitude of the vector is the square root
+of AX squared plus AY squared plus AZ squared.
+
+114
+11:40,807 --> 11:50,307
+And so we can take a simple example.
+For instance, I take a vector A.
+
+115
+11:51,497 --> 11:54,997
+So this is just an example to see this in action.
+
+116
+11:55,697 --> 12:02,057
+And we call A three X roof.
+
+117
+12:02,807 --> 12:08,487
+So A of X is three minus five Y roof.
+
+118
+12:09,717 --> 12:12,647
+plus six Z roof.
+
+119
+12:13,357 --> 12:24,517
+So that means that it's three units in this direction.
+It is five units in this direction in the minus Y direction
+and six in the plus Z direction.
+
+120
+12:25,017 --> 12:29,917
+That makes up a vector and I call that vector A.
+
+121
+12:31,247 --> 12:39,017
+What is the magnitude of that vector, which I always write down
+with vertical bars? If I put two bars on one side,
+that's always the magnitude.
+
+122
+12:39,477 --> 12:42,037
+Or sometimes I simply leave the arrow off.
+
+123
+12:42,477 --> 12:47,157
+But to be always on the safe side,
+I like this idea that you know it's really the magnitude.
+
+124
+12:47,657 --> 12:49,597
+It becomes a scalar when you do that.
+
+125
+12:50,747 --> 13:01,987
+So that would be the square root of three square is nine,
+five square is 25, six square is 36.
+So that's the square root of 70.
+
+126
+13:02,327 --> 13:07,247
+And suppose I asked you what is theta?
+It's uniquely determined, of course.
+
+127
+13:07,247 --> 13:10,277
+This vector is uniquely determined in three-dimensional space.
+
+128
+13:10,547 --> 13:13,137
+So you should be able to find phi and theta.
+
+129
+13:13,577 --> 13:19,127
+Well, the cosine of theta, see this angle here
+is 90 degrees, projection.
+
+130
+13:20,007 --> 13:24,367
+So the cosine of theta is A of Z divided by A itself.
+
+131
+13:24,967 --> 13:35,747
+So the cosine of theta equals A of Z
+divided by A itself, which in our case
+would be 6 divided by the square root of 70.
+
+132
+13:36,407 --> 13:37,457
+And you can do phi.
+
+133
+13:38,007 --> 13:41,777
+This is just simply a matter of manipulating
+some numbers.
+
+134
+13:43,827 --> 13:50,697
+We now come to a much more difficult part
+of vectors, and that is multiplication of vectors.
+
+135
+13:59,187 --> 14:02,327
+We're not going to need this until October.
+
+136
+14:03,397 --> 14:06,117
+But I decided we might as well get it over with now.
+
+137
+14:06,317 --> 14:19,287
+Now that we introduce vectors, you can add and subtract,
+you might as well learn about multiplication.
+It's sort of the job is done, it's like going to the dentist,
+it's a little painful, but it's good for you,
+and when it's behind you, the pain disappears.
+
+138
+14:19,937 --> 14:27,097
+So I'm going to talk about multiplication of vectors,
+something that will not come back until October
+and later in the course.
+
+139
+14:27,847 --> 14:30,217
+There are two ways that we multiply vectors.
+
+140
+14:30,757 --> 14:38,437
+And one is called the dot product,
+often also called the scalar product.
+
+141
+14:39,257 --> 14:42,937
+A dot B, a fat dot.
+
+142
+14:43,997 --> 14:58,167
+And that's defined as it is a scalar,
+A of X times B of X, just the number,
+plus A of Y times B of Y, that's another number,
+plus A of Z times B of Z, that's another number.
+
+143
+14:58,427 --> 14:59,647
+It is a scalar.
+
+144
+15:00,827 --> 15:02,947
+has no longer a direction.
+
+145
+15:04,337 --> 15:06,387
+That is the dot product.
+
+146
+15:07,377 --> 15:11,017
+So that's method number one, that's completely legitimate
+and you can always use that.
+
+147
+15:12,327 --> 15:20,117
+There is another way to find the dot product,
+depending upon what you're being given,
+how the problem is presented to you.
+
+148
+15:20,797 --> 15:25,227
+If someone gives you the vector A,
+
+149
+15:26,207 --> 15:29,837
+and you have the vector B,
+
+150
+15:30,747 --> 15:38,637
+and you happen to know this angle between them,
+this angle theta, which has nothing to do with that angle theta,
+it's the angle between the two.
+
+151
+15:39,397 --> 15:49,417
+Then the dot product is also the following,
+and you may make may make an attempt to
+to prove that.
+
+152
+15:50,257 --> 15:53,407
+You project the vector B on A.
+
+153
+15:55,017 --> 15:56,477
+This is that projection.
+
+154
+15:58,077 --> 16:03,127
+The length of this vector is B cosine theta.
+
+155
+16:04,097 --> 16:12,527
+And then the dot product is the magnitude of A
+times the magnitude of B times the cosine of the angle theta.
+
+156
+16:12,807 --> 16:15,187
+The two are completely identical.
+
+157
+16:15,857 --> 16:20,087
+Now you may ask me, you may say, Gee,
+how do I know what theta is?
+
+158
+16:20,377 --> 16:23,877
+How do I know I should take theta this angle,
+or maybe I should take theta this angle?
+
+159
+16:24,317 --> 16:26,517
+I mean, what angle is A making with B?
+
+160
+16:26,777 --> 16:34,117
+It makes no difference because the cosine
+of this angle here is the same as the cosine
+of 360 degrees minus theta. So that makes no difference.
+
+161
+16:36,087 --> 16:42,577
+Sometimes this is faster depending upon how the problem is
+presented to you, sometimes the other is faster.
+
+162
+16:43,717 --> 16:55,347
+You can immediately see by looking at this,
+it's easier to see than looking here,
+that the dot product can be larger than zero,
+it can be equal to zero, and it can be smaller than zero.
+
+163
+16:56,077 --> 17:00,817
+A and B are by definition always positive,
+they are the magnitude.
+
+164
+17:01,507 --> 17:06,187
+But so it's determined by the cosine of theta.
+If the cosine of theta is larger than zero, well, then it's larger than zero.
+
+165
+17:07,257 --> 17:09,007
+The cosine of theta can be zero.
+
+166
+17:09,487 --> 17:18,007
+If the angle for theta is pi over 2, in other words,
+if the two vectors are perpendicular to each other,
+then the dot product is zero.
+
+167
+17:18,387 --> 17:25,007
+And if this angle theta is between 90 degrees
+and 180 degrees, then the cosine is negative.
+
+168
+17:25,347 --> 17:31,197
+We will see that at work, no pun implied,
+when we're going to deal with work in physics.
+
+169
+17:31,577 --> 17:35,477
+You will see that we can do positive work
+and we can do negative work.
+
+170
+17:35,947 --> 17:39,297
+And that has to do with this dot product.
+Work is a dot product.
+
+171
+17:41,097 --> 17:48,277
+I could do an extremely simple example with you,
+the simplest that I can think of.
+
+172
+17:48,597 --> 17:54,237
+Perhaps it's almost an insult, it's not meant that way.
+Suppose
+
+173
+17:54,837 --> 17:59,367
+we have A. B.
+
+174
+17:59,527 --> 18:05,007
+And A is the one that you already have on the blackboard there.
+Right here, that's A.
+
+175
+18:05,647 --> 18:13,207
+But B is just 2Y dropped.
+
+176
+18:13,627 --> 18:15,977
+Two Y roof. That's all it is.
+
+177
+18:16,677 --> 18:18,577
+Well, what is A. B?
+
+178
+18:18,887 --> 18:26,287
+A. B, there's no X component of B.
+So that becomes zero, this term becomes zero.
+
+179
+18:27,357 --> 18:36,497
+There is only a Y component of B. So it is minus 5
+times plus two. So I get minus 10 because there is no Z component.
+
+180
+18:37,027 --> 18:39,057
+Simple as that. So it's minus 10.
+
+181
+18:41,257 --> 18:44,837
+I can give you another example. Example two.
+
+182
+18:46,207 --> 18:56,057
+Suppose A itself is the unit vector in the Y direction
+and B is the unit vector in the Z direction.
+
+183
+18:56,647 --> 19:01,017
+Then A. B is what?
+
+184
+19:01,707 --> 19:02,567
+Zero.
+
+185
+19:03,587 --> 19:05,117
+I want to hear it loud and clear.
+
+186
+19:05,377 --> 19:07,497
+Zero! Yeah, zero.
+
+187
+19:08,067 --> 19:13,017
+It is zero. You don't even have to think about anything,
+you know that these two are at 90 degrees.
+
+188
+19:13,397 --> 19:18,207
+If you want to waste your time and want to substitute it in here,
+you will see that it comes out to be zero.
+
+189
+19:18,567 --> 19:20,507
+It should work because clearly,
+
+190
+19:21,677 --> 19:26,977
+A of Y means that this this this is one.
+That's what it means.
+
+191
+19:27,427 --> 19:34,007
+And B is Z, that means that B of Z, this is one,
+and all the others do not exist.
+
+192
+19:34,487 --> 19:46,077
+Well, I wish you luck with that, and we now go to a
+way way more difficult part of multiplication
+and that is vector multiplication,
+which is called the vector product.
+
+193
+19:47,527 --> 19:54,667
+or also called, most of the time I refer to it
+as the cross product.
+
+194
+19:55,897 --> 20:03,427
+The cross product is written like so,
+A cross B equals C.
+
+195
+20:04,047 --> 20:06,507
+It's a cross, very clear cross.
+
+196
+20:07,517 --> 20:13,957
+And I will tell you how I remember, that is method number one.
+I'm going to teach you just like with the dot product, two methods.
+
+197
+20:14,187 --> 20:19,597
+I will tell you method number one, which is the one that always works,
+time consuming, but it always works.
+
+198
+20:20,817 --> 20:24,497
+You write down here a matrix with three rows.
+
+199
+20:24,867 --> 20:30,657
+The first row is X roof, Y roof, Z roof.
+
+200
+20:31,017 --> 20:40,407
+The second one is A of X, A of Y, A of Z.
+It's important, if A is here first, that that second row must be A.
+
+201
+20:40,917 --> 20:47,007
+And the third row is then B. B of X, B of Y, B of Z.
+
+202
+20:47,477 --> 20:50,607
+So these six are numbers, and these are the unit vectors.
+
+203
+20:51,827 --> 21:04,177
+I repeat this here verbatim. You'll see in a minute why I need that.
+
+204
+21:04,847 --> 21:14,267
+And I will do the same here.
+
+205
+21:15,147 --> 21:16,437
+Okay, and now comes the recipe.
+
+206
+21:17,427 --> 21:25,587
+You take, you go from the upper left hand corner
+to the one in this direction.
+
+207
+21:26,307 --> 21:29,587
+You multiply them all three, and that's a plus sign.
+
+208
+21:30,417 --> 21:43,997
+So you get AY, so C, which is the cross A cross B equals
+AY times BZ times the X roof.
+
+209
+21:44,277 --> 21:52,677
+But I'm not going to put the X roof in yet, because I have to
+subtract this one, minus sign.
+
+210
+21:53,157 --> 21:55,447
+Which has AZ BY.
+
+211
+21:56,237 --> 22:04,247
+So it is minus AZ BY and that
+is in the direction X.
+
+212
+22:05,277 --> 22:07,537
+The next one is this one.
+
+213
+22:08,487 --> 22:13,397
+AZ BX.
+
+214
+22:14,837 --> 22:16,287
+minus
+
+215
+22:17,347 --> 22:22,477
+this one. AX BZ.
+
+216
+22:26,437 --> 22:29,177
+in the direction Y.
+
+217
+22:30,027 --> 22:34,527
+And last but not least, AX BY
+
+218
+22:39,517 --> 22:40,917
+minus
+
+219
+22:43,817 --> 22:45,487
+AY BX.
+
+220
+22:50,467 --> 22:55,027
+in the direction of the unit vector Z.
+
+221
+22:56,617 --> 23:04,367
+So this part here is what we call C of X.
+It's the X component of this vector.
+
+222
+23:05,247 --> 23:11,007
+And this we can call C of Y, and this we can call C of Z.
+
+223
+23:11,657 --> 23:24,327
+So you can also write that vector then that C
+equals C of X X roof plus C of Y
+Y roof plus C of Z Z roof.
+
+224
+23:24,847 --> 23:27,757
+That's the cross product of A and B.
+
+225
+23:28,727 --> 23:35,247
+We will have lots of exercises, lots of chances
+you will have on assignment two to play with this a little bit.
+
+226
+23:35,497 --> 23:37,117
+Now comes my method number two.
+
+227
+23:37,547 --> 23:45,527
+And method number two is again, as we had with the dot product,
+is a geometrical geometrical method.
+
+228
+23:54,677 --> 24:05,007
+If you know vector A and you know vector B,
+and you know that the angle is theta,
+
+229
+24:05,717 --> 24:11,417
+then the cross product C equals A cross B
+
+230
+24:12,097 --> 24:18,627
+is the magnitude of A times the magnitude of B
+times the sine of theta.
+
+231
+24:19,867 --> 24:26,037
+Not the cosine of theta, as we had before
+with the dot product, it is the sine of theta.
+
+232
+24:27,177 --> 24:34,017
+So you can already immediately see that this will be zero
+if theta is either 0 degrees or 180 degrees.
+
+233
+24:34,267 --> 24:37,747
+Whereas the dot product was zero
+when the angle between them was 90 degrees.
+
+234
+24:39,647 --> 24:45,957
+This number can be larger than zero, if the sine theta is larger than zero,
+it can also be smaller than zero.
+
+235
+24:46,387 --> 24:52,457
+Now we only have the magnitude of the vector,
+and now comes the hardest part, what is the direction of the vector?
+
+236
+24:53,527 --> 24:58,597
+And that is something that you have to engrave in your mind
+and not forget.
+
+237
+24:59,127 --> 25:09,577
+The direction is found as follows. You take A
+because it's first mentioned, and you rotate A over the shortest
+possible angle to B.
+
+238
+25:10,427 --> 25:14,357
+If you had in your hand a cork screw,
+and I will show that in a minute,
+
+239
+25:14,677 --> 25:20,377
+then you turn the cork screw as seen from you seats clockwise,
+and the cork screw would go into the blackboard.
+
+240
+25:20,847 --> 25:32,047
+And if the cork screw goes into the blackboard,
+you will see the tail of the vector,
+and you will see a cross, a little plus sign,
+and therefore we put that like so.
+
+241
+25:32,527 --> 25:37,677
+A cross product is always perpendicular
+to both A and B.
+
+242
+25:38,057 --> 25:43,007
+But it leaves you with two choices, it can either come out
+of the blackboard or it can go in the blackboard.
+
+243
+25:43,537 --> 25:47,107
+And I just told you which convention to use.
+
+244
+25:47,617 --> 25:54,067
+And I want to show that to you in a way that
+may appeal to you more.
+
+245
+25:54,467 --> 26:04,447
+This is what I have used before
+on my television help sessions that I've given at MIT.
+
+246
+26:04,687 --> 26:08,637
+I have an apple, not an apple, this is a tomato.
+Not a tomato, it's a potato.
+
+247
+26:09,717 --> 26:12,367
+I have a potato here, and here is a cork screw.
+
+248
+26:13,487 --> 26:15,067
+There's a cork screw.
+
+249
+26:15,547 --> 26:19,427
+I'm going to turn the cork screw as seen from your side clockwise.
+
+250
+26:20,247 --> 26:28,057
+And you'll see that the cork screw goes into the
+potato in.
+
+251
+26:28,277 --> 26:30,607
+That's the direction then of the vector.
+
+252
+26:31,127 --> 26:38,437
+If we had B cross A, then you take B in your hands
+and you wrote it over the shortest angle to A.
+
+253
+26:38,807 --> 26:40,717
+Now you have to rotate counterclockwise.
+
+254
+26:41,297 --> 26:45,337
+And when you rotate counterclockwise,
+the cork screw comes to you.
+
+255
+26:45,487 --> 26:48,527
+There you go, and so the vector is now pointing in this direction.
+
+256
+26:49,017 --> 26:55,407
+And if the vector is pointing towards you,
+then we would indicate that with a circle and a dot.
+
+257
+26:56,157 --> 27:06,297
+Another words for this vector B cross A
+would have exactly the same magnitude, no difference,
+but it would be coming out of the blackboard.
+
+258
+27:06,817 --> 27:15,387
+In other words, A cross B equals minus B cross A.
+
+259
+27:18,737 --> 27:22,977
+Whereas A dot B is the same as B dot A.
+
+260
+27:23,387 --> 27:31,637
+We will encounter cross products when we deal with torques,
+and when we deal with angular momentum, which is not the easiest part of 801.
+
+261
+27:33,217 --> 27:45,767
+Let's take an extremely simple example.
+Again, I don't mean to insult you with such a simple example,
+but you will get chances, more advanced chances on your assignment.
+
+262
+27:46,507 --> 27:54,987
+Suppose I gave the vector A is X roof.
+
+263
+27:55,107 --> 27:57,467
+It's the unit vector in the X direction.
+
+264
+27:57,467 --> 28:01,207
+That means A of X is 1, and A of Y is 0, and A of Z is 0.
+
+265
+28:01,597 --> 28:06,427
+And suppose B is Y roof.
+
+266
+28:07,147 --> 28:14,557
+That means B of Y is one, and B of A is
+B of X is zero, and B of Z is zero.
+
+267
+28:15,547 --> 28:20,467
+What now is the dot product, the cross product A cross B?
+
+268
+28:24,867 --> 28:36,207
+Well, you can apply that recipe, but it's much easier
+to go to the XYZ axis that we have here.
+
+269
+28:37,087 --> 28:41,457
+A was in the X direction, the unit vector, and B in the Y direction.
+
+270
+28:41,797 --> 28:49,057
+I take A in my hand, I rotate over the smallest angle,
+which is 90 degrees to Y, and my cork screw will go up.
+
+271
+28:49,637 --> 28:56,007
+So I know the whole thing already. I know that this cross product
+must be Z roof.
+
+272
+28:56,427 --> 29:02,157
+The magnitude must be one, that's immediately clear,
+but I immediately have the direction by using the cork screw rule.
+
+273
+29:02,917 --> 29:14,027
+Now, if you are very smart, you may say,
+aha, you find plus Z only because you have used this coordinate system.
+
+274
+29:14,427 --> 29:24,147
+If this axis had been X and this one had been Y,
+then the cross product and X and Y would be in the minus Z direction.
+
+275
+29:24,437 --> 29:26,067
+Yeah, you're right.
+
+276
+29:26,337 --> 29:28,537
+But if you ever do that, I will kill you.
+
+277
+29:29,117 --> 29:36,097
+You will always, always have to work with what we call
+a right-handed coordinate system.
+
+278
+29:36,467 --> 29:45,517
+And a right-handed coordinate system by definition is one whereby the cross product
+of X with Y is Z and not Y minus Z.
+
+279
+29:46,087 --> 29:54,267
+So whenever you get in the future involved with cross products
+and torques and angular momentum, always make yourself an XYZ diagram
+
+280
+29:54,767 --> 29:57,077
+for which X cross Y is Z.
+
+281
+29:57,307 --> 30:05,207
+Never ever make it such that X cross Y is minus Z.
+You're going to hang yourself because for one thing, that wouldn't work anymore.
+
+282
+30:05,757 --> 30:07,457
+So be very, very careful.
+
+283
+30:07,977 --> 30:15,577
+must work, if you use the right hand cork screw rule,
+make sure you work with the right-handed coordinate system.
+
+284
+30:17,197 --> 30:18,067
+All right.
+
+285
+30:19,387 --> 30:21,607
+Now, the worst part is over.
+
+286
+30:22,327 --> 30:33,807
+And now I would like to write down for you,
+we get we pick up some of the the fruits now, although it will penetrate slowly,
+I want to write down for you
+
+287
+30:35,657 --> 30:44,877
+a equations for a moving particle,
+a moving object in three-dimensional space.
+
+288
+30:46,357 --> 30:52,257
+Very complicated motion, which I
+can hardly imagine what it's like.
+
+289
+30:52,987 --> 30:59,207
+It is a point that's going to move around
+in space, and it is this point, P.
+
+290
+30:59,717 --> 31:03,487
+This point P is going to move around in space.
+
+291
+31:04,557 --> 31:13,317
+And I call this vector OP, I call that now vector R,
+and I give it a sub index T, which indicates it's changing with time.
+
+292
+31:13,967 --> 31:20,337
+I call this location A of Y, I'm going to call that Y of T.
+It's changing with time.
+
+293
+31:20,837 --> 31:23,997
+I call this X of T. It's going to change with time.
+
+294
+31:24,447 --> 31:30,647
+And I call this point Z of T, which is going to change with time
+because point P is going to move.
+
+295
+31:32,187 --> 31:47,267
+And so I'm going to write down the vector R
+in its most general form that I can do that R which changes with time
+is now X of T, which is the same as A of X there before,
+
+296
+31:47,447 --> 31:57,687
+times X roof plus Y of T
+Y roof plus Z of T Z roof.
+
+297
+31:58,307 --> 32:06,537
+I have decomposed my vector R into three
+independent vectors. Each one of those change with time.
+
+298
+32:07,647 --> 32:09,817
+What is the velocity of this particle?
+
+299
+32:10,327 --> 32:19,427
+Well, the velocity is the first derivative
+of the position. So that is dR
+
+300
+32:19,427 --> 32:20,177
+dt.
+
+301
+32:20,577 --> 32:27,717
+So there we go. First the derivative of this one,
+which is dx dt X roof.
+
+302
+32:28,357 --> 32:38,547
+I'm going to write for dx dt X dot because I'm lazy
+and I'm going to write for d2x dt squared X double dot.
+
+303
+32:38,967 --> 32:45,527
+It's often done but not in your book, but it's a notation that I will often use
+because otherwise the equation look so clumsy.
+
+304
+32:46,197 --> 32:54,177
+plus Y dot times Y roof plus Z dot times Z roof.
+
+305
+32:54,497 --> 32:56,077
+So Z dot is dz dt.
+
+306
+32:56,827 --> 33:05,167
+What is the acceleration as a function of time?
+Well, the acceleration as a function of time equals Dvdt.
+
+307
+33:06,147 --> 33:09,887
+So that's the second derivative of X versus time.
+
+308
+33:10,247 --> 33:22,237
+And so that becomes X double dot times X roof
+plus Y double dot times Y roof plus Z double dot times Z roof.
+
+309
+33:24,357 --> 33:27,557
+And look what we have now accomplished.
+
+310
+33:28,037 --> 33:31,227
+It looks like minor, but it's going to be big later on.
+
+311
+33:31,737 --> 33:34,507
+We have a point P going in three-dimensional space.
+
+312
+33:35,487 --> 33:46,247
+And here we have the entire behavior
+of the object as it moves its projection along the X-axis.
+
+313
+33:47,097 --> 33:52,667
+This is the position. This is its velocity,
+and this is its acceleration.
+
+314
+33:53,317 --> 33:57,997
+And here you see the entire behavior
+on the Z axis.
+
+315
+33:58,527 --> 34:05,447
+This is the position on the Z axis. This is the velocity component
+in the Z direction, and this is the acceleration in the Z axis.
+
+316
+34:05,657 --> 34:07,047
+And here you have the Y.
+
+317
+34:07,347 --> 34:16,427
+In other words, we have now a three-dimensional motion,
+we have cut into three one-dimensional motions.
+
+318
+34:17,107 --> 34:18,897
+This is a one-dimensional motion.
+
+319
+34:19,377 --> 34:26,217
+This is a behavior only along the X-axis, and this is a behavior
+only along the Y-axis, and this is a behavior only along the Z-axis.
+
+320
+34:26,627 --> 34:33,307
+And the three together make up the actual motion of that particle.
+
+321
+34:34,737 --> 34:38,847
+So what have we gained now? It looks like this looks like a mathematical zoo.
+
+322
+34:38,847 --> 34:42,677
+You would say, well, if this is what it's going to be like, it's going to be hell.
+
+323
+34:43,937 --> 34:50,277
+Well, not quite. In fact, it's going to help you a great deal.
+
+324
+34:51,677 --> 35:03,287
+First of all, if I throw up a tennis ball in class like this,
+then the whole trajectory is the whole trajectory is in one plane, in the vertical plane.
+
+325
+35:03,727 --> 35:11,537
+So, even though it is in three dimensions, we can always represent it
+by two axes, by two dimensionally, a Y- axis and an X- axis.
+
+326
+35:12,037 --> 35:16,527
+So already, the three-dimensional problem often becomes a two-dimensional problem.
+
+327
+35:18,107 --> 35:28,987
+We will with great success analyze these trajectories
+by decomposing this very complicated motion. Imagine what an incredibly complicated arc that is.
+
+328
+35:29,497 --> 35:39,967
+And yet we are going to decompose it into a motion in the X direction,
+which lives a life of its own, independent of the motion in the Y direction, which lives a life of its own.
+
+329
+35:40,467 --> 35:45,527
+And of course, you always have to combine the two to know what the particle is doing.
+
+330
+35:48,497 --> 35:58,877
+We know the equations so well from our last lecture
+from one dimensional motion with a constant acceleration.
+
+331
+36:00,557 --> 36:04,557
+The first line tells you what the X position is as a function of time.
+
+332
+36:05,547 --> 36:08,797
+The index T tells you that it's changing with time.
+
+333
+36:09,277 --> 36:19,077
+It is the position at T equals zero plus the velocity at T equals 0 times T
+plus 1/2 AX T squared if there is an acceleration in the X direction.
+
+334
+36:19,527 --> 36:26,567
+The velocity immediately comes from taking the derivative of this function,
+and the acceleration comes from taking the derivative of this function.
+
+335
+36:27,697 --> 36:50,497
+Now, if we have a motion which is more complicated,
+which reaches out to two or three dimensions, we can decompose the motion in three
+perpendicular axes, and you can replace every X here by a Y,
+which gives you the entire behavior in the Y direction,
+and if you want to know the behavior in the Z direction, you replace every X here by Z.
+
+336
+36:50,907 --> 37:01,067
+And then you have decomposed the motion in three
+directions. Each of them are linear.
+
+337
+37:01,947 --> 37:03,637
+And that's what I want to do now.
+
+338
+37:04,357 --> 37:18,057
+I'm going to throw up an object,
+a golf ball or an apple in 26 100.
+
+339
+37:19,437 --> 37:28,427
+And we know that it's in a vertical plane, so we have we only deal with a two-dimensional problem.
+This being I call this my X-axis.
+
+340
+37:29,837 --> 37:33,127
+And I'm going to call this my Y-axis.
+
+341
+37:33,707 --> 37:39,197
+I call this increasing value of X,
+and I call this increasing value of Y.
+
+342
+37:39,847 --> 37:48,817
+I could have called this increasing value of Y.
+Today I've decided to call this increasing value of Y. I'm free in that choice.
+
+343
+37:49,917 --> 37:59,497
+I throw up an object at a certain angle
+and I see a motion like this. Boing and it comes back to the ground.
+
+344
+38:01,777 --> 38:12,137
+My initial speed when I threw it
+was V0 and the angle here is alpha.
+
+345
+38:14,447 --> 38:22,957
+The X component of that initial velocity
+is V0 cosine alpha.
+
+346
+38:23,687 --> 38:30,447
+And the Y component equals V0
+sine alpha.
+
+347
+38:31,347 --> 38:37,947
+So that's the begin velocity of in the X direction,
+and this is the begin velocity in the Y direction.
+
+348
+38:39,797 --> 38:48,357
+A little later in time, that object
+is here at point P.
+
+349
+38:49,417 --> 38:53,957
+And this is now the position vector which we have called R of T.
+
+350
+38:54,917 --> 38:56,417
+That's this vector.
+
+351
+38:59,547 --> 39:02,937
+That's the vector that is moving through space.
+
+352
+39:03,847 --> 39:09,567
+At this moment in time, X of T
+is here.
+
+353
+39:10,247 --> 39:17,407
+And at this moment in time, Y of T
+is here.
+
+354
+39:19,677 --> 39:25,167
+And now you're going to see for the first time
+a big gain
+
+355
+39:26,027 --> 39:33,737
+by the way that we have divided the
+two axes, which live an independent life.
+
+356
+39:33,897 --> 39:34,747
+First X.
+
+357
+39:35,517 --> 39:44,717
+I want to know everything about X that has to be known.
+I want to know where it is at any moment in time,
+velocity and the acceleration only in X.
+
+358
+39:46,317 --> 39:48,847
+First, I want to know that at T equals zero.
+
+359
+39:51,017 --> 39:53,297
+Well, at T equals zero, I look there.
+
+360
+39:53,817 --> 40:01,167
+X0, that's the I can choose that to be zero.
+So I can say X0 is zero, that's my free choice.
+
+361
+40:02,287 --> 40:05,007
+Now I need V0 X. What is the velocity?
+
+362
+40:05,417 --> 40:14,077
+The velocity at T equals zero, which we have called V0 X
+is this velocity, V0 cosine alpha.
+
+363
+40:15,237 --> 40:18,317
+And is not going to change.
+
+364
+40:18,597 --> 40:23,047
+Why is it not going to change? Because there is no A of X.
+
+365
+40:23,577 --> 40:33,267
+So this term here is zero. We only have this one.
+So at all moments in time, the velocity in the X direction is V0
+cosine alpha.
+
+366
+40:33,947 --> 40:37,257
+And the A of X equals zero.
+
+367
+40:41,187 --> 40:46,207
+Now, I want to do the same in the X direction
+for time T.
+
+368
+40:47,657 --> 40:49,687
+Well, at time T,
+
+369
+40:50,467 --> 40:52,557
+I look there at the first equation.
+
+370
+40:53,937 --> 40:55,207
+Uh, there it is.
+
+371
+40:55,517 --> 40:56,807
+X0 is zero.
+
+372
+40:57,117 --> 41:09,317
+I know V0 X, that is V0 cosine alpha.
+So X of T is V0 cosine alpha times T.
+But there is no acceleration.
+
+373
+41:09,807 --> 41:10,897
+So that's it.
+
+374
+41:11,357 --> 41:17,847
+What is Vx of T? The velocity in the X direction
+at any moment in time.
+
+375
+41:18,287 --> 41:22,277
+That's that that that is that equation. That is simply V0 X.
+
+376
+41:22,547 --> 41:24,007
+It is not changing in time.
+
+377
+41:24,577 --> 41:31,927
+because there is no acceleration. So the initial velocity
+at T0 is the same as T seconds later.
+
+378
+41:32,277 --> 41:33,637
+And the acceleration is zero.
+
+379
+41:34,117 --> 41:38,947
+Now, we're going to do this for the Y direction.
+
+380
+41:40,157 --> 41:44,047
+And now you begin to see the gain for the decomposition.
+
+381
+41:45,077 --> 41:48,867
+In the Y direction, we change the X by a Y.
+
+382
+41:50,017 --> 41:52,297
+And so we do it first at T equals zero.
+
+383
+41:53,627 --> 41:55,107
+So look there.
+
+384
+41:55,437 --> 41:57,607
+This becomes Y0, I call that zero.
+
+385
+41:58,027 --> 42:03,387
+I can always call my origin zero. I get V0 Y * T.
+
+386
+42:04,167 --> 42:08,947
+Well, V0 Y is this quantity, is V0 sin alpha.
+
+387
+42:11,127 --> 42:17,217
+V0 sin alpha. This is V0 sin alpha.
+
+388
+42:17,547 --> 42:27,357
+That is the velocity at time zero and this is zero.
+At time zero, this is zero at time zero.
+
+389
+42:27,827 --> 42:34,077
+What is the acceleration in the Y direction at time zero?
+
+390
+42:34,637 --> 42:37,367
+What is the acceleration? That has to do with gravity.
+
+391
+42:38,117 --> 42:40,437
+There is no acceleration in the X direction.
+
+392
+42:40,917 --> 42:43,097
+But you better believe it there is one in the Y direction.
+
+393
+42:43,647 --> 42:47,337
+So only when we deal with the Y equations does this acceleration come in.
+
+394
+42:47,907 --> 42:49,837
+Not at all when we deal with the X direction.
+
+395
+42:51,077 --> 43:02,467
+Well, if we call the acceleration due to gravity G
+equals plus 9.80 and I always call it G,
+what would be the acceleration in the Y direction?
+
+396
+43:02,467 --> 43:06,247
+Given the fact that I call this increasing value of Y.
+
+397
+43:06,497 --> 43:07,277
+-G"
+
+398
+43:08,337 --> 43:09,127
+"Negative G"
+
+399
+43:09,477 --> 43:16,087
+Minus 9.8, which I will also say
+always call minus G because my G is always positive.
+
+400
+43:16,807 --> 43:18,907
+So it is minus G.
+
+401
+43:19,817 --> 43:23,847
+So that tells the story at T equals zero in the Y direction.
+
+402
+43:24,377 --> 43:27,717
+And now we have to complete it at time T equals T.
+
+403
+43:29,177 --> 43:33,947
+At time T equals T, we have the first line there.
+
+404
+43:34,477 --> 43:35,917
+Y0 is zero.
+
+405
+43:36,197 --> 43:48,497
+So we have Y as a function of time. Y0 is zero.
+So we don't have to work with that. So I get V0 Y times T.
+
+406
+43:48,877 --> 44:03,017
+So I get V0 sin alpha times T
+plus 1/2 but it is minus 1/2 GT squared.
+
+407
+44:03,547 --> 44:16,447
+And now I get the velocity in the Y direction at time T,
+that is my second line. That is going to be V0
+sin alpha minus GT.
+
+408
+44:17,297 --> 44:22,497
+And the acceleration in the Y direction at any moment in time
+equals minus G.
+
+409
+44:23,247 --> 44:33,807
+And now I have done all I can to completely decompose
+this complicated motion into two entirely independent one-dimensional motions.
+
+410
+44:34,317 --> 44:39,557
+And the next lecture, we're going to use this again and again and again and again.
+
+411
+44:39,767 --> 44:51,737
+This lecture is not over yet, but I want you to know that this is what we're going to apply
+for many lectures to come, the decomposition of a complicated
+trajectory into two simple ones.
+
+412
+44:52,877 --> 44:56,577
+Now when you look at this, there is something quite remarkable.
+
+413
+44:57,007 --> 45:06,557
+And the remarkable thing is that the velocity in the X direction
+throughout this whole trajectory, if there is no air drag, if there is no friction, is not changing.
+
+414
+45:07,167 --> 45:10,327
+It's only the velocity in the Y direction that is changing.
+
+415
+45:11,007 --> 45:18,297
+It means if I throw up this golf ball, I throw it up like this,
+and it has a certain component in X direction, a certain velocity.
+
+416
+45:18,667 --> 45:26,217
+If I move myself with exactly that same velocity,
+with exactly the same horizontal velocity, I could catch the ball here.
+
+417
+45:26,777 --> 45:29,597
+It would it would have to come back exactly in my hands.
+
+418
+45:30,177 --> 45:39,027
+That is because there is only an acceleration in the Y direction,
+but the motion in the Y direction is completely independent of the X direction.
+
+419
+45:39,567 --> 45:42,907
+The X direction doesn't even know what's going on in the Y direction.
+
+420
+45:43,207 --> 45:51,477
+In the X direction, if I throw an object like this,
+the X direction simply very boringly moves with a constant velocity.
+
+421
+45:52,177 --> 45:54,977
+There is no time dependence.
+
+422
+45:55,407 --> 46:01,887
+And the Y direction on its own does its own thing. It goes up,
+comes to a halt and it stop.
+
+423
+46:02,577 --> 46:07,617
+And of course, the actual motion is the sum, the superposition of the two.
+
+424
+46:08,597 --> 46:17,367
+We have tried to find a way to demonstrate this quite bizarre
+behavior, which is not so intuitive that the X direction really lives a life of its own.
+
+425
+46:21,647 --> 46:27,647
+And the way we want to do that
+is as follows.
+
+426
+46:28,567 --> 46:36,947
+We have here a golf ball, a
+gun, we can shoot up the golf ball.
+
+427
+46:37,557 --> 46:45,417
+And we do that in such a way that the
+golf ball, if we do it correctly, exactly comes back here.
+
+428
+46:45,987 --> 46:49,527
+That's not easy. That takes hours and hours of adjustment.
+
+429
+46:50,427 --> 46:54,847
+The golf ball goes up and comes back here.
+
+430
+46:55,347 --> 46:58,047
+Not here, not here, not there. That's easy.
+
+431
+46:58,307 --> 47:01,807
+You can shoot it up a little at an angle and the golf ball will come back here.
+
+432
+47:03,177 --> 47:06,897
+Once we have achieved that that the golf ball will come back there,
+
+433
+47:07,827 --> 47:11,007
+then I'm going to give this car a push.
+
+434
+47:11,897 --> 47:16,547
+And the moment that it passes through this switch,
+the golf ball will fire.
+
+435
+47:17,197 --> 47:21,667
+So the golf ball will go straight up
+as seen from the car.
+
+436
+47:22,207 --> 47:27,677
+But it has an horizontal velocity which is exactly the same horizontal velocity as the car.
+
+437
+47:27,947 --> 47:34,227
+So the car is like my hand, as the golf ball goes like this,
+the car stays always exactly under the golf ball.
+
+438
+47:34,917 --> 47:42,667
+Always exactly under the golf ball, and if all works well,
+the ball ends up exactly on the car again.
+
+439
+47:43,887 --> 47:53,367
+Let me first show you, otherwise, if that doesn't work, of course, it's all over,
+that if we shoot the ball straight up, that it comes back here.
+
+440
+47:53,667 --> 47:57,847
+If it doesn't do that, I don't even have to try this
+more complicated experiment.
+
+441
+47:59,457 --> 48:02,627
+So here's the golf ball. I'm going to fire the gun now.
+
+442
+48:03,937 --> 48:04,687
+Close.
+
+443
+48:06,227 --> 48:08,147
+Close.
+
+444
+48:09,747 --> 48:12,217
+Reasonably close.
+
+445
+48:13,107 --> 48:15,937
+Well, since it's only reasonably close,
+
+446
+48:16,497 --> 48:18,067
+Perhaps
+
+447
+48:22,447 --> 48:26,017
+Perhaps it would help if we give it a little bit
+of leeway.
+
+448
+48:26,547 --> 48:28,037
+There goes the gun.
+
+449
+48:30,567 --> 48:32,897
+Here comes the ball.
+
+450
+48:35,607 --> 48:39,307
+And this is just in case.
+
+451
+48:43,887 --> 48:45,027
+Tape it down.
+
+452
+48:46,607 --> 48:50,497
+So as I'm going to push this now,
+
+453
+48:50,867 --> 48:57,417
+Give it a push. The gun will be triggered
+when the middle of the car is here.
+
+454
+48:58,127 --> 49:02,747
+You've seen how high that ball goes. So that ball will go.
+
+455
+49:02,917 --> 49:08,307
+And depending upon how hard I push it, they may meet here
+or they may meet there.
+
+456
+49:11,307 --> 49:13,517
+You ready for this?
+
+457
+49:14,237 --> 49:15,237
+You ready?
+
+458
+49:15,567 --> 49:16,167
+Yes.
+
+459
+49:16,437 --> 49:17,107
+I'm ready.
+
+460
+49:17,397 --> 49:21,747
+(Sound of cart rolling and ball firing)
+Physics works.
+
+461
+49:25,367 --> 49:26,527
+See you Wednesday.

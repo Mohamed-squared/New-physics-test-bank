@@ -1,0 +1,1926 @@
+1
+00:00:00,687 --> 00:07,997
+Today we're going to talk about springs, about pendulums and about simple harmonic oscillators.
+
+2
+00:08,227 --> 00:11,557
+One of the key topics in 801.
+
+3
+00:12,517 --> 00:16,177
+If I have a spring,
+
+4
+00:17,157 --> 00:20,567
+and this is the relaxed length of the string, spring.
+
+5
+00:21,037 --> 00:23,087
+I call that x = 0.
+
+6
+00:23,817 --> 00:27,927
+And I extend the string, the spring with a P.
+
+7
+00:28,337 --> 00:35,407
+Then there is a force that wants to drive this spring back to equilibrium.
+
+8
+00:36,157 --> 00:42,507
+And it is an experimental fact that many springs, we call them ideal springs,
+
+9
+00:43,097 --> 00:49,507
+for many springs, this force is proportional to the displacement X.
+
+10
+00:50,377 --> 00:52,037
+So if this is X,
+
+11
+00:53,167 --> 00:58,657
+If you make X three times larger, that restoring force is three times larger.
+
+12
+00:59,867 --> 01:11,117
+This is a one-dimensional problem, so to avoid the vector notation, we can simply say that the force, therefore, is minus a certain constant, which we call the spring constant.
+
+13
+01:11,447 --> 01:13,447
+This is called the spring constant.
+
+14
+01:14,397 --> 01:18,097
+And the spring constant has units Newtons per meter.
+
+15
+01:18,907 --> 01:22,267
+So the minus sign takes care of the direction.
+
+16
+01:22,727 --> 01:30,027
+When X is positive, then the force is in the negative direction. When F is negative, the force is in the positive direction.
+
+17
+01:30,747 --> 01:32,507
+It is a restoring force.
+
+18
+01:33,477 --> 01:42,187
+Whenever this linear relation between F and X holds, that is referred to as Hook's law.
+
+19
+01:44,047 --> 01:47,567
+How can we measure the spring constant?
+
+20
+01:48,197 --> 01:50,317
+That's actually not too difficult.
+
+21
+01:50,997 --> 01:57,947
+I can use gravity. Here is the spring in its relaxed situation.
+
+22
+01:58,317 --> 02:07,237
+I hang on the spring a mass M, and I make use of the fact that gravity now exerts a force on the spring,
+
+23
+02:07,747 --> 02:16,457
+and when you have a new equilibrium, this is the new equilibrium position, then the spring force, of course, must be exactly the same as mg.
+
+24
+02:16,757 --> 02:19,667
+There's no acceleration when the thing is at rest.
+
+25
+02:19,897 --> 02:28,777
+And so I could now make a plot whereby I could have here X, and I could have here this force F, which I know because I know the masses.
+
+26
+02:29,357 --> 02:33,317
+I can change the masses, I can go through a whole lot of them.
+
+27
+02:33,757 --> 02:38,537
+And you will see data points which scatter around a straight line.
+
+28
+02:39,637 --> 02:50,117
+And the spring constant follows then if you take, if you call this delta F, and you call this delta X,
+
+29
+02:50,797 --> 02:56,427
+then the spring constant K is delta F divided by delta X.
+
+30
+02:56,617 --> 03:02,417
+So you can even measure it, you don't have to start necessarily at this point where the spring is relaxed.
+
+31
+03:02,647 --> 03:06,407
+You could already start when the spring is already under tension.
+
+32
+03:06,607 --> 03:08,667
+That is not a problem.
+
+33
+03:10,567 --> 03:16,477
+You'd be surprised how many springs really behave very nicely according to Hook's law.
+
+34
+03:17,367 --> 03:27,547
+Uh, I have one here. That's not a very expensive spring. You see it here, and there is here holder onto it, so it's already a little bit under stress.
+
+35
+03:27,957 --> 03:29,367
+That doesn't make any difference.
+
+36
+03:30,237 --> 03:33,127
+These marks here are 13 cm apart.
+
+37
+03:33,427 --> 03:39,537
+And every time that I put 1 kg on, you will see that it goes down by roughly 13 cm.
+
+38
+03:40,327 --> 03:42,057
+It goes down to this mark.
+
+39
+03:42,637 --> 03:46,307
+I put another kilogram on, goes down to this mark.
+
+40
+03:47,437 --> 03:52,097
+I put another kilogram on and it goes back to this mark.
+
+41
+03:53,117 --> 03:54,177
+All the way down.
+
+42
+03:54,527 --> 03:58,537
+And if I take them all off, so what I've done is I effectively went along this curve.
+
+43
+03:58,837 --> 04:05,147
+And if I take them off, if it is an ideal spring, then it goes back to its original length.
+
+44
+04:06,447 --> 04:07,397
+And which it does.
+
+45
+04:07,837 --> 04:12,667
+That's a requirement, of course, for an ideal spring, if it behaves according to Hook's law.
+
+46
+04:13,537 --> 04:16,107
+Now, I can of course overdo things.
+
+47
+04:16,537 --> 04:22,637
+I can take a spring like this one and stretch it to the point that it no longer behaves like Hook's law.
+
+48
+04:23,207 --> 04:24,637
+I can damage it.
+
+49
+04:25,477 --> 04:29,127
+Uh, I can do permanent deformation.
+
+50
+04:29,887 --> 04:35,447
+Look, that's easy. For sure Hook's law is no longer acting.
+
+51
+04:35,717 --> 04:38,237
+Look how much longer this spring is than it was before.
+
+52
+04:38,657 --> 04:45,237
+So there comes of course a limit how far you can go before you permanently deform the spring.
+
+53
+04:45,697 --> 04:54,637
+What I have done now with that spring, probably in the beginning, I went up along this straight line, and then something like this must have happened.
+
+54
+04:55,097 --> 04:58,517
+I got a huge extension. My force did not increase very much.
+
+55
+04:58,827 --> 05:04,667
+And then when I relaxed, when I took my force off, this spring was longer at the end than it was at the beginning.
+
+56
+05:05,127 --> 05:08,577
+So I have a net extension which will always be there.
+
+57
+05:08,877 --> 05:12,387
+And that's not very nice, of course, to do that to a spring.
+
+58
+05:12,717 --> 05:15,257
+So Hook's law holds only within certain limitations.
+
+59
+05:15,587 --> 05:19,247
+You have to obey a certain amount of discipline.
+
+60
+05:19,887 --> 05:25,917
+There are ways that you can also measure the spring constant in a dynamic way,
+
+61
+05:26,347 --> 05:28,367
+which is actually very interesting.
+
+62
+05:29,377 --> 05:34,297
+Um, I have here a spring.
+
+63
+05:35,007 --> 05:38,407
+And this spring, this is X equals 0.
+
+64
+05:38,957 --> 05:46,297
+And I attach now to the spring a mass M. This has to be on a frictionless surface.
+
+65
+05:46,767 --> 05:57,367
+And you will see when I extend it over a distance X, that you get your force, your spring force, that drives it back.
+
+66
+05:57,807 --> 06:04,077
+We have, of course, gravity, mg, and we have the normal force from the surface.
+
+67
+06:04,387 --> 06:11,497
+So there is in the in the Y direction, there is no acceleration, so I don't have to worry about the forces in the Y direction at all.
+
+68
+06:12,457 --> 06:18,657
+If I let this thing oscillate, I let I release it, it will start to oscillate about this point back and forth.
+
+69
+06:18,967 --> 06:32,737
+Then, as I will show you now, you will find that the period of oscillation, the time for one whole oscillation is 2 pi times the square root of the mass M divided by the spring constant K.
+
+70
+06:33,777 --> 06:35,547
+I will derive that. You will see that shortly.
+
+71
+06:35,777 --> 06:41,617
+In other words, if you measured the period and you knew the mass, then you can calculate K.
+
+72
+06:42,017 --> 06:50,157
+Alternatively, if you knew K, and you measure the period, you can calculate the mass, even in the absence of gravity.
+
+73
+06:50,447 --> 06:57,507
+I don't use gravity here. So a spring always allows you to measure a mass even in the absence of gravity.
+
+74
+06:58,057 --> 07:05,747
+The period that you see, the time that it takes for this object to oscillate once back and forth,
+
+75
+07:06,337 --> 07:13,227
+is completely independent of how far I move it out, which is very non-intuitive, but you will see that that comes out of the derivation.
+
+76
+07:13,667 --> 07:16,397
+There is no dependence on how far I move it out.
+
+77
+07:16,597 --> 07:24,317
+So whether I oscillate it like this, or whether I oscillate it like this, as long as Hook's law holds,
+
+78
+07:24,517 --> 07:29,377
+you will see that the period is independent of what we call that amplitude.
+
+79
+07:30,117 --> 07:33,317
+So I'm going to derive the situation now for an ideal case.
+
+80
+07:33,617 --> 07:36,007
+Ideal case means Hook's law must hold.
+
+81
+07:36,357 --> 07:44,577
+There is no friction and the spring itself has negligible mass compared to this one. Let's call it a massless spring.
+
+82
+07:45,727 --> 07:54,617
+So now I'm going to write down Newton's second law. MA, which is all in the X direction equals - kX.
+
+83
+07:55,447 --> 08:07,367
+A is the second derivative of position, for which I will write X double dot mx double dot. One dot is the first derivative, that's the velocity, two dots is the acceleration.
+
+84
+08:07,667 --> 08:17,537
+plus kx = 0. I divide by M and I get X double dot plus k over M times X = 0.
+
+85
+08:18,327 --> 08:24,437
+And this is arguably the most important equation in all of physics.
+
+86
+08:25,667 --> 08:30,907
+It's a differential equation. Some of you may already have solved differential equations.
+
+87
+08:31,447 --> 08:48,547
+The outcome of this, you will see is very simple. X is of course changing in some way as a function of time, and when you have the correct solution for X as a function of time, and you substitute that back into that differential equation, that equation will have to be satisfied.
+
+88
+08:49,507 --> 08:53,707
+What would a solution be to this differential equation?
+
+89
+08:54,357 --> 08:58,077
+I'm going to make you see this oscillation first.
+
+90
+08:58,357 --> 09:04,127
+I'm going to make you see X as a function of time and I'm going to do that in the following way.
+
+91
+09:04,647 --> 09:11,217
+I have here a spray paint can which is suspended between two springs.
+
+92
+09:11,737 --> 09:17,667
+And I can oscillate it vertically, which is your X direction, like that.
+
+93
+09:18,587 --> 09:20,937
+So X changes with time.
+
+94
+09:21,337 --> 09:28,417
+The time axis I will introduce by pulling on this string when the spray paint is going to spray.
+
+95
+09:28,697 --> 09:38,477
+I'm going to pull on that string and if I can do that at a constant speed, then you get horizontally a time axis, and of course vertically vertically you will get the position of X.
+
+96
+09:38,807 --> 09:48,507
+So I want you to just see qualitatively what kind of a weird curve X as a function of time is, which then will have to satisfy that differential equation.
+
+97
+09:49,337 --> 09:57,587
+All right, it's always a messy experiment because the paint is dripping, but I will try to get this spray paint going. There we go.
+
+98
+09:59,037 --> 10:00,307
+Okay.
+
+99
+10:01,127 --> 10:05,287
+Now I'll pull.
+
+100
+10:06,237 --> 10:06,717
+All right.
+
+101
+10:07,447 --> 10:08,507
+Can you give me a hand?
+
+102
+10:10,647 --> 10:11,757
+Yeah, could you please?
+
+103
+10:12,357 --> 10:15,137
+I'll cut it here and then you
+
+104
+10:16,567 --> 10:19,667
+Be very careful because it's it is messy.
+
+105
+10:21,737 --> 10:24,007
+Oh, let's put it let's take it out this way.
+
+106
+10:24,427 --> 10:28,867
+Okay, just walk back. Just walk. Yeah, great.
+
+107
+10:30,947 --> 10:36,227
+Yeah, hold up the top so that they can see it. Fine.
+
+108
+10:37,527 --> 10:37,977
+Okay.
+
+109
+10:39,547 --> 10:42,227
+What is what does it remind you of?
+
+110
+10:43,447 --> 10:44,337
+Sinusoid.
+
+111
+10:44,807 --> 10:46,527
+Reminds me of a cosine sinusoid, by the way.
+
+112
+10:47,107 --> 10:49,517
+Sinusoid or a cosine, same thing.
+
+113
+10:50,127 --> 10:54,117
+All right. Well let's try to substitute in that equation
+
+114
+10:54,717 --> 11:01,157
+a sinusoid or a cosine solution, whichever one you prefer, makes no difference.
+
+115
+11:01,737 --> 11:15,347
+So, I'm going to substitute in this equation, this is my trial function that X as a function of time is a constant A, I will get back to that in a minute, times cosine omega t plus phi.
+
+116
+11:15,977 --> 11:19,957
+This A, we call the amplitude.
+
+117
+11:20,547 --> 11:25,887
+Notice the cosine function it's the highest value is plus one and the lowest value is minus one.
+
+118
+11:26,287 --> 11:35,507
+So the amplitude indicates that is the farthest displacement from zero on this side would be plus A and on this side would be minus A.
+
+119
+11:35,877 --> 11:36,817
+So that's in meters.
+
+120
+11:37,907 --> 11:44,157
+This omega, we call the angular frequency.
+
+121
+11:44,657 --> 11:47,317
+Don't confuse it with angular velocity.
+
+122
+11:47,897 --> 11:53,567
+We call it angular frequency and the units are the same. The units are in radians per second.
+
+123
+11:54,057 --> 11:55,867
+The same as angular velocity.
+
+124
+11:57,397 --> 12:07,577
+If I advance this time little T, if I advance that by 2 pi divided by omega,
+
+125
+12:08,537 --> 12:19,137
+If I advance this time by 2π divided by omega, then this angle here increases by 2π radians, which is 360°.
+
+126
+12:19,547 --> 12:22,617
+And so that's the time that it takes for the oscillation to repeat itself.
+
+127
+12:23,477 --> 12:28,367
+So this is the period of the oscillation, and that is in seconds.
+
+128
+12:29,207 --> 12:38,247
+And you can determine if you want to, you can define the frequency of the oscillation, which is 1 over T, which we express always in terms of hertz.
+
+129
+12:38,817 --> 12:46,447
+And then here we have what we call the phase angle, and I will return to that, that's in radiance.
+
+130
+12:46,867 --> 12:52,477
+And this trial function, I'm going to substitute now into this equation.
+
+131
+12:52,977 --> 13:00,407
+So the first thing I have to do, I have to find what the second derivative is of X as a function of time.
+
+132
+13:02,197 --> 13:03,727
+Well, that's my function.
+
+133
+13:04,427 --> 13:09,077
+I have here first the first derivative, X dot.
+
+134
+13:10,147 --> 13:14,417
+That becomes minus A omega.
+
+135
+13:14,697 --> 13:19,547
+I get an omega out because there's a time here, and now I have to take the derivative of the function itself.
+
+136
+13:19,927 --> 13:24,477
+So I get the sign of omega t plus phi.
+
+137
+13:25,237 --> 13:29,607
+Of course, I could have started off here with the sine curve. I hope you realize that. I just picked the cosine one.
+
+138
+13:30,547 --> 13:35,187
+X double dot. Now, I get another omega out.
+
+139
+13:35,587 --> 13:44,537
+So I get minus A omega squared, the derivative of the sine is the cosine, cosine omega t plus phi.
+
+140
+13:45,277 --> 13:54,487
+And that is also minus omega squared times X, because notice I have A cosine omega t plus phi, which itself is X.
+
+141
+13:55,367 --> 14:00,787
+So now I'm ready to substitute this result into that differential equation.
+
+142
+14:01,727 --> 14:06,527
+This must always hold for any value of X, for any moment in time.
+
+143
+14:07,227 --> 14:11,677
+And therefore the only way that this can work is if omega square is k over M.
+
+144
+14:12,237 --> 14:15,957
+So omega square must be k over M.
+
+145
+14:16,767 --> 14:20,567
+And therefore, we now have the solution to this problem.
+
+146
+14:21,657 --> 14:27,107
+So we have omega equals the square root of k over M.
+
+147
+14:27,407 --> 14:32,537
+And the period is 2 pi times the square root of M over K.
+
+148
+14:33,987 --> 14:40,177
+And what is striking, really remarkable that this is independent of the amplitude.
+
+149
+14:40,527 --> 14:44,317
+And it's also independent of this angle phi, this phase angle.
+
+150
+14:44,737 --> 14:46,927
+What is this business of this phase angle?
+
+151
+14:47,307 --> 14:49,417
+It's a peculiar thing that we have there.
+
+152
+14:49,777 --> 14:51,967
+Well, you can think about the physics actually.
+
+153
+14:52,667 --> 15:05,017
+When I start this oscillation, I have a choice of two things. I can start it off at a certain position, which I can choose. I can give it a certain displacement from zero and simply let it go.
+
+154
+15:05,587 --> 15:10,117
+But I can also, when I let it go, give it a certain velocity. That's my choice.
+
+155
+15:10,427 --> 15:14,517
+So I have two choices, where I let it go and what velocity I give it.
+
+156
+15:14,857 --> 15:28,407
+And that is reflected in my solution, namely that ultimately in the solution, I get the result of A and the result of phi, which doesn't determine the period, but it results from what we call my initial conditions.
+
+157
+15:28,897 --> 15:37,327
+And I want to do an example whereby you see how A and phi immediately follow from the initial conditions.
+
+158
+15:37,817 --> 15:44,257
+So in this example, I release the object at x = 0 at t = 0.
+
+159
+15:44,697 --> 15:46,697
+So I release it at equilibrium.
+
+160
+15:47,237 --> 15:52,167
+At that moment in time, I give it a velocity which is - 3 m per second.
+
+161
+15:52,487 --> 15:54,327
+My units are always in MKS units.
+
+162
+15:54,717 --> 15:59,177
+The spring constant K equals 10 Newtons per meter.
+
+163
+15:59,657 --> 16:03,077
+And the mass of the object is 0.1 kg.
+
+164
+16:04,067 --> 16:11,267
+And now I can ask you, what now is X as a function of time, including the amplitude A, including the phase angle phi.
+
+165
+16:12,047 --> 16:19,187
+Well, let's first calculate omega, that is the square root of K over M.
+
+166
+16:19,877 --> 16:24,157
+That would be 10 radians per second.
+
+167
+16:24,597 --> 16:35,037
+The period T, which is 2 pi divided by omega, would be roughly 6.28 seconds.
+
+168
+16:35,667 --> 16:41,537
+And the frequency F would be about 0.16 hertz.
+
+169
+16:42,607 --> 16:44,437
+Just to get some numbers.
+
+170
+16:45,147 --> 16:46,617
+1.6 hertz, sorry.
+
+171
+16:47,427 --> 16:56,387
+This is not my day, this is 0. 628 and this is 1.6 hertz.
+
+172
+16:57,497 --> 17:04,567
+2π divided by omega, you can see, this is 10, 6 divided by 10 is about 0.6.
+
+173
+17:05,677 --> 17:10,747
+All right, so now I know that at T equals 0, X equals 0.
+
+174
+17:11,447 --> 17:13,847
+So I see my solution right there.
+
+175
+17:14,547 --> 17:18,657
+Right here, I put in T equals 0, and I know that X is 0.
+
+176
+17:18,987 --> 17:24,627
+So I get 0 equals A times the cosine of phi.
+
+177
+17:25,777 --> 17:27,907
+Well, A is not zero.
+
+178
+17:28,507 --> 17:33,187
+If I release that thing at equilibrium and I give it a velocity of 3 m per second, it's going to oscillate.
+
+179
+17:33,487 --> 17:34,327
+So A is not zero.
+
+180
+17:34,787 --> 17:44,237
+So the only solution is that cosine phi is zero, and so that leaves me with phi is pi over 2 or pi is 3 pi. phi is 3 pi over 2.
+
+181
+17:44,867 --> 17:46,837
+That's the only two possibilities."
+
+182
+17:47,267 --> 17:52,047
+Now I go to my next initial condition that the velocity is - 3.
+
+183
+17:52,497 --> 17:54,517
+Now here you see the equation for the velocity.
+
+184
+17:55,017 --> 17:58,137
+This is minus 3 at T equals 0.
+
+185
+17:58,617 --> 18:07,197
+So minus 3 equals minus A and A is we don't know yet, minus A.
+
+186
+18:07,507 --> 18:15,547
+And there we have omega squared omega, sorry, which is 10. T is zero, I get the sign of phi.
+
+187
+18:18,817 --> 18:27,607
+If I pick pi over 2, then the sign of phi is one, and so you find immediately that A equals plus 0.3.
+
+188
+18:28,227 --> 18:33,347
+And so the solution now, which includes now phi and A, is that X
+
+189
+18:33,767 --> 18:43,877
+equals + 0.3 times the cosine of omega, which is 10t + pi over 2.
+
+190
+18:44,537 --> 18:52,647
+So you see that the initial conditions, what the conditions are T equals zero, they determine my A and they determine my phase angle.
+
+191
+18:52,917 --> 19:03,487
+If you had chosen this as the phase angle, 3 pi over 2, that would have been fine, you would have found a minus sign here, and that's exactly the same.
+
+192
+19:03,817 --> 19:06,567
+So you would have found nothing different.
+
+193
+19:08,337 --> 19:21,887
+I want to demonstrate to you that the period of oscillations, non-intuitive as that may be, is independent of the amplitude that I give the object.
+
+194
+19:22,357 --> 19:24,497
+And I want to do that here with this air track.
+
+195
+19:25,317 --> 19:27,027
+I have a an object here.
+
+196
+19:27,927 --> 19:36,347
+This object has a mass 180 6 plus or minus 1 gram.
+
+197
+19:38,177 --> 19:45,047
+call it M1.
+
+198
+19:45,837 --> 19:48,967
+I'm going to oscillate it and we're going to measure the period.
+
+199
+19:49,437 --> 19:58,547
+But instead of measuring one period, I'm going to measure 10 periods, because that gives me a smaller uncertainty, a smaller relative error in my measurement.
+
+200
+19:58,767 --> 20:05,277
+So I'm going to do it as an amplitude which is 15 cm, let's make it 20 cm.
+
+201
+20:05,987 --> 20:08,037
+So I get 10 T.
+
+202
+20:08,347 --> 20:13,577
+I get a certain number and I get an error, which is my reaction error, which is about a 10th of a second.
+
+203
+20:14,627 --> 20:17,597
+That's about the reaction error that we all have roughly.
+
+204
+20:17,867 --> 20:25,817
+Then I will do it at 40 cm. We get a 10 T and we get again plus or minus one 0.1 seconds.
+
+205
+20:26,557 --> 20:30,217
+And we'll see how much they differ.
+
+206
+20:30,617 --> 20:35,357
+They should be the same if this is an ideal spring within the uncertainty of my measurements.
+
+207
+20:35,767 --> 20:37,367
+You see the timing there.
+
+208
+20:38,317 --> 20:44,257
+I'm going to give it a 20 cm offset, which is here, and then I will start it when it comes back here.
+
+209
+20:44,527 --> 20:50,417
+So I will allow it one oscillation first. That's easier for me to see it stand still when I start it.
+
+210
+20:50,857 --> 20:51,547
+There we go.
+
+211
+20:53,587 --> 21:08,197
+One, two, three, four, five, 6, 7, 8, 9, 10.
+
+212
+21:09,237 --> 21:10,817
+What do we see?
+
+213
+21:12,287 --> 21:13,367
+15.16.
+
+214
+21:15,197 --> 21:18,427
+15 16 seconds.
+
+215
+21:18,657 --> 21:24,157
+By the way, you can derive the spring constant from this now, because you know the mass and you know the time.
+
+216
+21:24,847 --> 21:29,487
+Now I'm going to give it in displacement, an amplitude, which is twice as high.
+
+217
+21:30,147 --> 21:31,757
+So I make it 40 cm.
+
+218
+21:32,637 --> 21:37,687
+So this is 10 40 cm, a huge displacement.
+
+219
+21:38,827 --> 21:54,527
+Now, 1 2 3 4 5 6 7 8 9 10.
+
+220
+21:55,697 --> 21:56,827
+15.13.
+
+221
+21:58,647 --> 22:05,997
+Fantastic agreement within the uncertainty of my measurements. They're within 300 of a second.
+
+222
+22:06,297 --> 22:14,587
+Of course, if you try it many times, you won't always get that close because my reaction time is really not much better than a 10th of a second.
+
+223
+22:16,177 --> 22:26,517
+Now, I will show you something else, which is quite interesting and that is how the behavior of the period is on the on the mass of the object.
+
+224
+22:27,847 --> 22:32,187
+I have here another car, which weighs roughly the same.
+
+225
+22:32,677 --> 22:40,517
+Uh, I'm going to add the two together and so we get M2 is about 372 plus or minus 1 gram.
+
+226
+22:40,827 --> 22:48,957
+The plus or minus one comes in because our scale is no more accurate than 1 g. So we put them both on the scale and we find this to be the uncertainty.
+
+227
+22:50,207 --> 22:59,417
+So now, I'm going to measure the 10 periods of this object which mass M2, so twice the mass.
+
+228
+22:59,817 --> 23:10,197
+So that should be the square root of m2 divided by m1 times 10 times the period of m1.
+
+229
+23:10,877 --> 23:16,227
+And so I can make a prediction because this is the square root of two and I know what this is.
+
+230
+23:16,927 --> 23:18,867
+So I will take my calculator.
+
+231
+23:19,737 --> 23:28,177
+And I will take the square root of 2 and I multiply that by uh let's take 15.15.
+
+232
+23:29,547 --> 23:38,197
+And so that comes out to be 21.42. It's not clear that this two is meaningful.
+
+233
+23:38,467 --> 23:46,197
+And now comes the $64 question, what is the uncertainty? This is a prediction.
+
+234
+23:47,557 --> 23:49,227
+And this now becomes a little tricky.
+
+235
+23:49,697 --> 23:55,537
+So what I'm telling you now may confuse you a bit, it's not meant to be, but I really won't hold you responsible for it."
+
+236
+23:55,967 --> 24:04,237
+You may now think that the uncertainty in this measurement follows from the uncertainty in this, which is true, which is about 0.6%.
+
+237
+24:04,547 --> 24:10,137
+And from the uncertainty in this. So this has about an uncertainty of 0.6%.
+
+238
+24:10,517 --> 24:16,207
+I got it low because I measured 10 oscillations, you see? The uncertainty is only 1 out of 150, which is low.
+
+239
+24:17,227 --> 24:26,777
+You may think that the uncertainty in there equals the square root of 372 plus or minus 1 divided by 186 plus or minus 1.
+
+240
+24:27,547 --> 24:41,557
+And now you may argue, and that's completely reasonable that you would argue that way, you would say, well, this is roughly a quarter of a percent error here under the square root, and this is roughly half a percent error, one out of 200 is about half.
+
+241
+24:41,877 --> 24:50,517
+So you would add up the two errors, a quarter plus half, that's about 0.7, and because of the square root, that becomes 0.35%.
+
+242
+24:50,777 --> 24:53,277
+And that's wrong. And the reason why that is completely wrong,"
+
+243
+24:53,647 --> 24:58,467
+that has to do with the fact that these two errors are coupled to each other.
+
+244
+24:58,817 --> 25:03,097
+See, we the 186 is included in the 372.
+
+245
+25:03,717 --> 25:14,467
+The best way I can show you this, suppose I measured m1 divided by m1, which would be 186 plus or minus 1 divided by 186 plus or minus 1.
+
+246
+25:14,907 --> 25:21,647
+That number is one with 100 zeros. This number is one. You you have the mass of one object, you divided by the same object.
+
+247
+25:21,897 --> 25:28,807
+Whereas if you would say, ah, this is a half a percent error, and this is a half a percent error, you would say the ratio has an error of 1% and that's not the case.
+
+248
+25:29,587 --> 25:33,217
+So I will not bother you with that. I will not hold you responsible for that.
+
+249
+25:33,537 --> 25:40,507
+But it turns out that if you do it correctly, and you take the error of this into account of about 0.6%."
+
+250
+25:40,947 --> 25:46,037
+That the error in this ratio is really much less than 0.2%. You can almost forget about it.
+
+251
+25:46,517 --> 25:50,837
+I will allow generously for a 1% error in the final answer.
+
+252
+25:51,237 --> 26:00,417
+And so I stick to my prediction that the 10 T of double the mass is going to be like this.
+
+253
+26:02,647 --> 26:10,947
+And now we're going to get the observation of 10 T times M2, which is double the mass.
+
+254
+26:11,627 --> 26:16,337
+And that, of course, always has my uncertainty of my reaction time. There's nothing I can do about that.
+
+255
+26:17,417 --> 26:19,367
+And we will compare these two numbers.
+
+256
+26:19,817 --> 26:22,697
+So I will put the the other mass on top of it.
+
+257
+26:23,417 --> 26:24,327
+comes here.
+
+258
+26:25,687 --> 26:29,467
+tape them together so that they won't fall off.
+
+259
+26:30,647 --> 26:32,147
+There we go.
+
+260
+26:34,397 --> 26:41,437
+So, I hope I did that correctly, the square root of 2 times 15.15.
+
+261
+26:42,017 --> 26:46,477
+We'll give it a amplitude, something like 30, maybe 35 cm. There we go.
+
+262
+26:48,667 --> 26:54,697
+One, two, it's much slower, huh? You see that.
+
+263
+26:54,987 --> 27:09,307
+Three, four, five, six, seven, eight, nine,
+
+264
+27:09,907 --> 27:10,347
+10.
+
+265
+27:11,637 --> 27:12,847
+21.36.
+
+266
+27:14,857 --> 27:20,267
+21. 36.
+
+267
+27:20,557 --> 27:25,177
+You can round it off four if you want to, and you see that the agreement is spectacular.
+
+268
+27:25,547 --> 27:28,957
+Within the uncertainty of my measurements comes out amazingly well.
+
+269
+27:29,187 --> 27:35,817
+You could have removed this two, of course, because if you have an uncertainty of 0.2 here, it's a little silly to have this little two hanging there.
+
+270
+27:36,127 --> 27:40,147
+But you see that indeed, this spring is very close to an ideal spring.
+
+271
+27:40,637 --> 27:45,357
+It obeys Hook's law, and it is also nearly massless.
+
+272
+27:46,117 --> 27:47,347
+Here is the pendulum.
+
+273
+27:48,307 --> 27:53,017
+Here is the mass and it's offset at an angle theta.
+
+274
+27:53,917 --> 27:57,517
+The length of the pendulum is L, the length of the string.
+
+275
+27:58,057 --> 28:01,197
+There is gravity here, mg.
+
+276
+28:02,197 --> 28:08,597
+And the other force on the object, the only other force is the tension T.
+
+277
+28:09,567 --> 28:12,517
+Don't confuse that with period T. This is tension T. It's in Newtons.
+
+278
+28:13,437 --> 28:16,327
+Those are the only two forces. There is nothing else.
+
+279
+28:16,907 --> 28:23,307
+The thing is going to arc around like this and it's going to oscillate.
+
+280
+28:25,187 --> 28:27,277
+I call this the Y direction.
+
+281
+28:28,057 --> 28:33,637
+And I call this the X direction, and here X equals 0.
+
+282
+28:35,457 --> 28:44,537
+Well, I'm going to decompose the tension into the Y and into the X direction as we have done before.
+
+283
+28:46,437 --> 28:48,657
+So this is going to be the Y component.
+
+284
+28:49,617 --> 28:51,967
+X component.
+
+285
+28:53,367 --> 28:58,487
+So this Y component equals T cosine theta.
+
+286
+28:58,887 --> 29:05,237
+And the X component equals T sin theta.
+
+287
+29:06,087 --> 29:11,207
+And now I'm going to write down the differential equations of motion, first in the X direction.
+
+288
+29:13,457 --> 29:19,267
+Second Newton's second law. MA equals."
+
+289
+29:19,777 --> 29:27,377
+This is the only force in the X direction. It's a restoring force, just like with the spring. I therefore have to give it a minus sign.
+
+290
+29:27,627 --> 29:31,727
+So equals minus T times the sin of theta."
+
+291
+29:32,717 --> 29:37,207
+T itself could easily be a function of theta. So I have to allow for that.
+
+292
+29:37,647 --> 29:43,547
+The sin of theta equals X, if it's here at position X divided by L."
+
+293
+29:44,337 --> 29:51,427
+And so I can write for this minus T which may be a function of theta times X divided by L.
+
+294
+29:51,957 --> 29:55,547
+That is my differential equation in the X direction.
+
+295
+29:55,897 --> 30:01,287
+And I prefer always for this A to write down X double dot.
+
+296
+30:01,917 --> 30:03,207
+Now the Y direction.
+
+297
+30:04,347 --> 30:08,937
+In the Y direction, I have M Y double dot equals.
+
+298
+30:09,907 --> 30:18,297
+This is my plus direction, so I have T cosine theta - mg.
+
+299
+30:19,117 --> 30:22,407
+This is equation one, and this is equation two."
+
+300
+30:22,887 --> 30:29,527
+And so now we have to solve two coupled differential equations, which is a hopeless task.
+
+301
+30:29,967 --> 30:32,387
+It looks like a zoo, and it is a zoo.
+
+302
+30:33,207 --> 30:36,047
+And now we're going to make some approximations.
+
+303
+30:36,457 --> 30:48,077
+And the approximations that we will make, which we will often see in physics, when something oscillates, is what we call the small angle approximations.
+
+304
+30:49,117 --> 30:54,467
+Small angle, we will not allow theta to become too large.
+
+305
+30:54,927 --> 30:57,607
+I'll be quantitative what I mean by too large.
+
+306
+30:58,017 --> 31:04,227
+When theta, which is in radians equals much much less than one, we call that a small angle.
+
+307
+31:05,117 --> 31:11,327
+If that's the case, the cosine of theta is very close to one.
+
+308
+31:11,817 --> 31:14,857
+You will say, well, how close to one?
+
+309
+31:15,337 --> 31:21,307
+Okay, 5 degrees. The cosine is 0.996.
+
+310
+31:21,887 --> 31:22,837
+That's close to one.
+
+311
+31:23,177 --> 31:31,017
+10 degrees, the cosine is 0.985. That's only 1 and a half% different from one.
+
+312
+31:31,447 --> 31:34,367
+So even at 10 degrees, you're doing extremely well.
+
+313
+31:35,577 --> 31:40,447
+So this is consequence number one of the small angle approximation.
+
+314
+31:41,187 --> 31:44,797
+But there is a second consequence of the small angle approximation.
+
+315
+31:46,227 --> 31:52,467
+Look at the excursion that this object made from equilibrium in X direction. That's this big.
+
+316
+31:52,857 --> 31:57,517
+Look at the excursion it makes in the Y direction. It's this small.
+
+317
+31:57,957 --> 32:04,607
+It's way smaller than the excursion in the X direction, provided that your angle is small.
+
+318
+32:05,687 --> 32:06,807
+I'll give you an example.
+
+319
+32:07,577 --> 32:13,557
+At 5 degrees, this excursion is only 4% of this excursion.
+
+320
+32:14,107 --> 32:18,567
+At 10 degrees, this excursion is only 9% of this excursion.
+
+321
+32:19,037 --> 32:31,997
+And since the excursion in the Y direction is so much smaller than in the X direction, we say that the acceleration in the Y direction can be approximated to be roughly zero.
+
+322
+32:32,537 --> 32:35,677
+There is almost no acceleration in the Y direction.
+
+323
+32:36,467 --> 32:44,147
+With these two conclusions which follow from the small angle approximation, I go back to my equation number two.
+
+324
+32:45,127 --> 32:46,797
+And I find that zero
+
+325
+32:47,577 --> 32:55,227
+equals T which could be a function of theta. The cosine of theta is 1 - mg.
+
+326
+32:55,727 --> 32:59,147
+So I find that T equals mg.
+
+327
+32:59,617 --> 33:02,367
+Notice, it's no longer even a function of theta.
+
+328
+33:02,747 --> 33:09,417
+So I simply have in my small angle approximation that I can make T the same as mg.
+
+329
+33:09,737 --> 33:12,587
+It's approximately, but I still put an equal sign there.
+
+330
+33:13,057 --> 33:17,137
+I substitute this back in my equation number one.
+
+331
+33:17,547 --> 33:22,197
+And so now I get that M times X double dot
+
+332
+33:22,777 --> 33:25,297
+And I bring this on the other side plus
+
+333
+33:26,027 --> 33:34,157
+T is now mg mg times X divided by L equals 0.
+
+334
+33:34,687 --> 33:35,547
+And now
+
+335
+33:36,467 --> 33:43,777
+comes the wonderful result. X double dot plus g over L times X equals 0.
+
+336
+33:44,607 --> 33:48,667
+And this is such a beautiful result that it almost makes me cry.
+
+337
+33:49,417 --> 33:53,447
+This is a simple harmonic oscillation.
+
+338
+33:53,957 --> 34:01,137
+This equation looks like a carbon copy of the one that we have there.
+
+339
+34:01,757 --> 34:06,277
+Here we have K over M. And there we have G over L.
+
+340
+34:06,527 --> 34:09,577
+That's all. Other than that, there is no difference.
+
+341
+34:10,077 --> 34:14,507
+So you can write down immediately the solution to this differential equation.
+
+342
+34:15,417 --> 34:24,137
+X will be some amplitude times the cosine of omega t plus phi just as we had before.
+
+343
+34:24,467 --> 34:35,417
+And omega will now be the square root of g over L, and so the period of the pendulum will be 2 pi times the square root of L over G.
+
+344
+34:37,167 --> 34:41,127
+Just falls into our lap because we did all the work.
+
+345
+34:42,187 --> 34:47,217
+I want you to realize that these results for a pendulum have their restrictions.
+
+346
+34:47,547 --> 34:52,117
+Small angles, and we discussed quantitatively how small you would like to allow.
+
+347
+34:52,407 --> 34:57,477
+And also the mass has to be exclusively in here and not in the string.
+
+348
+34:57,747 --> 35:00,587
+We call that a massless string.
+
+349
+35:01,067 --> 35:08,177
+To give you some rough idea of what these periods will be, substitute for L 1 meter.
+
+350
+35:08,797 --> 35:17,567
+And you take for G 9.8, you take the square root, and you multiply by 2 pi, and what you find is that the period is about 2 seconds.
+
+351
+35:18,157 --> 35:22,687
+So, a pendulum 1 meter long has a period of about 2 seconds.
+
+352
+35:25,947 --> 35:31,577
+1, 2, 3, 4, 5, 6.
+
+353
+35:32,087 --> 35:34,487
+So to go from here to here is about 1 second.
+
+354
+35:35,187 --> 35:37,237
+If I make it four times shorter,
+
+355
+35:37,867 --> 35:41,747
+L four times shorter, the square root of 4 is two.
+
+356
+35:41,997 --> 35:48,537
+Then the period is the period is changing, four times shorter, the period must be two times shorter.
+
+357
+35:49,007 --> 35:55,427
+Make roughly 25 cm. I'm not trying to be very quantitative here. Now the whole period must be about 1 second.
+
+358
+35:56,187 --> 36:02,457
+1, 2, 3, 4, 5, 6.
+
+359
+36:02,777 --> 36:03,877
+roughly 1 second.
+
+360
+36:04,127 --> 36:11,657
+So you see that the period is extremely sensitive to the length of the string.
+
+361
+36:14,047 --> 36:26,517
+I now want to compare with you the results that we have for the spring with the results that we have from the pendulum to give you some further insight.
+
+362
+36:26,827 --> 36:31,147
+We have the string and we have the pendulum.
+
+363
+36:31,937 --> 36:39,337
+And I'm only going to look at the period T which here is 2 pi divided by the square root of M over K.
+
+364
+36:39,667 --> 36:43,527
+And here is 2 pi times the square root of L over G.
+
+365
+36:45,727 --> 36:48,927
+If I look here, there is a mass in here.
+
+366
+36:49,637 --> 36:52,407
+If I look here, it's independent of the mass."
+
+367
+36:53,577 --> 36:55,337
+Why is there a mass in here?
+
+368
+36:55,817 --> 36:57,617
+That is very easy to see.
+
+369
+36:58,297 --> 37:07,067
+If I take a spring and I extend the spring over a certain distance, then there is a certain force that I feel.
+
+370
+37:08,007 --> 37:11,247
+That force is independent of the mass that I put at the end of the spring.
+
+371
+37:11,647 --> 37:17,747
+The spring doesn't know what the mass is you're going to put on. All it knows is I am too long and I want to go back to equilibrium.
+
+372
+37:18,367 --> 37:29,147
+That force is a fixed force. If I double the mass, that fixed force will give on double the mass half the acceleration. If the acceleration goes down, the period of oscillation goes up.
+
+373
+37:29,417 --> 37:30,257
+It's very clear.
+
+374
+37:30,657 --> 37:35,607
+So you can immediately see that with a spring, the mass must enter into the period.
+
+375
+37:36,337 --> 37:38,127
+Now go to the pendulum."
+
+376
+37:38,467 --> 37:48,207
+If I double the mass of my bob at the end of a pendulum, then the vertical component of the tension will also double.
+
+377
+37:48,747 --> 37:53,207
+That means this restoring force, which is proportional with the tension, will also double.
+
+378
+37:53,697 --> 37:59,917
+So now the restoring force doubles and the mass doubles, the acceleration remains the same, the period remains the same.
+
+379
+38:00,717 --> 38:05,577
+So you can simply argue that there should be no mass in here, and there isn't.
+
+380
+38:06,397 --> 38:07,597
+How about this K?
+
+381
+38:07,997 --> 38:11,117
+If K is high, then a spring is stiff.
+
+382
+38:11,427 --> 38:12,677
+What does it mean a stiff spring?
+
+383
+38:13,017 --> 38:18,277
+It means that if I give it a small extension, that the spring force is huge.
+
+384
+38:18,697 --> 38:26,137
+If I have a huge spring force, the acceleration on a given mass will be high. If I have a high acceleration, the period will be short.
+
+385
+38:26,617 --> 38:31,207
+And that's exactly what you see. If K is high, the period will be short.
+
+386
+38:32,147 --> 38:33,407
+G.
+
+387
+38:34,437 --> 38:38,867
+Imagine that you have a pendulum in outer space. There is no gravity, nothing.
+
+388
+38:39,227 --> 38:45,577
+The pendulum will not swing. The period of the pendulum will be infinitely long.
+
+389
+38:45,867 --> 39:01,657
+Go into the shuttle where the perceived gravity in their frame of reference, perceived, they're weightless, remember, their perceived gravity is zero. You take a pendulum in the shuttle and you put it at this angle, you let it go, it will stay there forever and ever and ever. The period is infinitely long.
+
+390
+39:02,477 --> 39:07,657
+But take a spring in the shuttle and let the spring oscillate, and it does.
+
+391
+39:07,987 --> 39:15,777
+So you can actually measure the mass of an object using a spring on the shuttle and let it oscillate if you know the spring constant. And that's the way it's actually done.
+
+392
+39:16,807 --> 39:26,607
+So, you see indeed that these things make sense when you think about it in a rational way.
+
+393
+39:28,107 --> 39:33,557
+We have here in 26100, the mother of all pendulums.
+
+394
+39:34,357 --> 39:44,277
+It is a pendulum. It is a pendulum which is um 5.1 m long.
+
+395
+39:45,677 --> 39:50,237
+And there is a mass at the end of it which is 15 kg.
+
+396
+39:58,047 --> 40:05,457
+The length is 5.18 m and the uncertainty is about 5 cm.
+
+397
+40:06,327 --> 40:08,837
+We can't measure it any better.
+
+398
+40:10,127 --> 40:16,227
+And the mass at the end of it, which doesn't enter into the period, is about 15 kg.
+
+399
+40:18,347 --> 40:25,307
+The period which is 2 pi times the square root of L over G."
+
+400
+40:25,687 --> 40:33,017
+If you substitute in your length of 5.1 m, you will find 4.57 seconds.
+
+401
+40:37,367 --> 40:43,717
+Since you have a 1% error in L, you're going to have a half a percent error in your period.
+
+402
+40:43,987 --> 40:47,337
+So that is about 0.02 seconds.
+
+403
+40:48,107 --> 40:49,777
+So this is my prediction.
+
+404
+40:52,537 --> 40:52,967
+.
+
+405
+40:55,007 --> 40:55,437
+.
+
+406
+40:57,307 --> 41:04,617
+And now I'm going to oscillate it for you and I'm going to do it from two different angles.
+
+407
+41:04,937 --> 41:10,647
+I'm going to do it at a 5 degree angle and I'm going to do it at a 10 degree angle.
+
+408
+41:10,957 --> 41:16,907
+In order to get my relative error down, I will oscillate 10 times.
+
+409
+41:17,357 --> 41:32,117
+So I'm going to get at an angle theta maximum of roughly 5 degrees, I get 10 T equals something plus or minus my reaction time, which is 0.1 of a second.
+
+410
+41:32,487 --> 41:41,477
+And then I will do it from 10 degrees, and I will do again 10 T, and again my reaction time is not much better than 0.1 second.
+
+411
+41:42,067 --> 41:43,527
+So let's do that first."
+
+412
+41:44,847 --> 41:53,237
+I will move this out of the way because if that 15 kg object hits this, that is not funny.
+
+413
+41:54,307 --> 41:55,437
+All right.
+
+414
+41:56,457 --> 41:57,687
+Zero.
+
+415
+41:58,837 --> 42:05,307
+I have a mark here on the floor. This is about 5 degrees, and this is about 10 degrees.
+
+416
+42:05,757 --> 42:07,987
+I will first do it from 5 degrees."
+
+417
+42:08,517 --> 42:13,707
+I will let it swing one oscillation and when it comes to a hold here, I will start the time. That's for me the easiest.
+
+418
+42:14,317 --> 42:17,517
+But I count on you when it comes to counting.
+
+419
+42:17,907 --> 42:19,387
+You ready?"
+
+420
+42:19,637 --> 42:21,447
+You ready? You sure?
+
+421
+42:21,637 --> 42:22,447
+I'm ready too.
+
+422
+42:25,457 --> 42:27,117
+Okay.
+
+423
+42:27,507 --> 42:33,777
+Now keep counting and don't confuse me again. You're completely responsible for the counting.
+
+424
+42:34,517 --> 42:39,117
+So you only have to tell me is when when eight or nine is coming up. That's all I want to know.
+
+425
+42:39,427 --> 42:41,357
+Don't even bother me with three.
+
+426
+42:41,557 --> 42:42,737
+Don't even bother me with four.
+
+427
+42:43,157 --> 42:47,627
+Just let me know when I have to get in position for the final kill.
+
+428
+42:52,577 --> 42:59,287
+Notice there's almost no damping on this pendulum. The amplitude remains almost the same, whereas with the with the air track, you could actually see that there was already some kind of friction.
+
+429
+42:59,587 --> 43:01,117
+It was Where are we now?
+
+430
+43:04,627 --> 43:08,157
+Nine? Nine, right?
+
+431
+43:10,827 --> 43:13,567
+Seven.
+
+432
+43:15,097 --> 43:17,887
+45.70."
+
+433
+43:19,187 --> 43:25,087
+45 70. Where is my chalk?
+
+434
+43:25,527 --> 43:29,797
+45 .70.
+
+435
+43:30,577 --> 43:33,037
+What was my prediction?
+
+436
+43:36,267 --> 43:37,097
+Yeah.
+
+437
+43:37,507 --> 43:38,217
+Yeah.
+
+438
+43:38,487 --> 43:38,737
+Yeah.
+
+439
+43:39,097 --> 43:40,757
+Yeah, exactly.
+
+440
+43:40,967 --> 43:42,257
+You get the picture.
+
+441
+43:43,137 --> 43:44,397
+That is pure luck.
+
+442
+43:44,797 --> 43:48,337
+Because my accuracy is no better than a 10th of a second.
+
+443
+43:48,527 --> 43:50,737
+Now we do from 10 10 degrees."
+
+444
+43:51,057 --> 43:58,417
+And I want to show you now that the effect on the angle, if you go from 5 to 10, is small.
+
+445
+43:58,647 --> 44:01,227
+So small that you cannot measure it within the accuracy of your measurement.
+
+446
+44:05,597 --> 44:06,877
+Yeah.
+
+447
+44:07,327 --> 44:09,577
+Okay.
+
+448
+44:10,007 --> 44:12,627
+Again, relax and count.
+
+449
+44:36,547 --> 44:37,707
+Seven.
+
+450
+44:41,077 --> 44:43,487
+Eight.
+
+451
+44:45,847 --> 44:49,717
+Nine.
+
+452
+44:51,337 --> 44:54,117
+10.
+
+453
+44:54,717 --> 44:56,557
+Did you expect anything else?
+
+454
+44:57,247 --> 44:59,197
+45.75.
+
+455
+45:00,497 --> 45:06,207
+45 .75.
+
+456
+45:06,537 --> 45:16,207
+One of the most remarkable things I just mentioned to you is that the period of the oscillations is independent of the mass of the object.
+
+457
+45:16,847 --> 45:25,227
+That would mean if I join the Bob and I swing down with the Bob, that you should get that same period.
+
+458
+45:25,567 --> 45:27,157
+Or should you not?"
+
+459
+45:27,817 --> 45:32,727
+I'm asking you a question before we do this awful experiment.
+
+460
+45:34,137 --> 45:38,057
+Would the period come out to be the same or not?
+
+461
+45:38,807 --> 45:40,757
+Some of you think it's the same.
+
+462
+45:41,647 --> 45:58,377
+Have you thought about it that I'm a little bit taller than this object, and that therefore maybe effectively the the length of the string has become a little less if I sit up like this? And if the length of the spring is a little less, the period would be a little shorter.
+
+463
+45:59,337 --> 46:00,957
+Yeah?
+
+464
+46:01,217 --> 46:02,417
+Be prepared for that.
+
+465
+46:02,707 --> 46:06,357
+On the other hand, I'm also well, I'm not quite prepared for it."
+
+466
+46:07,527 --> 46:15,737
+I will try to hold my body as horizontal as I possibly can in order to be at the same level as the Bob.
+
+467
+46:16,087 --> 46:18,747
+I will start when I come to a hold here.
+
+468
+46:18,987 --> 46:19,877
+There we go."
+
+469
+46:24,197 --> 46:27,477
+Now. You count."
+
+470
+46:29,357 --> 46:31,407
+This hurts.
+
+471
+46:33,067 --> 46:34,417
+Oh.
+
+472
+46:37,547 --> 46:39,817
+I want to hear you loud.
+
+473
+46:43,567 --> 46:48,817
+Oh.
+
+474
+46:49,567 --> 46:51,717
+Ah, thank you.
+
+475
+46:52,197 --> 46:57,317
+Oh.
+
+476
+47:06,567 --> 47:07,857
+What?
+
+477
+47:09,117 --> 47:10,437
+10.
+
+478
+47:10,707 --> 47:11,607
+Oh!
+
+479
+47:15,367 --> 47:25,007
+10 T with Walter Lewin 45.6 plus or minus 0.1 second.
+
+480
+47:25,277 --> 47:27,797
+Physics works, I'm telling you.
+
+481
+47:33,597 --> 47:38,167
+I'll see you Monday. Have a good weekend.
+
+482
+47:39,567 --> 47:41,047

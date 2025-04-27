@@ -5,119 +5,229 @@ import { daysBetween, getFormattedDate } from './utils.js';
 
 // --- Grading & Grade Representation ---
 
+/**
+ * Calculates the final total mark based on component scores and weights.
+ * @param {object} progressData - The user's course progress data.
+ * @returns {number | null} - The calculated total mark (0-100+bonus), or null if insufficient data.
+ */
 export function calculateTotalMark(progressData) {
-    // ... (Implementation unchanged from previous correct version) ...
-    if (!progressData || progressData.status !== 'completed') {
-        return null;
+    // Only calculate if completed, otherwise return partial/null
+    if (!progressData /* || progressData.status !== 'completed' */ ) {
+        // Calculation might be premature or data incomplete before completion
+        console.warn("Calculating total mark before course completion or with incomplete data.");
+        // Return null or potentially calculate based on available data for interim display?
+        // Let's calculate based on what's available for now.
+        // return null;
     }
+
     const weights = GRADING_WEIGHTS;
     let totalMark = 0;
-    const calculateAverage = (scores) => {
-        if (!scores) return 0;
-        const values = Array.isArray(scores) ? scores.filter(s => s !== null && s !== undefined) : Object.values(scores).filter(s => s !== null && s !== undefined);
-        if (values.length === 0) return 0;
-        const sum = values.reduce((acc, score) => acc + (score || 0), 0);
-        return (sum / values.length);
-    };
-    const skipExamAvg = calculateAverage(progressData.skipExamScores);
-    const assignmentAvg = calculateAverage(progressData.assignmentScores);
-    const weeklyExamAvg = calculateAverage(progressData.weeklyExamScores);
-    const midcourseAvg = calculateAverage(progressData.midcourseExamScores);
-    const finalAvg = calculateAverage(progressData.finalExamScores);
-    const attendance = progressData.attendanceScore || 0;
-    const bonus = progressData.extraPracticeBonus || 0;
+    let totalWeightAchieved = 0; // Track weight of components with scores
 
-    totalMark += (skipExamAvg * weights.skipExams);
-    totalMark += (assignmentAvg * weights.assignments);
-    totalMark += (weeklyExamAvg * weights.weeklyExams);
-    totalMark += (midcourseAvg * weights.midcourseExams);
-    totalMark += (finalAvg * weights.finalExams);
+    // Helper to calculate average score from a scores object/array
+    const calculateAverage = (scores) => {
+        if (!scores) return { average: 0, count: 0 };
+        // Filter out null/undefined scores before calculating
+        const values = (Array.isArray(scores) ? scores : Object.values(scores))
+                       .filter(s => s !== null && s !== undefined);
+        if (values.length === 0) return { average: 0, count: 0 };
+        const sum = values.reduce((acc, score) => acc + (score || 0), 0);
+        return { average: (sum / values.length), count: values.length }; // Average percentage score & count
+    };
+
+    const skipExamResult = calculateAverage(progressData.skipExamScores);
+    if (skipExamResult.count > 0) {
+        totalMark += (skipExamResult.average * weights.skipExams);
+        totalWeightAchieved += weights.skipExams;
+    }
+
+    const assignmentResult = calculateAverage(progressData.assignmentScores);
+    if (assignmentResult.count > 0) {
+        totalMark += (assignmentResult.average * weights.assignments);
+        totalWeightAchieved += weights.assignments;
+    }
+
+    const weeklyExamResult = calculateAverage(progressData.weeklyExamScores);
+     if (weeklyExamResult.count > 0) {
+        totalMark += (weeklyExamResult.average * weights.weeklyExams);
+        totalWeightAchieved += weights.weeklyExams;
+    }
+
+    const midcourseResult = calculateAverage(progressData.midcourseExamScores);
+     if (midcourseResult.count > 0) {
+        totalMark += (midcourseResult.average * weights.midcourseExams);
+        totalWeightAchieved += weights.midcourseExams;
+    }
+
+    const finalResult = calculateAverage(progressData.finalExamScores); // Assumes finalExamScores stores percentages
+     if (finalResult.count > 0) {
+        totalMark += (finalResult.average * weights.finalExams);
+        totalWeightAchieved += weights.finalExams;
+    }
+
+    const attendance = progressData.attendanceScore || 0; // Assumes attendance is 0-100 scale
     totalMark += (attendance * weights.attendance);
-    totalMark += bonus;
+    totalWeightAchieved += weights.attendance; // Attendance always contributes weight
+
+    const bonus = progressData.extraPracticeBonus || 0;
+    totalMark += bonus; // Add bonus directly, doesn't affect weight calculation
+
+    // Optional: Normalize mark if not all components are complete?
+    // Example: if (totalWeightAchieved > 0 && totalWeightAchieved < (1-weights.attendance)) {
+    //     totalMark = (totalMark / totalWeightAchieved) * (1-weights.attendance); // Normalize to exclude attendance weight temporarily
+    // }
+    // For now, we just calculate based on available data.
+
+    // Clamp mark between 0 and potentially > 100 due to bonus
     return Math.max(0, totalMark);
 }
 
+/**
+ * Determines the letter grade based on the total mark percentage.
+ * @param {number | null} totalMark - The final calculated total mark.
+ * @returns {string | null} - The letter grade ("A+", "A", ..., "F") or null.
+ */
 export function getLetterGrade(totalMark) {
-    // ... (Implementation unchanged from previous correct version) ...
     if (totalMark === null || totalMark === undefined) return null;
+
     if (totalMark >= 90) return "A+";
     if (totalMark >= 85) return "A";
     if (totalMark >= 80) return "B+";
     if (totalMark >= 75) return "B";
     if (totalMark >= 70) return "C+";
-    if (totalMark >= PASSING_GRADE_PERCENT) return "C";
+    if (totalMark >= PASSING_GRADE_PERCENT) return "C"; // Use config value
     return "F";
 }
 
+/**
+ * Gets Tailwind CSS color classes for a given letter grade.
+ * @param {string | null} grade - The letter grade.
+ * @returns {object} - Object with { bg, text, border, textMuted } class strings.
+ */
 export function getLetterGradeColor(grade) {
-    // ... (Implementation unchanged from previous correct version) ...
     switch (grade) {
-        case "A+": case "A": return { bg: "bg-green-100 dark:bg-green-900", text: "text-green-800 dark:text-green-200", border: "border-green-300 dark:border-green-600", textMuted: "text-green-600 dark:text-green-400" };
-        case "B+": case "B": return { bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-800 dark:text-blue-200", border: "border-blue-300 dark:border-blue-600", textMuted: "text-blue-600 dark:text-blue-400" };
-        case "C+": case "C": return { bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-800 dark:text-yellow-200", border: "border-yellow-300 dark:border-yellow-600", textMuted: "text-yellow-600 dark:text-yellow-400" };
+        case "A+":
+        case "A": return { bg: "bg-green-100 dark:bg-green-900", text: "text-green-800 dark:text-green-200", border: "border-green-300 dark:border-green-600", textMuted: "text-green-600 dark:text-green-400" };
+        case "B+":
+        case "B": return { bg: "bg-blue-100 dark:bg-blue-900", text: "text-blue-800 dark:text-blue-200", border: "border-blue-300 dark:border-blue-600", textMuted: "text-blue-600 dark:text-blue-400" };
+        case "C+":
+        case "C": return { bg: "bg-yellow-100 dark:bg-yellow-900", text: "text-yellow-800 dark:text-yellow-200", border: "border-yellow-300 dark:border-yellow-600", textMuted: "text-yellow-600 dark:text-yellow-400" };
         case "F": return { bg: "bg-red-100 dark:bg-red-900", text: "text-red-800 dark:text-red-200", border: "border-red-300 dark:border-red-600", textMuted: "text-red-600 dark:text-red-400" };
         default: return { bg: "bg-gray-100 dark:bg-gray-700", text: "text-gray-800 dark:text-gray-200", border: "border-gray-300 dark:border-gray-600", textMuted: "text-gray-600 dark:text-gray-400" };
     }
 }
 
+
 // --- Pace Calculation ---
 
+/**
+ * Calculates the initial mediocre pace based on the first week's progress.
+ * @param {object} progressData - User's course progress.
+ * @param {number} totalCourseChapters - Total chapters in the course.
+ * @returns {number | null} - Chapters per day, or null if not enough data.
+ */
 export function calculateInitialMediocrePace(progressData, totalCourseChapters) {
-    // ... (Implementation unchanged from previous correct version) ...
-    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
+    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate || Date.now());
     const today = new Date();
-    const daysEnrolled = daysBetween(enrollmentDate, today) + 1;
-    if (daysEnrolled < 7) return null;
+    const daysEnrolled = daysBetween(enrollmentDate, today) + 1; // +1 to include enrollment day
+
+    if (daysEnrolled < 7) {
+        console.log("Pace calculation: Waiting for first week of data.");
+        return null; // Need at least a week of data
+    }
+
     let chaptersCompletedInFirstWeek = 0;
     for (let i = 0; i < 7; i++) {
         const dateToCheck = new Date(enrollmentDate);
         dateToCheck.setDate(enrollmentDate.getDate() + i);
         const dateStr = getFormattedDate(dateToCheck);
-        chaptersCompletedInFirstWeek += progressData.dailyProgress[dateStr]?.chaptersStudied?.length || 0;
+        chaptersCompletedInFirstWeek += progressData.dailyProgress?.[dateStr]?.chaptersStudied?.length || 0;
     }
-    if (chaptersCompletedInFirstWeek <= 0) return 0.5; // Default pace
+
+    if (chaptersCompletedInFirstWeek <= 0) {
+        console.log("Pace calculation: No chapters completed in the first week. Using default pace (0.5 chapters/day).");
+        return 0.5; // Default: half a chapter per day if nothing done in first week
+    }
+
     const calculatedPace = chaptersCompletedInFirstWeek / 7;
+    console.log(`Pace calculation: Initial mediocre pace set to ${calculatedPace.toFixed(2)} chapters/day.`);
     return calculatedPace;
 }
 
+/**
+ * Updates the current daily pace based on overall progress.
+ * @param {object} progressData - User's course progress.
+ * @param {number} totalCourseChapters - Total chapters in the course.
+ * @returns {number | null} - Current chapters per day, or null if error.
+ */
 export function updateCurrentPace(progressData, totalCourseChapters) {
-    // ... (Implementation unchanged from previous correct version) ...
-    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
+    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate || Date.now());
     const today = new Date();
     const daysEnrolled = daysBetween(enrollmentDate, today) + 1;
+
     if (daysEnrolled <= 0) return null;
+
+    // Count total chapters studied so far
     const totalChaptersStudied = Object.values(progressData.dailyProgress || {})
                                     .reduce((sum, day) => sum + (day.chaptersStudied?.length || 0), 0);
-    if (totalChaptersStudied <= 0) return 0;
+
+    if (totalChaptersStudied <= 0) return 0; // If nothing studied yet, pace is 0
+
     const currentPace = totalChaptersStudied / daysEnrolled;
     return currentPace;
 }
 
+/**
+ * Determines the target chapter for the current day based on selected pace.
+ * @param {object} progressData - User's course progress.
+ * @param {object} courseDef - The course definition object.
+ * @returns {number} - The target chapter number for today.
+ */
 export function determineTargetChapter(progressData, courseDef) {
-    // ... (Implementation unchanged from previous correct version) ...
-     if (!progressData || !courseDef) return 1;
-    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
-    const today = new Date();
-    const daysEnrolled = daysBetween(enrollmentDate, today);
-    let targetPace = progressData.baseMediocrePace;
+     if (!progressData || !courseDef || !progressData.enrollmentDate) return 1; // Default to chapter 1 if critical data is missing
 
+    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const daysEnrolled = daysBetween(enrollmentDate, today); // Days *since* enrollment day (0 on enrollment day)
+
+    let targetPace = progressData.baseMediocrePace; // Start with the calculated base pace
+
+    // Adjust pace based on selection or estimate if base pace not set
     if (progressData.selectedPace === 'custom' && progressData.customPaceDays > 0) {
         targetPace = courseDef.totalChapters / progressData.customPaceDays;
-    } else if (targetPace !== null) { // Only apply multiplier if base pace exists
+    } else if (targetPace !== null && targetPace !== undefined) { // Only apply multiplier if base pace exists
         if (progressData.selectedPace === 'compact') targetPace *= PACE_MULTIPLIER.compact;
         else if (progressData.selectedPace === 'lenient') targetPace *= PACE_MULTIPLIER.lenient;
-    } else { // Estimate if base pace not yet set
-        let estimatedMediocre = 1.0;
-        if (progressData.selectedPace === 'custom' && progressData.customPaceDays > 0) targetPace = courseDef.totalChapters / progressData.customPaceDays;
-        else if (progressData.selectedPace === 'compact') targetPace = estimatedMediocre * PACE_MULTIPLIER.compact;
-        else if (progressData.selectedPace === 'lenient') targetPace = estimatedMediocre * PACE_MULTIPLIER.lenient;
-        else targetPace = estimatedMediocre;
+        // 'mediocre' uses the base pace directly
+    } else { // Estimate if base pace not yet set (first week)
+        let estimatedMediocre = 1.0; // Default assumption
+        if (progressData.selectedPace === 'custom' && progressData.customPaceDays > 0) {
+             targetPace = courseDef.totalChapters / progressData.customPaceDays;
+        } else if (progressData.selectedPace === 'compact') {
+             targetPace = estimatedMediocre * PACE_MULTIPLIER.compact;
+        } else if (progressData.selectedPace === 'lenient') {
+             targetPace = estimatedMediocre * PACE_MULTIPLIER.lenient;
+        } else { // 'mediocre' or undefined
+             targetPace = estimatedMediocre;
+        }
+        console.log(`Target Pace estimated as ${targetPace.toFixed(2)} for first week or missing base.`);
     }
 
+    // Calculate expected chapter based on pace and days enrolled
+    // Add 1 because target is the chapter *to be* studied based on days passed
     const expectedChapterFloat = 1 + (daysEnrolled * targetPace);
     let targetChapter = Math.ceil(expectedChapterFloat);
+
+    // Ensure target chapter doesn't exceed total chapters or go below 1
     targetChapter = Math.min(targetChapter, courseDef.totalChapters);
     targetChapter = Math.max(1, targetChapter);
+
+    // Consider already completed chapters?
+    // A more advanced logic could look at the last studied chapter and suggest the next one
+    // if the user is ahead of the calculated target. For now, stick to time/pace.
+    // const lastStudied = Math.max(0, ...(progressData.courseStudiedChapters || []));
+    // targetChapter = Math.max(targetChapter, lastStudied + 1); // Ensure target is at least the next unstudied
+
     return targetChapter;
 }
 
@@ -131,56 +241,54 @@ export function determineTargetChapter(progressData, courseDef) {
  * @returns {string} - A description of today's objective.
  */
 export function determineTodaysObjective(progressData, courseDef) {
-    if (!progressData || !courseDef || progressData.status !== 'enrolled') {
-        return "Review course materials.";
+    if (!progressData || !courseDef || !progressData.enrollmentDate || progressData.status !== 'enrolled') {
+        return "Review course materials."; // Default if not enrolled or data missing
     }
 
     const todayStr = getFormattedDate();
     const todaysProgress = progressData.dailyProgress?.[todayStr] || {};
-    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate || Date.now());
+    const enrollmentDate = progressData.enrollmentDate?.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
     const today = new Date(); today.setHours(0,0,0,0);
     const dayNumber = daysBetween(enrollmentDate, today) + 1; // Day 1, Day 2...
+    const studiedChaptersSet = new Set(progressData.courseStudiedChapters || []);
+    const totalChaptersStudied = studiedChaptersSet.size;
 
     // --- Check for mandatory blocking tasks first ---
 
-    // 1. Yesterday's Assignment (if not day 1)
+    // 1. Yesterday's Assignment (if not day 1 and not completed)
     if (dayNumber > 1) {
-        const yesterday = new Date(today);
-        yesterday.setDate(today.getDate() - 1);
+        const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
         const yesterdayStr = getFormattedDate(yesterday);
-        const yesterdaysProgress = progressData.dailyProgress?.[yesterdayStr];
-        if (!yesterdaysProgress?.assignmentCompleted) {
-            const assignmentNum = dayNumber - 1;
-            return `Complete Assignment ${assignmentNum} (From ${yesterdayStr}).`;
+        const assignmentNumYesterday = dayNumber - 1;
+        const yesterdayAssignmentId = `day${assignmentNumYesterday}`;
+        // Check if assignment exists and score is null/undefined (meaning not completed/submitted)
+        if (progressData.assignmentScores?.[yesterdayAssignmentId] === undefined) {
+            return `Complete Assignment ${assignmentNumYesterday} (From ${yesterdayStr}).`;
         }
     }
 
     // 2. Today's Assignment (if not already completed)
-    if (!todaysProgress.assignmentCompleted) {
-         const assignmentNum = dayNumber;
-         // Check if we've studied enough chapters to warrant this assignment
-         // Simple model: Assignment X is due after completing study/skip for chapter X
+    const assignmentNumToday = dayNumber;
+    const todayAssignmentId = `day${assignmentNumToday}`;
+    // Check if assignment exists and score is null/undefined
+    if (progressData.assignmentScores?.[todayAssignmentId] === undefined) {
+         // Check if we've studied enough chapters (Assignment N is due after Chapter N is studied)
          const lastStudiedChapter = Math.max(0, ...(progressData.courseStudiedChapters || []));
-         if (lastStudiedChapter >= assignmentNum) {
-              return `Complete Assignment ${assignmentNum}.`;
+         if (lastStudiedChapter >= assignmentNumToday || assignmentNumToday === 1) { // Assignment 1 is always due
+              return `Complete Assignment ${assignmentNumToday}.`;
          }
-         // If not studied enough, objective is to study first
-    } else {
-         // Today's assignment IS completed.
+         // If not studied enough, fall through to study objective
     }
 
     // --- Determine Study/Exam Objective ---
     const targetChapter = determineTargetChapter(progressData, courseDef);
-    const studiedChaptersSet = new Set(progressData.courseStudiedChapters || []);
-    const totalChaptersStudied = studiedChaptersSet.size;
 
     // 3. Midcourse Exams
     for (let i = 0; i < (courseDef.midcourseChapters || []).length; i++) {
         const chapterThreshold = courseDef.midcourseChapters[i];
-        const midNum = i + 1;
-        const midId = `mid${midNum}`;
+        const midNum = i + 1; const midId = `mid${midNum}`;
         const isMidcourseDone = progressData.midcourseExamScores?.[midId] !== undefined;
-        // Due if studied chapter *after* threshold and exam not done
+        // Due if studied chapter *at or beyond* threshold and exam not done
         if (totalChaptersStudied >= chapterThreshold && !isMidcourseDone) {
             return `Complete Midcourse Exam #${midNum}.`;
         }
@@ -190,29 +298,27 @@ export function determineTodaysObjective(progressData, courseDef) {
     if (totalChaptersStudied >= courseDef.totalChapters) {
         const numFinalsDone = (progressData.finalExamScores || []).filter(s => s !== null).length;
         if (numFinalsDone < 3) {
-             // Check if it's a revision day (simple alternation)
-             const lastFinalIndex = (progressData.finalExamScores || []).length -1; // Index of last score entry
-             // If index is even (0 or 2), next is exam. If odd (1), next is revision.
-             if (lastFinalIndex === 0 || lastFinalIndex === 2 ) { // After Final 1 or Final 3 (or before first)
+             const lastFinalIndex = (progressData.finalExamScores || []).length -1; // Index of last score entry (-1 if empty)
+             // Simple alternation: After 0 or 2, take exam. After 1, revise.
+             if (lastFinalIndex === -1 || lastFinalIndex === 1) { // Before 1st, or after 2nd
                  return `Take Final Exam #${numFinalsDone + 1}.`;
-             } else { // After Final 2
+             } else { // After 1st or 3rd (though 3rd means done)
                  return `Revision Day - Review Weakest Areas.`;
              }
         } else {
-            // Should transition to 'completed' status, but if still enrolled:
+            // Course should ideally be marked completed here, but handle the state if still 'enrolled'
             return "Course Completed! Review final grade.";
         }
     }
 
     // 5. Weekly Exams (Check if end of week and not done)
-    const weekNumber = Math.floor(dayNumber / 7) + (dayNumber % 7 > 0 ? 1 : 0);
-    const isEndOfCurrentWeek = dayNumber % 7 === 0; // Simple check: Sunday is day 7, 14, etc.
+    const weekNumber = Math.floor((dayNumber -1) / 7) + 1; // Week 1 starts day 1
+    const isEndOfAWeek = dayNumber % 7 === 0 && dayNumber > 0;
     const weeklyExamId = `week${weekNumber}`;
     const isWeeklyDone = progressData.weeklyExamScores?.[weeklyExamId] !== undefined;
-    if(isEndOfCurrentWeek && !isWeeklyDone){
+    if(isEndOfAWeek && !isWeeklyDone){
          return `Complete Weekly Exam ${weekNumber}.`;
     }
-
 
     // 6. Study Next Chapter
     // Find the lowest chapter number >= targetChapter that hasn't been studied
@@ -222,20 +328,26 @@ export function determineTodaysObjective(progressData, courseDef) {
     }
 
     if (chapterToStudy <= courseDef.totalChapters) {
-        return `Study Chapter ${chapterToStudy}: ${courseDef.chapters[chapterToStudy - 1] || ''}`;
+        // Safely access chapter title
+        const chapterTitle = (Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterToStudy)
+                             ? courseDef.chapters[chapterToStudy - 1]
+                             : `Chapter ${chapterToStudy}`; // Fallback title
+        return `Study Chapter ${chapterToStudy}: ${chapterTitle || ''}`;
     }
 
-    // If all else fails (shouldn't happen if final exam logic is correct)
+    // Fallback if all chapters studied but finals not started yet (should be caught by final exam logic)
+     if (totalChaptersStudied >= courseDef.totalChapters) {
+          return "Prepare for Final Exams.";
+     }
+
+    // Default fallback if somehow none of the above match
+    console.warn("Could not determine specific objective, defaulting to review.");
     return "Continue reviewing or use Extra Practice.";
 }
 
 
 /**
- * Helper function to determine the next specific task based on the objective.
- * This maps the objective string to a structured task object.
- * @param {object} progressData - User's course progress.
- * @param {object} courseDef - The course definition object.
- * @returns {object | null} - Task object { type, id, buttonText } or null.
+ * Helper function to determine the next specific task based on the objective string.
  */
 export function determineNextTask(progressData, courseDef) {
     const objective = determineTodaysObjective(progressData, courseDef);
@@ -261,7 +373,6 @@ export function determineNextTask(progressData, courseDef) {
          if (match) return { type: 'study', id: match[1], buttonText: `Go to Chapter ${match[1]} Material` };
      }
     if (objective.startsWith("Revision Day")) {
-        // Could link to progress page or specific review section
         return { type: 'review', id: 'finals_review', buttonText: 'Review Weak Areas' };
     }
     if (objective.startsWith("Course Completed")) {
@@ -273,23 +384,42 @@ export function determineNextTask(progressData, courseDef) {
 
 
 // --- Attendance Calculation ---
+/**
+ * Calculates the attendance score based on daily assignment completion rate.
+ * @param {object} progressData - User's course progress.
+ * @returns {number} - Attendance score (0-100).
+ */
 export function calculateAttendanceScore(progressData) {
-    // ... (Implementation unchanged from previous correct version) ...
     if (!progressData || !progressData.enrollmentDate) return 0;
+
     const enrollmentDate = progressData.enrollmentDate.toDate ? progressData.enrollmentDate.toDate() : new Date(progressData.enrollmentDate);
     const today = new Date(); today.setHours(0,0,0,0);
-    const totalDaysPossible = daysBetween(enrollmentDate, today) + 1;
-    if (totalDaysPossible <= 0) return 100;
+    const totalDaysElapsed = daysBetween(enrollmentDate, today); // Days *since* enrollment
+
+    if (totalDaysElapsed < 0) return 100; // Enrolled today or future? Perfect score.
+    const numberOfDaysToCheck = totalDaysElapsed + 1; // Check including today
+
     let completedAssignments = 0;
-    for (let i = 0; i < totalDaysPossible; i++) {
+    for (let i = 0; i < numberOfDaysToCheck; i++) {
         const dateToCheck = new Date(enrollmentDate);
         dateToCheck.setDate(enrollmentDate.getDate() + i);
-        if (dateToCheck > today) break; // Don't count future days
-        const dateStr = getFormattedDate(dateToCheck);
-        if (progressData.dailyProgress?.[dateStr]?.assignmentCompleted === true) {
+        const assignmentNum = i + 1; // Assignment number corresponds to day number
+        const assignmentId = `day${assignmentNum}`;
+
+        // Check if an assignment score exists for that day's assignment ID
+        if (progressData.assignmentScores?.[assignmentId] !== undefined) {
             completedAssignments++;
         }
+        // Alternative: Check dailyProgress flag if using that
+        // const dateStr = getFormattedDate(dateToCheck);
+        // if (progressData.dailyProgress?.[dateStr]?.assignmentCompleted === true) {
+        //     completedAssignments++;
+        // }
     }
-    const completionRate = completedAssignments / totalDaysPossible;
+
+    // Calculate score based on completion rate over the elapsed days
+    const completionRate = numberOfDaysToCheck > 0 ? (completedAssignments / numberOfDaysToCheck) : 1; // Avoid division by zero
     return Math.round(completionRate * 100);
 }
+
+// --- END OF FILE course_logic.js ---

@@ -10,7 +10,8 @@ import { showLoading, hideLoading, escapeHtml } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions } from './firebase_firestore.js';
+// Added unenrollFromCourse, updateCourseStatusForUser
+import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser } from './firebase_firestore.js';
 
 // --- UI Imports ---
 import { importData, exportData, showImportExportDashboard } from './ui_import_export.js';
@@ -29,22 +30,32 @@ import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubje
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
-import { showAdminDashboard, promptAdminReply } from './ui_admin_dashboard.js';
+// Added handleAdminMarkCourseComplete, loadUserBadgesForAdmin, promptAddBadge, handleAddBadgeForUser, confirmRemoveBadge, handleRemoveBadgeForUser
+import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, handleAddBadgeForUser, confirmRemoveBadge, handleRemoveBadgeForUser } from './ui_admin_dashboard.js';
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
 import { showInbox, handleMarkRead } from './ui_inbox.js';
 
-// --- NEW Course UI Imports ---
-import { showMyCoursesDashboard, showCurrentCourseDashboard, showCurrentStudyMaterial, showCurrentAssignmentsExams, showCurrentCourseProgress, navigateToCourseDashboard, handleCourseAction } from './ui_course_dashboard.js';
+// --- Course UI Imports ---
+// Renamed showCurrentStudyMaterial to showNextLesson in dashboard import
+import { showMyCoursesDashboard, showCurrentCourseDashboard, showNextLesson, showFullStudyMaterial, showCurrentAssignmentsExams, showCurrentCourseProgress, navigateToCourseDashboard, handleCourseAction, confirmUnenroll } from './ui_course_dashboard.js';
 import { showCourseEnrollment, handlePaceSelection } from './ui_course_enrollment.js';
-import { showCourseStudyMaterial, displayFormulaSheet, handleExplainSelection, navigateChapterMaterial } from './ui_course_study_material.js';
+// Actual function name remains showCourseStudyMaterial here as it displays specific chapter content
+import {
+     showCourseStudyMaterial, displayFormulaSheet, handleExplainSelection,
+     navigateChapterMaterial, loadYouTubeAPI, handleVideoWatched,
+     initPdfViewer, cleanupPdfViewer, handlePdfSnapshotForAI, // Corrected export name
+     triggerSkipExamGeneration, askQuestionAboutTranscription // Added askQuestionAboutTranscription
+} from './ui_course_study_material.js';
 import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_assignments_exams.js';
 import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js'; // Added renderCourseCharts
+// NEW: Import for the content menu UI
+import { displayCourseContentMenu } from './ui_course_content_menu.js';
 
 
 // --- Initialization ---
 
 async function initializeApp() {
-    console.log("Initializing App (Module)...");
+    console.log("Initializing Lyceum (Module)..."); // MODIFIED Name
     showLoading("Initializing...");
 
     // Theme Init
@@ -66,16 +77,13 @@ async function initializeApp() {
              // Re-render charts if dashboards are visible
              const progressDash = document.getElementById('dashboard');
              const courseDashArea = document.getElementById('course-dashboard-area');
-             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); // Check for a specific chart canvas
+             const courseProgressCanvas = document.getElementById('assignmentScoresChart');
 
              if (progressDash && !progressDash.classList.contains('hidden')) {
-                renderCharts(); // Re-render standard progress charts
+                renderCharts();
              }
              if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseCharts === 'function') {
-                 // Re-render course charts - needs access to progress data
-                 // This requires the showCourseProgressDetails function to be called again or state management
                  console.log("Theme changed, attempting to re-render course charts if visible.");
-                 // Find the active course progress data to pass to renderCourseCharts
                  if(window.userCourseProgressMap && window.activeCourseId && window.userCourseProgressMap.has(window.activeCourseId)) {
                      renderCourseCharts(window.userCourseProgressMap.get(window.activeCourseId));
                  } else {
@@ -85,23 +93,20 @@ async function initializeApp() {
 
             // Re-initialize Mermaid theme
              if (typeof mermaid !== 'undefined') {
-                  try {
-                      mermaid.initialize({ theme: 'base', themeVariables: { darkMode: isDark } });
-                      // Attempt to re-render *visible* mermaid diagrams
-                      document.querySelectorAll('.mermaid').forEach(el => {
-                          // A simple check if the element or its parent is potentially visible
-                          if (el.offsetParent !== null) {
-                              try {
-                                  // Re-fetch the definition from data attribute if stored there
-                                  const definition = el.getAttribute('data-mermaid-def') || el.textContent;
-                                  el.removeAttribute('data-processed'); // Allow mermaid to process again
-                                  el.innerHTML = definition; // Reset content before rendering
-                                  mermaid.run({ nodes: [el] }); // Use mermaid.run for specific nodes
-                                  console.log(`Re-rendered Mermaid diagram: ${el.id || 'untitled'}`);
-                              } catch (e) { console.error("Error re-rendering mermaid:", e); }
-                          }
-                      });
-                  } catch (e) { console.error("Error re-initializing mermaid theme:", e); }
+                  mermaid.initialize({
+                    startOnLoad: false, // Don't auto-render on load
+                    theme: isDark ? 'dark' : 'default', // Or 'neutral', 'forest'
+                    securityLevel: 'loose', // Allow scripts if needed, use 'strict' or 'antiscript' for safety
+                    themeVariables: {
+                        darkMode: isDark,
+                        primaryColor: isDark ? '#0ea5e9' : '#0284c7', // Example primary color mapping
+                        primaryTextColor: isDark ? '#e5e7eb' : '#ffffff', // Example text on primary
+                        lineColor: isDark ? '#64748b' : '#9ca3af', // Example line color
+                        mainBkg: isDark ? '#1e293b' : '#ffffff', // Example background
+                        textColor: isDark ? '#cbd5e1' : '#374151', // Example default text
+                    }
+                 });
+                 console.log(`Mermaid theme re-initialized to: ${isDark ? 'dark' : 'default'}`);
              }
         });
         themeToggle.dataset.listenerAttached = 'true';
@@ -114,7 +119,7 @@ async function initializeApp() {
      if (menuButton && sidebar && overlay && !menuButton.dataset.listenerAttached) {
          menuButton.addEventListener('click', (e) => {
              e.stopPropagation();
-             sidebar.classList.toggle('is-open'); // Defined in CSS
+             sidebar.classList.toggle('is-open');
              sidebar.classList.toggle('hidden'); // Also toggle base hidden class
              overlay.classList.toggle('is-visible');
          });
@@ -125,11 +130,11 @@ async function initializeApp() {
          });
          sidebar.querySelectorAll('.sidebar-link').forEach(link => {
              link.addEventListener('click', () => {
-                if (window.innerWidth < 768) { // md breakpoint
-                    sidebar.classList.remove('is-open');
-                    sidebar.classList.add('hidden');
-                    overlay.classList.remove('is-visible');
-                }
+                // Always close sidebar on link click, regardless of screen size,
+                // because the button is now always visible.
+                sidebar.classList.remove('is-open');
+                sidebar.classList.add('hidden');
+                overlay.classList.remove('is-visible');
             });
          });
           menuButton.dataset.listenerAttached = 'true';
@@ -137,57 +142,43 @@ async function initializeApp() {
           console.warn("Mobile menu elements not found during initialization.");
      }
 
-    // Firebase Init
+    // Firebase Init (Unchanged)
     if (typeof firebase === 'undefined' || !firebase.app) {
-        console.error("Firebase core is not available. Check HTML setup.");
-        alert("Fatal Error: Application cannot start. Firebase is missing.");
-        hideLoading();
-        return;
-    }
+         hideLoading();
+         console.error("Firebase SDK not loaded! Ensure Firebase scripts are included correctly in index.html.");
+         alert("Fatal Error: Firebase cannot be initialized. Please check the console.");
+         return;
+     }
     try {
         if (firebase.apps.length === 0) {
-             console.error("Firebase was not initialized in index.html. App cannot run.");
-             alert("Fatal Error: Firebase initialization failed.");
-             hideLoading();
-             return;
-        }
+              hideLoading();
+              console.error("Firebase app not initialized! Check your firebaseConfig in index.html.");
+              alert("Fatal Error: Firebase configuration is missing or incorrect.");
+              return;
+         }
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        window.auth = firebase.auth(); // Global access (use modules where possible)
-        window.db = firebase.firestore(); // Global access
-        setupAuthListener(); // This will trigger data loading and UI updates
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+        setupAuthListener();
     } catch (e) {
-        console.error("Firebase Services Access Failed in script.js:", e);
-        alert("Error accessing Firebase services: " + e.message);
         hideLoading();
-        return;
+        console.error("Firebase initialization error:", e);
+        alert("Error initializing Firebase services: " + e.message);
     }
 
-    // Initialize Mermaid.js
+    // Initialize Mermaid.js (Unchanged)
      if (typeof mermaid !== 'undefined') {
-         try {
-             const isDark = document.documentElement.classList.contains('dark');
-             mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: isDark } });
-             console.log("Mermaid initialized.");
-         } catch (mermaidError) {
-             console.error("Error initializing Mermaid:", mermaidError);
-         }
+         const isDark = document.documentElement.classList.contains('dark');
+         mermaid.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default' });
+         console.log("Mermaid initialized.");
      } else {
-         console.warn("Mermaid library not immediately available during initializeApp.");
-         window.addEventListener('load', () => {
-             if (typeof mermaid !== 'undefined') {
-                 try {
-                      const isDark = document.documentElement.classList.contains('dark');
-                     mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { darkMode: isDark } });
-                     console.log("Mermaid initialized (on window load).");
-                 } catch (mermaidError) {
-                     console.error("Error initializing Mermaid (on window load):", mermaidError);
-                 }
-             } else {
-                  console.error("Mermaid library failed to load.");
-             }
-         });
+         console.warn("Mermaid not loaded yet. Will initialize later if needed.");
+         // Potentially retry initialization later or rely on on-demand rendering
      }
+
+    // Load YouTube API Async (Unchanged)
+    loadYouTubeAPI();
 
     console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
@@ -220,24 +211,36 @@ window.showCourseEnrollment = showCourseEnrollment; // User action
 window.handlePaceSelection = handlePaceSelection; // User action from enrollment form
 window.navigateToCourseDashboard = navigateToCourseDashboard;
 window.handleCourseAction = handleCourseAction; // Handles buttons within course dash
+window.confirmUnenroll = confirmUnenroll; // NEW: Assign unenroll confirm
 
 // Course-Specific Dashboard Navigation (called from sidebar)
 window.showCurrentCourseDashboard = showCurrentCourseDashboard;
-window.showCurrentStudyMaterial = showCurrentStudyMaterial;
+window.showNextLesson = showNextLesson; // RENAMED function call
+window.showFullStudyMaterial = showFullStudyMaterial; // NEW function call
 window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
 window.showCurrentCourseProgress = showCurrentCourseProgress;
 
 // Course Study Material Functions
+window.showCourseStudyMaterial = showCourseStudyMaterial; // The function that displays a specific chapter
 window.displayFormulaSheet = displayFormulaSheet;
 window.handleExplainSelection = handleExplainSelection;
 window.navigateChapterMaterial = navigateChapterMaterial;
+window.handleVideoWatched = handleVideoWatched;
+window.initPdfViewer = initPdfViewer;
+window.cleanupPdfViewer = cleanupPdfViewer;
+window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;
+window.triggerSkipExamGeneration = triggerSkipExamGeneration;
+window.askQuestionAboutTranscription = askQuestionAboutTranscription; // Added
 
 // Course Assignments/Exams Functions
 window.startAssignmentOrExam = startAssignmentOrExam;
 
 // Course Progress Functions
 window.showCourseProgressDetails = showCourseProgressDetails;
-window.renderCourseCharts = renderCourseCharts; // Make available for theme toggle
+window.renderCourseCharts = renderCourseCharts;
+
+// Course Content Menu Function
+window.displayCourseContentMenu = displayCourseContentMenu; // NEW
 
 
 // Test Generation (Standard)
@@ -248,7 +251,7 @@ window.startTestGeneration = startTestGeneration;
 
 // PDF / TeX Generation (Standard)
 window.downloadTexFileWrapper = downloadTexFile;
-// PDF generation attached dynamically via event listeners
+// PDF generation attached dynamically via event listeners in ui_test_generation.js
 
 // Online Test (Shared)
 window.navigateQuestion = navigateQuestion;
@@ -260,14 +263,7 @@ window.submitOnlineTest = submitOnlineTest;
 // Exams Dashboard (Standard Test Gen)
 window.enterResultsForm = enterResultsForm;
 window.submitPendingResults = submitPendingResults;
-window.showExamDetailsWrapper = async (index) => {
-    try {
-        await showExamDetails(index);
-    } catch(e) {
-        console.error("Error showing exam details:", e);
-        displayContent('<p class="text-danger p-4 text-center">Error loading exam details. Please try again.</p>');
-    }
-};
+window.showExamDetailsWrapper = async (index) => { if (index !== null && index >= 0) { await showExamDetails(index); } };
 window.confirmDeletePendingExam = confirmDeletePendingExam;
 window.confirmDeleteCompletedExam = confirmDeleteCompletedExam;
 window.overrideQuestionCorrectness = overrideQuestionCorrectness;
@@ -304,17 +300,34 @@ window.showAdminDashboard = showAdminDashboard;
 window.showInbox = showInbox;
 window.handleMarkRead = handleMarkRead;
 window.promptAdminReply = promptAdminReply;
+window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete; // NEW
+// Badge Management (Admin)
+window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
+window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
+window.promptAddBadge = promptAddBadge;
+window.handleAddBadgeForUser = handleAddBadgeForUser;
+window.confirmRemoveBadge = confirmRemoveBadge;
+window.handleRemoveBadgeForUser = handleRemoveBadgeForUser;
+
 
 // --- Dynamic UI Updates ---
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
+    const adminIcon = document.getElementById('admin-indicator-icon'); // Assuming an icon exists near the username
     const currentUserFromState = currentUser;
+
+    const isAdmin = currentUserFromState && currentUserFromState.uid === ADMIN_UID;
+
     if (adminPanelLink) {
-        const isAdmin = currentUserFromState && currentUserFromState.uid === ADMIN_UID;
         adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
     }
+    // Toggle visibility of a dedicated admin icon if it exists
+    if (adminIcon) {
+         adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
+    }
+
     if (currentUserFromState) {
-        fetchAndUpdateUserInfo(currentUserFromState);
+        fetchAndUpdateUserInfo(currentUserFromState); // Refresh user display (might add admin icon here too)
     }
 }
 
@@ -329,34 +342,29 @@ function attachAuthListeners() {
     if (loginForm && !loginForm.dataset.listenerAttached) {
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const identifier = document.getElementById('login-identifier')?.value;
-            const password = document.getElementById('login-password')?.value;
-            if (!identifier || !password) { alert("Please enter both identifier and password."); return; }
-            signInUser(identifier, password).catch(err => console.error("Sign in submit error:", err));
+            const identifier = e.target.elements['login-identifier'].value;
+            const password = e.target.elements['login-password'].value;
+            signInUser(identifier, password);
         });
         loginForm.dataset.listenerAttached = 'true';
         console.log("Login form listener attached.");
-    } else if (!loginForm) { console.warn("Login form (#login-form) NOT found."); }
-
+    }
     if (signupForm && !signupForm.dataset.listenerAttached) {
         signupForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const username = document.getElementById('signup-username')?.value;
-            const email = document.getElementById('signup-email')?.value;
-            const password = document.getElementById('signup-password')?.value;
-            if (!username || !email || !password) { alert("Please fill in all signup fields."); return; }
-            if (password.length < 6) { alert("Password must be at least 6 characters."); return; }
-            signUpUser(username, email, password).catch(err => console.error("Sign up submit error:", err));
-         });
-         signupForm.dataset.listenerAttached = 'true';
+            const username = e.target.elements['signup-username'].value;
+            const email = e.target.elements['signup-email'].value;
+            const password = e.target.elements['signup-password'].value;
+            signUpUser(username, email, password);
+        });
+        signupForm.dataset.listenerAttached = 'true';
          console.log("Signup form listener attached.");
-    } else if (!signupForm) { console.warn("Signup form (#signup-form) NOT found."); }
-
+    }
     if (googleButton && !googleButton.dataset.listenerAttached) {
-        googleButton.addEventListener('click', () => { signInWithGoogle(); });
+        googleButton.addEventListener('click', signInWithGoogle);
         googleButton.dataset.listenerAttached = 'true';
-        console.log("Google button listener attached.");
-    } else if (!googleButton) { console.warn("Google Sign-in button (#google-signin-button) NOT found."); }
+         console.log("Google signin listener attached.");
+    }
 
     console.log("Finished attempting to attach auth listeners.");
 }
@@ -371,4 +379,3 @@ if (document.readyState === 'loading') {
     initializeApp();
     attachAuthListeners();
 }
-// --- END OF FILE script.js ---
