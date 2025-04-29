@@ -1,12 +1,19 @@
-import { currentUser, globalCourseDataMap, db } from './state.js'; // Added db
+
+
+// MODIFIED: Import necessary state and functions
+import { currentUser, globalCourseDataMap, db, activeCourseId, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 // MODIFIED: Import Firestore save/load functions for notes
 import { saveUserNotes, loadUserNotes, loadSharedNotes, saveSharedNote } from './firebase_firestore.js';
 import { renderMathIn } from './utils.js';
-import { generateAndDownloadPdfWithMathJax } from './ui_pdf_generation.js';
+import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js'; // Added downloadTexFile
 // MODIFIED: Import AI functions
 import { callGeminiTextAPI, reviewNoteWithAI, convertNoteToLatex, improveNoteWithAI, getAllPdfTextForAI } from './ai_integration.js'; // Added getAllPdfTextForAI and improveNoteWithAI
-import { downloadTexFile } from './ui_pdf_generation.js'; // Import tex download helper
+// MODIFIED: Added imports for state and logic needed for target chapter
+import { determineTargetChapter } from './course_logic.js';
+// MODIFIED: Added import for setActiveSidebarLink and displayContent
+import { setActiveSidebarLink, displayContent } from './ui_core.js';
+
 
 // Global state for currently loaded notes for the active chapter
 let currentLoadedUserNotes = [];
@@ -25,30 +32,27 @@ const NOTE_TYPES = {
 };
 
 /**
- * Triggered by the sidebar link. Determines the correct chapter and shows the panel.
+ * Triggered by the sidebar link. Displays the chapter list menu for notes.
  */
 export async function showCurrentNotesDocuments() {
+    // MODIFIED: Uses the imported activeCourseId from state
     if (!currentUser || !activeCourseId) {
          alert("Please select a course first.");
          window.showMyCoursesDashboard(); // Redirect if no active course
          return;
     }
-    // Use the last viewed chapter for notes if available, otherwise the current target chapter
-    const chapterToShow = lastViewedChapterForNotes || determineTargetChapterForNotes(activeCourseId);
-    if (!chapterToShow) {
-         alert("Could not determine which chapter's notes to show.");
-         window.showCurrentCourseDashboard(activeCourseId); // Go back to course dash
-         return;
-    }
-    await showNotesDocumentsPanel(activeCourseId, chapterToShow);
+    // MODIFIED: Calls the new menu display function
+    await displayNotesContentMenu(activeCourseId);
 }
 // Helper to determine the default chapter for notes
 function determineTargetChapterForNotes(courseId) {
      const progress = userCourseProgressMap.get(courseId);
      const courseDef = globalCourseDataMap.get(courseId);
-     if (progress && courseDef) {
+     // MODIFIED: Check window scope for determineTargetChapter
+     if (progress && courseDef && typeof window.determineTargetChapter === 'function') {
           return window.determineTargetChapter(progress, courseDef); // Use global function
      }
+     console.warn("Could not determine target chapter, defaulting to 1.");
      return 1; // Default to chapter 1
 }
 
@@ -60,9 +64,69 @@ export function setLastViewedChapterForNotes(chapterNum) {
     lastViewedChapterForNotes = chapterNum;
 }
 
+/**
+ * NEW: Displays a menu listing all chapters to access their notes.
+ */
+export async function displayNotesContentMenu(courseId = activeCourseId) {
+    if (!currentUser || !courseId) return;
+    setActiveSidebarLink('showCurrentNotesDocuments', 'sidebar-course-nav'); // Keep notes link active
+
+    const courseDef = globalCourseDataMap.get(courseId);
+    if (!courseDef) {
+        displayContent(`<p class="text-red-500 p-4">Error: Course data not found for ${courseId}.</p>`, 'course-dashboard-area');
+        return;
+    }
+
+    showLoading("Loading Chapter List for Notes...");
+
+    const totalChapters = courseDef.totalChapters || 0;
+    let chapterListHtml = '';
+
+    if (totalChapters > 0) {
+        chapterListHtml = '<ul class="space-y-2 list-none p-0">';
+        for (let i = 1; i <= totalChapters; i++) {
+            const chapterNum = i;
+            let chapterTitle = `Chapter ${chapterNum}`;
+            if (courseDef.chapters && Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterNum) {
+                chapterTitle = courseDef.chapters[chapterNum - 1] || chapterTitle;
+            }
+            // Each list item links to the specific chapter's notes panel
+            chapterListHtml += `
+                <li class="border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <a href="#" onclick="window.showNotesDocumentsPanel('${courseId}', ${chapterNum}); return false;" class="block p-3 text-sm">
+                        <span class="font-medium text-gray-800 dark:text-gray-200">${chapterNum}. ${escapeHtml(chapterTitle)}</span>
+                        
+                    </a>
+                </li>
+            `;
+            // We could potentially load note counts here, but it might be slow. Keep it simple for now.
+        }
+        chapterListHtml += '</ul>';
+    } else {
+        chapterListHtml = '<p class="text-center text-muted italic p-4">No chapters defined for this course.</p>';
+    }
+
+    hideLoading();
+
+    const menuHtml = `
+        <div class="animate-fade-in space-y-6">
+            <div class="flex justify-between items-center">
+                 <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(courseDef.name)} - Notes & Documents</h2>
+                 <button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary-small">Back to Dashboard</button>
+            </div>
+            <p class="text-sm text-muted">Select a chapter to view or manage your notes and uploaded documents.</p>
+            <div class="content-card">
+                ${chapterListHtml}
+            </div>
+        </div>
+    `;
+
+    displayContent(menuHtml, 'course-dashboard-area');
+}
+
 
 /**
- * Displays the Notes & Documents panel, loading data from Firestore.
+ * Displays the Notes & Documents panel FOR A SPECIFIC CHAPTER, loading data from Firestore.
  */
 export async function showNotesDocumentsPanel(courseId, chapterNum) {
     const courseDef = globalCourseDataMap.get(courseId);
@@ -73,7 +137,7 @@ export async function showNotesDocumentsPanel(courseId, chapterNum) {
     currentChapterNumForNotes = chapterNum;
     setLastViewedChapterForNotes(chapterNum); // Update last viewed
 
-    setActiveSidebarLink('showCurrentNotesDocuments', 'sidebar-course-nav'); // Highlight the new link
+    setActiveSidebarLink('showCurrentNotesDocuments', 'sidebar-course-nav'); // Keep notes link active
 
     // Use displayContent to render into the main course area
     displayContent(`<div id="notes-panel-dynamic-content"><div class="text-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-2 text-sm text-muted">Loading Notes for Chapter ${chapterNum}...</p></div></div>`, 'course-dashboard-area');
@@ -83,13 +147,14 @@ export async function showNotesDocumentsPanel(courseId, chapterNum) {
     try {
         // Load notes from Firestore
         currentLoadedUserNotes = await loadUserNotes(currentUser.uid, courseId, chapterNum);
-        currentLoadedSharedNotes = await loadSharedNotes(courseId, chapterNum);
+        currentLoadedSharedNotes = await loadSharedNotes(courseId, chapterNum); // Keep loading shared notes logic if needed later
 
         const panelHtml = `
             <div class="content-card border dark:border-gray-700">
                  <div class="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-600">
                     <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Notes & Documents (Chapter ${chapterNum})</h3>
-                    <button onclick="window.showCourseStudyMaterial('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs">Back to Study Material</button>
+                    <!-- MODIFIED: Button now goes back to the Notes Menu -->
+                    <button onclick="window.displayNotesContentMenu('${courseId}')" class="btn-secondary-small text-xs">Back to Chapter List</button>
                  </div>
 
                 <!-- Quick Access Section -->
@@ -287,26 +352,27 @@ async function editNote(noteId) {
     document.getElementById('note-edit-modal')?.remove();
 
     // MODIFIED: Conditionally enable AI buttons based on note type
-    const canUseTextAI = note.type === NOTE_TYPES.TEXT || (note.type === NOTE_TYPES.FILE && note.filetype === 'application/pdf');
-    const canUseLatexConvert = note.type === NOTE_TYPES.TEXT; // Only convert plain text
+    // Allow AI review/improve if it's TEXT (could be original text or extracted PDF text)
+    const canUseTextAI = note.type === NOTE_TYPES.TEXT;
+    const canUseLatexConvert = note.type === NOTE_TYPES.TEXT; // Only convert text notes
 
     const modalHtml = `
         <div id="note-edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4 animate-fade-in" aria-labelledby="note-edit-title" role="dialog" aria-modal="true">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-3xl transform transition-all flex flex-col max-h-[90vh]">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0">
-                    <h3 id="note-edit-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Edit Note ${note.type === NOTE_TYPES.FILE ? `(Editing Text from: ${escapeHtml(note.filename)})` : ''}</h3>
+                    <h3 id="note-edit-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Edit Note ${note.filename ? `(Editing Text from: ${escapeHtml(note.filename)})` : ''}</h3>
                     <div class="flex gap-2">
                         <button onclick="window.convertNoteToLatexWrapper()" class="btn-secondary-small text-xs" title="Convert current text to LaTeX format using AI" ${!canUseLatexConvert ? 'disabled' : ''}>Convert to LaTeX (AI)</button>
                         <button onclick="window.improveNoteWithAIWrapper()" class="btn-secondary-small text-xs" title="Ask AI to improve clarity and structure" ${!canUseTextAI ? 'disabled' : ''}>Improve with AI</button>
                          <button onclick="window.reviewNoteWithAIWrapper('${note.id}')" class="btn-secondary-small text-xs" title="Get AI feedback compared to chapter material" ${!canUseTextAI ? 'disabled' : ''}>Review Note (AI)</button>
-                        <button onclick="document.getElementById('note-edit-modal').remove()" class="btn-icon">&times;</button>
+                        <button onclick="document.getElementById('note-edit-modal').remove()" class="btn-icon">×</button>
                     </div>
                 </div>
                 <input type="text" id="note-title-edit" value="${escapeHtml(note.title)}" class="w-full mb-3 p-2 border rounded dark:bg-gray-700 dark:border-gray-600 dark:text-white flex-shrink-0">
                 <div class="flex-grow overflow-y-auto mb-4 border rounded dark:border-gray-600">
                     <textarea id="note-content-edit" class="w-full h-full p-2 font-mono text-sm border-none resize-none dark:bg-gray-700 dark:text-gray-100 focus:outline-none min-h-[40vh]">${escapeHtml(note.content)}</textarea>
                 </div>
-                 <p class="text-xs text-muted mb-3">${note.type === NOTE_TYPES.FILE ? 'You are editing the text extracted from the PDF. Saving will update this text content.' : 'Editing note content.'}</p>
+                 <p class="text-xs text-muted mb-3">${note.filename ? 'You are editing the text extracted from the original file. Saving will update this text content.' : 'Editing note content.'}</p>
                 <div class="flex justify-end gap-3 flex-shrink-0">
                     <button onclick="document.getElementById('note-edit-modal').remove()" class="btn-secondary">Cancel</button>
                     <button onclick="window.saveNoteChangesWrapper('${note.id}')" class="btn-primary">Save Changes</button>
@@ -344,11 +410,12 @@ async function saveNoteChanges(noteId) {
          } else {
               newType = NOTE_TYPES.TEXT;
          }
-    } else if (newType === NOTE_TYPES.FILE && originalNote.filetype === 'application/pdf') {
-         // If editing extracted text from a PDF, save it as a TEXT note now
-         newType = NOTE_TYPES.TEXT;
-         console.log("Saving edited PDF text as TEXT note type.");
+    } else if (newType === NOTE_TYPES.FILE) {
+        // If original was a file (e.g. PDF, image), editing changes its type to TEXT
+        newType = NOTE_TYPES.TEXT;
+        console.log(`Saving edited content from file (${originalNote.filename}) as TEXT note type.`);
     }
+    // AI Review type remains unchanged
 
     // Update local state
     currentLoadedUserNotes[noteIndex] = {
@@ -356,7 +423,7 @@ async function saveNoteChanges(noteId) {
         title: title.trim(),
         content: content, // Keep original spacing
         timestamp: Date.now(),
-        type: newType, // Update type based on content check or PDF edit
+        type: newType, // Update type based on content check or edit source
     };
 
     modal.remove(); // Close modal first
@@ -408,10 +475,10 @@ async function improveNoteWithAIUIAction() {
 
     showLoading('Improving note with AI...');
     try {
-        // Call the modified improveNoteWithAI function
-        const improvedContent = await improveNoteWithAI(currentContent);
-        // Append the AI suggestions below the original content for review
-        contentArea.value += `\n\n---\n**AI Suggestions/Additions:**\n---\n${improvedContent}\n---`;
+        // Call the modified improveNoteWithAI function from ai_integration.js
+        const responseText = await improveNoteWithAI(currentContent);
+        // MODIFIED: Append the AI suggestions below the original content for review
+        contentArea.value += `\n\n---\n**AI Suggestions/Additions:**\n---\n${responseText}\n---`;
         alert("AI suggestions have been appended to your note. Please review and integrate them as needed before saving.");
     } catch (error) {
         console.error('Error improving note:', error);
@@ -444,17 +511,18 @@ async function uploadNote(courseId, chapterNum) {
                  noteContent = await file.text();
                  noteType = NOTE_TYPES.TEXT; // Treat basic text files as text notes
                  if (file.name.toLowerCase().endsWith('.tex')) noteType = NOTE_TYPES.LATEX;
+                 console.log(`Extracted text from ${file.type}: ${file.name}`);
             } else if (file.type === 'application/pdf') {
                  // Extract text from PDF using helper
                  const arrayBuffer = await file.arrayBuffer();
                  const pdfData = new Uint8Array(arrayBuffer);
                  noteContent = await getAllPdfTextForAI(pdfData) || `[PDF Content - ${file.name}]`; // Fallback text if extraction fails
-                 noteType = NOTE_TYPES.TEXT; // Store extracted text
+                 noteType = NOTE_TYPES.TEXT; // Store extracted text as TEXT type
                  console.log(`Extracted ${noteContent.length} chars from PDF ${file.name}`);
             } else if (file.type.startsWith('image/')) {
-                 // For images, maybe store a placeholder or use Vision API later?
+                 // For images, store a placeholder
                  noteContent = `[Image File - ${file.name}]`;
-                 noteType = NOTE_TYPES.FILE; // Keep as file type for now
+                 noteType = NOTE_TYPES.FILE;
             } else {
                  // For other types, just store filename
                  noteContent = `[File - ${file.name}]`;
@@ -545,13 +613,11 @@ async function viewNote(noteId, isUserNote) {
     let downloadButtonHtml = '';
     let aiReviewButtonHtml = '';
 
+    // MODIFIED: Handle viewing extracted text from PDF (now type TEXT)
     if (note.type === NOTE_TYPES.FILE) {
+        // This now mainly applies to images or other non-extractable file types
         contentHtml = `<p class="text-center text-muted italic p-4">File: ${escapeHtml(note.filename)} (${escapeHtml(note.filetype || 'Unknown type')})</p>`;
-        if (note.filetype === 'application/pdf') {
-             contentHtml += `<p class="text-sm text-center text-muted italic">(PDF view for uploaded files not yet supported. Edit note to see extracted text.)</p>`;
-        }
-         // Add download button for FILE type (if we implement file storage)
-         // downloadButtonHtml = `<button class="btn-secondary-small" disabled title="File download not implemented">Download File</button>`;
+         // downloadButtonHtml = `<button class="btn-secondary-small" disabled title="File download not implemented">Download File</button>`; // Placeholder
     } else if (note.type === NOTE_TYPES.AI_REVIEW) {
         contentHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${note.content}</div>`; // Assume content is already HTML formatted
     } else if (note.type === NOTE_TYPES.LATEX) {
@@ -560,7 +626,8 @@ async function viewNote(noteId, isUserNote) {
          downloadButtonHtml = `<button onclick="window.downloadNoteAsTexWrapper('${note.id}')" class="btn-secondary-small text-xs">Download .tex</button>`;
          // Enable AI review for LaTeX notes too
          if (isUserNote) aiReviewButtonHtml = `<button onclick="window.reviewNoteWithAIWrapper('${note.id}')" class="btn-secondary-small text-xs">Review Note (AI)</button>`;
-    } else { // TEXT
+    } else { // TEXT (could be original text or extracted from PDF/TXT/MD)
+         const titleSuffix = note.filename ? ` (Text from: ${escapeHtml(note.filename)})` : '';
          contentHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(note.content).replace(/\n/g, '<br>')}</div>`;
          // Enable AI review for TEXT notes
          if (isUserNote) aiReviewButtonHtml = `<button onclick="window.reviewNoteWithAIWrapper('${note.id}')" class="btn-secondary-small text-xs">Review Note (AI)</button>`;
@@ -572,7 +639,7 @@ async function viewNote(noteId, isUserNote) {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-3xl transform transition-all flex flex-col max-h-[90vh]">
                 <div class="flex justify-between items-center mb-4 flex-shrink-0 pb-3 border-b dark:border-gray-600">
                     <h3 id="note-view-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 truncate" title="${escapeHtml(note.title)}">${escapeHtml(note.title)}</h3>
-                    <button onclick="document.getElementById('note-view-modal').remove()" class="btn-icon">&times;</button>
+                    <button onclick="document.getElementById('note-view-modal').remove()" class="btn-icon">×</button>
                 </div>
                 <div id="note-view-content-area" class="flex-grow overflow-y-auto mb-4 pr-2">
                    ${contentHtml}
@@ -593,30 +660,6 @@ async function viewNote(noteId, isUserNote) {
     }
 }
 
-/**
- * Triggers download of a LaTeX note as a .tex file.
- */
-function downloadNoteAsTex(noteId) {
-    const note = findNoteById(noteId, true); // Only user notes can be downloaded this way
-    if (!note || note.type !== NOTE_TYPES.LATEX) {
-        alert("Cannot download: Note not found or is not a LaTeX note.");
-        return;
-    }
-    const filename = (note.title.endsWith('.tex') ? note.title : `${note.title}.tex`).replace(/[^a-zA-Z0-9_.-]/g, '_'); // Clean filename
-    // Content is already LaTeX source
-    const content = note.content;
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-
 
 // Helper to find a note by ID in either user or shared lists
 function findNoteById(noteId, searchUserNotes) {
@@ -628,8 +671,9 @@ function findNoteById(noteId, searchUserNotes) {
 // Wrapper for AI Review
 async function reviewNoteWithAIUIAction(noteId) { // Renamed internal function
      const note = findNoteById(noteId, true); // Find in user notes
-     if (!note || note.type === NOTE_TYPES.FILE || note.type === NOTE_TYPES.AI_REVIEW) {
-         alert("Cannot review this note type or note not found.");
+     // MODIFIED: Allow review if type is TEXT (could be original or extracted PDF)
+     if (!note || note.type === NOTE_TYPES.FILE || note.type === NOTE_TYPES.AI_REVIEW || note.type === NOTE_TYPES.LATEX) {
+         alert("Cannot review this note type (only TEXT notes) or note not found.");
          return;
      }
       // Close view modal if open
@@ -671,6 +715,31 @@ async function reviewNoteWithAIUIAction(noteId) { // Renamed internal function
          alert(`Failed to get AI review: ${error.message}`);
      }
 }
+
+/**
+ * Triggers download of a LaTeX note as a .tex file.
+ */
+function downloadNoteAsTex(noteId) {
+    const note = findNoteById(noteId, true); // Only user notes can be downloaded this way
+    if (!note || note.type !== NOTE_TYPES.LATEX) {
+        alert("Cannot download: Note not found or is not a LaTeX note.");
+        return;
+    }
+    const filename = (note.title.endsWith('.tex') ? note.title : `${note.title}.tex`).replace(/[^a-zA-Z0-9_.-]/g, '_'); // Clean filename
+    // Content is already LaTeX source
+    const content = note.content;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+
 
 // Attach wrapper functions to window scope (Done in script.js)
 
