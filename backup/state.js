@@ -1,13 +1,23 @@
+// --- START OF FILE state.js ---
+
 // --- Core Data & State ---
 export let auth = null;
 export let db = null;
 export let data = null; // Holds the user's specific app data { subjects: { ... } }
 export let currentUser = null; // Holds the Firebase Auth user object
 export let currentSubject = null; // Holds the currently selected subject object from 'data'
-// REMOVED: markdownContentCache - Fetched dynamically now
-// export let markdownContentCache = null;
 export let charts = {}; // For the progress dashboard
 export let currentOnlineTestState = null; // Holds state during an online test
+
+// --- NEW Course State ---
+// Stores progress for all courses the user is enrolled in
+// Key: courseId (e.g., "fop_physics_v1"), Value: UserCourseProgress object
+export let userCourseProgressMap = new Map();
+// Stores the definition data for courses (fetched from global collection)
+// Key: courseId, Value: CourseDefinition object
+export let globalCourseDataMap = new Map();
+// Currently active course ID being viewed/worked on
+export let activeCourseId = null;
 
 // --- State Modifiers ---
 export function setAuth(newAuth) {
@@ -25,15 +35,32 @@ export function setCurrentUser(newUser) {
 export function setCurrentSubject(newSubject) {
     currentSubject = newSubject;
 }
-// REMOVED: setMarkdownContentCache
-// export function setMarkdownContentCache(newCache) {
-//     markdownContentCache = newCache;
-// }
 export function setCharts(newCharts) {
     charts = newCharts;
 }
 export function setCurrentOnlineTestState(newState) {
     currentOnlineTestState = newState;
+}
+// --- NEW Course State Modifiers ---
+export function setUserCourseProgressMap(newMap) {
+    userCourseProgressMap = newMap;
+}
+export function setGlobalCourseDataMap(newMap) {
+    globalCourseDataMap = newMap;
+}
+export function setActiveCourseId(newId) {
+    activeCourseId = newId;
+}
+export function updateUserCourseProgress(courseId, progressData) {
+    if (userCourseProgressMap.has(courseId)) {
+        // Merge updates smartly if needed, or replace entirely
+        userCourseProgressMap.set(courseId, { ...userCourseProgressMap.get(courseId), ...progressData });
+    } else {
+        userCourseProgressMap.set(courseId, progressData);
+    }
+}
+export function updateGlobalCourseData(courseId, courseData) {
+     globalCourseDataMap.set(courseId, courseData);
 }
 
 // --- State Reset ---
@@ -42,29 +69,55 @@ export function clearUserSession() {
     setData(null);
     setCurrentOnlineTestState(null);
     setCharts({});
-    // setMarkdownContentCache(null); // Removed
-    document.getElementById('content')?.replaceChildren(); // Use replaceChildren for better cleanup
+    // --- NEW: Clear Course State ---
+    setUserCourseProgressMap(new Map());
+    setActiveCourseId(null);
+    // Do NOT clear globalCourseDataMap here, it's global definition data
+
+    document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');
     document.getElementById('online-test-area')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
+     // Stop any potential PDF viewer or YouTube players
+     window.cleanupPdfViewer?.();
+     window.cleanupYouTubePlayers?.();
 }
 
-// --- Structure Update Notes for exam_history items ---
-/*
-Each question in `exam_history[...].questions` (for online tests) should now potentially have:
+// --- Structure Update Notes for userCourseProgress items ---
+/* userCourseProgress/{userId}/courses/{courseId} document structure:
 {
-    // ... existing fields: id, chapter, number, text, options, image, userAnswer, correctAnswer, isCorrect
-    isOverridden: boolean (optional, default false) // NEW: For override feature
-}
+    courseId: string,
+    enrollmentDate: timestamp,
+    selectedPace: string ("compact", "mediocre", "lenient", "custom"),
+    customPaceDays: number | null,
+    baseMediocrePace: number | null, // chapters/day, set after week 1
+    currentPace: number | null, // chapters/day, recalculated daily
+    courseStudiedChapters: number[], // Chapters marked as studied *within this course*
+    // Track watched videos and duration
+    watchedVideoUrls: { [chapterNum]: string[] }, // Deprecated? Maybe keep for quick check if video *started*?
+    watchedVideoDurations: { [chapterNum]: { [videoId]: number } }, // Watched duration in seconds
+    // *** NEW: PDF Progress Tracking ***
+    pdfProgress: { [chapterNum]: { currentPage: number, totalPages: number } }, // Track PDF reading
+    // Skip Exam Tracking
+    skipExamAttempts: { [chapterNum]: number }, // Count attempts per chapter
+    lastSkipExamScore: { [chapterNum]: number | null }, // Last percentage score
+    // Other Scores (Now used for grading instead of skip exams)
+    dailyProgress: { [dateString]: { chaptersStudied: number[], assignmentCompleted: boolean, assignmentScore: number | null } },
+    // skipExamScores: { [chapterNum]: number }, // Removed from direct grading - maybe keep for history/stats? Let's remove for now to simplify.
+    assignmentScores: { [assignmentId]: number }, // assignmentId could be "dayX" or "dateString"
+    weeklyExamScores: { [weekNum]: number },
+    midcourseExamScores: { [midcourseNum]: number }, // e.g., 1, 2, 3
+    finalExamScores: number[] | null, // Array of 3 scores
+    // Calculated fields / Status
+    attendanceScore: number, // Calculated, 0-100
+    extraPracticeBonus: number, // 0-5
+    totalMark: number | null, // Final calculated mark
+    grade: string | null, // "A+", "B", etc. or null
+    status: string ("enrolled", "completed", "failed"),
+    completionDate: timestamp | null,
+    lastActivityDate: timestamp,
+    currentChapterTarget: number, // Which chapter the user *should* be working on today
+    currentDayObjective: string | null // e.g., "Study Chapter 5, Complete Assignment 5"
+}*/
 
-The top-level exam_history item should now potentially have:
-{
-    // ... existing fields: examId, subjectId, timestamp, durationMinutes, type, questions, allocation, totalQuestions
-    score: number, // This remains the ORIGINAL score
-    originalScore: number, // NEW: Explicitly store original score if overridden
-    overriddenScore: number (optional) // NEW: Store the score after overrides
-}
-*/
-
-// --- Export direct access for convenience (use with caution) ---
-// Allows reading state directly, e.g., import { data } from './state.js';
+// --- END OF FILE state.js ---

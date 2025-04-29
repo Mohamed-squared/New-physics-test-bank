@@ -1,10 +1,11 @@
+// --- START OF FILE markdown_parser.js ---
+
 // --- Markdown Parsing ---
 
+import { showLoading, hideLoading } from './utils.js'; // Assuming utils are needed somewhere, maybe not here directly
+
 export function updateChaptersFromMarkdown(subject, mdContent) {
-    if (!subject) {
-        console.error("updateChaptersFromMarkdown: Subject is undefined");
-        return false; // Indicate no changes made
-    }
+    if (!subject) { console.error("updateChaptersFromMarkdown: Subject undefined"); return false; }
     const parsedChapters = parseChaptersFromMarkdown(mdContent);
     const existingChapters = subject.chapters || {};
     const updatedChapters = {};
@@ -15,56 +16,33 @@ export function updateChaptersFromMarkdown(subject, mdContent) {
         const parsedChapData = parsedChapters[chapNum];
         const existingChapData = existingChapters[chapNum];
         const newTotal = parsedChapData?.total_questions ?? 0;
-
-        let currentChapterData = {};
-        let chapterChanged = false;
+        let currentChapterData = {}; let chapterChanged = false;
 
         if (existingChapData) {
             currentChapterData = { ...existingChapData };
             if (parsedChapData) {
-                // Chapter exists in both: Update total and available list if needed
                 if (currentChapterData.total_questions !== newTotal) {
-                    console.log(`Chapter ${chapNum}: Total questions changed from ${currentChapterData.total_questions} to ${newTotal}. Resetting available questions.`);
+                    console.log(`Ch ${chapNum}: Total Qs changed ${currentChapterData.total_questions} -> ${newTotal}. Resetting available.`);
                     currentChapterData.total_questions = newTotal;
-                    // Reset available questions to all questions for this chapter
                     currentChapterData.available_questions = Array.from({ length: newTotal }, (_, j) => j + 1);
                     chapterChanged = true;
                 } else {
-                    // Total questions unchanged, validate existing available list
-                    currentChapterData.total_questions = newTotal; // Ensure it's set
+                    currentChapterData.total_questions = newTotal;
                     const initialAvailable = currentChapterData.available_questions || [];
-                    // Filter out invalid numbers and duplicates
-                    currentChapterData.available_questions = [...new Set(
-                        (initialAvailable)
-                            .filter(q => typeof q === 'number' && q > 0 && q <= newTotal)
-                    )].sort((a, b) => a - b);
-
-                    // Check if the list actually changed after filtering/sorting
+                    currentChapterData.available_questions = [...new Set( (initialAvailable).filter(q => typeof q === 'number' && q > 0 && q <= newTotal) )].sort((a, b) => a - b);
                     if (JSON.stringify(initialAvailable.sort((a,b)=>a-b)) !== JSON.stringify(currentChapterData.available_questions)) {
-                         console.log(`Chapter ${chapNum}: Available questions list cleaned/validated.`);
-                         chapterChanged = true;
+                         console.log(`Ch ${chapNum}: Available Qs list cleaned.`); chapterChanged = true;
                     }
                 }
-            } else {
-                // Chapter exists in data but NOT in Markdown: Mark as having 0 questions
-                 if (currentChapterData.total_questions !== 0 || (currentChapterData.available_questions && currentChapterData.available_questions.length > 0)) {
-                    console.warn(`Chapter ${chapNum} exists in data but not found in the Markdown file. Removing questions.`);
-                    currentChapterData.total_questions = 0;
-                    currentChapterData.available_questions = [];
-                    chapterChanged = true;
+            } else { // Exists in data, not MD
+                 if (currentChapterData.total_questions !== 0 || currentChapterData.available_questions?.length > 0) {
+                    console.warn(`Ch ${chapNum} not found in MD. Removing questions.`);
+                    currentChapterData.total_questions = 0; currentChapterData.available_questions = []; chapterChanged = true;
                  }
             }
-        } else if (parsedChapData) {
-            // Chapter exists ONLY in Markdown: Add it as new
-            console.log(`Chapter ${chapNum}: Found new chapter in Markdown with ${newTotal} questions.`);
-            currentChapterData = {
-                total_questions: newTotal,
-                total_attempted: 0,
-                total_wrong: 0,
-                available_questions: Array.from({ length: newTotal }, (_, j) => j + 1),
-                mistake_history: [],
-                consecutive_mastery: 0
-            };
+        } else if (parsedChapData) { // Exists only in MD
+            console.log(`Ch ${chapNum}: Found new chapter in MD (${newTotal} Qs).`);
+            currentChapterData = { total_questions: newTotal, total_attempted: 0, total_wrong: 0, available_questions: Array.from({ length: newTotal }, (_, j) => j + 1), mistake_history: [], consecutive_mastery: 0 };
             chapterChanged = true;
         }
 
@@ -75,268 +53,165 @@ export function updateChaptersFromMarkdown(subject, mdContent) {
         currentChapterData.consecutive_mastery = currentChapterData.consecutive_mastery ?? 0;
         currentChapterData.available_questions = currentChapterData.available_questions ?? [];
 
-        // Only add chapter if it has data or questions
-         if (Object.keys(currentChapterData).length > 0 || newTotal > 0) {
-              updatedChapters[chapNum] = currentChapterData;
-         }
-         if (chapterChanged) {
-             changesMade = true;
-         }
+        if (Object.keys(currentChapterData).length > 0 || newTotal > 0) { updatedChapters[chapNum] = currentChapterData; }
+        if (chapterChanged) { changesMade = true; }
     });
-
-    subject.chapters = updatedChapters; // Update the subject object directly
-    return changesMade; // Return whether changes occurred
+    subject.chapters = updatedChapters; return changesMade;
 }
 
 export function parseChaptersFromMarkdown(mdContent) {
-    console.log("--- Inside parseChaptersFromMarkdown ---");
-    if (!mdContent) {
-        console.error("parseChaptersFromMarkdown received null or empty mdContent.");
-        return {};
-    }
-    console.log(`Parsing MD content (Length: ${mdContent.length}, Start):\n`, mdContent.substring(0, 500));
-
-    const chapters = {};
-    let currentChapterNum = null;
-    let questionCount = 0;
-    const lines = mdContent.split('\n');
-    // Regex to find "### Chapter <number>[: anything]"
-    const chapterRegex = /^\s*###\s+Chapter\s+(\d+):?.*?$/i;
-    // Regex to find a line starting with a number, period/paren, then space (question start)
+    console.log("--- Parsing MD for Chapters ---");
+    if (!mdContent) { console.error("parseChaptersFromMarkdown: null mdContent."); return {}; }
+    const chapters = {}; let currentChapterNum = null; let questionCount = 0;
+    const lines = mdContent.split('\n'); const chapterRegex = /^\s*###\s+Chapter\s+(\d+):?.*?$/i;
     const questionRegex = /^\s*\d+[\.\)]\s+.*/;
-
-    console.log(`Checking ${lines.length} lines against regex: ${chapterRegex}`);
-
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
-
-        // Logging for debug
-        // if (i < 10 || i % 50 === 0 || line.startsWith('#')) {
-        //      console.log(`Line ${i+1}: "${line}" (Trimmed: "${trimmedLine}")`);
-        // }
-
+        const line = lines[i]; const trimmedLine = line.trim();
         const chapterMatch = trimmedLine.match(chapterRegex);
         if (chapterMatch) {
-            // console.log(`>>> Regex MATCHED Chapter on Line ${i+1}: "${line}"`);
-            // Finalize count for the previous chapter (if any)
-            if (currentChapterNum !== null) {
-                if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
-                chapters[currentChapterNum].total_questions = questionCount;
-            }
-            // Start new chapter
-            currentChapterNum = chapterMatch[1];
-            questionCount = 0; // Reset count for the new chapter
-            if (!chapters[currentChapterNum]) {
-                 chapters[currentChapterNum] = { total_questions: 0 }; // Initialize if not seen before
-            }
-        } else if (currentChapterNum !== null && questionRegex.test(line)) {
-            // If we are inside a chapter and find a question line, increment count
-            questionCount++;
-        }
+            if (currentChapterNum !== null) { if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {}; chapters[currentChapterNum].total_questions = questionCount; }
+            currentChapterNum = chapterMatch[1]; questionCount = 0;
+            if (!chapters[currentChapterNum]) { chapters[currentChapterNum] = { total_questions: 0 }; }
+        } else if (currentChapterNum !== null && questionRegex.test(line)) { questionCount++; }
     }
-
-    // Finalize count for the last chapter in the file
-    if (currentChapterNum !== null) {
-         if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
-         chapters[currentChapterNum].total_questions = questionCount;
-    }
-
-    if (Object.keys(chapters).length === 0) {
-        console.error("ERROR: No chapters were parsed. Check chapterRegex and MD format (e.g., '### Chapter 1: Title').");
-    } else {
-        console.log(`Parsed ${Object.keys(chapters).length} chapters successfully.`);
-        // console.log("Parsed chapter data:", chapters); // Optional: log the result
-    }
-    console.log("--- Exiting parseChaptersFromMarkdown ---");
+    if (currentChapterNum !== null) { if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {}; chapters[currentChapterNum].total_questions = questionCount; }
+    if (Object.keys(chapters).length === 0) { console.error("ERROR: No chapters parsed. Check MD format (e.g., '### Chapter 1: Title')."); }
+    else { console.log(`Parsed ${Object.keys(chapters).length} chapters.`); }
+    console.log("--- Finished Parsing MD for Chapters ---");
     return chapters;
 }
 
 export function extractQuestionsFromMarkdown(mdContent, selectedQuestionsMap) {
-    const extracted = {
-        questions: [], // { id, chapter, number, text, options: [{letter: 'A', text: '...'}], image, answer }
-        answers: {}    // { "c<chapter>q<question>": "A", ... }
-    };
-    if (!mdContent || !selectedQuestionsMap || Object.keys(selectedQuestionsMap).length === 0) {
-        console.error("Markdown content or selection map invalid for extraction.");
-        return extracted;
-    }
-
-    const lines = mdContent.split('\n');
-    let currentChapter = null;
-    let currentQuestion = null; // Holds the question object being built
-    let processingState = 'seeking_chapter'; // 'seeking_chapter', 'seeking_question', 'in_question_text', 'in_options', 'found_answer'
-
-    // Regex definitions
-    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i;
-    const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/; // Capture number and first line text
-    const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/; // Capture option letter and text
-    const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i; // Capture answer letter/digit
-    const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g; // Capture image URL
+    const extracted = { questions: [], answers: {} };
+    if (!mdContent || !selectedQuestionsMap || Object.keys(selectedQuestionsMap).length === 0) { console.error("Invalid args for extractQuestionsFromMarkdown."); return extracted; }
+    const lines = mdContent.split('\n'); let currentChapter = null; let currentQuestion = null; let processingState = 'seeking_chapter';
+    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i; const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/; const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/; const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i; const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
 
     function finalizeQuestion() {
         if (currentQuestion && currentChapter) {
-            const questionId = `c${currentChapter}q${currentQuestion.number}`;
-            let rawText = currentQuestion.textLines.join('\n').trim();
-            let answer = null;
-            let imageUrl = null;
-
-            // Process potential answer line
-            if (currentQuestion.answerLine) {
-                const answerMatch = currentQuestion.answerLine.match(answerRegex);
-                if (answerMatch) {
-                    answer = answerMatch[1].toUpperCase();
-                }
-                // Remove the answer line from the question text if it's the last line
-                if (currentQuestion.textLines.length > 0 && currentQuestion.textLines[currentQuestion.textLines.length - 1]?.trim() === currentQuestion.answerLine) {
-                     currentQuestion.textLines.pop();
-                     rawText = currentQuestion.textLines.join('\n').trim(); // Update rawText
-                }
-            }
-
-            // Extract first image URL and remove all image markdown from text
-            const firstImageMatch = rawText.match(/!\[(.*?)\]\((.*?)\)/);
-             if (firstImageMatch) {
-                 imageUrl = firstImageMatch[2];
-                 rawText = rawText.replace(imageMarkdownRegex, '').trim(); // Remove ALL image tags
-             }
-
-            // Format options
-            const formattedOptions = currentQuestion.options.map(opt => ({
-                letter: opt.letter,
-                text: opt.text.trim() // Trim whitespace from option text
-            }));
-
-            // Add to extracted data
-            extracted.questions.push({
-                id: questionId,
-                chapter: currentChapter,
-                number: currentQuestion.number,
-                text: rawText, // Cleaned text
-                options: formattedOptions,
-                image: imageUrl, // Extracted image URL
-                answer: answer    // Extracted answer
-            });
-
-            // Store answer separately
-            if (answer) {
-                extracted.answers[questionId] = answer;
-            } else {
-                console.warn(`Answer not found for Q ${questionId} (Line: ${currentQuestion.answerLine || 'N/A'}). Check format 'ans: X'.`);
-            }
-        }
-        currentQuestion = null; // Reset for next question
+            const questionId = `c${currentChapter}q${currentQuestion.number}`; let rawText = currentQuestion.textLines.join('\n').trim(); let answer = null; let imageUrl = null;
+            if (currentQuestion.answerLine) { const m = currentQuestion.answerLine.match(answerRegex); if (m) answer = m[1].toUpperCase(); if (currentQuestion.textLines.length > 0 && currentQuestion.textLines[currentQuestion.textLines.length - 1]?.trim() === currentQuestion.answerLine) { currentQuestion.textLines.pop(); rawText = currentQuestion.textLines.join('\n').trim(); } }
+            const imgMatch = rawText.match(/!\[.*?\]\((.*?)\)/); if (imgMatch) { imageUrl = imgMatch[1]; rawText = rawText.replace(imageMarkdownRegex, '').trim(); }
+            const formattedOptions = currentQuestion.options.map(opt => ({ letter: opt.letter, text: opt.text.trim() }));
+            extracted.questions.push({ id: questionId, chapter: currentChapter, number: currentQuestion.number, text: rawText, options: formattedOptions, image: imageUrl, answer: answer });
+            if (answer) extracted.answers[questionId] = answer; else console.warn(`Answer missing for Q ${questionId}.`);
+        } currentQuestion = null;
     }
 
-    // Iterate through lines
-     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmedLine = line.trim();
-
-        // Attempt to match line types
-        const chapterMatch = trimmedLine.match(chapterRegex);
-        const questionMatch = line.match(questionStartRegex); // Use original line for question num at start
-        const optionMatch = trimmedLine.match(optionRegex);
-        const isPotentialAnswerLine = answerRegex.test(trimmedLine);
-
-        // --- State Machine Logic ---
-
-        if (chapterMatch) {
-            finalizeQuestion(); // Finalize previous question before starting new chapter
-            currentChapter = chapterMatch[1];
-            processingState = 'seeking_question';
-            continue;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]; const trimmedLine = line.trim();
+        const chapterMatch = trimmedLine.match(chapterRegex); const questionMatch = line.match(questionStartRegex); const optionMatch = trimmedLine.match(optionRegex); const isPotentialAnswerLine = answerRegex.test(trimmedLine);
+        if (chapterMatch) { finalizeQuestion(); currentChapter = chapterMatch[1]; processingState = 'seeking_question'; continue; }
+        if (processingState === 'seeking_chapter') continue;
+        if (questionMatch) {
+            finalizeQuestion(); const qNum = parseInt(questionMatch[1], 10); const firstLineText = questionMatch[2]; const chapterKey = String(currentChapter);
+            if (selectedQuestionsMap[chapterKey]?.includes(qNum)) { currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null }; processingState = 'in_question_text'; }
+            else { processingState = 'seeking_question'; currentQuestion = null; } continue;
         }
+        if (currentQuestion) {
+            if (optionMatch) { processingState = 'in_options'; currentQuestion.options.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2] }); continue; }
+             if (isPotentialAnswerLine) {
+                  let nextLineIndex = i + 1; let nextSignificantLine = null; while(nextLineIndex < lines.length) { nextSignificantLine = lines[nextLineIndex].trim(); if(nextSignificantLine !== '') break; nextLineIndex++; }
+                  const nextIsNewQ = nextSignificantLine && /^\s*\d+[\.\)]\s+.*/.test(nextSignificantLine); const nextIsNewChapter = nextSignificantLine && /^###\s+Chapter\s+\d+:?.*?$/i.test(nextSignificantLine); const isLastLine = nextLineIndex >= lines.length;
+                 if (nextSignificantLine === null || nextIsNewQuestion || nextIsNewChapter || isLastLine) { currentQuestion.answerLine = trimmedLine; processingState = 'found_answer'; }
+                 else { if (processingState === 'in_options' && currentQuestion.options.length > 0) { currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line; } else { currentQuestion.textLines.push(line); } } continue;
+             }
+             if (processingState === 'in_options' && currentQuestion.options.length > 0) { currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line; }
+             else if (processingState !== 'found_answer') { currentQuestion.textLines.push(line); }
+        }
+    }
+    finalizeQuestion();
+    console.log(`Extraction finished. Found ${extracted.questions.length} questions.`);
+    const totalSelectedCount = Object.values(selectedQuestionsMap).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+    if (extracted.questions.length < totalSelectedCount && totalSelectedCount > 0) { console.warn(`Extraction Warning: Selected ${totalSelectedCount} but only extracted ${extracted.questions.length}.`); }
+    return extracted;
+}
 
-        if (processingState === 'seeking_chapter') continue; // Skip lines until a chapter is found
+
+// --- Skip Exam Text Parser (Improved Robustness) ---
+export function parseSkipExamText(rawText, chapterNum) {
+    if (!rawText || !chapterNum) { console.error("parseSkipExamText: Missing args."); return null; }
+    console.log(`Parsing Skip Exam Text for Chapter ${chapterNum}...`);
+    const extracted = { questions: [], answers: {} };
+    // Split by lines, removing empty lines first
+    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    let currentQuestion = null; let questionNumFromText = 0; let questionTextBuffer = []; let optionsBuffer = []; let answerLineBuffer = null;
+
+    // Regex (allow optional space after marker, make case insensitive)
+    const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/i;
+    const optionRegex = /^\s*([A-Da-d])\s*[\.\)]\s*(.*)/i; // Only A-D expected now
+    const answerRegex = /^\s*(?:ans|answer)\s*:\s*([A-Da-d])\s*$/i;
+
+    function finalizeCurrentQuestion() {
+        if (questionNumFromText > 0 && questionTextBuffer.length > 0 && optionsBuffer.length > 0 && answerLineBuffer) {
+            const answerMatch = answerLineBuffer.match(answerRegex);
+            const answer = answerMatch ? answerMatch[1].toUpperCase() : null;
+            if (answer && optionsBuffer.length >= 2) { // Need at least 2 options and an answer
+                 const questionId = `c${chapterNum}q${questionNumFromText}`;
+                 extracted.questions.push({
+                    id: questionId,
+                    chapter: String(chapterNum),
+                    number: questionNumFromText,
+                    text: questionTextBuffer.join(' ').trim(), // Join multi-line question text
+                    options: optionsBuffer.map(opt => ({ letter: opt.letter, text: opt.text.trim() })),
+                    image: null,
+                    answer: answer
+                 });
+                 extracted.answers[questionId] = answer;
+            } else {
+                 console.warn(`Skipping incomplete/invalid question block ending near line buffer: Answer='${answer}', Options=${optionsBuffer.length}`);
+                 console.warn("Q Text:", questionTextBuffer.join(' '));
+                 console.warn("Options:", optionsBuffer);
+                 console.warn("Ans Line:", answerLineBuffer);
+            }
+        } else if (questionNumFromText > 0) {
+             console.warn(`Discarding incomplete block for question number ${questionNumFromText}. Missing text, options, or answer.`);
+        }
+        // Reset buffers
+        currentQuestion = null; questionNumFromText = 0; questionTextBuffer = []; optionsBuffer = []; answerLineBuffer = null;
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const questionMatch = line.match(questionStartRegex);
+        const optionMatch = line.match(optionRegex);
+        const answerMatch = line.match(answerRegex);
 
         if (questionMatch) {
-            finalizeQuestion(); // Finalize previous question
-            const qNum = parseInt(questionMatch[1], 10);
-            const firstLineText = questionMatch[2];
-            const chapterKey = String(currentChapter);
-
-            // Check if this question is selected for the current chapter
-            if (selectedQuestionsMap[chapterKey] && selectedQuestionsMap[chapterKey].includes(qNum)) {
-                // Start building the new question object
-                currentQuestion = {
-                    number: qNum,
-                    textLines: [firstLineText], // Start with the first line
-                    options: [],
-                    answerLine: null
-                };
-                processingState = 'in_question_text'; // We are now processing the text of this question
-            } else {
-                // Question not selected, remain in seeking state
-                processingState = 'seeking_question';
-                currentQuestion = null;
+            finalizeCurrentQuestion(); // Finalize previous before starting new
+            questionNumFromText = parseInt(questionMatch[1]);
+            questionTextBuffer = [questionMatch[2].trim()]; // Start with first line of text
+        } else if (optionMatch && questionNumFromText > 0) {
+            // Found an option for the current question
+            optionsBuffer.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2].trim() });
+            answerLineBuffer = null; // Reset answer buffer if options are found after it
+        } else if (answerMatch && questionNumFromText > 0 && optionsBuffer.length > 0) {
+            // Found potential answer line *after* options
+            answerLineBuffer = line;
+            // Don't finalize yet, wait for next question or end of file
+        } else if (questionNumFromText > 0) { // Belongs to the current question block
+            if (optionsBuffer.length > 0 && !answerLineBuffer) {
+                // Append to the text of the LAST option if no answer yet seen
+                optionsBuffer[optionsBuffer.length - 1].text += ' ' + line;
+            } else if (optionsBuffer.length === 0 && !answerLineBuffer) {
+                // Append to question text if before options and answer
+                questionTextBuffer.push(line);
             }
-            continue; // Move to next line
-        }
-
-        // If we are currently building a question object
-        if (currentQuestion) {
-            if (optionMatch) {
-                // Found an option line
-                processingState = 'in_options';
-                currentQuestion.options.push({
-                    letter: optionMatch[1].toUpperCase(),
-                    text: optionMatch[2] // Store initial option text
-                });
-                continue; // Move to next line
-            }
-
-             // Check for the answer line - this is a bit tricky
-             if (isPotentialAnswerLine) {
-                  // Look ahead to see if the *next* non-empty line is a new question or chapter
-                  let nextLineIndex = i + 1;
-                  let nextSignificantLine = null;
-                  while(nextLineIndex < lines.length) {
-                       nextSignificantLine = lines[nextLineIndex].trim();
-                       if(nextSignificantLine !== '') break; // Found next non-empty line
-                       nextLineIndex++;
-                  }
-
-                  const nextIsNewQuestion = nextSignificantLine && /^\s*\d+[\.\)]\s+.*/.test(nextSignificantLine);
-                  const nextIsNewChapter = nextSignificantLine && /^###\s+Chapter\s+\d+:?.*?$/i.test(nextSignificantLine);
-                  const isLastLineOfFile = nextLineIndex >= lines.length; // Reached end of file
-
-                 // If the next line is empty, a new question, a new chapter, or end of file, assume this is the answer
-                 if (nextSignificantLine === null || nextIsNewQuestion || nextIsNewChapter || isLastLineOfFile) {
-                     currentQuestion.answerLine = trimmedLine;
-                     processingState = 'found_answer'; // Mark answer as found
-                 } else {
-                     // Not the answer line, treat as continuation of previous text/option
-                      if (processingState === 'in_options' && currentQuestion.options.length > 0) {
-                          // Append to the last option's text
-                          currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line;
-                      } else {
-                          // Append to the question text
-                          currentQuestion.textLines.push(line);
-                      }
-                 }
-                 continue; // Move to next line
-             }
-
-             // If not a chapter, question, option, or answer, it's continuation text
-             if (processingState === 'in_options' && currentQuestion.options.length > 0) {
-                 // Append to the last option's text
-                 currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line;
-             } else if (processingState !== 'found_answer') { // Avoid adding lines after answer found
-                 // Append to the question text
-                 currentQuestion.textLines.push(line);
-             }
+            // Ignore lines after a potential answer line until a new question starts
         }
     }
-    finalizeQuestion(); // Finalize the last question in the file
+    finalizeCurrentQuestion(); // Finalize the very last question block
 
-    console.log(`Extraction finished. Found ${extracted.questions.length} questions.`);
-    const totalSelectedCount = Object.values(selectedQuestionsMap).reduce((sum, arr) => sum + arr.length, 0);
-    if (extracted.questions.length === 0 && totalSelectedCount > 0) {
-        console.error("Extraction Error: Selected questions but extracted none. Check Regex and MD format near selected questions.");
-    } else if (extracted.questions.length < totalSelectedCount) {
-         console.warn(`Extraction Warning: Selected ${totalSelectedCount} questions but only extracted ${extracted.questions.length}. Check formatting.`);
+    console.log(`Parsed ${extracted.questions.length} potentially valid questions from Skip Exam text.`);
+    if (extracted.questions.length === 0 && lines.length > 5) {
+        console.error("Parsing failed: Extracted 0 questions. Check AI output format against expected structure (Num. Text \\n A. Text \\n ... \\n ans: X).");
+        return null; // Indicate failure
+    } else if (extracted.questions.length < 10 && lines.length > 50) { // Heuristic check
+        console.warn(`Parsed only ${extracted.questions.length} questions. AI might not have generated the full requested amount or format was inconsistent.`);
     }
 
     return extracted;
 }
+
+
+// --- END OF FILE markdown_parser.js ---
