@@ -1,10 +1,11 @@
-// --- START OF FILE ai_integration.js ---
-
 // ai_integration.js
 
 import { GEMINI_API_KEY, PDF_WORKER_SRC, COURSE_TRANSCRIPTION_BASE_PATH } from './config.js'; // Import the API key & PDF Worker Source & Transcription Path
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Import UI helpers & escapeHtml
-import { globalCourseDataMap } from './state.js'; // Need course data map
+import { globalCourseDataMap, currentUser } from './state.js'; // Need course data map and current user for feedback
+// *** NEW: Import submitFeedback for error reporting ***
+// NOTE: This introduces a potential circular dependency risk. Manage carefully.
+import { submitFeedback } from './firebase_firestore.js';
 // *** NEW: Import getSrtFilenameFromTitle from ui_course_study_material ***
 import { getSrtFilenameFromTitle } from './ui_course_study_material.js'; // Import SRT filename helper
 
@@ -21,7 +22,7 @@ try {
 let pdfjsLib = window.pdfjsLib;
 
 // Define models (Consider using latest stable or appropriate versions)
-const TEXT_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Use a standard text model
+const TEXT_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Use a standard text model like Flash for speed/cost balance
 const VISION_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Use a model supporting multimodal input
 
 // --- Helper: Fetch Text File (SRT Parser) ---
@@ -50,26 +51,25 @@ async function fetchSrtText(url) {
 
 // --- Helper: Extract Text from ALL pages of a PDF ---
 // Make this globally available for study material UI too
-export async function getAllPdfTextForAI(pdfPath) {
+export async function getAllPdfTextForAI(pdfDataOrPath) {
     // Ensure PDF.js library is available
     if (typeof pdfjsLib === 'undefined') {
         console.error("PDF.js library is not loaded. Cannot extract text from PDF.");
         if (window.pdfjsLib) { pdfjsLib = window.pdfjsLib; console.log("Accessed PDF.js from window scope."); }
         else { alert("PDF processing library (PDF.js) is not available."); return null; }
     }
-     if (!pdfPath) return null; // No path provided
+     if (!pdfDataOrPath) return null; // No path or data provided
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
     let pdfText = "";
-    console.log(`Attempting to extract text from all pages of PDF: ${pdfPath}`);
+    const sourceDescription = typeof pdfDataOrPath === 'string' ? pdfDataOrPath : `Uint8Array (length: ${pdfDataOrPath.length})`;
+    console.log(`Attempting to extract text from all pages of PDF source: ${sourceDescription}`);
     try {
-        const loadingTask = pdfjsLib.getDocument(pdfPath);
+        const loadingTask = pdfjsLib.getDocument(pdfDataOrPath); // Accepts URL string or Uint8Array
         const pdfDoc = await loadingTask.promise;
         const numPages = pdfDoc.numPages;
         console.log(`Extracting text from ${numPages} pages...`);
-        const maxPagesToProcess = 50; // Adjust this limit as needed
-        const pagesToProcess = Math.min(numPages, maxPagesToProcess);
-        if (numPages > maxPagesToProcess) { console.warn(`PDF text extraction limited to first ${maxPagesToProcess} pages.`); }
+        const pagesToProcess = numPages; // Process all pages
 
         for (let i = 1; i <= pagesToProcess; i++) {
             try {
@@ -80,12 +80,12 @@ export async function getAllPdfTextForAI(pdfPath) {
                 if (pageText) {
                      pdfText += pageText + "\n\n"; // Add double newline for paragraph separation
                 }
-            } catch (pageError) { console.warn(`Error extracting text from page ${i} of ${pdfPath}:`, pageError); }
+            } catch (pageError) { console.warn(`Error extracting text from page ${i} of ${sourceDescription}:`, pageError); }
         }
         console.log(`Finished text extraction. Total length: ${pdfText.length}`);
         return pdfText.trim(); // Trim final result
     } catch (error) {
-        console.error(`Error extracting text from PDF ${pdfPath}:`, error);
+        console.error(`Error extracting text from PDF ${sourceDescription}:`, error);
         return null; // Return null if extraction fails
     }
 }
@@ -93,9 +93,40 @@ window.getAllPdfTextForAI = getAllPdfTextForAI; // Assign to window scope
 
 
 // --- API Call Helpers ---
+// MODIFIED: Added tokenLimitCheck function
+/**
+ * Checks if the prompt length likely exceeds a safe token limit.
+ * Sends feedback if the limit is exceeded.
+ * @param {string} prompt - The prompt text.
+ * @param {number} [charLimit=800000] - Approximate character limit (adjust based on model).
+ * @returns {Promise<boolean>} - True if the prompt is likely within the limit, false otherwise.
+ */
+async function tokenLimitCheck(prompt, charLimit = 800000) { // Approx 800k chars for 1M tokens
+    if (prompt.length > charLimit) {
+        console.error(`AI Prompt Exceeds Limit: Length ${prompt.length} > Limit ${charLimit}`);
+        const feedbackData = {
+            subjectId: "AI Context Limit",
+            questionId: null,
+            feedbackText: `AI prompt length (${prompt.length}) exceeded the safety limit (${charLimit}) for a function call. Context might be too large. First 100 chars: ${prompt.substring(0, 100)}`,
+            context: "System Error - AI Prompt Length"
+        };
+        // Use the imported currentUser from state
+        await submitFeedback(feedbackData, currentUser).catch(e => console.error("Failed to submit feedback for context limit error:", e));
+        return false; // Exceeds limit
+    }
+    return true; // Within limit
+}
+
+
 export async function callGeminiTextAPI(prompt) {
     if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
     if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY") throw new Error("API Key not configured.");
+
+    // MODIFIED: Check token limit BEFORE sending
+    if (!await tokenLimitCheck(prompt)) {
+        throw new Error("The chapter material is bigger than the model's ability to comprehend. Feedback was sent to the admin.");
+    }
+
     try {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: TEXT_MODEL_NAME });
@@ -155,6 +186,8 @@ export async function callGeminiTextAPI(prompt) {
         else if (error.message?.includes('quota')) { errorMessage = "Quota exceeded."; }
         else if (error.message?.includes('safety settings')) { /* Already specific */ }
         else if (error.toString().includes('API key not valid')) { errorMessage = "Invalid API Key."; }
+        // Catch our custom error
+        else if (error.message?.includes('model\'s ability to comprehend')) { errorMessage = error.message; }
         throw new Error(errorMessage); // Re-throw handled error
     }
 }
@@ -163,6 +196,9 @@ export async function callGeminiVisionAPI(promptParts) {
     if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
     if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY") throw new Error("API Key not configured.");
     if (!promptParts?.length) throw new Error("Prompt parts cannot be empty.");
+
+    // Note: Token limit check for vision is more complex due to image tokens.
+    // We'll rely on the API to return an error if the limit is exceeded.
 
     try {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -232,7 +268,7 @@ function formatResponseAsHtml(rawText) {
     // Handle unordered lists (* or -) - Similar simple approach
     escapedText = escapedText.replace(/^\s*[\*\-]\s+(.*)/gm, '<li>$1</li>');
     // Wrap consecutive <li> generated above with <ul>
-    escapedText = escapedText.replace(/(<li>.*<\/li>\s*)+/g, (match) => `<ul style="list-style:disc;margin-left:1.5em;">${match}</ol>`);
+    escapedText = escapedText.replace(/(<li>.*<\/li>\s*)+/g, (match) => `<ul style="list-style:disc;margin-left:1.5em;">${match}</ul`);
 
 
     // Handle paragraphs/line breaks - Replace remaining single newlines with <br>, but not inside lists or pre
@@ -245,8 +281,8 @@ function formatResponseAsHtml(rawText) {
         if (trimmedLine.startsWith('<ol') || trimmedLine.startsWith('<ul')) inList = true;
 
         let outputLine = line;
-        // Add <br> only if it's a non-empty line, not inside pre/list tags, and not already a list item start/end
-        if (!inPre && !inList && trimmedLine.length > 0 && !trimmedLine.startsWith('<li') && !trimmedLine.endsWith('</li>')) {
+        // Add <br> only if it's a non-empty line, not inside pre/list tags, and not already a list item start/end or heading
+        if (!inPre && !inList && trimmedLine.length > 0 && !trimmedLine.startsWith('<li') && !trimmedLine.endsWith('</li>') && !trimmedLine.startsWith('<h') && !trimmedLine.endsWith('>')) {
             outputLine += '<br>';
         }
         // Remove <br> right before list/pre blocks or after list/pre blocks
@@ -297,19 +333,50 @@ export async function explainStudyMaterialSnippet(snippet, context) {
     console.log(`Requesting explanation for snippet/question: "${snippet.substring(0, 50)}..." with context length: ${context?.length || 0}`);
     if (!snippet) return `<p class="text-warning">No text provided.</p>`;
     const isLikelyQuestion = snippet.length < 200; let prompt;
+    // MODIFIED: Removed context truncation logic
     if (isLikelyQuestion && context?.length > 500) {
-         prompt = `You are a helpful physics and mathematics tutor. Based *only* on the following text extracted from study material, please answer the user's question clearly and concisely:\n\nUser Question: "${snippet}"\n\nStudy Material Text (Use ONLY this):\n---\n${context.substring(0, 15000)} ${context.length > 15000 ? "...[Truncated]" : ""}\n---\nEnd Context.\n\nAnswer based *only* on the provided text. Use basic Markdown/LaTeX ($$, $). If the context doesn't contain the answer, state that explicitly. No headings (#).`;
+         prompt = `You are a helpful physics and mathematics tutor. Based *only* on the following text extracted from study material, please answer the user's question clearly and concisely:\n\nUser Question: "${snippet}"\n\nStudy Material Text (Use ONLY this):\n---\n${context}\n---\nEnd Context.\n\nAnswer based *only* on the provided text. Use basic Markdown/LaTeX ($$, $). If the context doesn't contain the answer, state that explicitly. No headings (#).`;
     } else {
          prompt = `You are a helpful physics and mathematics tutor. Explain the following text snippet clearly:\n\nSnippet: "${snippet}"\n\nContext: "${context || 'None provided.'}"\n\nProvide an explanation suitable for someone studying this topic. Use basic Markdown/LaTeX ($$, $). No headings (#).`;
     }
     try {
-        showLoading("Generating Explanation..."); const explanationText = await callGeminiTextAPI(prompt); hideLoading();
+        showLoading("Generating Explanation...");
+        const explanationText = await callGeminiTextAPI(prompt); // Will throw error if context too long
+        hideLoading();
         return formatResponseAsHtml(explanationText);
     } catch (error) {
         console.error("Error explaining snippet:", error); hideLoading();
-        return `<p class="text-danger">Error: ${error.message}</p>`;
+        return `<p class="text-danger">Error: ${error.message}</p>`; // Display error (e.g., context limit)
     }
 }
+
+// NEW: Ask AI about the whole PDF document
+export async function askAboutPdfDocument(userQuestion, pdfPath, courseId, chapterNum) {
+     console.log(`Asking about whole PDF: ${pdfPath} (Ch ${chapterNum})`);
+     if (!userQuestion) return `<p class="text-warning">Please enter a question about the PDF.</p>`;
+     if (!pdfPath) return `<p class="text-danger">No PDF path available for this chapter.</p>`;
+
+     showLoading("Extracting PDF text for AI...");
+     const fullPdfText = await getAllPdfTextForAI(pdfPath); // Use helper
+     if (!fullPdfText) {
+         hideLoading();
+         return `<p class="text-danger">Failed to extract text from the PDF document.</p>`;
+     }
+     console.log(`Extracted ${fullPdfText.length} characters from PDF.`);
+
+     const prompt = `You are a helpful physics and mathematics tutor. Based *only* on the following text extracted from the Chapter ${chapterNum} PDF document, please answer the user's question clearly and concisely:\n\nUser Question: "${userQuestion}"\n\nChapter ${chapterNum} PDF Text (Use ONLY this):\n---\n${fullPdfText}\n---\nEnd PDF Text.\n\nAnswer based *only* on the provided PDF text. Use basic Markdown/LaTeX ($$, $). If the context doesn't contain the answer, state that explicitly. No headings (#).`;
+
+     try {
+         showLoading("Asking AI about PDF...");
+         const explanationText = await callGeminiTextAPI(prompt); // Will throw error if context too long
+         hideLoading();
+         return formatResponseAsHtml(explanationText);
+     } catch (error) {
+         console.error("Error asking about PDF:", error); hideLoading();
+         return `<p class="text-danger">Error processing request: ${error.message}</p>`; // Display error
+     }
+}
+
 
 export async function getExplanationForPdfSnapshot(userQuestion, base64ImageData, context) {
     console.log(`Requesting AI explanation for PDF snapshot (Context: ${context})`);
@@ -367,8 +434,8 @@ export async function generateFormulaSheet(courseId, chapterNum) {
      if (fullPdfText) combinedContent += `== Chapter PDF Text ==\n${fullPdfText}\n\n`;
      combinedContent += `== End of Content ==`;
 
-     const maxContentLength = 80000; let truncatedContent = combinedContent;
-     if (combinedContent.length > maxContentLength) { truncatedContent = combinedContent.substring(0, maxContentLength) + "\n...[Truncated]"; console.warn(`Combined content truncated.`); }
+     // MODIFIED: Removed truncation
+     const truncatedContent = combinedContent; // Use full content
 
      const prompt = `You are an expert physics and mathematics assistant. Based ONLY on the following combined text content (from ${contentSourceInfo}) for Chapter ${chapterNum}, extract ALL key formulas, equations, physical laws, and important definitions. Present them clearly and concisely as a comprehensive formula sheet. Use basic Markdown (bold, lists) and LaTeX ($...$ or $$...$$). Do NOT include explanations, derivations, or examples. Focus strictly on presenting the formulas and definitions. Organize logically if possible.
 
@@ -381,11 +448,13 @@ End of Combined Text Content.
 Generate the comprehensive formula sheet now for Chapter ${chapterNum}:`;
 
      try {
-         showLoading(`Generating Formula Sheet (Ch ${chapterNum})...`); const formulaSheetText = await callGeminiTextAPI(prompt); hideLoading();
+         showLoading(`Generating Formula Sheet (Ch ${chapterNum})...`);
+         const formulaSheetText = await callGeminiTextAPI(prompt); // Will throw error if context too long
+         hideLoading();
          return formatResponseAsHtml(formulaSheetText);
      } catch (error) {
          console.error(`Error generating formula sheet for Ch ${chapterNum}:`, error); hideLoading();
-         return `<p class="text-danger">Error: ${error.message}</p>`;
+         return `<p class="text-danger">Error: ${error.message}</p>`; // Display the error message (e.g., context limit)
      }
 }
 
@@ -431,17 +500,19 @@ export async function generateChapterSummary(courseId, chapterNum) {
     if (fullPdfText) combinedContent += `== Chapter PDF Text ==\n${fullPdfText}\n\n`;
     combinedContent += `== End of Content ==`;
 
-    const maxContentLength = 80000; let truncatedContent = combinedContent;
-    if (combinedContent.length > maxContentLength) { truncatedContent = combinedContent.substring(0, maxContentLength) + "\n...[Truncated]"; console.warn(`Combined content truncated.`); }
+    // MODIFIED: Removed truncation
+    const truncatedContent = combinedContent;
 
     const prompt = `You are an expert physics and mathematics assistant. Based ONLY on the following combined text content (from ${contentSourceInfo}) for Chapter ${chapterNum}, write a clear, concise, and comprehensive summary of the chapter. Focus on the main concepts, key ideas, and important points. Use clear language suitable for a student review. Organize the summary logically, using bullet points or short paragraphs as appropriate. You may include simple LaTeX math ($...$ or $$...$$) for equations, but do NOT include a formula sheet or list all formulas. Do NOT copy large blocks of text verbatim. Do NOT include quiz questions or exam content.\n\nCombined Text Content for Chapter ${chapterNum}:\n---\n${truncatedContent}\n---\nEnd of Combined Text Content.\n\nGenerate the summary now for Chapter ${chapterNum}:`;
 
     try {
-        showLoading(`Generating Summary (Ch ${chapterNum})...`); const summaryText = await callGeminiTextAPI(prompt); hideLoading();
+        showLoading(`Generating Summary (Ch ${chapterNum})...`);
+        const summaryText = await callGeminiTextAPI(prompt); // Will throw error if context too long
+        hideLoading();
         return formatResponseAsHtml(summaryText);
     } catch (error) {
         console.error(`Error generating summary for Ch ${chapterNum}:`, error); hideLoading();
-        return `<p class="text-danger">Error: ${error.message}</p>`;
+        return `<p class="text-danger">Error: ${error.message}</p>`; // Display the error message (e.g., context limit)
     }
 }
 
@@ -490,8 +561,9 @@ export async function generateSkipExam(courseId, chapterNum) {
      if (fullPdfText) combinedContent += `== Chapter PDF Text ==\n${fullPdfText}\n\n`;
      combinedContent += `== End of Content ==`;
 
-     const maxContentLength = 80000; let truncatedContent = combinedContent;
-     if (combinedContent.length > maxContentLength) { truncatedContent = combinedContent.substring(0, maxContentLength) + "\n...[Truncated]"; console.warn(`Combined content truncated for skip exam generation.`); }
+    // MODIFIED: Removed truncation
+    const truncatedContent = combinedContent;
+
 
      try {
          const requestedMCQs = 10; // Generate a reasonable number of MCQs
@@ -501,13 +573,13 @@ Generate exactly ${requestedMCQs} challenging multiple-choice questions covering
 
 For EACH of the ${requestedMCQs} questions:
 1. Write the question text clearly, starting with the question number (e.g., "1. Question text...").
-2. Provide 4 distinct answer options (labeled A, B, C, D).
+2. Provide 5 distinct answer options (labeled A, B, C, D, E).
 3. Ensure only ONE option is definitively correct based *only* on the provided text. Avoid ambiguity.
 4. Indicate the correct answer on a **separate new line** immediately following the options using the exact format: "ans: [Correct Letter]".
 
 **IMPORTANT:**
 - Adhere strictly to the provided text content. Do not introduce external knowledge.
-- Ensure every question has exactly 4 options (A, B, C, D).
+- Ensure every question has exactly 5 options (A, B, C, D, E).
 - Ensure every question is followed immediately by the "ans: [Letter]" line.
 - Number questions sequentially from 1 to ${requestedMCQs}.
 
@@ -520,7 +592,7 @@ End of Study Material Text.
 Generate the ${requestedMCQs} quiz questions now in the specified format:`;
 
          showLoading(`Generating Skip Exam MCQs (Ch ${chapterNum})...`);
-         const examText = await callGeminiTextAPI(prompt);
+         const examText = await callGeminiTextAPI(prompt); // Will throw error if context too long
          hideLoading();
          console.log(`Raw Skip Exam Text (MCQs Only) for Ch ${chapterNum}:\n`, examText);
 
@@ -583,18 +655,18 @@ export async function reviewNoteWithAI(noteContent, courseId, chapterNum) {
     }
 
     let combinedSourceContent = `Source Study Material for Chapter ${chapterNum}:\n\n`;
-    if (transcriptionText) combinedSourceContent += `== Lecture Transcriptions ==\n${transcriptionText.substring(0, 40000)}\n\n`; // Limit context size
-    if (fullPdfText) combinedSourceContent += `== Chapter PDF Text ==\n${fullPdfText.substring(0, 40000)}\n\n`; // Limit context size
+    if (transcriptionText) combinedSourceContent += `== Lecture Transcriptions ==\n${transcriptionText}\n\n`; // MODIFIED: Removed truncation
+    if (fullPdfText) combinedSourceContent += `== Chapter PDF Text ==\n${fullPdfText}\n\n`; // MODIFIED: Removed truncation
     combinedSourceContent += `== End of Source Material ==`;
 
     const prompt = `You are an expert physics and mathematics tutor. Review the following student's note for Chapter ${chapterNum}, comparing it against the provided source study material.
 
 **Student's Note:**
 ---
-${noteContent.substring(0, 10000)} ${noteContent.length > 10000 ? "...[Truncated Note]" : ""}
+${noteContent}
 ---
 
-**Source Study Material (Excerpt):**
+**Source Study Material:**
 ---
 ${combinedSourceContent}
 ---
@@ -610,12 +682,12 @@ Format the response clearly using Markdown (bold, lists). Use LaTeX ($$, $) for 
 
     try {
         showLoading(`AI Reviewing Note (Ch ${chapterNum})...`);
-        const reviewText = await callGeminiTextAPI(prompt);
+        const reviewText = await callGeminiTextAPI(prompt); // Will throw error if context too long
         hideLoading();
         return formatResponseAsHtml(reviewText);
     } catch (error) {
         console.error(`Error reviewing note for Ch ${chapterNum}:`, error); hideLoading();
-        return `<p class="text-danger">Error generating note review: ${error.message}</p>`;
+        return `<p class="text-danger">Error generating note review: ${error.message}</p>`; // Display error
     }
 }
 
@@ -624,21 +696,25 @@ Format the response clearly using Markdown (bold, lists). Use LaTeX ($$, $) for 
  * Asks the AI to convert provided text (potentially including LaTeX) into well-formatted LaTeX.
  */
 export async function convertNoteToLatex(noteContent) {
-    console.log(`Requesting LaTeX conversion for note content (length: ${noteContent.length})`);
-    if (!noteContent) return '';
+    console.log(`Requesting LaTeX conversion for note content (length: ${noteContent?.length || 0})`); // Added safety check for length
+    // MODIFIED: Added check for empty/null content
+    if (!noteContent || noteContent.trim() === '') {
+        console.warn("convertNoteToLatex: Input note content is empty.");
+        return ''; // Return empty string if no content
+    }
 
     const prompt = `You are a LaTeX expert. Convert the following text content into a well-formatted LaTeX document body. Ensure mathematical expressions are correctly preserved or converted to LaTeX math environments (e.g., $...$, $$...$$, \\begin{equation}...\\end{equation}). Use standard LaTeX commands for formatting (e.g., \\section{}, \\subsection{}, \\textbf{}, \\textit{}, \\begin{itemize}...\\end{itemize}, \\begin{enumerate}...\\end{enumerate}). Assume standard packages like amsmath, amssymb, graphicx are loaded. Return ONLY the LaTeX code for the document body, do not include \\documentclass, \\usepackage, \\begin{document}, or \\end{document}.
 
 **Original Text:**
 ---
-${noteContent.substring(0, 15000)} ${noteContent.length > 15000 ? "...[Truncated]" : ""}
+${noteContent}
 ---
 
-Convert the above text to LaTeX body code:`;
+Convert the above text to LaTeX body code:`; // MODIFIED: Removed truncation
 
     try {
         showLoading("Converting to LaTeX...");
-        const latexCode = await callGeminiTextAPI(prompt);
+        const latexCode = await callGeminiTextAPI(prompt); // Will throw error if context too long
         hideLoading();
         // Basic cleanup - remove potential preamble/postamble if AI includes it
         let cleanedCode = latexCode.replace(/\\documentclass\[.*?\]{.*?}\s*/gs, '');
@@ -650,9 +726,46 @@ Convert the above text to LaTeX body code:`;
         return cleanedCode;
     } catch (error) {
         console.error("Error converting note to LaTeX:", error); hideLoading();
-        throw new Error(`Failed to convert to LaTeX: ${error.message}`);
+        throw new Error(`Failed to convert to LaTeX: ${error.message}`); // Propagate error
     }
 }
+
+// --- NEW: Function to improve note ---
+/**
+ * Asks the AI to improve a note by adding clarity, structure, and relevant equations *without deleting* existing content.
+ * @param {string} noteContent - The original note content.
+ * @returns {Promise<string>} - The improved note content including original + additions.
+ */
+export async function improveNoteWithAI(noteContent) {
+     console.log(`Requesting AI improvement for note (length: ${noteContent?.length || 0})`);
+     if (!noteContent || noteContent.trim() === '') {
+         console.warn("improveNoteWithAI: Input note content is empty.");
+         return noteContent; // Return original empty content
+     }
+
+     // MODIFIED: Updated prompt to emphasize adding, not replacing.
+     const prompt = `You are an expert physics and mathematics assistant. Review the following student's note and enhance it by adding clarity, improving structure, and incorporating any relevant key equations or formulas that might be missing based on the context. **Crucially, DO NOT remove or significantly alter the student's original content.** Append your suggestions, clarifications, or additions clearly below the original text, perhaps under a heading like "--- AI SUGGESTIONS ---". Format your response using basic Markdown and LaTeX ($$, $).
+
+**Student's Original Note (DO NOT DELETE THIS PART):**
+---
+${noteContent}
+---
+
+**Enhancements (Additions/Clarifications ONLY):**
+[Your suggested improvements, explanations, and relevant equations go here.]`;
+
+     try {
+         showLoading("AI Improving Note...");
+         const improvedContent = await callGeminiTextAPI(prompt); // Will throw error if context too long
+         hideLoading();
+         // Return the full response which should ideally contain the original + additions
+         return improvedContent;
+     } catch (error) {
+         console.error("Error improving note:", error); hideLoading();
+         throw new Error(`Failed to improve note: ${error.message}`); // Propagate error
+     }
+}
+
 
 
 // --- END OF FILE ai_integration.js ---

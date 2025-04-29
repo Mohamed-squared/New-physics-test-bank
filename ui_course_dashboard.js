@@ -1,5 +1,3 @@
-// --- START OF FILE ui_course_dashboard.js ---
-
 // ui_course_dashboard.js
 
 import { currentUser, userCourseProgressMap, globalCourseDataMap, activeCourseId, setActiveCourseId } from './state.js';
@@ -14,8 +12,8 @@ import { determineTodaysObjective, getLetterGradeColor, calculateAttendanceScore
 import { unenrollFromCourse } from './firebase_firestore.js';
 // NOTE: We can still call showMyCoursesDashboard directly within this file if needed
 
-// Add import for notes panel
-import { showNotesDocumentsPanel } from './ui_notes_documents.js';
+// MODIFIED: Import Notes UI function
+import { showCurrentNotesDocuments } from './ui_notes_documents.js';
 
 // --- Navigation ---
 export function navigateToCourseDashboard(courseId) {
@@ -141,11 +139,8 @@ export async function showCourseDashboard(courseId) { // Made async
                  ${nextTask ? `<button onclick="window.handleCourseAction('${courseId}', '${nextTask.type}', '${nextTask.id}')" class="btn-primary inline-flex items-center"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-2"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.857-9.809a.75.75 0 0 0-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 1 0-1.06 1.061l2.5 2.5a.75.75 0 0 0 1.137-.089l4-5.5Z" clip-rule="evenodd" /></svg>${nextTask.buttonText}</button>` : '<p class="text-sm text-muted">No specific action identified for today.</p>'}
             </div>
 
-             <!-- NEW Notes & Documents Panel Container -->
-             <div id="notes-documents-area" class="mt-6">
-                  <p class="text-center text-muted italic p-4">Loading notes & documents...</p>
-                  <div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-             </div>
+             <!-- REMOVED Notes Panel Container - Now accessed via Sidebar -->
+             <!-- <div id="notes-documents-area" class="mt-6"></div> -->
 
             <!-- Quick Links -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -173,11 +168,6 @@ export async function showCourseDashboard(courseId) { // Made async
         </div>
     `;
     displayContent(html, 'course-dashboard-area');
-
-    // Trigger loading notes/docs panel AFTER main dashboard is displayed
-    // Determine target chapter for notes (usually the current target chapter)
-    const targetChapterForNotes = determineTargetChapter(progress, courseDef);
-    await showNotesDocumentsPanel(courseId, targetChapterForNotes);
 
 }
 
@@ -218,7 +208,7 @@ export function handleCourseAction(courseId, actionType, actionId) {
     console.log(`Handling action: ${actionType}, ID: ${actionId} for course ${courseId}`);
     switch(actionType) {
         case 'study':
-            // Use window scope as showCourseStudyMaterial is in another module
+            // Use window scope as showCourseStudyMaterial is in a different module
             window.showCourseStudyMaterial(courseId, parseInt(actionId));
             break;
         case 'assignment':
@@ -339,5 +329,6 @@ window.showNextLesson = showNextLesson;
 window.showFullStudyMaterial = showFullStudyMaterial;
 window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
 window.showCurrentCourseProgress = showCurrentCourseProgress;
+window.showCurrentNotesDocuments = showCurrentNotesDocuments; // NEW: Assign notes function
 
 // --- END OF FILE ui_course_dashboard.js ---

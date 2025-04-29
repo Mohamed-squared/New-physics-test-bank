@@ -1,4 +1,3 @@
-// --- START OF FILE ui_pdf_generation.js ---
 
 import { PDF_GENERATION_OPTIONS, LATEX_DOCUMENT_CLASS, LATEX_PACKAGES, LATEX_BEGIN_DOCUMENT, LATEX_END_DOCUMENT } from './config.js';
 import { showLoading, hideLoading, renderMathIn } from './utils.js';
@@ -11,13 +10,14 @@ export function generatePdfHtml(examId, questions) {
     let solutionHtml = '';
 
     // Basic Styles for PDF rendering (Mimicking TeX structure)
+    // Added class for AI Review and Note content
     const styles = `
         <style>
             body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; font-size: 11pt; margin: 0; padding: 0; }
             .container { padding: 1.5cm; } /* Matches jsPDF margin */
-            .exam-header { text-align: center; margin-bottom: 1.5em; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
+            .exam-header, .note-header { text-align: center; margin-bottom: 1.5em; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
             .question-list { list-style-type: decimal; padding-left: 1.5em; margin-left: 0; } /* Main question numbering */
-            .question-item { margin-bottom: 1.2em; page-break-inside: avoid; }
+            .question-item, .note-content, .ai-review-content { margin-bottom: 1.2em; page-break-inside: avoid; }
             .question-content { margin-left: 0; }
             .question-text { margin-bottom: 0.8em; }
             .question-image-container { text-align: center; margin: 0.8em 0; } /* Center image container */
@@ -32,11 +32,17 @@ export function generatePdfHtml(examId, questions) {
             mjx-container > svg { max-width: 100%; vertical-align: middle; } /* Prevent SVG overflow */
             .MathJax_Display { text-align: left !important; }
             /* Prose adjustments for tighter spacing */
+            .prose { max-width: none; }
             .prose p { margin-top: 0.3em; margin-bottom: 0.3em; line-height: 1.3; }
             .prose ol, .prose ul { margin-top: 0.3em; margin-bottom: 0.3em; padding-left: 1.5em;}
             .prose li { margin-bottom: 0.1em; line-height: 1.3;}
+            .prose code { font-size: 0.85em; padding: 0.1em 0.3em; background-color: #f0f0f0; border-radius: 3px; }
+            .prose pre { font-size: 0.85em; background-color: #f0f0f0; padding: 0.5em; border-radius: 4px; overflow-x: auto; }
+            .prose pre code { background-color: transparent; padding: 0; }
             /* Problem type styling */
             .problem-text-container { border: 1px solid #eee; padding: 10px; margin-top: 10px; background-color: #f9f9f9; }
+            /* AI Review styling */
+             .ai-review-content .prose { border-left: 3px solid #8b5cf6; padding-left: 1em; background-color: #faf5ff; }
         </style>
     `;
 
@@ -93,6 +99,54 @@ export function generatePdfHtml(examId, questions) {
     return { questionHtml: fullQuestionHtml, solutionHtml: fullSolutionHtml };
 }
 
+// --- NEW: Generate PDF HTML for a single Note ---
+export function generateNotePdfHtml(note) {
+     const styles = `
+        <style>
+            body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; font-size: 11pt; margin: 0; padding: 0; }
+            .container { padding: 1.5cm; }
+            .note-header { text-align: center; margin-bottom: 1.5em; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
+            .note-meta { text-align: center; font-size: 9pt; color: #555; margin-bottom: 1.5em; }
+            .note-content { margin-bottom: 1.2em; }
+            /* MathJax Specific Styling for PDF */
+            mjx-container { text-align: left !important; margin: 0.5em 0 !important; display: block !important; }
+            mjx-container[display="true"] { display: block; overflow-x: auto; }
+            mjx-container > svg { max-width: 100%; vertical-align: middle; }
+            .MathJax_Display { text-align: left !important; }
+            /* Prose adjustments */
+            .prose { max-width: none; } .prose p { margin: 0.5em 0; } .prose ul, .prose ol { margin: 0.5em 0; padding-left: 1.6em; } .prose li { margin: 0.1em 0; }
+            .prose code { font-size: 0.9em; padding: 0.1em 0.3em; background-color: #f0f0f0; border-radius: 3px; border: 1px solid #ddd; }
+            .prose pre { font-size: 0.9em; background-color: #f0f0f0; padding: 0.7em; border-radius: 4px; overflow-x: auto; border: 1px solid #ddd;}
+            .prose pre code { background-color: transparent; padding: 0; border: none; }
+            /* AI Review styling */
+             .ai-review-content .prose { border-left: 3px solid #ddd; padding-left: 1em; background-color: #f8f8f8; }
+        </style>
+    `;
+    const dateStr = new Date(note.timestamp).toLocaleString();
+    let contentForPdf = '';
+    if (note.type === 'latex') {
+         // For LaTeX notes, wrap content in a <pre><code> block for raw display in PDF
+         contentForPdf = `<pre><code>${escapeHtml(note.content)}</code></pre>`;
+    } else if (note.type === 'ai_review') {
+         // AI review content is already HTML, wrap it for styling
+         contentForPdf = `<div class="ai-review-content">${note.content}</div>`;
+    } else { // text or file (with extracted text)
+        // Basic paragraph handling for text notes
+        contentForPdf = `<div class="prose">${note.content.replace(/\n/g, '<br>')}</div>`;
+    }
+
+
+    const fullNoteHtml = `
+        <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Note - ${note.title}</title>${styles}</head>
+        <body><div class="container">
+            <div class="note-header">Note: ${escapeHtml(note.title)}</div>
+            <div class="note-meta">Chapter ${note.chapterNum} | Last Updated: ${dateStr} ${note.filename ? `| Original File: ${escapeHtml(note.filename)}` : ''}</div>
+            <div class="note-content">${contentForPdf}</div>
+        </div></body></html>`;
+
+    return fullNoteHtml;
+}
+
 
 export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilename) {
     showLoading(`Generating ${baseFilename}...`);
@@ -116,7 +170,7 @@ export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilenam
         console.log("generateAndDownloadPdf: MathJax rendering complete.");
 
         // Increased delay to allow complex rendering and potential image loading
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise(resolve => setTimeout(resolve, 2500)); // Slightly increased delay
 
         const options = { ...PDF_GENERATION_OPTIONS }; // Use global config
         options.filename = `${baseFilename}.pdf`;
@@ -127,6 +181,7 @@ export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilenam
             useCORS: true,
             // Ensure width/height are captured correctly after rendering
             windowWidth: tempElement.scrollWidth,
+            scrollY: -window.scrollY // Attempt to fix cutoff
         };
         options.jsPDF = {
             ...options.jsPDF,
@@ -134,8 +189,8 @@ export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilenam
             format: 'a4',
             orientation: 'portrait'
         };
-        // Update pagebreak targeting
-        options.pagebreak = { mode: ['avoid-all', 'css', 'legacy'], before: '.question-item' };
+        // Update pagebreak targeting - general class for items
+        options.pagebreak = { mode: ['avoid-all', 'css', 'legacy'], before: '.question-item, .note-content, .ai-review-content' };
 
         console.log(`Starting html2pdf generation for ${options.filename} with options:`, JSON.stringify(options));
         const pdfWorker = html2pdf().set(options).from(tempElement);
@@ -209,8 +264,7 @@ export function generateTexSource(examId, questions) {
     let solutionsBody = '';
 
     // Questions are assumed to be pre-shuffled
-    questions.forEach((q, index) => {
-        let questionNumber = index + 1; // Use loop index for numbering
+    questions.forEach((q, index) => { // Use index for numbering if needed, though list handles it
         let qTextForTex = escapeLatex(q.text || '[Question text unavailable]');
         let imageTex = '';
         if (q.image) {

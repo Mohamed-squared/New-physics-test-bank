@@ -1,5 +1,3 @@
-// --- START OF FILE ui_course_study_material.js ---
-
 // ui_course_study_material.js
 
 import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress } from './state.js';
@@ -15,9 +13,11 @@ import { parseSkipExamText } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { generateAndDownloadPdfWithMathJax } from './ui_pdf_generation.js';
 import { showCurrentCourseDashboard } from './ui_course_dashboard.js';
-// MODIFIED: Import generateExam from exam_storage instead? No, let's keep it simple for now.
-// Let's assume generateSkipExam in ai_integration handles the problem combining.
-// If not, we'd need to import from test_logic here.
+// MODIFIED: Import test_logic functions for problem selection/combination
+import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
+// MODIFIED: Import notes functions - Added setLastViewedChapterForNotes
+import { showNotesDocumentsPanel, setLastViewedChapterForNotes } from './ui_notes_documents.js';
+
 
 // --- Module State ---
 let currentTranscriptionData = [];
@@ -51,11 +51,6 @@ let chapterLectureVideos = [];
 let currentVideoIndex = 0;
 // --- End Module State ---
 
-// --- Global Formula Sheet Store (Removed - using Firestore now) ---
-// if (!window.globalFormulaSheets) window.globalFormulaSheets = {};
-
-// --- Global Chapter Summary Store (Removed - using Firestore now) ---
-// if (!window.globalChapterSummaries) window.globalChapterSummaries = {};
 
 // --- Helper Functions ---
 
@@ -634,6 +629,7 @@ export function handleTranscriptionClick(event) {
          console.warn("Could not find current player to seek for transcription click.");
     }
 }
+window.handleTranscriptionClick = handleTranscriptionClick; // Assign to window
 
 function toggleTranscriptionView() {
      isTranscriptionExpanded = !isTranscriptionExpanded;
@@ -929,10 +925,11 @@ export async function showCourseStudyMaterial(courseId, chapterNum, videoIdx = 0
     currentChapterNumber = chapterNum;
     currentVideoIndex = videoIdx;
     isTranscriptionExpanded = false; // Reset transcription view state
+    setLastViewedChapterForNotes(chapterNum); // Track the last viewed chapter for notes
 
     if (!currentUser || !courseId || !chapterNum) { return; }
     setActiveCourseId(courseId);
-    setActiveSidebarLink('sidebar-next-lesson-link', 'sidebar-course-nav'); // Or appropriate link
+    setActiveSidebarLink('sidebar-study-material-link', 'sidebar-course-nav'); // Highlight Study Material
 
     const courseDef = globalCourseDataMap.get(courseId);
     if (!courseDef) { return; }
@@ -1078,19 +1075,20 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
 
     showLoading(`Generating Skip Exam for Chapter ${chapterNum}...`);
     try {
-         // GenerateSkipExam now handles combining problems and MCQs
-        const examText = await generateSkipExam(null, null, chapterNum); // Fetch content inside AI function
-        if (!examText) throw new Error("Failed to generate exam content.");
+         // GenerateSkipExam now primarily gets MCQs based on content
+        const examMCQText = await generateSkipExam(courseId, chapterNum); // Fetch content inside AI function
+        if (!examMCQText) throw new Error("Failed to generate exam MCQ content.");
 
         // Parse only the MCQ part
-        const parsedMCQs = parseSkipExamText(examText, chapterNum);
+        const parsedMCQs = parseSkipExamText(examMCQText, chapterNum);
         if (!parsedMCQs || parsedMCQs.questions.length === 0) {
              console.warn("AI generated skip exam text, but no MCQs could be parsed. Format might be incorrect.");
              // Proceed to try and parse problems
         }
 
-        // Get predefined problems for the chapter
-        const problems = await selectProblemsForExam(chapterNum, 5); // Aim for 5 problems
+        // Get predefined problems for the chapter (from test_logic)
+        await parseChapterProblems(); // Ensure problem cache is loaded
+        const problems = selectProblemsForExam(chapterNum, 5); // Aim for 5 problems
 
         // Combine parsed MCQs and problems
         // Target around 10-15 total questions for a skip exam
@@ -1161,7 +1159,11 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
     // --- Check Firestore cache ---
     let cachedSheet = null;
     if (!forceRegenerate) {
-        cachedSheet = await loadFormulaSheet(courseId, chapterNum);
+         try {
+             cachedSheet = await loadFormulaSheet(courseId, chapterNum);
+         } catch (error) {
+             console.error("Error loading cached formula sheet:", error); // Log error but continue
+         }
     }
 
     if (cachedSheet) {
@@ -1178,10 +1180,15 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         const sheetHtml = await generateFormulaSheet(courseId, chapterNum);
         formulaContent.innerHTML = sheetHtml;
         await renderMathIn(formulaContent);
-        if (!sheetHtml.includes('Error generating') && !sheetHtml.includes('No text content available')) {
+        if (!sheetHtml.includes('Error generating') && !sheetHtml.includes('No text content available') && !sheetHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
             // --- Store in Firestore ---
-            await saveFormulaSheet(courseId, chapterNum, sheetHtml);
+            try {
+                 await saveFormulaSheet(courseId, chapterNum, sheetHtml);
+            } catch (saveError) {
+                 console.error("Failed to save generated formula sheet to Firestore:", saveError);
+                 // Don't alert user, but log it. Download still works.
+            }
         } else {
             // Display the error message from generation, don't enable download
             console.warn("AI generation indicated an issue, not caching or enabling download.");
@@ -1236,7 +1243,11 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
     // --- Check Firestore cache ---
     let cachedSummary = null;
     if (!forceRegenerate) {
-        cachedSummary = await loadChapterSummary(courseId, chapterNum);
+         try {
+             cachedSummary = await loadChapterSummary(courseId, chapterNum);
+         } catch (error) {
+             console.error("Error loading cached chapter summary:", error); // Log error but continue
+         }
     }
 
     if (cachedSummary) {
@@ -1253,10 +1264,15 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         const summaryHtml = await generateChapterSummary(courseId, chapterNum);
         summaryContent.innerHTML = summaryHtml;
         await renderMathIn(summaryContent);
-        if (!summaryHtml.includes('Error generating') && !summaryHtml.includes('No text content available')) {
+        if (!summaryHtml.includes('Error generating') && !summaryHtml.includes('No text content available') && !summaryHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
             // --- Store in Firestore ---
-            await saveChapterSummary(courseId, chapterNum, summaryHtml);
+             try {
+                await saveChapterSummary(courseId, chapterNum, summaryHtml);
+             } catch (saveError) {
+                  console.error("Failed to save generated chapter summary to Firestore:", saveError);
+                  // Don't alert user, but log it. Download still works.
+             }
         } else {
              console.warn("AI generation indicated an issue with summary, not caching or enabling download.");
         }

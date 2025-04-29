@@ -55,8 +55,8 @@ import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_a
 import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js'; // Added renderCourseCharts
 // NEW: Import for the content menu UI
 import { displayCourseContentMenu } from './ui_course_content_menu.js';
-// MODIFIED: Import improveNoteWithAIWrapper, removed convertNoteToLatex from here
-import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChanges, uploadNoteWrapper, deleteNoteWrapper, shareNote, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper } from './ui_notes_documents.js'; // Use Wrappers
+// MODIFIED: Import Notes UI wrappers
+import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, showCurrentNotesDocuments } from './ui_notes_documents.js'; // Use Wrappers + added showCurrentNotesDocuments
 // MODIFIED: Removed reportQuestionIssue from this import
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 // NEW: Import the actual convertNoteToLatex from AI module
@@ -235,6 +235,7 @@ window.showNextLesson = showNextLesson;
 window.showFullStudyMaterial = showFullStudyMaterial;
 window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
 window.showCurrentCourseProgress = showCurrentCourseProgress;
+window.showCurrentNotesDocuments = showCurrentNotesDocuments; // NEW: Assign notes link handler
 
 // Course Study Material Functions
 window.showCourseStudyMaterial = showCourseStudyMaterial;
@@ -270,14 +271,15 @@ window.displayCourseContentMenu = displayCourseContentMenu;
 window.showNotesDocumentsPanel = showNotesDocumentsPanel;
 window.addNewNoteWrapper = addNewNoteWrapper; // Use Wrappers for consistency
 window.editNoteWrapper = editNoteWrapper;
-window.saveNoteChangesWrapper = saveNoteChanges; // Use Wrapper
+window.saveNoteChangesWrapper = saveNoteChangesWrapper; // Use Wrapper
 window.uploadNoteWrapper = uploadNoteWrapper; // Use Wrapper
 window.deleteNoteWrapper = deleteNoteWrapper; // Use Wrapper
-window.shareNote = shareNote; // Should be shareNoteWrapper? Needs implementation
+window.shareCurrentNoteWrapper = shareCurrentNoteWrapper; // Needs implementation
 window.viewNoteWrapper = viewNoteWrapper;
-window.convertNoteToLatexWrapper = convertNoteToLatexWrapper; // Renamed to match UI
+window.convertNoteToLatexWrapper = convertNoteToLatexWrapper; // Renamed wrapper
 window.improveNoteWithAIWrapper = improveNoteWithAIWrapper; // Corrected: Use wrapper
 window.reviewNoteWithAIWrapper = reviewNoteWithAIWrapper; // NEW: Assign review wrapper
+window.downloadNoteAsTexWrapper = downloadNoteAsTexWrapper; // NEW: Assign TeX download wrapper
 
 // Exam Storage/Review Functions (NEW)
 window.showExamReviewUI = showExamReviewUI;
@@ -370,7 +372,9 @@ window.toggleSidebarDropdown = function(contentId, arrowId) {
         const isOpen = content.classList.toggle('open');
         button.classList.toggle('open', isOpen);
         // Also toggle max-height for animation if using CSS transitions
+        // Use scrollHeight to dynamically set max-height for smooth animation
         content.style.maxHeight = isOpen ? content.scrollHeight + "px" : "0";
+
         // Check if any child link is active and keep parent highlighted
         const hasActiveChild = content.querySelector('.sidebar-link.active-link');
         button.classList.toggle('active-parent', !!hasActiveChild);

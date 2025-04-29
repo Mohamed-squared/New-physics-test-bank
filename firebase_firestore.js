@@ -1,5 +1,3 @@
-// --- START OF FILE firebase_firestore.js ---
-
 // firebase_firestore.js
 
 import {
@@ -27,7 +25,7 @@ async function fetchMarkdownForSubject(subject) {
     // Use subject.fileName, default logic might need adjustment based on expected import data format
     const fileName = subject.fileName || (subject.name === "Fundamentals of Physics" ? "chapters.md" : `${subject.name}.md`);
     const safeFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const url = `${safeFileName}?t=${new Date().getTime()}`; // Add cache buster
+    const url = `./${safeFileName}?t=${new Date().getTime()}`; // Add cache buster - Use relative path from index.html
 
     console.log(`Fetching Markdown from: ${url}`);
     try {
@@ -130,8 +128,11 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
         if (dataToSave.finalExamScores === undefined) { dataToSave.finalExamScores = null; }
         // Ensure dailyProgress sub-objects are initialized if needed
         Object.keys(dataToSave.dailyProgress).forEach(dateStr => {
+            dataToSave.dailyProgress[dateStr] = dataToSave.dailyProgress[dateStr] || {}; // Ensure day object exists
             dataToSave.dailyProgress[dateStr].chaptersStudied = dataToSave.dailyProgress[dateStr].chaptersStudied || [];
             dataToSave.dailyProgress[dateStr].skipExamsPassed = dataToSave.dailyProgress[dateStr].skipExamsPassed || [];
+            dataToSave.dailyProgress[dateStr].assignmentCompleted = dataToSave.dailyProgress[dateStr].assignmentCompleted ?? false;
+            dataToSave.dailyProgress[dateStr].assignmentScore = dataToSave.dailyProgress[dateStr].assignmentScore ?? null;
         });
 
         await progressRef.set(dataToSave, { merge: true });
@@ -175,8 +176,11 @@ export async function loadAllUserCourseProgress(uid) {
                 progressData.status = progressData.status || 'enrolled';
                  // Ensure dailyProgress sub-objects are initialized if needed
                 Object.keys(progressData.dailyProgress).forEach(dateStr => {
+                    progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {}; // Ensure day object exists
                     progressData.dailyProgress[dateStr].chaptersStudied = progressData.dailyProgress[dateStr].chaptersStudied || [];
                     progressData.dailyProgress[dateStr].skipExamsPassed = progressData.dailyProgress[dateStr].skipExamsPassed || [];
+                    progressData.dailyProgress[dateStr].assignmentCompleted = progressData.dailyProgress[dateStr].assignmentCompleted ?? false;
+                    progressData.dailyProgress[dateStr].assignmentScore = progressData.dailyProgress[dateStr].assignmentScore ?? null;
                 });
 
                 // Convert Timestamps to Dates for client-side use
@@ -281,6 +285,7 @@ export async function loadGlobalCourseDefinitions() {
               console.log(`FOP course ${FOP_COURSE_ID} not found in Firestore, loading from local config.`);
               const fopDef = {...FOP_COURSE_DEFINITION}; // Clone
               fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
+              fopDef.chapterResources = fopDef.chapterResources || {}; // Initialize if missing
               updateGlobalCourseData(FOP_COURSE_ID, fopDef);
          }
     } catch (error) {

@@ -1,5 +1,3 @@
-// --- START OF FILE ui_inbox.js ---
-
 // ui_inbox.js
 
 // Import db and currentUser from state.js
@@ -23,7 +21,8 @@ export function showInbox() {
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <div class="flex justify-between items-center mb-4 pb-4 border-b dark:border-gray-700">
                 <h2 class="text-xl font-semibold text-blue-600 dark:text-blue-400">Your Inbox</h2>
-                <button onclick="window.promptContactAdmin()" class="btn-secondary-small flex items-center">
+                <!-- MODIFIED: Button opens modal -->
+                <button onclick="window.showContactAdminModal()" class="btn-secondary-small flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1">
                       <path fill-rule="evenodd" d="M2.5 3A1.5 1.5 0 0 0 1 4.5v11A1.5 1.5 0 0 0 2.5 17h15a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 17.5 3h-15Zm11.25 8.75c.414 0 .75.336.75.75s-.336.75-.75.75h-5.5a.75.75 0 0 1 0-1.5h5.5Zm0-3c.414 0 .75.336.75.75s-.336.75-.75.75h-5.5a.75.75 0 0 1 0-1.5h5.5Zm-5.5-3A.75.75 0 0 0 7.5 7h5a.75.75 0 0 0 0-1.5h-5A.75.75 0 0 0 7.5 6Z" clip-rule="evenodd" />
                     </svg>
@@ -68,7 +67,8 @@ async function loadInboxMessages() {
             const date = message.timestamp ? new Date(message.timestamp.toDate()).toLocaleString() : 'N/A';
             const isUnread = !message.isRead;
             if (isUnread) unreadCount++;
-            const senderName = message.senderId === ADMIN_UID ? 'Admin' : (message.senderName || 'System');
+            const isAdminSender = message.senderId === ADMIN_UID;
+            const senderName = isAdminSender ? 'Admin' : (message.senderName || 'System'); // Assuming senderName is stored for non-admin replies now
 
             messagesHtml += `
                 <details class="bg-gray-50 dark:bg-gray-700/60 p-4 rounded-lg border dark:border-gray-600 group shadow-sm hover:shadow transition-shadow duration-150"
@@ -85,6 +85,12 @@ async function loadInboxMessages() {
                     </summary>
                     <div class="mt-3 pt-3 border-t dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
                         <p>${message.body ? message.body.replace(/\n/g, '<br>') : 'No content.'}</p>
+                        <!-- MODIFIED: Add Reply Button -->
+                        ${isAdminSender ? `
+                            <div class="mt-3 text-right">
+                                <button onclick="window.showReplyToAdminModal('${messageId}', '${escapeHtml(message.subject)}')"" class="btn-secondary-small text-xs">Reply to Admin</button>
+                            </div>
+                        ` : ''}
                     </div>
                 </details>
             `;
@@ -146,36 +152,65 @@ export async function handleMarkRead(messageId, detailsElement) {
     }
 }
 
-// --- NEW: Contact Admin Feature ---
-export function promptContactAdmin() {
+// --- MODIFIED: Contact Admin Feature ---
+
+// Shows a modal for contacting the admin
+export function showContactAdminModal() {
     if (!currentUser) {
-         alert("Please log in to contact the admin.");
-         return;
-     }
+        alert("Please log in to contact the admin.");
+        return;
+    }
+    // Remove existing modal first
+    document.getElementById('contact-admin-modal')?.remove();
 
-     const subject = prompt("Enter a brief subject for your message to the admin:");
-     if (subject === null) return; // User cancelled
-     if (!subject.trim()) {
-         alert("Subject cannot be empty.");
-         return;
-     }
-
-     const message = prompt(`Enter your message for the admin (Subject: ${subject}):`);
-     if (message === null) return; // User cancelled
-     if (!message.trim()) {
-         alert("Message cannot be empty.");
-         return;
-     }
-
-     handleContactAdmin(subject.trim(), message.trim());
+    const modalHtml = `
+        <div id="contact-admin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4 animate-fade-in" aria-labelledby="contact-admin-title" role="dialog" aria-modal="true">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="contact-admin-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Contact Admin</h3>
+                    <button onclick="document.getElementById('contact-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                </div>
+                <form id="contact-admin-form" onsubmit="window.handleSendAdminMessage(event)" class="space-y-4">
+                    <div>
+                        <label for="contact-subject" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
+                        <input type="text" id="contact-subject" required class="mt-1 w-full">
+                    </div>
+                    <div>
+                        <label for="contact-message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+                        <textarea id="contact-message" required rows="5" class="mt-1 w-full"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" onclick="document.getElementById('contact-admin-modal').remove()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Send Message</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('contact-subject')?.focus();
 }
-window.promptContactAdmin = promptContactAdmin; // Assign to window
 
-async function handleContactAdmin(subject, message) {
-    if (!currentUser) return; // Should be checked already, but safeguard
+// Handles sending the message from the modal
+async function handleSendAdminMessage(event) {
+    event.preventDefault();
+    if (!currentUser) return;
 
+    const subjectInput = document.getElementById('contact-subject');
+    const messageInput = document.getElementById('contact-message');
+    if (!subjectInput || !messageInput) return;
+
+    const subject = subjectInput.value.trim();
+    const message = messageInput.value.trim();
+
+    if (!subject || !message) {
+        alert("Subject and message cannot be empty.");
+        return;
+    }
+
+    document.getElementById('contact-admin-modal')?.remove(); // Close modal immediately
     showLoading("Sending message...");
-    // Use the submitFeedback function, but mark it clearly as a direct contact
+    // Use submitFeedback function
     const feedbackData = {
          subjectId: "Direct Contact", // Special identifier
          questionId: null,
@@ -192,5 +227,86 @@ async function handleContactAdmin(subject, message) {
     }
 }
 
+// --- NEW: Reply to Admin ---
+
+// Shows modal for replying to a specific admin message
+export function showReplyToAdminModal(originalMessageId, originalSubject) {
+    if (!currentUser) {
+        alert("Please log in to reply.");
+        return;
+    }
+    // Remove existing modal first
+    document.getElementById('reply-admin-modal')?.remove();
+
+    const replySubject = `Re: ${originalSubject || 'Previous Message'}`;
+
+    const modalHtml = `
+        <div id="reply-admin-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[70] p-4 animate-fade-in" aria-labelledby="reply-admin-title" role="dialog" aria-modal="true">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="reply-admin-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Reply to Admin</h3>
+                    <button onclick="document.getElementById('reply-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                </div>
+                <form id="reply-admin-form" onsubmit="window.handleSendReplyToAdmin(event, '${originalMessageId}', '${escapeHtml(replySubject)}')" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Subject</label>
+                        <p class="mt-1 text-sm text-gray-800 dark:text-gray-200 p-2 bg-gray-100 dark:bg-gray-700 rounded border dark:border-gray-600">${escapeHtml(replySubject)}</p>
+                    </div>
+                    <div>
+                        <label for="reply-message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Your Reply</label>
+                        <textarea id="reply-message" required rows="5" class="mt-1 w-full"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-2">
+                        <button type="button" onclick="document.getElementById('reply-admin-modal').remove()" class="btn-secondary">Cancel</button>
+                        <button type="submit" class="btn-primary">Send Reply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('reply-message')?.focus();
+}
+
+// Handles sending the reply
+async function handleSendReplyToAdmin(event, originalMessageId, subject) {
+    event.preventDefault();
+    if (!currentUser) return;
+
+    const messageInput = document.getElementById('reply-message');
+    if (!messageInput) return;
+
+    const message = messageInput.value.trim();
+    if (!message) {
+        alert("Reply message cannot be empty.");
+        return;
+    }
+
+    document.getElementById('reply-admin-modal')?.remove(); // Close modal immediately
+    showLoading("Sending reply...");
+
+    // Use submitFeedback function, adding context about the reply
+    const feedbackData = {
+         subjectId: "User Reply", // Special identifier
+         questionId: null,
+         feedbackText: `Subject: ${subject}\n\nReply:\n${message}\n\n(In reply to admin message ID: ${originalMessageId})`,
+         context: `User reply to admin message ${originalMessageId}`
+     };
+
+    const success = await submitFeedback(feedbackData, currentUser);
+    hideLoading();
+    if (success) {
+        alert("Your reply has been sent to the admin.");
+    } else {
+        alert("Failed to send reply. Please try again.");
+    }
+}
+
+
+// Assign new functions to window scope (done in script.js)
+window.showContactAdminModal = showContactAdminModal;
+window.handleSendAdminMessage = handleSendAdminMessage;
+window.showReplyToAdminModal = showReplyToAdminModal;
+window.handleSendReplyToAdmin = handleSendReplyToAdmin;
 
 // --- END OF FILE ui_inbox.js ---

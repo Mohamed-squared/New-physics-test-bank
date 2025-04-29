@@ -2,97 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Usernames collection (for unique usernames)
-    match /usernames/{username} {
-      allow read: if true; // Anyone can check if a username exists
-      // Only the user associated with this username entry can create it initially.
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Disallow updates/deletes for simplicity.
-      allow update, delete: if false;
-    }
-
-    // User data collection
-    match /users/{userId} {
-      // Allow user to read/write/delete their own main document
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-      // Allow user to create their own document on signup
-      allow create: if request.auth != null && request.auth.uid == userId;
-
-      // Inbox subcollection
-      match /inbox/{messageId} {
-         // Allow user full control over their own inbox messages
-         allow read, create, update, delete: if request.auth != null && request.auth.uid == userId;
-      }
-    }
-
-    // User Course Progress Subcollection Rules
-    // Allows a user to read/write ANY document within their own userCourseProgress document path
-    match /userCourseProgress/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Feedback collection
-    match /feedback/{feedbackId} {
-       // Any authenticated user can create (submit) feedback
-       allow create: if request.auth != null;
-       // Only Admin can read/update feedback status/replies
-       // Use your actual ADMIN_UID here
-       allow read, update: if request.auth != null && request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1';
-       // Feedback deletion generally disallowed through rules
-       allow delete: if false;
-    }
-
-    // Courses collection - REVISED RULES
-    match /courses/{courseId} {
-
-      // --- READ ---
-      // Logged-in users can read 'approved' courses. Admin can read all.
-      // Use your actual ADMIN_UID here
-      allow read: if request.auth != null &&
-                    (resource.data.status == 'approved' || request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1');
-
-      // --- WRITE (Combined Create, Update, Delete) ---
-      allow write: if request.auth != null && (
-        // **ADMIN:** Full create, update, delete access
-        ( request.auth.uid == '04amtH9UgfTWxPH0rqn2quaKiNf1' )
-        ||
-        // **USER CREATE (Pending Only):**
-        ( request.method == 'create'
-          && request.auth.uid != '04amtH9UgfTWxPH0rqn2quaKiNf1' // Must NOT be admin
-          && request.resource.data.creatorUid == request.auth.uid
-          && request.resource.data.status == 'pending' // Must be pending
-          && request.resource.data.name is string && request.resource.data.name.size() > 0
-          && request.resource.data.relatedSubjectId is string && request.resource.data.relatedSubjectId.size() > 0
-          && request.resource.data.totalChapters is number && request.resource.data.totalChapters > 0
-          // Ensure all necessary fields are present upon creation by user
-          && request.resource.data.keys().hasAll([
-               'creatorUid', 'creatorName', 'createdAt', 'status', 'name',
-               'description', 'majorTag', 'subjectTag', 'relatedSubjectId',
-               'totalChapters', 'youtubePlaylistUrl', 'pdfPathPattern',
-               'transcriptionPathPattern', 'chapters', 'chapterResources',
-               'reportedBy', 'reportReason'
-             ])
-        )
-        ||
-        // **USER UPDATE (Reporting Only):**
-        ( request.method == 'update'
-          && request.auth.uid != resource.data.creatorUid // Not the creator
-          && resource.data.status == 'approved' // Can only report 'approved' courses
-          && request.resource.data.status == 'reported' // Setting status to 'reported'
-          && request.resource.data.reportReason is string && request.resource.data.reportReason.size() > 0 // Reason is required
-          // Check ONLY these fields are changing compared to the existing document
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reportReason', 'reportedBy'])
-          // Check that reportedBy is simply adding the current user's ID
-          && request.resource.data.reportedBy == resource.data.reportedBy.concat([request.auth.uid])
-        )
-      );
-      // Note: Delete is implicitly covered by the admin write rule. Non-admins cannot delete.
-    }
-  }
-}rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-
     // --- Usernames: Publicly readable, writable only if creating and user matches UID ---
     match /usernames/{username} {
       allow read: if true; // Allow checking if username exists
@@ -125,11 +34,12 @@ service cloud.firestore {
     // --- User Exam Storage: User can read/write own, Admin can read all ---
     match /userExams/{userId}/{exams}/{examId} {
        allow read, write, delete: if request.auth != null && request.auth.uid == userId; // User owns their exam results
+       // Admin read access
+       allow read: if request.auth != null && isAdmin();
        // Admin cannot directly write/delete user exams unless explicitly needed later
-       allow read: if request.auth != null && isAdmin(); // Admin read access
     }
 
-    // --- Feedback: Authenticated users can create, Admin can read/update all ---
+    // --- Feedback: Authenticated users can create, Admin can read/update/delete all ---
     match /feedback/{feedbackId} {
       allow create: if request.auth != null; // Any logged-in user can submit
       allow read, update, delete: if request.auth != null && isAdmin(); // Only admin can manage
@@ -147,17 +57,15 @@ service cloud.firestore {
       allow create, update, delete: if request.auth != null && isAdmin(); // Only Admin manages course definitions
     }
 
-    // --- Shared Global Data (Formula Sheets, Summaries): Readable by all, Writable by Admin (or specific logic) ---
-    // Example: Allow any authenticated user to write (caching) - ADJUST IF NEEDED
+    // --- Shared Global Data (Formula Sheets, Summaries): Readable by all, Writable by authenticated users ---
+    // Allows the application to cache generated sheets/summaries for any logged-in user.
     match /globalFormulaSheets/{sheetId} {
         allow read: if true;
-        allow write: if request.auth != null; // Allow any logged-in user to potentially cache generated sheets
-        // allow write: if request.auth != null && isAdmin(); // Alternative: Only Admin can write
+        allow write: if request.auth != null; // Allow any logged-in user to write (cache) generated sheets
     }
     match /globalChapterSummaries/{summaryId} {
         allow read: if true;
-        allow write: if request.auth != null; // Allow any logged-in user to potentially cache generated summaries
-        // allow write: if request.auth != null && isAdmin(); // Alternative: Only Admin can write
+        allow write: if request.auth != null; // Allow any logged-in user to write (cache) generated summaries
     }
 
     // --- Shared Notes: Readable by all (if desired), Writable by authenticated users ---
@@ -170,8 +78,7 @@ service cloud.firestore {
 
     // --- Helper function for Admin Check ---
     function isAdmin() {
-      // Replace 'YOUR_ADMIN_UID_HERE' with the actual Admin UID from config.js
-      // It's generally better to manage admin roles via custom claims or a dedicated roles collection for scalability.
+      // Replace '04amtH9UgfTWxPH0rqn2quaKiNf1' with your actual Admin UID.
       return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
     }
   }

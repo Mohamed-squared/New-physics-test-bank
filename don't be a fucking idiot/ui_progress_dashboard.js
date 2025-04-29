@@ -64,10 +64,13 @@ export function showProgressDashboard() {
 
      // Use requestAnimationFrame to ensure the DOM is updated before rendering charts
      requestAnimationFrame(renderCharts);
-     setActiveSidebarLink('showProgressDashboard', 'sidebar-standard-nav'); // Set active link
+     // MODIFIED: Target correct dropdown parent link
+     setActiveSidebarLink('showProgressDashboard', 'testgen-dropdown-content'); // Set active link within dropdown
 }
 
 export function closeDashboard() {
+    // This function is now effectively replaced by the button navigating directly
+    // Kept here in case it's called elsewhere, but behavior should be reconsidered
     document.getElementById('dashboard')?.classList.add('hidden');
     // Destroy charts when closing dashboard to free resources
     Object.values(charts).forEach(chart => {
@@ -78,10 +81,8 @@ export function closeDashboard() {
     setCharts({}); // Clear the charts state
 
     clearContent(); // Clear the dynamic #content area
-    // Show a default prompt or the last viewed screen? Let's show default prompt.
-    displayContent('<p class="text-center p-4">Select an option from the sidebar.</p>');
-    // Make sure the default sidebar link is active again
-    setActiveSidebarLink('showHomeDashboard', 'sidebar-standard-nav');
+    // Navigate back to the TestGen main view instead of a generic prompt
+    window.showTestGenerationDashboard(); // Use window scope
 }
 
 // Separate function to handle chart rendering
