@@ -1,3 +1,5 @@
+
+
 /* ==========================================================================
    Professional TestGen Pro Styles - styles.css
    ========================================================================== */
@@ -482,6 +484,58 @@ html.dark #theme-icon-dark { display: block; }
     min-width: 1.2rem;
     text-align: center;
 }
+
+/* --- NEW/MODIFIED: Sidebar Dropdown Styles --- */
+.sidebar-dropdown-toggle {
+    /* Ensure toggle button behaves like a link but can contain an icon */
+    background: none;
+    border: none;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+}
+.sidebar-dropdown-toggle .dropdown-arrow {
+    transition: transform 0.2s ease-in-out;
+}
+.sidebar-dropdown-toggle.open .dropdown-arrow {
+    transform: rotate(90deg);
+}
+.sidebar-dropdown-content {
+    /* Initial state: hidden, no height */
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    opacity: 0;
+    /* Indent dropdown items */
+    padding-left: 0.5rem;
+    margin-left: 0.85rem; /* Align indentation roughly under parent icon */
+    border-left: 1px dashed var(--color-gray-300);
+}
+.dark .sidebar-dropdown-content {
+    border-left-color: var(--color-gray-600);
+}
+.sidebar-dropdown-content.open {
+    max-height: 500px; /* Adjust as needed, large enough for content */
+    opacity: 1;
+    transition: max-height 0.4s ease-in, opacity 0.3s ease-in;
+}
+/* Style for active parent toggle (when child is active) */
+.sidebar-dropdown-toggle.active-parent {
+     background-color: var(--color-primary-50);
+     color: var(--color-primary-600);
+     font-weight: 600;
+}
+.dark .sidebar-dropdown-toggle.active-parent {
+     background-color: var(--color-primary-900);
+     color: var(--color-primary-300);
+}
+ .sidebar-dropdown-toggle.active-parent svg:not(.dropdown-arrow) { /* Don't color the arrow */
+    color: var(--color-primary-600);
+}
+.dark .sidebar-dropdown-toggle.active-parent svg:not(.dropdown-arrow) {
+   color: var(--color-primary-300);
+}
+
 
 /* ==========================================================================
    Admin Indicator Icon

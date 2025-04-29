@@ -1,8 +1,5 @@
-
-
 // script.js
 // --- Core State & Config Imports ---
-// MODIFIED: Reverted renaming of setAuth and setDb imports
 import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
 import { ADMIN_UID, FOP_COURSE_ID } from './config.js';
 
@@ -59,7 +56,7 @@ import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progr
 // NEW: Import for the content menu UI
 import { displayCourseContentMenu } from './ui_course_content_menu.js';
 // MODIFIED: Import improveNoteWithAIWrapper, removed convertNoteToLatex from here
-import { showNotesDocumentsPanel, addNewNote, editNote, saveNoteChanges, uploadNote, deleteNote, shareNote, viewNote, /* removed convertNoteToLatex, */ improveNoteWithAIWrapper, reviewNoteWithAIWrapper } from './ui_notes_documents.js';
+import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChanges, uploadNoteWrapper, deleteNoteWrapper, shareNote, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper } from './ui_notes_documents.js'; // Use Wrappers
 // MODIFIED: Removed reportQuestionIssue from this import
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 // NEW: Import the actual convertNoteToLatex from AI module
@@ -144,13 +141,14 @@ async function initializeApp() {
              sidebar.classList.add('hidden');
              overlay.classList.remove('is-visible');
          });
-         sidebar.querySelectorAll('.sidebar-link').forEach(link => {
-             link.addEventListener('click', () => {
-                // Always close sidebar on link click, regardless of screen size,
-                // because the button is now always visible.
-                sidebar.classList.remove('is-open');
-                sidebar.classList.add('hidden');
-                overlay.classList.remove('is-visible');
+         sidebar.querySelectorAll('.sidebar-link, .sidebar-dropdown-toggle').forEach(link => { // Include dropdown toggles
+             link.addEventListener('click', (e) => {
+                 // Only close if it's NOT a dropdown toggle button itself
+                 if (!e.currentTarget.classList.contains('sidebar-dropdown-toggle')) {
+                     sidebar.classList.remove('is-open');
+                     sidebar.classList.add('hidden');
+                     overlay.classList.remove('is-visible');
+                 }
             });
          });
           menuButton.dataset.listenerAttached = 'true';
@@ -270,15 +268,14 @@ window.displayCourseContentMenu = displayCourseContentMenu;
 
 // Notes & Documents Functions (NEW)
 window.showNotesDocumentsPanel = showNotesDocumentsPanel;
-window.addNewNote = addNewNote; // Should be addNewNoteWrapper? Let's keep internal separate for now
+window.addNewNoteWrapper = addNewNoteWrapper; // Use Wrappers for consistency
 window.editNoteWrapper = editNoteWrapper;
-window.saveNoteChangesWrapper = saveNoteChanges;
-window.uploadNoteWrapper = uploadNoteWrapper;
-window.deleteNoteWrapper = deleteNoteWrapper;
-window.shareNote = shareNote; // Should be shareNoteWrapper?
+window.saveNoteChangesWrapper = saveNoteChanges; // Use Wrapper
+window.uploadNoteWrapper = uploadNoteWrapper; // Use Wrapper
+window.deleteNoteWrapper = deleteNoteWrapper; // Use Wrapper
+window.shareNote = shareNote; // Should be shareNoteWrapper? Needs implementation
 window.viewNoteWrapper = viewNoteWrapper;
-// MODIFIED: Assign the actual convertNoteToLatex from ai_integration
-window.convertNoteToLatexWrapper = convertNoteToLatex; // This wrapper name now calls the real function
+window.convertNoteToLatexWrapper = convertNoteToLatexWrapper; // Renamed to match UI
 window.improveNoteWithAIWrapper = improveNoteWithAIWrapper; // Corrected: Use wrapper
 window.reviewNoteWithAIWrapper = reviewNoteWithAIWrapper; // NEW: Assign review wrapper
 
@@ -364,6 +361,21 @@ window.handleRemoveBadgeForUser = handleRemoveBadgeForUser; // Defined in fireba
 // window.escapeHtml = escapeHtml;
 window.renderMathIn = renderMathIn; // Assign MathJax render function
 
+// Sidebar Dropdown Toggle Function
+window.toggleSidebarDropdown = function(contentId, arrowId) {
+    const content = document.getElementById(contentId);
+    const arrow = document.getElementById(arrowId);
+    const button = arrow?.closest('.sidebar-dropdown-toggle'); // Get the parent button
+    if (content && arrow && button) {
+        const isOpen = content.classList.toggle('open');
+        button.classList.toggle('open', isOpen);
+        // Also toggle max-height for animation if using CSS transitions
+        content.style.maxHeight = isOpen ? content.scrollHeight + "px" : "0";
+        // Check if any child link is active and keep parent highlighted
+        const hasActiveChild = content.querySelector('.sidebar-link.active-link');
+        button.classList.toggle('active-parent', !!hasActiveChild);
+    }
+};
 
 // --- Dynamic UI Updates ---
 export function updateAdminPanelVisibility() {
