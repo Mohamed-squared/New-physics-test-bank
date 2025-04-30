@@ -33,8 +33,8 @@ try {
 let pdfjsLib = window.pdfjsLib;
 
 // Define models (Using latest stable versions)
-const TEXT_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable 1.5 pro
-const VISION_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable vision model
+const TEXT_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable 1.5 pro
+const VISION_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable vision model
 
 
 // --- Helper: Fetch Text File (SRT Parser) ---

@@ -19,7 +19,6 @@ import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PA
 /**
  * Stores the completed exam data (including AI marking results) in Firestore.
  * Uses a dedicated subcollection: userExams/{userId}/exams/{examId}
- * *** MODIFIED: Refined MCQ scoring logic for unanswered/incorrect states. ***
  * @param {string|null} courseId - The ID of the course (or null for standard tests).
  * @param {object} examState - The final state of the online test.
  * @param {string} examType - Type of exam (e.g., 'practice', 'skip_exam', 'assignment', 'testgen').
@@ -46,7 +45,8 @@ export async function storeExamResult(courseId, examState, examType) {
 
         // Prepare the complete record for Firestore
         examRecord = { // Assign to outer scope variable
-            id: examState.examId,
+            id: examState.examId, // Ensure ID is set
+            examId: examState.examId, // Add redundant ID field for compatibility
             userId: currentUser.uid,
             courseId: courseId || null, // Store course ID if applicable
             subjectId: examState.subjectId || null,
@@ -455,6 +455,11 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
         return;
     }
 
+    // Initialize or reset the conversation history for this question
+    if (!window.currentExplanationHistories) {
+        window.currentExplanationHistories = {};
+    }
+
     // If revealing and content is empty, fetch initial explanation
     if (!explanationContentArea.innerHTML.trim() || explanationContentArea.innerHTML.includes('Loading explanation...')) {
         try {
@@ -486,8 +491,32 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
                 throw new Error('Failed to generate explanation');
             }
 
-            window.currentExplanationHistories[questionIndex] = result.history; // Store initial history
-            explanationContentArea.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Initial explanation
+            // Initialize the conversation history with the first explanation
+            window.currentExplanationHistories[questionIndex] = result.history;
+            
+            // Create the conversation container
+            explanationContentArea.innerHTML = `
+                <div class="conversation-container space-y-4">
+                    <div class="ai-message bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                        <p class="font-medium text-sm text-purple-700 dark:text-purple-300 mb-2">AI Explanation:</p>
+                        <div class="prose prose-sm dark:prose-invert">${result.explanationHtml}</div>
+                    </div>
+                </div>
+                <div class="mt-4 sticky bottom-0 bg-white dark:bg-gray-800 pt-4 border-t dark:border-gray-600">
+                    <div class="flex gap-2">
+                        <input type="text" 
+                            id="follow-up-input-${questionIndex}"
+                            class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+                            placeholder="Ask a follow-up question..."
+                            onkeypress="if(event.key === 'Enter') { window.askAIFollowUp('${examId}', ${questionIndex}); }"
+                        >
+                        <button onclick="window.askAIFollowUp('${examId}', ${questionIndex})"
+                            class="btn-primary-small whitespace-nowrap">
+                            Ask AI
+                        </button>
+                    </div>
+                </div>`;
+
             await renderMathIn(explanationContentArea);
             console.log('Explanation generated and rendered successfully');
 
@@ -508,51 +537,103 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
 // Assign to window for HTML onclick access
 window.showAIExplanationSection = showAIExplanationSection;
 
-window.askAIFollowUp = async (examId, questionIndex) => {
+// Handle follow-up questions
+export const askAIFollowUp = async (examId, questionIndex) => {
+    console.log(`[askAIFollowUp] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
+    
+    const explanationContainer = document.getElementById(`ai-explanation-${questionIndex}`);
+    const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
+    const conversationContainer = explanationContentArea?.querySelector('.conversation-container');
     const inputElement = document.getElementById(`follow-up-input-${questionIndex}`);
-    const explanationContentArea = document.getElementById(`ai-explanation-${questionIndex}`)?.querySelector('.ai-explanation-content-area');
-    if (!inputElement || !explanationContentArea || !window.currentExplanationHistories) return;
+    
+    if (!explanationContainer || !explanationContentArea || !conversationContainer || !inputElement) {
+        console.error('Required DOM elements not found for follow-up');
+        return;
+    }
 
     const followUpText = inputElement.value.trim();
-    if (!followUpText) return;
+    if (!followUpText) {
+        console.log('No follow-up text provided');
+        return;
+    }
 
+    // Disable input while processing
     inputElement.disabled = true;
     const askButton = inputElement.nextElementSibling;
     if (askButton) askButton.disabled = true;
 
-    // Append user's follow-up
-    explanationContentArea.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
-
-    // Append loading indicator
-    const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
-    explanationContentArea.insertAdjacentHTML('beforeend', loadingHtml);
-    explanationContentArea.scrollTop = explanationContentArea.scrollHeight;
-
-    const history = window.currentExplanationHistories[questionIndex] || [];
-
     try {
-        // Pass followUpText as the 'studentAnswer' argument for the API call
+        // Append user's question to the conversation
+        conversationContainer.insertAdjacentHTML('beforeend', `
+            <div class="user-message bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                <p class="font-medium text-sm text-blue-700 dark:text-blue-300 mb-2">Your question:</p>
+                <p class="text-sm">${escapeHtml(followUpText)}</p>
+            </div>
+            <div class="ai-message-loading flex items-center p-3">
+                <div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div>
+                <p class="ml-2 text-sm text-muted">AI is thinking...</p>
+            </div>
+        `);
+
+        // Scroll to the latest message
+        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+
+        // Get the conversation history
+        const history = window.currentExplanationHistories[questionIndex] || [];
+        
+        // Generate follow-up response
         const result = await generateExplanation(null, null, followUpText, history);
+        
+        // Remove loading indicator
+        const loadingDiv = conversationContainer.querySelector('.ai-message-loading');
+        if (loadingDiv) loadingDiv.remove();
 
-        window.currentExplanationHistories[questionIndex] = result.history; // Update history state
+        // Add AI's response
+        conversationContainer.insertAdjacentHTML('beforeend', `
+            <div class="ai-message bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
+                <p class="font-medium text-sm text-purple-700 dark:text-purple-300 mb-2">AI Response:</p>
+                <div class="prose prose-sm dark:prose-invert">${result.explanationHtml}</div>
+            </div>
+        `);
 
-        explanationContentArea.querySelector('.ai-loading')?.remove(); // Remove loader
+        // Update conversation history
+        window.currentExplanationHistories[questionIndex] = result.history;
 
-        // Append AI's response
-        explanationContentArea.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+        // Clear input
         inputElement.value = '';
-        await renderMathIn(explanationContentArea); // Re-render math
-        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll down
+        
+        // Render any math in the new response
+        await renderMathIn(conversationContainer.lastElementChild);
+
+        // Scroll to the new response
+        conversationContainer.scrollTop = conversationContainer.scrollHeight;
 
     } catch (error) {
-        console.error("Error asking AI follow-up:", error);
-        explanationContentArea.querySelector('.ai-loading')?.remove();
-        explanationContentArea.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+        console.error("Error in askAIFollowUp:", error);
+        // Remove loading indicator if it exists
+        conversationContainer.querySelector('.ai-message-loading')?.remove();
+        
+        // Add error message
+        conversationContainer.insertAdjacentHTML('beforeend', `
+            <div class="error-message bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                <p class="font-medium text-sm text-red-700 dark:text-red-300">Error:</p>
+                <p class="text-sm mt-1">${error.message || 'An unexpected error occurred'}</p>
+            </div>
+        `);
+        
+        // Scroll to error message
+        conversationContainer.scrollTop = conversationContainer.scrollHeight;
     } finally {
+        // Re-enable input
         inputElement.disabled = false;
         if (askButton) askButton.disabled = false;
+        // Focus back on input for convenience
+        inputElement.focus();
     }
 };
+
+// Assign to window for HTML onclick access
+window.askAIFollowUp = askAIFollowUp;
 
 // --- Issue Reporting ---
 
