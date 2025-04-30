@@ -4,11 +4,12 @@
 import { currentUser, globalCourseDataMap, activeCourseId, userCourseProgressMap } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
-// *** MODIFIED: Import combined progress calculation, YouTube API Key, and skip exam trigger ***
+// *** Corrected/Verified Import ***
+// Ensure 'showCourseStudyMaterial' is correctly exported from the target file.
 import { showCourseStudyMaterial, triggerSkipExamGeneration, calculateChapterCombinedProgress, getYouTubeVideoId, videoDurationMap, displayChapterSummary } from './ui_course_study_material.js'; // Added videoDurationMap import and displayChapterSummary
 import { startAssignmentOrExam } from './ui_course_assignments_exams.js';
 import { SKIP_EXAM_PASSING_PERCENT, YOUTUBE_API_KEY } from './config.js'; // Import config
-import { showMyCoursesDashboard } from './ui_course_dashboard.js';
+import { showMyCoursesDashboard } from './ui_course_dashboard.js'; // Import showMyCoursesDashboard
 
 // --- Helper to get SRT filename (remains same) ---
 function getSrtFilenameFromTitle(title) {
@@ -101,6 +102,8 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
         displayContent(`<p class="text-red-500 p-4">Error: Course or progress data not found for ${courseId}.</p>`, 'course-dashboard-area');
         return;
     }
+    // MODIFIED: Check viewer mode
+    const isViewer = progress.enrollmentMode === 'viewer';
 
     showLoading("Loading Chapter Details...");
 
@@ -146,7 +149,8 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
 
          // Only include chapters with actual content (PDF or Video) in the average calculation
          if (videoIdsForChapter.length > 0 || pdfPath) {
-             const { percent: chapterPercent } = calculateChapterCombinedProgress(progress, i, chapterVideoDurationMap, pdfInfo);
+             // Only calculate progress if not viewer
+             const chapterPercent = isViewer ? 0 : calculateChapterCombinedProgress(progress, i, chapterVideoDurationMap, pdfInfo).percent;
              totalCourseProgressSum += chapterPercent;
              chaptersConsideredForAvg++;
          }
@@ -162,13 +166,15 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
         </div>
         <p class="text-sm text-muted">Browse all chapters, access study materials, and take related quizzes or exams.</p>
 
-        <!-- Overall Progress -->
+        <!-- Overall Progress (Hidden for Viewer) -->
+        ${!isViewer ? `
         <div class="mb-4">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Overall Course Completion (${overallProgressPercent}% Avg Progress)</label>
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mt-1">
                  <div class="bg-gradient-to-r from-blue-400 to-primary-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${overallProgressPercent}%" title="${overallProgressPercent}% Average Chapter Progress (${studiedChaptersCount}/${totalChapters} Chapters Marked Studied)"></div>
             </div>
         </div>
+        ` : ''}
 
         <div class="space-y-3">`;
 
@@ -193,50 +199,55 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
             const hasTranscriptionSource = lecturesForChapter.some(lec => getSrtFilenameFromTitle(lec.title));
             const canAttemptSkip = pdfPath || hasTranscriptionSource; // Check if PDF or Transcription exists
 
-            // --- Skip Exam Button Logic ---
+            // --- Skip Exam Button Logic (Hidden for Viewer) ---
              let skipExamStatusHtml = '';
-             if (isStudied) {
-                  // If studied (either by progress or skip exam pass), show status
-                  skipExamStatusHtml = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">${lastSkipScore !== undefined ? `(Skip Passed: ${lastSkipScore.toFixed(0)}%)` : '(Progress Complete)'}</span>`;
-             } else if (lastSkipScore !== undefined && lastSkipScore < SKIP_EXAM_PASSING_PERCENT) {
-                  // If failed last attempt AND not yet studied by progress
-                  skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs ml-auto" title="Last Score: ${lastSkipScore.toFixed(0)}%. Attempts: ${skipAttempts}. Needs ${SKIP_EXAM_PASSING_PERCENT}%">Retake Skip Exam</button>`;
-             } else {
-                  // If never attempted (or previous pass doesn't matter because progress isn't 100%)
-                  skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs ml-auto" ${!canAttemptSkip ? 'disabled title="No content for exam generation"' : `title="Pass (${SKIP_EXAM_PASSING_PERCENT}%) to mark chapter as studied"`}>Take Skip Exam</button>`;
+             if (!isViewer) {
+                 if (isStudied) {
+                      // If studied (either by progress or skip exam pass), show status
+                      skipExamStatusHtml = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">${lastSkipScore !== undefined ? `(Skip Passed: ${lastSkipScore.toFixed(0)}%)` : '(Progress Complete)'}</span>`;
+                 } else if (lastSkipScore !== undefined && lastSkipScore < SKIP_EXAM_PASSING_PERCENT) {
+                      // If failed last attempt AND not yet studied by progress
+                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs ml-auto" title="Last Score: ${lastSkipScore.toFixed(0)}%. Attempts: ${skipAttempts}. Needs ${SKIP_EXAM_PASSING_PERCENT}%">Retake Skip Exam</button>`;
+                 } else {
+                      // If never attempted (or previous pass doesn't matter because progress isn't 100%)
+                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs ml-auto" ${!canAttemptSkip ? 'disabled title="No content for exam generation"' : `title="Pass (${SKIP_EXAM_PASSING_PERCENT}%) to mark chapter as studied"`}>Take Skip Exam</button>`;
+                 }
              }
 
-            // --- Chapter Progress Bar (Using Combined Progress) ---
-            const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
-            const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
-            const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Get PDF progress info
-            // Use the imported combined progress function
-            const { percent: chapterCombinedProgress, watchedStr, totalStr } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
+            // --- Chapter Progress Bar (Using Combined Progress, Hidden for Viewer) ---
+            let progressBarHtml = '';
+            if (!isViewer) {
+                const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+                const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
+                const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Get PDF progress info
+                // Use the imported combined progress function
+                const { percent: chapterCombinedProgress, watchedStr, totalStr } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
 
-            // Override progress display to 100% if marked studied
-            const displayProgressPercent = isStudied ? 100 : chapterCombinedProgress;
-            const displayProgressText = isStudied ? 'Completed: 100%' : `Progress: ${watchedStr} / ${totalStr} (${chapterCombinedProgress}%)`;
+                // Override progress display to 100% if marked studied
+                const displayProgressPercent = isStudied ? 100 : chapterCombinedProgress;
+                const displayProgressText = isStudied ? 'Completed: 100%' : `Progress: ${watchedStr} / ${totalStr} (${chapterCombinedProgress}%)`;
 
-            let progressBarHtml = `
-                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1 relative group">
-                     <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500 ease-out ${isStudied ? '!bg-green-500' : ''}" style="width: ${displayProgressPercent}%"></div>
-                     <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max p-1.5 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 progress-tooltip-text">
-                          ${displayProgressText}
-                     </div>
-                </div>
-            `;
+                progressBarHtml = `
+                    <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-1 relative group">
+                         <div class="bg-blue-500 h-1.5 rounded-full transition-all duration-500 ease-out ${isStudied ? '!bg-green-500' : ''}" style="width: ${displayProgressPercent}%"></div>
+                         <div class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max p-1.5 text-xs text-white bg-black rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 progress-tooltip-text">
+                              ${displayProgressText}
+                         </div>
+                    </div>
+                `;
+            }
 
             contentHtml += `
                 <div class="content-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-0 overflow-hidden">
                      <div class="p-3 flex justify-between items-center ${isStudied ? 'bg-green-50 dark:bg-green-900/30' : ''}">
                           <span class="font-semibold text-gray-700 dark:text-gray-200">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</span>
-                          ${isStudied ? '<span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 rounded-full font-medium ml-2">Studied</span>' : ''}
-                          ${skipExamStatusHtml} <!-- Added skip exam status/button here -->
+                          ${isViewer ? '<span class="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-700 dark:text-purple-100 rounded-full font-medium ml-2">Viewer</span>' : (isStudied ? '<span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 rounded-full font-medium ml-2">Studied</span>' : '')}
+                          ${skipExamStatusHtml} <!-- Skip exam status/button (hidden if viewer) -->
                      </div>
                      <div class="p-3 border-t dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 space-y-2 text-sm" id="chapter-progress-${chapterNum}">
-                          ${progressBarHtml}
+                          ${progressBarHtml} <!-- Progress bar (hidden if viewer) -->
                           <div class="flex flex-wrap gap-2 items-center mt-2">
-                               <button onclick="window.showCourseStudyMaterial('${courseId}', ${chapterNum})" class="btn-primary-small text-xs">${isStudied ? 'Review Chapter' : 'Study Chapter'}</button>
+                               <button onclick="window.showCourseStudyMaterial('${courseId}', ${chapterNum})" class="btn-primary-small text-xs">${isStudied ? 'Review Chapter' : 'View Chapter'}</button> <!-- Changed text for viewer -->
                                <!-- Quick access buttons -->
                                <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" ${!canAttemptSkip ? 'disabled' : ''} title="View Formula Sheet (AI)">Formulas</button>
                                <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" ${!canAttemptSkip ? 'disabled' : ''} title="View Chapter Summary (AI)">Summary</button>

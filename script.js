@@ -8,8 +8,8 @@ import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-// MODIFIED: Added loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadFormulaSheet, saveFormulaSheet, loadChapterSummary, saveChapterSummary
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadFormulaSheet, saveFormulaSheet, loadChapterSummary, saveChapterSummary } from './firebase_firestore.js';
+// *** MODIFIED: Changed loadChapterSummary to loadUserChapterSummary ***
+import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary } from './firebase_firestore.js';
 
 // --- UI Imports ---
 import { importData, exportData, showImportExportDashboard } from './ui_import_export.js';
@@ -30,7 +30,7 @@ import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubje
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
-// Added handleAdminMarkCourseComplete, loadUserBadgesForAdmin, promptAddBadge, handleAddBadgeForUser, confirmRemoveBadge, handleRemoveBadgeForUser
+// Added handleAdminMarkCourseComplete, loadUserBadgesForAdmin, promptAddBadge, handleAddBadgeForUser, confirmRemoveBadge
 import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge } from './ui_admin_dashboard.js'; // Removed duplicate badge handlers
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
 import { showInbox, handleMarkRead } from './ui_inbox.js';
@@ -116,7 +116,7 @@ async function initializeApp() {
                         primaryTextColor: isDark ? '#e5e7eb' : '#ffffff', // Example text on primary
                         lineColor: isDark ? '#64748b' : '#9ca3af', // Example line color
                         mainBkg: isDark ? '#1e293b' : '#ffffff', // Example background
-                        textColor: isDark ? '#cbd5e1' : '#374151', // Example default text
+                        textColor: isDark ? '#cbd5e1' : '#374151', // Example default text,
                     }
                  });
                  console.log(`Mermaid theme re-initialized to: ${isDark ? 'dark' : 'default'}`);

@@ -2,7 +2,8 @@
 
 import { currentSubject, currentUser, data } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
-import { allocateQuestions, selectNewQuestionsAndUpdate, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js'; // Added problem logic imports
+// MODIFIED: Import parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions
+import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { generateAndDownloadPdfWithMathJax, generatePdfHtml, generateTexSource, downloadTexFile } from './ui_pdf_generation.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
@@ -50,12 +51,14 @@ async function getCurrentSubjectMarkdown() {
 export function showTestGenerationDashboard() {
     if (!currentSubject) {
         displayContent('<p class="text-yellow-500 p-4">Please select or add a subject first.</p><button onclick="window.showManageSubjects()" class="btn-secondary mt-2">Manage Subjects</button>');
+        // MODIFIED: Target correct nav section
         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
         return;
     }
      if (!currentSubject.chapters || Object.keys(currentSubject.chapters).length === 0) {
           displayContent(`<p class="text-yellow-500 p-4">The current subject '${escapeHtml(currentSubject.name)}' has no chapters loaded. Check subject setup or associated Markdown file (${escapeHtml(currentSubject.fileName || 'Not Specified')}).</p><button onclick="window.initializeApp()" class="btn-secondary mt-2">Reload Data</button>`);
-          setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+         // MODIFIED: Target correct nav section
+         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
           return;
       }
 
@@ -76,7 +79,8 @@ export function showTestGenerationDashboard() {
         </div>
     `;
     displayContent(html);
-    setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+    // MODIFIED: Target correct nav section and dropdown item if applicable
+    setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
 export function promptChapterSelectionForTest() {
@@ -92,7 +96,8 @@ export function promptChapterSelectionForTest() {
 
     if (chapterNumbers.length === 0) {
         displayContent('<p class="text-red-500 p-4">No chapters with questions available in this subject to select from.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>');
-        setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+         // MODIFIED: Target correct nav section
+         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
         return;
     }
 
@@ -123,12 +128,13 @@ export function promptChapterSelectionForTest() {
             </button>
              <button onclick="window.showTestGenerationDashboard()" class="w-full btn-secondary mt-2">
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
-                Back
-            </button>
+                 Back
+             </button>
         </div>
     `;
     displayContent(html);
-    setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+    // MODIFIED: Target correct nav section and dropdown item if applicable
+    setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
 export function getSelectedChaptersAndPromptTestType() {
@@ -146,6 +152,7 @@ export function getSelectedChaptersAndPromptTestType() {
 export function promptTestType(mode, selectedChapters = null) {
      if (!currentSubject || !currentSubject.chapters) {
          displayContent('<p class="text-red-500 p-4">Error: Subject data is missing.</p>');
+         // MODIFIED: Target correct nav section
          setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
          return;
      }
@@ -159,7 +166,8 @@ export function promptTestType(mode, selectedChapters = null) {
         const studied = currentSubject.studied_chapters || [];
         if (studied.length === 0) {
             displayContent('<p class="text-red-500 p-4">No chapters marked as studied.</p><button onclick="window.showManageStudiedChapters()" class="btn-secondary mt-4">Manage Studied Chapters</button>');
-            setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+            // MODIFIED: Target correct nav section
+             setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
             return;
         }
         studied.forEach(chapNum => {
@@ -172,7 +180,8 @@ export function promptTestType(mode, selectedChapters = null) {
         chapterCount = Object.keys(relevantChapters).length;
         if (chapterCount === 0) {
              displayContent('<p class="text-yellow-500 p-4">None of your studied chapters have available questions.</p>');
-             setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+              // MODIFIED: Target correct nav section
+              setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
              return;
         }
         chapterScopeDescription = `Based on your ${chapterCount} studied chapter(s) (${totalAvailableInScope} questions available).`;
@@ -187,19 +196,22 @@ export function promptTestType(mode, selectedChapters = null) {
         chapterCount = Object.keys(relevantChapters).length;
          if (chapterCount === 0) {
               displayContent('<p class="text-yellow-500 p-4">None of the selected chapters have available questions.</p>');
-              setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+               // MODIFIED: Target correct nav section
+               setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
               return;
          }
         chapterScopeDescription = `Based on the ${chapterCount} selected chapter(s) (${totalAvailableInScope} questions available).`;
     } else {
          displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
-         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+          // MODIFIED: Target correct nav section
+          setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
          return;
     }
 
      if (totalAvailableInScope === 0) {
         displayContent(`<p class="text-yellow-500 p-4">The chapters in scope have no available questions currently.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
-        setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+         // MODIFIED: Target correct nav section
+         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
         return;
      }
 
@@ -231,7 +243,8 @@ export function promptTestType(mode, selectedChapters = null) {
         </div>
     `;
     displayContent(html);
-    setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+    // MODIFIED: Target correct nav section and dropdown item if applicable
+    setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
 export async function startTestGeneration(mode, selectedChapters, testType) {
@@ -245,8 +258,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
 
     // Fetch the correct Markdown content for the current subject (for MCQs)
     const subjectMarkdownContent = await getCurrentSubjectMarkdown();
-    // Fetch problems (independent of subject MD file)
-    await parseChapterProblems(); // Ensure problem cache is populated
+    // MODIFIED: Pass currentSubject to problem parser
+    await parseChapterProblems(currentSubject); // Ensure problem cache is populated for this subject
 
     let relevantChaptersForAllocation = {};
     let chaptersInScope = [];
@@ -285,12 +298,13 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
     let problemsPerChapter = targetProblemCount > 0 ? Math.ceil(targetProblemCount / chaptersInScope.length) : 0;
     if (problemsPerChapter > 0) {
          chaptersInScope.forEach(chapNum => {
-             selectedProblems.push(...selectProblemsForExam(chapNum, problemsPerChapter));
+             // MODIFIED: Pass currentSubject.id to problem selector
+             selectedProblems.push(...selectProblemsForExam(chapNum, problemsPerChapter, currentSubject.id));
          });
          // Trim if we selected slightly too many due to ceiling division
          selectedProblems = selectedProblems.slice(0, targetProblemCount);
     }
-    console.log(`Selected ${selectedProblems.length} problems.`);
+    console.log(`Selected ${selectedProblems.length} problems for subject ${currentSubject.id}.`);
 
     // 3. Determine needed MCQ count
     const remainingSlots = maxTestSize - selectedProblems.length;
@@ -315,7 +329,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
                 if (n > 0) {
                     const chap = currentSubject.chapters[chapNum];
                     if (chap) {
-                        const questionsSelected = selectQuestions(chap.available_questions, n, chap.total_questions); // Use non-updating select
+                        // MODIFIED: Call selectNewQuestionsAndUpdate (which calls selectQuestions internally)
+                        const questionsSelected = selectNewQuestionsAndUpdate(chap, n);
                         if (questionsSelected.length > 0) {
                             selectedMcqMap[chapNum] = questionsSelected;
                             actualTotalSelectedMcqs += questionsSelected.length;
@@ -381,6 +396,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
             currentQuestionIndex: 0,
             status: 'active',
             durationMinutes: Math.max(15, Math.min(120, actualTotalQuestions * 2.5)), // Adjust duration
+            // MODIFIED: Set courseContext to null for standard tests
+            courseContext: null
         };
         setCurrentOnlineTestState(onlineTestState);
 
@@ -397,9 +414,6 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
         currentSubject.pending_exams.push({
             id: examId,
             allocation: selectedMcqMap, // Store MCQ map
-            // Storing problem details might be useful if needed later for PDF result entry,
-            // but for now, keep it simple. totalQuestions covers both.
-            // problemDetails: selectedProblems.map(p => ({id: p.id, chapter: p.chapter})),
             results_entered: false,
             timestamp: new Date().toISOString(),
             totalQuestions: actualTotalQuestions, // Total combined count
@@ -451,7 +465,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
              </div>
              <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">This exam is now pending. Enter results manually via the Exams Dashboard when ready.</p>
          `);
-        setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+        // MODIFIED: Target correct nav section and dropdown item if applicable
+        setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 
          // Add event listeners for PDF downloads
          document.getElementById('download-pdf-q')?.addEventListener('click', () => generateAndDownloadPdfWithMathJax(questionHtml, questionsPdfFilename));

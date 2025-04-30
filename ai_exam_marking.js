@@ -2,15 +2,19 @@
 
 // ai_exam_marking.js
 
+// MODIFIED: Import escapeHtml from utils
 import { callGeminiTextAPI } from './ai_integration.js';
-import { showLoading, hideLoading } from './utils.js';
+import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml import
 
 // Constants for marking
+// MODIFIED: Define max marks for MCQs separately if needed, or use a standard value like 10
 const MAX_MARKS_PER_PROBLEM = 10; // Define max marks for problems
+const MAX_MARKS_PER_MCQ = 10;     // Define max marks for MCQs (typically all or nothing)
 
 /**
- * Marks a single exam answer (problem or MCQ) using AI.
- * @param {object} question - The question object (including text, options if MCQ, type).
+ * Marks a single exam answer (problem ONLY) using AI.
+ * MCQ marking is now handled directly in markFullExam.
+ * @param {object} question - The question object (must be a problem).
  * @param {string|null} studentAnswer - The student's answer text. Null if unanswered.
  * @param {number} [maxMarks=MAX_MARKS_PER_PROBLEM] - Maximum marks for this question.
  * @returns {Promise<object>} - A promise resolving to the marking result object.
@@ -23,102 +27,73 @@ export async function markExamAnswer(question, studentAnswer, maxMarks = MAX_MAR
         improvement_suggestions: []
     };
 
+    // Basic check: Ensure this function is only called for problems now
+    const isProblem = question.isProblem || !question.options || question.options.length === 0;
+    if (!isProblem) {
+        console.error("markExamAnswer called for an MCQ. This should be handled in markFullExam.");
+        return {
+            score: 0, // MCQs scored in markFullExam
+            feedback: "MCQ marking handled separately.",
+            key_points: [],
+            improvement_suggestions: []
+        };
+    }
+
     if (studentAnswer === null || studentAnswer === undefined || studentAnswer.trim() === "") {
         return {
             score: 0,
-            feedback: "No answer provided.",
+            feedback: "No answer provided for this problem.",
             key_points: [],
-            improvement_suggestions: ["Attempt all questions for practice."]
+            improvement_suggestions: ["Attempt all problems for practice."]
         };
     }
 
     try {
-        // Determine if it's a problem or MCQ based on the 'isProblem' flag or options
-        const isProblem = question.isProblem || !question.options || question.options.length === 0;
-        const questionType = isProblem ? "Problem" : "Multiple Choice Question";
-
-        let prompt = `You are an expert physics and mathematics examiner. Mark the following exam answer and provide detailed feedback.\n\n`;
-        prompt += `**Question Type:** ${questionType}\n`;
+        let prompt = `You are an expert physics and mathematics examiner. Mark the following exam PROBLEM answer and provide detailed feedback.\n\n`;
+        prompt += `**Question Type:** Problem\n`;
         prompt += `**Question:** ${question.text}\n\n`;
-
-        if (!isProblem) {
-            prompt += `**Options:**\n`;
-            question.options.forEach(opt => { prompt += `${opt.letter}. ${opt.text}\n`; });
-            prompt += `\n**Correct Answer:** ${question.correctAnswer}\n`;
-        }
-
         prompt += `**Student's Answer:** ${studentAnswer}\n\n`;
         prompt += `Evaluate the answer considering:\n`;
-
-        if (isProblem) {
-            prompt += `1. Correctness of the final result (if applicable).\n`;
-            prompt += `2. Accuracy and validity of the physics/mathematical steps and reasoning.\n`;
-            prompt += `3. Understanding of the underlying concepts.\n`;
-            prompt += `4. Clarity and organization of the solution.\n`;
-            prompt += `Award partial marks generously for correct reasoning, formulas, or partial steps, even if the final answer is incorrect or incomplete. Be specific about where marks were awarded or deducted.\n`;
-        } else { // MCQ
-            prompt += `1. Compare the student's answer ('${studentAnswer}') with the correct answer ('${question.correctAnswer}').\n`;
-            prompt += `2. Explain *why* the student's answer is correct or incorrect.\n`;
-            prompt += `3. Briefly explain *why* the correct answer is correct, focusing on the core concept.\n`;
-            // For MCQs, score is typically all or nothing based on correct choice, but AI can still provide feedback.
-            // We'll calculate score outside the AI call for MCQs based on the 'correctAnswer' field.
-        }
-
+        prompt += `1. Correctness of the final result (if applicable).\n`;
+        prompt += `2. Accuracy and validity of the physics/mathematical steps and reasoning.\n`;
+        prompt += `3. Understanding of the underlying concepts.\n`;
+        prompt += `4. Clarity and organization of the solution.\n`;
+        prompt += `Award partial marks generously for correct reasoning, formulas, or partial steps, even if the final answer is incorrect or incomplete. Be specific about where marks were awarded or deducted.\n`;
         prompt += `\nProvide your response in this exact JSON format:\n`;
-        if (isProblem) {
-            prompt += `{\n`;
-            prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
-            prompt += `    "feedback": "[Detailed explanation of the marking, justifying the score. Explain errors and correct steps.]",\n`;
-            prompt += `    "key_points": ["[List of crucial correct steps/concepts identified in the answer]", "[List of specific errors or misconceptions found]"],\n`;
-            prompt += `    "improvement_suggestions": ["[Actionable advice for improving similar problems]"]\n`;
-            prompt += `}\n`;
-        } else { // Simplified JSON for MCQ feedback (score calculated separately)
-             prompt += `{\n`;
-             prompt += `    "feedback": "[Explanation of why the student's choice was right or wrong, and why the correct answer is right.]",\n`;
-             prompt += `    "key_points": ["[Core concept tested by the question]"],\n`;
-             prompt += `    "improvement_suggestions": ["[Suggestion if the student was wrong, e.g., 'Review topic X']"]\n`;
-             prompt += `}\n`;
-        }
-
+        prompt += `{\n`;
+        prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
+        prompt += `    "feedback": "[Detailed explanation of the marking, justifying the score. Explain errors and correct steps.]",\n`;
+        prompt += `    "key_points": ["[List of crucial correct steps/concepts identified in the answer]", "[List of specific errors or misconceptions found]"],\n`;
+        prompt += `    "improvement_suggestions": ["[Actionable advice for improving similar problems]"]\n`;
+        prompt += `}\n`;
 
         const response = await callGeminiTextAPI(prompt);
         try {
             const result = JSON.parse(response);
 
-            if (isProblem) {
-                // Validate and clamp score for problems
-                result.score = Math.min(Math.max(0, Number(result.score) || 0), maxMarks);
-                return {
-                    score: result.score,
-                    feedback: result.feedback || "No specific feedback provided.",
-                    key_points: result.key_points || [],
-                    improvement_suggestions: result.improvement_suggestions || []
-                };
-            } else {
-                 // Calculate MCQ score based on comparison, use AI feedback
-                 const isCorrect = studentAnswer === question.correctAnswer;
-                 return {
-                     score: isCorrect ? maxMarks : 0, // All or nothing for MCQ score
-                     feedback: result.feedback || (isCorrect ? "Correct." : "Incorrect."),
-                     key_points: result.key_points || [],
-                     improvement_suggestions: result.improvement_suggestions || []
-                 };
-            }
+            // Validate and clamp score for problems
+            result.score = Math.min(Math.max(0, Number(result.score) || 0), maxMarks);
+            return {
+                score: result.score,
+                feedback: result.feedback || "No specific feedback provided.",
+                key_points: result.key_points || [],
+                improvement_suggestions: result.improvement_suggestions || []
+            };
+
         } catch (parseError) {
             console.error("Error parsing AI marking response:", parseError, "\nRaw Response:", response);
             // Attempt to return raw response as feedback if JSON fails
             return {
-                score: isProblem ? 0 : (studentAnswer === question.correctAnswer ? maxMarks : 0),
+                score: 0, // Cannot determine score from failed parse
                 feedback: `Error processing AI response. Raw output: ${escapeHtml(response)}`,
                 key_points: [],
                 improvement_suggestions: []
             };
         }
     } catch (error) {
-        console.error("Error in AI marking call:", error);
+        console.error("Error in AI problem marking call:", error);
         return { // Return default error structure
              ...defaultResult,
-             score: isProblem ? 0 : (studentAnswer === question.correctAnswer ? maxMarks : 0), // Still calculate basic MCQ score
              feedback: `Error during AI marking: ${error.message}`
          };
     }
@@ -126,6 +101,7 @@ export async function markExamAnswer(question, studentAnswer, maxMarks = MAX_MAR
 
 /**
  * Marks a full exam, aggregating scores and generating overall feedback.
+ * AI is ONLY used for marking WRITTEN PROBLEMS. MCQs are scored deterministically.
  * @param {object} examData - The exam data object including questions and userAnswers.
  * @returns {Promise<object>} - A promise resolving to the full marking results.
  */
@@ -134,7 +110,7 @@ export async function markFullExam(examData) {
     const results = {
         totalScore: 0,
         maxPossibleScore: 0,
-        questionResults: [],
+        questionResults: [], // Stores result for each question (score, feedback, etc.)
         overallFeedback: null, // Initialize as null
         timestamp: Date.now()
     };
@@ -144,10 +120,12 @@ export async function markFullExam(examData) {
         weaknesses: [],
         study_recommendations: []
     };
+    // MODIFIED: Declare overallResponse outside the try block for the overall feedback section
+    let overallResponse = null;
 
     try {
         console.log(`Marking full exam: ${examData.examId}, Questions: ${examData.questions?.length}`);
-        // Mark each question
+
         if (examData.questions && examData.questions.length > 0) {
             for (let i = 0; i < examData.questions.length; i++) {
                  const question = examData.questions[i];
@@ -155,13 +133,31 @@ export async function markFullExam(examData) {
                  if (!question.id) {
                       question.id = `q-${i+1}`; // Simple sequential ID if missing
                  }
-                 const studentAnswer = examData.userAnswers[question.id];
+                 const studentAnswer = examData.userAnswers?.[question.id]; // Use safe access
                  const isProblem = question.isProblem || !question.options || question.options.length === 0;
-                 const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : 10; // Use constant for problems
+                 const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
                  results.maxPossibleScore += maxMarks; // Add to max possible score
 
-                 console.log(`Marking Q${i+1} (ID: ${question.id}, Type: ${isProblem ? 'Problem' : 'MCQ'}). Answer: "${studentAnswer}"`);
-                 const questionResult = await markExamAnswer(question, studentAnswer, maxMarks);
+                 let questionResult;
+
+                 if (isProblem) {
+                     // *** MODIFIED: Only call AI for problems ***
+                     console.log(`Marking Problem Q${i+1} (ID: ${question.id}) with AI. Answer: "${studentAnswer}"`);
+                     questionResult = await markExamAnswer(question, studentAnswer, maxMarks);
+                 } else {
+                     // *** MODIFIED: Score MCQs directly ***
+                     console.log(`Scoring MCQ Q${i+1} (ID: ${question.id}). Answer: "${studentAnswer}", Correct: "${question.correctAnswer}"`);
+                     const isCorrect = studentAnswer === question.correctAnswer;
+                     const score = isCorrect ? maxMarks : 0;
+                     // Generate basic feedback for MCQs without AI call for marking
+                     // AI explanation can still be requested later during review.
+                     questionResult = {
+                         score: score,
+                         feedback: isCorrect ? "Correct." : `Incorrect. The correct answer was ${question.correctAnswer}.`,
+                         key_points: [],
+                         improvement_suggestions: isCorrect ? [] : ["Review the concepts related to this question."]
+                     };
+                 }
 
                  // Ensure score is a number before adding
                  const scoreToAdd = Number(questionResult.score) || 0;
@@ -174,7 +170,9 @@ export async function markFullExam(examData) {
                      score: scoreToAdd // Store the validated score
                  });
                  console.log(`Result for Q${i+1}: Score=${scoreToAdd}/${maxMarks}`);
-                 await new Promise(resolve => setTimeout(resolve, 200)); // Small delay between API calls
+                 if (isProblem) {
+                     await new Promise(resolve => setTimeout(resolve, 200)); // Small delay ONLY between AI problem calls
+                 }
              }
         } else {
              console.warn("No questions found in examData to mark.");
@@ -182,13 +180,21 @@ export async function markFullExam(examData) {
 
 
         // Generate overall feedback only if there were questions
-        if (results.questionResults.length > 0) {
+        if (results.questionResults.length > 0 && results.maxPossibleScore > 0) { // Added maxPossibleScore check
+            // Construct summary for overall feedback prompt
+            const performanceSummary = results.questionResults.map(r => {
+                const q = examData.questions.find(q => q.id === r.questionId);
+                const qType = (q?.isProblem || !q?.options || q.options.length === 0) ? 'Problem' : 'MCQ';
+                const qMax = qType === 'Problem' ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
+                return `\n  Q${r.questionIndex + 1} (${qType}): ${r.score}/${qMax} - Feedback snippet: ${r.feedback.substring(0, 70)}...`;
+            }).join('');
+
             const overallPrompt = `You are an expert examiner providing summative feedback on a physics/mathematics exam. Based on the following detailed results for each question, provide overall feedback and recommendations.
 
 Exam Summary:
 - Total Score: ${results.totalScore}/${results.maxPossibleScore} (${((results.totalScore / results.maxPossibleScore) * 100).toFixed(1)}%)
 - Number of Questions Marked: ${results.questionResults.length}
-- Performance by Question: ${results.questionResults.map(r => `\n  Q${r.questionIndex + 1}: ${r.score}/${MAX_MARKS_PER_PROBLEM} - Feedback: ${r.feedback.substring(0, 100)}...`).join('')}
+- Performance by Question: ${performanceSummary}
 
 Provide your response in this exact JSON format:
 {
@@ -200,21 +206,25 @@ Provide your response in this exact JSON format:
 
             try {
                  console.log("Generating overall feedback...");
-                 const overallResponse = await callGeminiTextAPI(overallPrompt);
+                 // MODIFIED: Assign to the outer scope variable
+                 overallResponse = await callGeminiTextAPI(overallPrompt);
                  results.overallFeedback = JSON.parse(overallResponse);
             } catch (parseError) {
-                 console.error("Error parsing overall feedback:", parseError, "\nRaw Response:", overallResponse);
-                 results.overallFeedback = defaultOverallFeedback;
+                 console.error("Error parsing overall feedback:", parseError, "\nRaw Response:", overallResponse); // Log the response here
+                 results.overallFeedback = { ...defaultOverallFeedback }; // Use spread to create a new object
+                 // MODIFIED: Use overallResponse declared outside the try block
+                 results.overallFeedback.overall_feedback = `Error parsing AI response for overall feedback. Raw output: ${escapeHtml(overallResponse || 'No response received from API')}`;
             }
         } else {
-             results.overallFeedback = defaultOverallFeedback;
-             results.overallFeedback.overall_feedback = "No questions were marked, cannot provide overall feedback.";
+             results.overallFeedback = { ...defaultOverallFeedback }; // Use spread to create a new object
+             results.overallFeedback.overall_feedback = "No questions were marked or max score is zero, cannot provide overall feedback.";
         }
 
     } catch (error) {
         console.error("Error in full exam marking process:", error);
-        results.overallFeedback = defaultOverallFeedback;
-        results.overallFeedback.overall_feedback = `An error occurred during marking: ${error.message}`;
+        results.overallFeedback = { ...defaultOverallFeedback }; // Use spread to create a new object
+        // MODIFIED: Check if error has message property
+        results.overallFeedback.overall_feedback = `An error occurred during marking: ${error?.message || String(error)}`;
     } finally {
         hideLoading();
     }
@@ -228,41 +238,67 @@ Provide your response in this exact JSON format:
  * @param {object} question - The question object.
  * @param {string|null} correctAnswer - The correct answer (null for problems).
  * @param {string|null} studentAnswer - The student's answer.
- * @returns {Promise<string>} - HTML formatted explanation.
+ * @param {Array} [history=[]] - Optional: Conversation history for follow-ups.
+ * @returns {Promise<{explanationHtml: string, history: Array}>} - HTML formatted explanation and updated history.
  */
-export async function generateExplanation(question, correctAnswer, studentAnswer) {
+export async function generateExplanation(question, correctAnswer, studentAnswer, history = []) {
     const isProblem = question.isProblem || !question.options || question.options.length === 0;
-    let prompt = `As a physics and mathematics tutor, provide a detailed explanation for the following question.\n\n`;
-    prompt += `**Question:** ${question.text}\n\n`;
+    let currentPromptText = ''; // The text for the *current* turn
 
-    if (isProblem) {
-        prompt += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
-        prompt += `Explain the correct concepts and steps required to solve this problem. If the student provided an answer, analyze their likely approach and point out potential errors or correct steps they took. Provide the final correct reasoning or expected form of the answer if applicable. Use LaTeX ($$, $) for math.`;
-    } else { // MCQ
-        prompt += `**Options:**\n`;
-        question.options.forEach(opt => { prompt += `${opt.letter}. ${opt.text}\n`; });
-        prompt += `\n**Correct Answer:** ${correctAnswer}\n`;
-        prompt += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
-        prompt += `Explain step-by-step:\n`;
-        prompt += `1. Why the correct answer (${correctAnswer}) is right, focusing on the underlying principle.\n`;
-        if (studentAnswer && studentAnswer !== correctAnswer) {
-            prompt += `2. Why the student's choice (${studentAnswer}) is incorrect.\n`;
-        } else if (studentAnswer === correctAnswer) {
-            prompt += `2. Briefly confirm the student chose correctly.\n`;
-        } else {
-            prompt += `2. The student did not select an answer.\n`;
+    if (history.length > 0) {
+        // This is a follow-up question
+        currentPromptText = studentAnswer; // In follow-ups, 'studentAnswer' holds the user's follow-up question
+        console.log("Generating follow-up explanation based on history and new question:", currentPromptText);
+    } else {
+        // This is the initial explanation request
+        currentPromptText = `As a physics and mathematics tutor, provide a detailed explanation for the following question.\n\n`;
+        currentPromptText += `**Question:** ${question.text}\n\n`;
+
+        if (isProblem) {
+            currentPromptText += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
+            currentPromptText += `Explain the correct concepts and steps required to solve this problem. If the student provided an answer, analyze their likely approach and point out potential errors or correct steps they took. Provide the final correct reasoning or expected form of the answer if applicable. Use LaTeX ($$, $) for math.`;
+        } else { // MCQ
+            currentPromptText += `**Options:**\n`;
+            question.options.forEach(opt => { currentPromptText += `${opt.letter}. ${opt.text}\n`; });
+            currentPromptText += `\n**Correct Answer:** ${correctAnswer}\n`;
+            currentPromptText += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
+            currentPromptText += `Explain step-by-step:\n`;
+            currentPromptText += `1. Why the correct answer (${correctAnswer}) is right, focusing on the underlying principle.\n`;
+            if (studentAnswer && studentAnswer !== correctAnswer) {
+                currentPromptText += `2. Why the student's choice (${studentAnswer}) is incorrect.\n`;
+            } else if (studentAnswer === correctAnswer) {
+                currentPromptText += `2. Briefly confirm the student chose correctly.\n`;
+            } else {
+                currentPromptText += `2. The student did not select an answer.\n`;
+            }
+            currentPromptText += `Use LaTeX ($$, $) for math if needed. Keep the explanation clear and educational.`;
         }
-        prompt += `Use LaTeX ($$, $) for math if needed. Keep the explanation clear and educational.`;
     }
+
+    // Construct the history object for the API call
+    const currentHistory = [...history, { role: "user", parts: [{ text: currentPromptText }] }];
 
     try {
-        showLoading("Generating AI Explanation...");
-        const explanationText = await callGeminiTextAPI(prompt);
-        hideLoading();
-        return formatResponseAsHtml(explanationText);
+        // No separate loading indicator needed here, handled by the caller (e.g., showAIExplanation)
+        // MODIFIED: Pass history to the API call function
+        const explanationText = await callGeminiTextAPI(null, currentHistory); // Pass null for prompt, use history
+
+        // Prepare the new history including the model's response
+        const updatedHistory = [...currentHistory, { role: "model", parts: [{ text: explanationText }] }];
+
+        return {
+            explanationHtml: formatResponseAsHtml(explanationText), // Keep formatting function
+            history: updatedHistory
+        };
     } catch (error) {
-        hideLoading();
         console.error("Error generating explanation:", error);
-        return `<p class="text-danger">Error generating explanation: ${error.message}</p>`;
+        // Return error message and the history *up to the point of error*
+        return {
+             explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
+             history: currentHistory // Return history before the failed API call
+         };
     }
 }
+
+
+// --- END OF FILE ai_exam_marking.js ---

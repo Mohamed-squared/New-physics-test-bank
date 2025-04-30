@@ -1,85 +1,94 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Usernames: Publicly readable, writable only if creating and user matches UID ---
+    // --- Helper function for Admin Check ---
+    function isAdmin() {
+      // Ensure this is your correct Admin Firebase User ID
+      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
+    }
+
+    // --- Usernames: Publicly readable, owner creates ---
     match /usernames/{username} {
-      allow read: if true; // Allow checking if username exists
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid; // Allow creating if authenticated and setting own UID
-      // Prevent updating/deleting for now
-      allow update, delete: if false;
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Prevent modification
     }
 
-    // --- Users: Read own doc, Write own doc (except sensitive fields?), Admin can read/write all ---
+    // --- Users: Owner or Admin can manage profile and subcollections ---
     match /users/{userId} {
-      // Allow read/write by the user themselves OR an admin
       allow read, update, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      // Allow creation only if UID matches authenticated user
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId; // Only the user can create their own doc
 
-      // --- Inbox Subcollection: User can read/write own, Admin can send ---
+      // Inbox: Owner manages, Admin can send (create)
       match /inbox/{messageId} {
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId; // User can manage their inbox
-        allow create: if request.auth != null && (request.auth.uid == userId || isAdmin()); // User can technically add (though unlikely), Admin can send
+        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && isAdmin();
       }
+
+      // User-specific Formula Sheets: Owner manages, Admin can read
+      match /userFormulaSheets/{sheetId} {
+          allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+          allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
+      }
+
+      // User-specific Chapter Summaries: Owner manages, Admin can read
+      match /userChapterSummaries/{summaryId} {
+          allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+          allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
+      }
+
+      // Note: userNotes map is covered by the parent /users/{userId} rule
     }
 
-    // --- User Course Progress: User can read/write own, Admin can read/write all ---
-    match /userCourseProgress/{userId}/{courses}/{courseId} {
-      allow read, write, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      // Allow creation only by the user themselves or an admin
-      allow create: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    // --- User Course Progress: Owner or Admin can manage ---
+    match /userCourseProgress/{userId}/{courses=**} { // Match any document in subcollections
+       allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
-    // --- User Exam Storage: User can read/write own, Admin can read all ---
-    match /userExams/{userId}/{exams}/{examId} {
-       allow read, write, delete: if request.auth != null && request.auth.uid == userId; // User owns their exam results
-       // Admin read access
+    // --- User Exam Storage: Owner manages, Admin can read ---
+    match /userExams/{userId}/{exams=**} { // Match any document in subcollections
+       // Owner can do anything with their exams
+       allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
+       // Admin can read any user's exams
        allow read: if request.auth != null && isAdmin();
-       // Admin cannot directly write/delete user exams unless explicitly needed later
+       // Note: Admins cannot currently write/delete other users' exams with this rule.
     }
 
-    // --- Feedback: Authenticated users can create, Admin can read/update/delete all ---
+    // --- Feedback: Auth users create, Admin manages ---
     match /feedback/{feedbackId} {
-      allow create: if request.auth != null; // Any logged-in user can submit
-      allow read, update, delete: if request.auth != null && isAdmin(); // Only admin can manage
+      allow create: if request.auth != null;
+      allow read, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Exam Issues: Authenticated users can create, Admin can read/update all ---
+    // --- Exam Issues: Auth users create, Admin manages ---
     match /examIssues/{issueId} {
-       allow create: if request.auth != null; // Any logged-in user can report
-       allow read, update, delete: if request.auth != null && isAdmin(); // Only admin can manage
+       allow create: if request.auth != null;
+       allow read, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Course Definitions: Readable by all, Writable only by Admin ---
+    // --- Course Definitions: Public read, Admin manages ---
     match /courses/{courseId} {
-      allow read: if true; // Anyone can browse courses
-      allow create, update, delete: if request.auth != null && isAdmin(); // Only Admin manages course definitions
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Shared Global Data (Formula Sheets, Summaries): Readable by all, Writable by authenticated users ---
-    // Allows the application to cache generated sheets/summaries for any logged-in user.
-    match /globalFormulaSheets/{sheetId} {
-        allow read: if true;
-        allow write: if request.auth != null; // Allow any logged-in user to write (cache) generated sheets
-    }
-    match /globalChapterSummaries/{summaryId} {
-        allow read: if true;
-        allow write: if request.auth != null; // Allow any logged-in user to write (cache) generated summaries
-    }
-
-    // --- Shared Notes: Readable by all (if desired), Writable by authenticated users ---
+    // --- Shared Notes: Public read, Auth create, Owner/Admin manage ---
     match /sharedCourseNotes/{noteId} {
-      allow read: if true; // Or restrict based on course enrollment/group if needed
-      allow create: if request.auth != null; // Any logged-in user can share
-      // Allow delete/update only by the creator or admin
+      allow read: if true;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid; // Creator sets correct UID
       allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
-    // --- Helper function for Admin Check ---
-    function isAdmin() {
-      // Replace '04amtH9UgfTWxPH0rqn2quaKiNf1' with your actual Admin UID.
-      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
+    // --- Deprecated Global Caches: Read allowed, Write blocked (except Admin) ---
+    match /globalFormulaSheets/{sheetId} {
+        allow read: if true;
+        allow write: if request.auth != null && isAdmin();
+    }
+    match /globalChapterSummaries/{summaryId} {
+        allow read: if true;
+        allow write: if request.auth != null && isAdmin();
     }
   }
 }

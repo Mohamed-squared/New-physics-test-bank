@@ -1,3 +1,5 @@
+// --- START OF FILE ui_course_progress.js ---
+
 // ui_course_progress.js
 
 import { currentUser, userCourseProgressMap, globalCourseDataMap, activeCourseId, charts, setCharts } from './state.js';
@@ -8,7 +10,7 @@ import { calculateTotalMark, getLetterGrade, getLetterGradeColor, calculateAtten
 import { generateCertificateOnCanvas, downloadCertificateImage, downloadCertificatePdf } from './certificate_generator.js';
 // Use Chart.js via ES module import
 import { Chart, registerables } from 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.js/+esm';
-import { SKIP_EXAM_PASSING_PERCENT } from './config.js'; // Import skip exam threshold
+import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js'; // Import skip/pass thresholds
 
 Chart.register(...registerables); // Register necessary components
 
@@ -21,6 +23,12 @@ export function showCourseProgressDetails(courseId = activeCourseId) {
 
     if (!progress || !courseDef) {
         displayContent(`<p class="text-red-500 p-4">Error: Could not load progress data for course ID: ${courseId}.</p>`, 'course-dashboard-area');
+        return;
+    }
+
+    // MODIFIED: Check for viewer mode
+    if (progress.enrollmentMode === 'viewer') {
+        displayContent(`<div class="content-card text-center p-6"><p class="text-purple-700 dark:text-purple-300 font-medium">Progress tracking is not available in Viewer Mode.</p><button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary mt-4">Back to Dashboard</button></div>`, 'course-dashboard-area');
         return;
     }
 
@@ -260,7 +268,20 @@ async function regenerateCertificatePreview(courseId) {
 
 
      console.log("Generating certificate preview...");
-     const studentName = currentUser.displayName || userData.displayName || currentUser.email?.split('@')[0] || 'Student Name'; // Get name reliably
+     // MODIFIED: Fetch user data again to get potentially updated display name
+     let studentName = 'Student Name'; // Fallback
+     try {
+          const userDoc = await db.collection('users').doc(currentUser.uid).get();
+          if (userDoc.exists) {
+               studentName = userDoc.data().displayName || currentUser.displayName || currentUser.email?.split('@')[0] || 'Student Name';
+          } else {
+               studentName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Student Name';
+          }
+     } catch (fetchError) {
+          console.error("Error fetching user name for certificate:", fetchError);
+          studentName = currentUser.displayName || currentUser.email?.split('@')[0] || 'Student Name'; // Use auth data on error
+     }
+
      const success = await generateCertificateOnCanvas(
          canvas,
          studentName,

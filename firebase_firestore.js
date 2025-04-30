@@ -1,3 +1,5 @@
+// --- START OF FILE firebase_firestore.js ---
+
 // firebase_firestore.js
 
 import {
@@ -54,10 +56,12 @@ async function fetchMarkdownForSubject(subject) {
  * Saves the user's core application data (subjects, test history, etc.) to Firestore.
  * This now only saves the `appData` field within the user document.
  * @param {string} uid - The user's unique ID.
+ * @param {object} [appDataToSave=data] - Optional: The app data object to save (defaults to global `data`).
  */
-export async function saveUserData(uid) {
+export async function saveUserData(uid, appDataToSave = data) { // Added optional param
     if (!db) { console.error("Firestore DB not initialized"); return; }
-    if (!uid || !data) {
+    // MODIFIED: Check appDataToSave instead of global 'data'
+    if (!uid || !appDataToSave) {
         console.warn("Attempted to save user appData without UID or data object.");
         return;
     }
@@ -65,7 +69,7 @@ export async function saveUserData(uid) {
     try {
         // Only save the 'appData' part (subjects, history, settings etc.)
         // Ensure data is serializable (no undefined values, classes etc.)
-        const cleanData = JSON.parse(JSON.stringify(data));
+        const cleanData = JSON.parse(JSON.stringify(appDataToSave));
         await userRef.update({
             appData: cleanData
             // Consider adding a lastAppDataUpdate timestamp here if needed
@@ -94,27 +98,79 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
     }
     const progressRef = db.collection('userCourseProgress').doc(uid).collection('courses').doc(courseId);
     try {
-        // Ensure lastActivityDate exists and is a Timestamp or Date BEFORE saving
-        let lastActivity = progressData.lastActivityDate;
-        if (!(lastActivity instanceof firebase.firestore.Timestamp) && !(lastActivity instanceof Date)) {
-            lastActivity = new Date(); // Use client time now if invalid/missing for saving
-        }
-        const dataToSave = JSON.parse(JSON.stringify(progressData)); // Deep clone to avoid modifying original and ensure plain object
+        // Deep clone to avoid modifying original and ensure plain object for Firestore
+        const dataToSave = JSON.parse(JSON.stringify(progressData));
 
-        // Convert Dates back to Timestamps before saving
+        // *** MODIFIED: Refined Date Handling ***
+        // Convert JS Dates to Timestamps IF they exist and are not already special Firestore values
+        // Enrollment Date Handling
         if (dataToSave.enrollmentDate) {
-             try { dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(new Date(dataToSave.enrollmentDate)); }
-             catch (e) { console.error("Error converting enrollmentDate to Timestamp:", e); delete dataToSave.enrollmentDate; }
+             if (dataToSave.enrollmentDate instanceof Date) { // Is it a JS Date?
+                try {
+                    dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dataToSave.enrollmentDate);
+                    console.log("Converted enrollmentDate (JS Date) to Timestamp for saving.");
+                } catch (e) {
+                    console.error("Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
+                    delete dataToSave.enrollmentDate; // Remove if conversion fails
+                }
+             } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate._methodName === 'serverTimestamp') {
+                 // It's already a serverTimestamp placeholder, leave it alone
+                 console.log("enrollmentDate is already serverTimestamp, keeping as is.");
+             } else {
+                 // Handle potential string/number representation if necessary (e.g., from direct JSON modification)
+                 try {
+                     const dateObj = new Date(dataToSave.enrollmentDate);
+                     if (!isNaN(dateObj)) {
+                          dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dateObj);
+                          console.log("Converted enrollmentDate (String/Number) to Timestamp for saving.");
+                     } else {
+                          console.warn("Invalid enrollmentDate value during save, deleting:", dataToSave.enrollmentDate);
+                          delete dataToSave.enrollmentDate;
+                     }
+                 } catch(e) {
+                      console.warn("Error processing non-Date/non-ServerTimestamp enrollmentDate during save, deleting:", e, dataToSave.enrollmentDate);
+                      delete dataToSave.enrollmentDate;
+                 }
+             }
         }
-        if (dataToSave.completionDate) {
-             try { dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(new Date(dataToSave.completionDate)); }
-             catch (e) { console.error("Error converting completionDate to Timestamp:", e); delete dataToSave.completionDate; }
-        }
-        // Use server timestamp for lastActivityDate when saving
-        dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
 
+        // Completion Date Handling (similar logic, check for null)
+         if (dataToSave.completionDate) {
+             if (dataToSave.completionDate instanceof Date) { // Is it a JS Date?
+                try {
+                    dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
+                    console.log("Converted completionDate (JS Date) to Timestamp for saving.");
+                } catch (e) {
+                    console.error("Error converting completionDate JS Date to Timestamp:", e, dataToSave.completionDate);
+                    delete dataToSave.completionDate;
+                }
+             } else { // It's not a JS Date (could be string, number, or null if previously saved)
+                 try {
+                     const dateObj = new Date(dataToSave.completionDate);
+                     if (!isNaN(dateObj)) {
+                         dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dateObj);
+                         console.log("Converted completionDate (String/Number) to Timestamp for saving.");
+                     } else {
+                         console.warn("Invalid completionDate value during save, setting to null:", dataToSave.completionDate);
+                         dataToSave.completionDate = null; // Set to null if unparseable
+                     }
+                 } catch (e) {
+                     console.warn("Error processing non-Date completionDate during save, setting to null:", e, dataToSave.completionDate);
+                     dataToSave.completionDate = null;
+                 }
+             }
+        } else if (dataToSave.completionDate === undefined) {
+             // Ensure it's null if undefined
+             dataToSave.completionDate = null;
+        }
+
+
+        // Always overwrite lastActivityDate with a new server timestamp on save
+        dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
+        console.log("Setting lastActivityDate to serverTimestamp for save.");
 
         // Ensure arrays/objects are properly formatted for Firestore
+        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; // MODIFIED: Default to full
         dataToSave.courseStudiedChapters = dataToSave.courseStudiedChapters || [];
         dataToSave.watchedVideoUrls = dataToSave.watchedVideoUrls || {};
         dataToSave.watchedVideoDurations = dataToSave.watchedVideoDurations || {};
@@ -135,6 +191,7 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
             dataToSave.dailyProgress[dateStr].assignmentScore = dataToSave.dailyProgress[dateStr].assignmentScore ?? null;
         });
 
+        console.log("Data ready for Firestore set:", dataToSave);
         await progressRef.set(dataToSave, { merge: true });
         console.log(`User course progress saved successfully for course ${courseId}.`);
         return true;
@@ -162,6 +219,7 @@ export async function loadAllUserCourseProgress(uid) {
             snapshot.forEach(doc => {
                 const progressData = doc.data();
                 // Basic validation/defaults for structure consistency
+                progressData.enrollmentMode = progressData.enrollmentMode || 'full'; // MODIFIED: Load enrollmentMode
                 progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
                 progressData.dailyProgress = progressData.dailyProgress || {};
                 progressData.assignmentScores = progressData.assignmentScores || {};
@@ -205,6 +263,7 @@ export async function loadAllUserCourseProgress(uid) {
                 // Determine today's objective based on loaded progress and course definition
                 const courseDef = globalCourseDataMap.get(doc.id);
                 if (courseDef) {
+                     // MODIFIED: Pass enrollmentMode to objective calculation if needed
                      progressData.currentDayObjective = determineTodaysObjective(progressData, courseDef);
                 } else {
                      console.warn(`Course definition missing for course ${doc.id} when calculating objective.`);
@@ -212,7 +271,7 @@ export async function loadAllUserCourseProgress(uid) {
                 }
 
                 newProgressMap.set(doc.id, progressData);
-                console.log(`Loaded progress for course: ${doc.id}`);
+                console.log(`Loaded progress for course: ${doc.id} (Mode: ${progressData.enrollmentMode})`);
             });
         } else {
             console.log("No enrolled courses found for user.");
@@ -336,6 +395,12 @@ export async function loadUserData(uid) {
                   console.log("Initializing userNotes map.");
                   await userRef.update({ userNotes: {} }).catch(e => console.error("Error setting initial userNotes:", e));
              }
+              // Ensure userFormulaSheets exists (as a subcollection reference isn't stored here)
+              // No need to add anything to the main user doc for subcollections
+
+              // Ensure userChapterSummaries exists (as a subcollection reference isn't stored here)
+              // No need to add anything to the main user doc for subcollections
+
 
             // --- End appData Initialization ---
 
@@ -750,6 +815,7 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
 
                  const courseDef = globalCourseDataMap.get(courseId);
                  if (courseDef) {
+                      // MODIFIED: Pass enrollmentMode if needed
                       updatedProgressData.currentDayObjective = determineTodaysObjective(updatedProgressData, courseDef);
                  }
                  updateUserCourseProgress(courseId, updatedProgressData);
@@ -815,101 +881,108 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
      } catch (error) { hideLoading(); console.error("Error removing badge:", error); alert(`Failed to remove badge: ${error.message}`); }
 }
 
-// --- Global Shared Data (Formula Sheets, Summaries, Shared Notes) ---
+// --- User-Specific Shared Data (Formula Sheets, Summaries, Notes) ---
 
-// FORMULA SHEETS
-const formulaSheetCollection = "globalFormulaSheets";
+// USER FORMULA SHEETS
+// Stored in users/{userId}/userFormulaSheets/{courseId}_ch{chapterNum}
+const userFormulaSheetSubCollection = "userFormulaSheets";
 
-export async function saveFormulaSheet(courseId, chapterNum, htmlContent) {
-    if (!db) return false;
+export async function saveUserFormulaSheet(userId, courseId, chapterNum, htmlContent) {
+    if (!db || !userId) return false;
     const docId = `${courseId}_ch${chapterNum}`;
+    const sheetRef = db.collection('users').doc(userId)
+                       .collection(userFormulaSheetSubCollection).doc(docId);
     try {
-        await db.collection(formulaSheetCollection).doc(docId).set({
-            courseId: courseId,
-            chapterNum: Number(chapterNum),
+        await sheetRef.set({
+            // No need to store courseId/chapterNum again, it's in the docId/path
             content: htmlContent, // Store generated HTML
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log(`Saved formula sheet for ${docId} to Firestore.`);
+        console.log(`Saved USER formula sheet for ${docId}`);
         return true;
     } catch (error) {
-        console.error(`Error saving formula sheet for ${docId} to Firestore:`, error);
+        console.error(`Error saving USER formula sheet for ${docId}:`, error);
         return false;
     }
 }
 
-export async function loadFormulaSheet(courseId, chapterNum) {
-    if (!db) return null;
+export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
+    if (!db || !userId) return null;
     const docId = `${courseId}_ch${chapterNum}`;
+    const sheetRef = db.collection('users').doc(userId)
+                       .collection(userFormulaSheetSubCollection).doc(docId);
     try {
-        const docSnap = await db.collection(formulaSheetCollection).doc(docId).get();
+        const docSnap = await sheetRef.get();
         if (docSnap.exists) {
-            console.log(`Loaded formula sheet for ${docId} from Firestore.`);
+            console.log(`Loaded USER formula sheet for ${docId}`);
             return docSnap.data().content; // Return the stored HTML
         }
-        console.log(`No cached formula sheet found for ${docId} in Firestore.`);
+        console.log(`No cached USER formula sheet found for ${docId}`);
         return null;
     } catch (error) {
-        console.error(`Error loading formula sheet for ${docId} from Firestore:`, error);
+        console.error(`Error loading USER formula sheet for ${docId}:`, error);
         return null;
     }
 }
 
-// CHAPTER SUMMARIES
-const summaryCollection = "globalChapterSummaries";
+// USER CHAPTER SUMMARIES
+// Stored in users/{userId}/userChapterSummaries/{courseId}_ch{chapterNum}
+const userSummarySubCollection = "userChapterSummaries";
 
-export async function saveChapterSummary(courseId, chapterNum, htmlContent) {
-    if (!db) return false;
+export async function saveUserChapterSummary(userId, courseId, chapterNum, htmlContent) {
+    if (!db || !userId) return false;
     const docId = `${courseId}_ch${chapterNum}`;
+    const summaryRef = db.collection('users').doc(userId)
+                        .collection(userSummarySubCollection).doc(docId);
     try {
-        await db.collection(summaryCollection).doc(docId).set({
-            courseId: courseId,
-            chapterNum: Number(chapterNum),
+        await summaryRef.set({
             content: htmlContent, // Store generated HTML
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log(`Saved chapter summary for ${docId} to Firestore.`);
+        console.log(`Saved USER chapter summary for ${docId}`);
         return true;
     } catch (error) {
-        console.error(`Error saving chapter summary for ${docId} to Firestore:`, error);
+        console.error(`Error saving USER chapter summary for ${docId}:`, error);
         return false;
     }
 }
 
-export async function loadChapterSummary(courseId, chapterNum) {
-    if (!db) return null;
+export async function loadUserChapterSummary(userId, courseId, chapterNum) {
+    if (!db || !userId) return null;
     const docId = `${courseId}_ch${chapterNum}`;
+     const summaryRef = db.collection('users').doc(userId)
+                        .collection(userSummarySubCollection).doc(docId);
     try {
-        const docSnap = await db.collection(summaryCollection).doc(docId).get();
+        const docSnap = await summaryRef.get();
         if (docSnap.exists) {
-            console.log(`Loaded chapter summary for ${docId} from Firestore.`);
+            console.log(`Loaded USER chapter summary for ${docId}`);
             return docSnap.data().content; // Return stored HTML
         }
-        console.log(`No cached chapter summary found for ${docId} in Firestore.`);
+        console.log(`No cached USER chapter summary found for ${docId}`);
         return null;
     } catch (error) {
-        console.error(`Error loading chapter summary for ${docId} from Firestore:`, error);
+        console.error(`Error loading USER chapter summary for ${docId}:`, error);
         return null;
     }
 }
 
-// USER NOTES (Stored within user document for privacy)
+// USER NOTES (Stored within user document's `userNotes` map for privacy)
 export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
      if (!db || !userId) return false;
      const userRef = db.collection('users').doc(userId);
-     const fieldPath = `userNotes.${courseId}.${chapterNum}`;
+     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; // Use combined key for map
      try {
          // Ensure notesArray is serializable (convert Timestamps if any, though we use Date.now())
          const notesToSave = JSON.parse(JSON.stringify(notesArray));
          await userRef.update({ [fieldPath]: notesToSave });
-         console.log(`Saved user notes for ${courseId} Ch ${chapterNum}`);
+         console.log(`Saved user notes for ${courseId} Ch ${chapterNum} to map key ${fieldPath}`);
          return true;
      } catch (error) {
-         console.error(`Error saving user notes for ${courseId} Ch ${chapterNum}:`, error);
+         console.error(`Error saving user notes for ${courseId} Ch ${chapterNum} using update:`, error);
          // Attempt to set if update fails (e.g., path doesn't exist)
          try {
-             // Only set the specific course/chapter, merge with existing notes
-             await userRef.set({ userNotes: { [courseId]: { [chapterNum]: notesArray } } }, { merge: true });
+             console.log(`Attempting set with merge for user notes: ${fieldPath}`);
+             await userRef.set({ userNotes: { [fieldPath]: notesArray } }, { merge: true });
              console.log(`Set user notes for ${courseId} Ch ${chapterNum} after update failed.`);
              return true;
          } catch (setError) {
@@ -923,11 +996,12 @@ export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
 export async function loadUserNotes(userId, courseId, chapterNum) {
      if (!db || !userId) return [];
      const userRef = db.collection('users').doc(userId);
+     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; // Use combined key
      try {
          const docSnap = await userRef.get();
          if (docSnap.exists) {
-             const notes = docSnap.data()?.userNotes?.[courseId]?.[chapterNum] || [];
-             console.log(`Loaded ${notes.length} user notes for ${courseId} Ch ${chapterNum}`);
+             const notes = docSnap.data()?.userNotes?.[fieldPath] || []; // Access using combined key
+             console.log(`Loaded ${notes.length} user notes for ${courseId} Ch ${chapterNum} from map key ${fieldPath}`);
              // Ensure timestamps are numbers (Date.now() is used for new notes)
              return notes.map(n => ({ ...n, timestamp: Number(n.timestamp) || Date.now() }));
          }
@@ -938,7 +1012,7 @@ export async function loadUserNotes(userId, courseId, chapterNum) {
      }
 }
 
-// SHARED NOTES (Stored in a separate collection)
+// SHARED NOTES (Stored in a separate global collection)
 const sharedNotesCollection = "sharedCourseNotes";
 
 export async function saveSharedNote(courseId, chapterNum, noteData, user) {

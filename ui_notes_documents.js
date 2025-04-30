@@ -1,14 +1,14 @@
 
 
-// MODIFIED: Import necessary state and functions
+// MODIFIED: Import activeCourseId and userCourseProgressMap
 import { currentUser, globalCourseDataMap, db, activeCourseId, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 // MODIFIED: Import Firestore save/load functions for notes
 import { saveUserNotes, loadUserNotes, loadSharedNotes, saveSharedNote } from './firebase_firestore.js';
 import { renderMathIn } from './utils.js';
 import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js'; // Added downloadTexFile
-// MODIFIED: Import AI functions
-import { callGeminiTextAPI, reviewNoteWithAI, convertNoteToLatex, improveNoteWithAI, getAllPdfTextForAI } from './ai_integration.js'; // Added getAllPdfTextForAI and improveNoteWithAI
+// MODIFIED: Import AI functions - Removed extractTextFromImageAndConvertToLatex
+import { callGeminiTextAPI, reviewNoteWithAI, convertNoteToLatex, improveNoteWithAI, getAllPdfTextForAI } from './ai_integration.js'; // Removed extractTextFromImageAndConvertToLatex
 // MODIFIED: Added imports for state and logic needed for target chapter
 import { determineTargetChapter } from './course_logic.js';
 // MODIFIED: Added import for setActiveSidebarLink and displayContent
@@ -41,6 +41,8 @@ export async function showCurrentNotesDocuments() {
          window.showMyCoursesDashboard(); // Redirect if no active course
          return;
     }
+    // MODIFIED: Add warning message
+    alert("WARNING: The 'Notes & Documents' feature is highly experimental. Many features might not work as expected, especially file handling, AI actions on uploads, and PDF generation. Use with caution.");
     // MODIFIED: Calls the new menu display function
     await displayNotesContentMenu(activeCourseId);
 }
@@ -95,7 +97,6 @@ export async function displayNotesContentMenu(courseId = activeCourseId) {
                 <li class="border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <a href="#" onclick="window.showNotesDocumentsPanel('${courseId}', ${chapterNum}); return false;" class="block p-3 text-sm">
                         <span class="font-medium text-gray-800 dark:text-gray-200">${chapterNum}. ${escapeHtml(chapterTitle)}</span>
-                        
                     </a>
                 </li>
             `;
@@ -227,7 +228,15 @@ function renderNotesList(notes, isUserNotes) {
     // Sort notes by timestamp descending (most recent first)
     const sortedNotes = [...notes].sort((a, b) => b.timestamp - a.timestamp);
 
-    return sortedNotes.map(note => `
+    return sortedNotes.map(note => {
+        // Determine if AI actions should be enabled in the view modal based on the note type
+        const canReviewNote = isUserNotes && note.type === NOTE_TYPES.TEXT;
+        const canPreviewLatex = note.type === NOTE_TYPES.LATEX;
+        const canDownloadTex = note.type === NOTE_TYPES.LATEX;
+        const canDownloadPdf = note.type === NOTE_TYPES.TEXT || note.type === NOTE_TYPES.LATEX || note.type === NOTE_TYPES.AI_REVIEW;
+        const canOcrImage = isUserNotes && note.type === NOTE_TYPES.FILE && note.filetype?.startsWith('image/');
+
+        return `
         <div class="note-item bg-gray-50 dark:bg-gray-700/50 rounded p-3 border dark:border-gray-600 hover:shadow-sm transition-shadow duration-150">
             <div class="flex justify-between items-start gap-2">
                 <div class="flex-grow min-w-0">
@@ -255,15 +264,18 @@ function renderNotesList(notes, isUserNotes) {
                 </div>
             </div>
             ${note.type === NOTE_TYPES.FILE ?
-                `<p class="text-xs mt-2 text-blue-600 dark:text-blue-400">File: ${escapeHtml(note.filename)} (${escapeHtml(note.filetype || 'unknown')})</p>` :
+                `<div class="mt-2 flex justify-between items-center">
+                     <p class="text-xs text-blue-600 dark:text-blue-400">File: ${escapeHtml(note.filename)} (${escapeHtml(note.filetype || 'unknown')})</p>
+                     ${canOcrImage ? `<button onclick="window.extractTextFromImageAndConvertToLatexWrapper('${note.id}')" class="btn-secondary-small text-xs" title="Use AI Vision to extract text and convert to LaTeX">OCR & LaTeX (AI)</button>` : ''}
+                 </div>` :
                 note.type === NOTE_TYPES.AI_REVIEW ?
                 `<p class="text-xs mt-2 text-purple-600 dark:text-purple-400">AI Review Result</p>` :
                 note.type === NOTE_TYPES.LATEX ?
                 `<p class="text-xs mt-2 text-green-600 dark:text-green-400">[LaTeX Note]</p>` : // Indicate LaTeX
-                `<p class="text-sm mt-2 line-clamp-2 prose prose-sm dark:prose-invert max-w-none">${note.content.substring(0, 100)}${note.content.length > 100 ? '...' : ''}</p>`
+                `<p class="text-sm mt-2 line-clamp-2 prose prose-sm dark:prose-invert max-w-none">${escapeHtml(note.content.substring(0, 100))}${note.content.length > 100 ? '...' : ''}</p>` // Added escapeHtml here
             }
         </div>
-    `).join('');
+    `}).join('');
 }
 
 // --- Note Management Functions ---
@@ -313,6 +325,18 @@ export function reviewNoteWithAIWrapper(noteId) {
 // Wrapper needed for window scope
 export function downloadNoteAsTexWrapper(noteId) {
      downloadNoteAsTex(noteId);
+}
+// NEW: Wrapper for LaTeX preview/print
+export function previewLatexNote(noteId) {
+     previewOrPrintLatexNote(noteId);
+}
+// NEW: Wrapper for Image OCR/LaTeX conversion
+export function extractAndConvertImageNoteToLatexWrapper(noteId) {
+     extractAndConvertImageNoteToLatexUIAction(noteId);
+}
+// NEW: Wrapper for Note PDF download
+export function downloadNoteAsPdfWrapper(noteId) {
+    downloadNoteAsPdf(noteId);
 }
 
 
@@ -424,6 +448,10 @@ async function saveNoteChanges(noteId) {
         content: content, // Keep original spacing
         timestamp: Date.now(),
         type: newType, // Update type based on content check or edit source
+        // Preserve filename and filetype if the original was a file
+        filename: originalNote.filename || null,
+        filetype: originalNote.filetype || null,
+        imageDataUri: newType === NOTE_TYPES.FILE && originalNote.filetype?.startsWith('image/') ? originalNote.imageDataUri : null // Keep image URI only if still FILE type image
     };
 
     modal.remove(); // Close modal first
@@ -476,9 +504,9 @@ async function improveNoteWithAIUIAction() {
     showLoading('Improving note with AI...');
     try {
         // Call the modified improveNoteWithAI function from ai_integration.js
-        const responseText = await improveNoteWithAI(currentContent);
+        const aiSuggestions = await improveNoteWithAI(currentContent);
         // MODIFIED: Append the AI suggestions below the original content for review
-        contentArea.value += `\n\n---\n**AI Suggestions/Additions:**\n---\n${responseText}\n---`;
+        contentArea.value += `\n\n---\n**AI Suggestions/Additions:**\n---\n${aiSuggestions}\n---`;
         alert("AI suggestions have been appended to your note. Please review and integrate them as needed before saving.");
     } catch (error) {
         console.error('Error improving note:', error);
@@ -505,6 +533,7 @@ async function uploadNote(courseId, chapterNum) {
         try {
             let noteContent = '';
             let noteType = NOTE_TYPES.FILE; // Default for non-text/pdf
+            let fileDataUri = null; // To store image data URI if needed
 
             // Basic text extraction for common types
             if (file.type.startsWith('text/')) {
@@ -520,9 +549,20 @@ async function uploadNote(courseId, chapterNum) {
                  noteType = NOTE_TYPES.TEXT; // Store extracted text as TEXT type
                  console.log(`Extracted ${noteContent.length} chars from PDF ${file.name}`);
             } else if (file.type.startsWith('image/')) {
-                 // For images, store a placeholder
+                 // For images, store a placeholder and attempt to get Data URI for potential Vision API use
                  noteContent = `[Image File - ${file.name}]`;
                  noteType = NOTE_TYPES.FILE;
+                 try {
+                      fileDataUri = await new Promise((resolve, reject) => {
+                         const reader = new FileReader();
+                         reader.onload = () => resolve(reader.result);
+                         reader.onerror = reject;
+                         reader.readAsDataURL(file);
+                      });
+                 } catch(readError) {
+                      console.error("Error reading image file as Data URI:", readError);
+                      fileDataUri = null; // Proceed without data URI if reading fails
+                 }
             } else {
                  // For other types, just store filename
                  noteContent = `[File - ${file.name}]`;
@@ -539,7 +579,8 @@ async function uploadNote(courseId, chapterNum) {
                 filetype: file.type, // Store MIME type
                 timestamp: Date.now(),
                 courseId: courseId,
-                chapterNum: chapterNum
+                chapterNum: chapterNum,
+                imageDataUri: fileDataUri // Store Data URI for images (or null)
             };
 
             currentLoadedUserNotes.push(note);
@@ -610,27 +651,53 @@ async function viewNote(noteId, isUserNote) {
     document.getElementById('note-view-modal')?.remove();
 
     let contentHtml = '';
-    let downloadButtonHtml = '';
+    let downloadTexButtonHtml = '';
+    let downloadPdfButtonHtml = ''; // Separate button for PDF
     let aiReviewButtonHtml = '';
+    let ocrButtonHtml = ''; // Button for Image OCR
 
-    // MODIFIED: Handle viewing extracted text from PDF (now type TEXT)
+    // Determine button visibility based on note type
+    const canReviewNote = isUserNote && note.type === NOTE_TYPES.TEXT;
+    const canPreviewLatex = note.type === NOTE_TYPES.LATEX;
+    const canDownloadTex = note.type === NOTE_TYPES.LATEX;
+    // Allow PDF download for TEXT, LATEX, and AI_REVIEW
+    const canDownloadPdf = note.type === NOTE_TYPES.TEXT || note.type === NOTE_TYPES.LATEX || note.type === NOTE_TYPES.AI_REVIEW;
+    const canOcrImage = isUserNote && note.type === NOTE_TYPES.FILE && note.filetype?.startsWith('image/');
+
+    // Generate content HTML
     if (note.type === NOTE_TYPES.FILE) {
-        // This now mainly applies to images or other non-extractable file types
         contentHtml = `<p class="text-center text-muted italic p-4">File: ${escapeHtml(note.filename)} (${escapeHtml(note.filetype || 'Unknown type')})</p>`;
-         // downloadButtonHtml = `<button class="btn-secondary-small" disabled title="File download not implemented">Download File</button>`; // Placeholder
+        if (note.filetype?.startsWith('image/') && note.imageDataUri) {
+             contentHtml += `<div class="text-center my-2"><img src="${note.imageDataUri}" alt="Image Preview" class="max-w-full max-h-60 inline-block border dark:border-gray-600 rounded"></div>`;
+        } else if (note.filetype?.startsWith('image/')) {
+             contentHtml += `<p class="text-center text-muted italic text-sm">(Image preview not available)</p>`;
+        }
     } else if (note.type === NOTE_TYPES.AI_REVIEW) {
         contentHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${note.content}</div>`; // Assume content is already HTML formatted
     } else if (note.type === NOTE_TYPES.LATEX) {
          // Display LaTeX source within pre/code and add download .tex button
          contentHtml = `<pre><code class="block whitespace-pre-wrap text-xs">${escapeHtml(note.content)}</code></pre>`;
-         downloadButtonHtml = `<button onclick="window.downloadNoteAsTexWrapper('${note.id}')" class="btn-secondary-small text-xs">Download .tex</button>`;
-         // Enable AI review for LaTeX notes too
-         if (isUserNote) aiReviewButtonHtml = `<button onclick="window.reviewNoteWithAIWrapper('${note.id}')" class="btn-secondary-small text-xs">Review Note (AI)</button>`;
+         // NO AI Review for LaTeX content directly
     } else { // TEXT (could be original text or extracted from PDF/TXT/MD)
          const titleSuffix = note.filename ? ` (Text from: ${escapeHtml(note.filename)})` : '';
          contentHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(note.content).replace(/\n/g, '<br>')}</div>`;
          // Enable AI review for TEXT notes
          if (isUserNote) aiReviewButtonHtml = `<button onclick="window.reviewNoteWithAIWrapper('${note.id}')" class="btn-secondary-small text-xs">Review Note (AI)</button>`;
+    }
+
+    // Generate Button HTML
+    if (canOcrImage) {
+         ocrButtonHtml = `<button onclick="window.extractAndConvertImageNoteToLatexWrapper('${note.id}')" class="btn-secondary-small text-xs" title="Use AI Vision to extract text and convert to LaTeX">OCR & LaTeX (AI)</button>`;
+    }
+    if (canDownloadTex) {
+         downloadTexButtonHtml = `<button onclick="window.downloadNoteAsTexWrapper('${note.id}')" class="btn-secondary-small text-xs">Download .tex</button>`;
+    }
+    if (canDownloadPdf) {
+         downloadPdfButtonHtml = `<button onclick="window.downloadNoteAsPdfWrapper('${note.id}')" class="btn-secondary-small text-xs">Download PDF</button>`;
+    }
+    if (canPreviewLatex) { // Reuse the same button for preview/print
+         // Replace PDF download with Preview/Print for LaTeX
+         downloadPdfButtonHtml = `<button onclick="window.previewLatexNote('${note.id}')" class="btn-secondary-small text-xs">Preview/Print LaTeX</button>`;
     }
 
 
@@ -646,7 +713,9 @@ async function viewNote(noteId, isUserNote) {
                 </div>
                 <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
                     ${aiReviewButtonHtml}
-                    ${downloadButtonHtml}
+                    ${ocrButtonHtml}
+                    ${downloadTexButtonHtml}
+                    ${downloadPdfButtonHtml}
                     <button onclick="document.getElementById('note-view-modal').remove()" class="btn-secondary">Close</button>
                 </div>
             </div>
@@ -654,8 +723,8 @@ async function viewNote(noteId, isUserNote) {
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
-    // Render MathJax if it's text/latex content, skip for file/review
-    if (note.type === NOTE_TYPES.TEXT || note.type === NOTE_TYPES.LATEX) {
+    // Render MathJax if needed
+    if (note.type === NOTE_TYPES.TEXT || note.type === NOTE_TYPES.LATEX || note.type === NOTE_TYPES.AI_REVIEW) {
         await renderMathIn(document.getElementById('note-view-content-area'));
     }
 }
@@ -671,9 +740,9 @@ function findNoteById(noteId, searchUserNotes) {
 // Wrapper for AI Review
 async function reviewNoteWithAIUIAction(noteId) { // Renamed internal function
      const note = findNoteById(noteId, true); // Find in user notes
-     // MODIFIED: Allow review if type is TEXT (could be original or extracted PDF)
-     if (!note || note.type === NOTE_TYPES.FILE || note.type === NOTE_TYPES.AI_REVIEW || note.type === NOTE_TYPES.LATEX) {
-         alert("Cannot review this note type (only TEXT notes) or note not found.");
+     // MODIFIED: Allow review if type is TEXT or LATEX
+     if (!note || note.type === NOTE_TYPES.FILE || note.type === NOTE_TYPES.AI_REVIEW ) {
+         alert("Cannot review this note type (only TEXT or LaTeX notes) or note not found.");
          return;
      }
       // Close view modal if open
@@ -737,6 +806,142 @@ function downloadNoteAsTex(noteId) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// NEW: Function to preview LaTeX note (opens in new tab for printing)
+async function previewOrPrintLatexNote(noteId) {
+    const note = findNoteById(noteId, true);
+    if (!note || note.type !== NOTE_TYPES.LATEX) {
+        alert("Cannot preview: Note not found or is not a LaTeX note.");
+        return;
+    }
+
+    showLoading("Preparing LaTeX Preview...");
+    const previewHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Preview: ${escapeHtml(note.title)}</title>
+            <meta charset="UTF-8">
+            <script>
+              window.MathJax = {
+                loader: { load: ['input/tex', 'output/svg'] },
+                tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+                svg: { fontCache: 'global' }
+              };
+            </script>
+            <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js" id="mathjax-script"></script>
+            <style> body { font-family: 'Times New Roman', serif; padding: 2em; font-size: 12pt; line-height: 1.5; } </style>
+        </head>
+        <body>
+            <h1>${escapeHtml(note.title)}</h1>
+            <hr>
+            <div>${note.content}</div>
+             <script>
+                // Ensure MathJax typesets after content is loaded
+                window.addEventListener('load', () => {
+                    if (typeof MathJax !== 'undefined' && MathJax.startup?.promise) {
+                        MathJax.startup.promise.then(() => {
+                            console.log("MathJax ready for preview.");
+                            MathJax.typesetPromise().then(() => console.log("Preview typesetting complete."));
+                        }).catch(err => console.error("Preview MathJax startup error:", err));
+                    } else {
+                         console.error("MathJax not ready on load for preview.");
+                    }
+                });
+            </script>
+        </body>
+        </html>
+    `;
+
+    try {
+        const blob = new Blob([previewHtml], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const previewWindow = window.open(url, '_blank');
+        if(!previewWindow) {
+            alert("Popup blocked. Please allow popups for this site to preview the note.");
+        }
+        // No need to revoke URL immediately for new tabs
+    } catch (e) {
+        console.error("Error creating preview blob/URL:", e);
+        alert("Failed to open preview window.");
+    } finally {
+        hideLoading();
+    }
+}
+
+// NEW: Function to handle Image OCR and LaTeX conversion
+async function extractAndConvertImageNoteToLatexUIAction(noteId) {
+     const note = findNoteById(noteId, true);
+     if (!note || note.type !== NOTE_TYPES.FILE || !note.filetype?.startsWith('image/') || !note.imageDataUri) {
+         alert("Cannot process: Note is not a valid image or image data is missing.");
+         return;
+     }
+     if (!confirm("Use AI Vision to extract text from this image and replace the note content with LaTeX? This may take a moment and cannot be easily undone.")) {
+         return;
+     }
+
+      // Close view modal if open
+     document.getElementById('note-view-modal')?.remove();
+
+     showLoading("Processing Image with AI Vision...");
+     try {
+         const base64Data = note.imageDataUri.split(',')[1]; // Get Base64 part
+         // Call the dedicated AI function
+         const latexContent = await extractTextFromImageAndConvertToLatex(base64Data);
+
+         if (latexContent === "") {
+             alert("AI could not recognize significant text or math in the image.");
+         } else {
+             // Update the note content and type LOCALLY first
+             const noteIndex = currentLoadedUserNotes.findIndex(n => n.id === noteId);
+             if (noteIndex !== -1) {
+                 currentLoadedUserNotes[noteIndex].content = latexContent;
+                 currentLoadedUserNotes[noteIndex].type = NOTE_TYPES.LATEX; // Change type
+                 currentLoadedUserNotes[noteIndex].timestamp = Date.now(); // Update timestamp
+                 // Remove image data URI after successful conversion to save space
+                 delete currentLoadedUserNotes[noteIndex].imageDataUri;
+
+                 // Save the updated note list
+                 const success = await saveUserNotes(currentUser.uid, currentCourseIdForNotes, currentChapterNumForNotes, currentLoadedUserNotes);
+                 if (success) {
+                     alert("Image successfully processed and converted to LaTeX note.");
+                     await showNotesDocumentsPanel(currentCourseIdForNotes, currentChapterNumForNotes); // Refresh list
+                 } else {
+                     alert("Processed image but failed to save the updated LaTeX note.");
+                     // Consider reverting local changes if save failed
+                 }
+             } else {
+                 throw new Error("Original note index not found after AI processing.");
+             }
+         }
+     } catch (error) {
+         console.error("Error in image OCR/LaTeX process:", error);
+         alert(`Failed to process image: ${error.message}`);
+     } finally {
+         hideLoading();
+     }
+}
+
+
+// NEW: Download TEXT/LATEX/AI_REVIEW note as PDF
+async function downloadNoteAsPdf(noteId) {
+    const note = findNoteById(noteId, true); // Find user note
+    if (!note || (note.type !== NOTE_TYPES.TEXT && note.type !== NOTE_TYPES.LATEX && note.type !== NOTE_TYPES.AI_REVIEW)) {
+        alert("Cannot download: Only Text, LaTeX, or AI Review notes can be downloaded as PDF.");
+        return;
+    }
+    const filename = note.title.replace(/[^a-zA-Z0-9_.-]/g, '_');
+    showLoading(`Generating PDF for note: ${note.title}...`);
+    try {
+        const noteHtml = generateNotePdfHtml(note); // Use the dedicated HTML generator
+        await generateAndDownloadPdfWithMathJax(noteHtml, filename);
+    } catch (error) {
+        console.error("Error generating note PDF:", error);
+        alert(`Failed to generate PDF for note: ${error.message}`);
+    } finally {
+        hideLoading();
+    }
 }
 
 

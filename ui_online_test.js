@@ -1,17 +1,15 @@
-
-
 // --- START OF FILE ui_online_test.js ---
 
 import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js'; // Added globalCourseDataMap and updateUserCourseProgress
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
-import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js'; // Added escapeHtml
+import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js'; // Added escapeHtml and getFormattedDate
 // MODIFIED: Added markChapterStudiedInCourse and saveUserCourseProgress
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
-// MODIFIED: Added SKIP_EXAM_PASSING_PERCENT
-import { ONLINE_TEST_DURATION_MINUTES, SKIP_EXAM_PASSING_PERCENT } from './config.js';
-// MODIFIED: Import necessary functions from exam_storage.js, REMOVED reportQuestionIssue import
+// *** MODIFIED: Added PASSING_GRADE_PERCENT to import ***
+import { ONLINE_TEST_DURATION_MINUTES, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+// MODIFIED: Import necessary functions from exam_storage.js
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 // AI Marking is handled within exam_storage.js now
 
@@ -98,7 +96,13 @@ export async function displayCurrentQuestion() {
     console.log("displayCurrentQuestion START");
     if (!currentOnlineTestState) { console.error("HALTED: currentOnlineTestState is null."); return; }
     const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
-    if (index < 0 || !questions?.length || index >= questions.length) { console.error(`HALTED: Invalid index ${index}/${questions?.length}`); const c = document.getElementById('question-container'); if(c) c.innerHTML = '<p class="text-red-500">Error: Invalid question index.</p>'; return; }
+    // MODIFIED: Check questions is array
+    if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) {
+         console.error(`HALTED: Invalid index ${index}/${questions?.length}`);
+         const c = document.getElementById('question-container');
+         if(c) c.innerHTML = '<p class="text-red-500">Error: Invalid question index.</p>';
+         return;
+     }
     const question = questions[index]; const container = document.getElementById('question-container'); const totalQuestions = questions.length;
     if (!question || !container) { console.error("HALTED: Missing question object or container."); return; }
     console.log(`Displaying question ${question.id} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
@@ -199,43 +203,69 @@ export async function submitOnlineTest() {
     try {
         console.log(`Submitting exam ${currentOnlineTestState.examId} of type ${activityType}`);
         // Store and mark the exam using the centralized function
+        // MODIFIED: Pass courseId to storeExamResult
         const examRecord = await storeExamResult(
-            courseId, // Pass courseId (can be null)
+            courseId,
             currentOnlineTestState,
             activityType
         );
 
         if (!examRecord || !examRecord.markingResults) {
-            throw new Error("Failed to store exam results or get marking.");
+            // Error already logged and alerted inside storeExamResult if it failed there
+             hideLoading(); // Make sure loading is hidden
+             // Attempt to navigate back gracefully
+              if (isCourseActivity && courseId) {
+                  window.showCurrentAssignmentsExams?.(courseId);
+              } else {
+                  showTestGenerationDashboard();
+              }
+             return; // Stop processing if storing/marking failed
         }
-        hideLoading(); // Hide loading *after* marking and storage attempt
+        hideLoading(); // Hide loading *after* marking and storage attempt SUCCEEDS
 
         // Display results UI using the stored/marked record
         displayOnlineTestResults(examRecord); // Pass the full record
 
         // Post-submission logic (like marking chapter studied)
-        if (isSkipExam && chapterNumForSkipExam && courseId) {
-            const percentage = examRecord.markingResults.maxPossibleScore > 0
-                             ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100
-                             : 0;
-            if (percentage >= SKIP_EXAM_PASSING_PERCENT) {
-                console.log(`Skip exam passed (${percentage.toFixed(1)}%). Marking chapter ${chapterNumForSkipExam} as studied.`);
-                await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed");
-            } else {
-                 console.log(`Skip exam not passed (${percentage.toFixed(1)}% < ${SKIP_EXAM_PASSING_PERCENT}%).`);
-                 // Optionally show a specific message here if needed, although displayOnlineTestResults handles the pass/fail text
+        if (isSkipExam && chapterNumForSkipExam && courseId && examRecord.markingResults.maxPossibleScore > 0) {
+            const percentage = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100;
+
+            // Update skip exam score in progress data
+            const progress = userCourseProgressMap.get(courseId);
+            if (progress) {
+                 progress.lastSkipExamScore = progress.lastSkipExamScore || {};
+                 progress.lastSkipExamScore[chapterNumForSkipExam] = percentage;
+                 progress.skipExamAttempts = progress.skipExamAttempts || {};
+                 progress.skipExamAttempts[chapterNumForSkipExam] = (progress.skipExamAttempts[chapterNumForSkipExam] || 0) + 1;
+
+                 // Log attempt pass/fail in daily progress
+                 const todayStr = getFormattedDate();
+                 progress.dailyProgress = progress.dailyProgress || {};
+                 progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
+
+                 if (percentage >= SKIP_EXAM_PASSING_PERCENT) {
+                     console.log(`Skip exam passed (${percentage.toFixed(1)}%). Marking chapter ${chapterNumForSkipExam} as studied.`);
+                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed"); // This also saves progress
+                 } else {
+                     console.log(`Skip exam not passed (${percentage.toFixed(1)}% < ${SKIP_EXAM_PASSING_PERCENT}%).`);
+                      // Save progress even on fail to record score/attempt count
+                      await saveUserCourseProgress(currentUser.uid, courseId, progress);
+                 }
             }
         } else if (!isCourseActivity && currentSubject) {
              // Update standard test gen subject data (remove used questions)
              let chaptersDataModified = false;
              if (examRecord.questions) {
                  examRecord.questions.forEach(q => {
-                      const globalChap = currentSubject.chapters[q.chapter];
-                      if (globalChap?.available_questions?.includes(q.number)) {
-                           const qIndex = globalChap.available_questions.indexOf(q.number);
-                           if (qIndex > -1) {
-                                globalChap.available_questions.splice(qIndex, 1);
-                                chaptersDataModified = true;
+                      // MODIFIED: Only remove MCQs from standard pool
+                      if (!q.isProblem) {
+                           const globalChap = currentSubject.chapters[q.chapter];
+                           if (globalChap?.available_questions?.includes(q.number)) {
+                                const qIndex = globalChap.available_questions.indexOf(q.number);
+                                if (qIndex > -1) {
+                                     globalChap.available_questions.splice(qIndex, 1);
+                                     chaptersDataModified = true;
+                                }
                            }
                       }
                  });
@@ -243,7 +273,7 @@ export async function submitOnlineTest() {
              if (chaptersDataModified) {
                   Object.values(currentSubject.chapters).forEach(chap => chap.available_questions?.sort((a,b) => a-b));
                   await saveUserData(currentUser.uid); // Save updated appData
-                  console.log("Removed used questions from standard test gen pool.");
+                  console.log("Removed used MCQs from standard test gen pool.");
              }
         }
 
@@ -275,7 +305,9 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
          return;
     }
 
-    const { examId, markingResults, courseContext, totalQuestions, durationMinutes, timestamp } = examRecord;
+    const { examId, markingResults, courseContext, timestamp } = examRecord;
+    // Use stored questions if available, otherwise use from markingResults (should be same)
+    const questions = examRecord.questions || markingResults.questionResults?.map(qr => examData.questions.find(q => q.id === qr.questionId)) || [];
     const score = markingResults.totalScore;
     const maxScore = markingResults.maxPossibleScore;
     const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
@@ -283,10 +315,13 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
     const isCourse = courseContext?.isCourseActivity ?? false;
     const isSkip = courseContext?.activityType === 'skip_exam';
     const courseId = courseContext?.courseId;
-    const passThreshold = isSkip ? SKIP_EXAM_PASSING_PERCENT : 50; // Use skip threshold if applicable
-    const isPassing = percentage >= passThreshold;
+    // *** MODIFIED: Use imported config values ***
+    const passThreshold = isSkip ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
+    const isPassing = parseFloat(percentage) >= passThreshold; // Use parseFloat for comparison
     const courseName = isCourse && courseId ? (globalCourseDataMap.get(courseId)?.name || courseId) : 'Standard Test';
+    const durationMinutes = examRecord.durationMinutes;
 
+    // *** MODIFIED: Changed 'html' to 'resultsHtml' ***
     const resultsHtml = `
         <div class="space-y-6 animate-fade-in max-w-3xl mx-auto">
             <div class="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border dark:border-gray-700">
@@ -300,7 +335,7 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
                     ${score.toFixed(1)} out of ${maxScore.toFixed(1)} points
                 </p>
                 <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">
-                    ${isPassing ? 'PASS' : 'FAIL'} ${isSkip ? `(Threshold: ${passThreshold}%)` : ''}
+                    ${isPassing ? 'PASS' : 'FAIL'} ${isSkip ? `(Threshold: ${passThreshold}%)` : `(Threshold: ${PASSING_GRADE_PERCENT}%)`}
                 </p>
                  ${isSkip && isPassing ? `<p class="text-sm text-green-600 mt-1">Chapter ${courseContext.chapterNum} marked as studied!</p>` : ''}
                  ${isSkip && !isPassing ? `<p class="text-sm text-red-600 mt-1">Needed ${passThreshold}% to pass the skip exam.</p>` : ''}
@@ -340,7 +375,7 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
 
             <div class="flex justify-center gap-4 flex-wrap">
                 <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.15.15 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.15.15 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
                     View Detailed Review
                 </button>
                 <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">
@@ -350,7 +385,8 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
                  ${!isCourse ? `<button onclick="window.showTestGenerationDashboard()" class="btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Generate New Test</button>` : ''}
             </div>
         </div>`;
-    displayContent(html);
+    // MODIFIED: Target main content area & use correct variable name
+    displayContent(resultsHtml, 'content'); // Display in the main content area
     setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'sidebar-standard-nav');
 
     // Render math in the overall feedback if needed (unlikely but possible)
@@ -360,7 +396,8 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
 
 // Add window functions for the UI review/report buttons
 window.showExamReviewUI = showExamReviewUI; // Use the imported function directly
-// MODIFIED: Removed assignment of reportQuestionIssue here, handled by script.js
+window.showIssueReportingModal = showIssueReportingModal;
+window.submitIssueReport = submitIssueReport;
 
 
 // Export the state setter

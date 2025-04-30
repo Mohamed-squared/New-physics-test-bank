@@ -1,17 +1,26 @@
 // --- START OF FILE exam_storage.js ---
 
-import { db, currentUser } from './state.js';
+import { db, currentUser, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
-import { markFullExam, generateExplanation } from './ai_exam_marking.js'; // Import AI marking
+// MODIFIED: Import AI marking and explanation generation
+import { markFullExam, generateExplanation } from './ai_exam_marking.js';
 import { renderMathIn } from './utils.js'; // Import MathJax renderer
-import { displayContent } from './ui_core.js'; // For displaying review UI
+// MODIFIED: Import displayContent and setActiveSidebarLink
+import { displayContent, setActiveSidebarLink } from './ui_core.js';
+// MODIFIED: Import submitFeedback from firestore
+import { submitFeedback } from './firebase_firestore.js';
+// MODIFIED: Define MAX_MARKS_PER_PROBLEM if needed for display
+const MAX_MARKS_PER_PROBLEM = 10;
+const MAX_MARKS_PER_MCQ = 10;
+
 
 // --- Exam Storage and Retrieval Functions ---
 
 /**
  * Stores the completed exam data (including AI marking results) in Firestore.
  * Uses a dedicated subcollection: userExams/{userId}/exams/{examId}
- * @param {string} courseId - The ID of the course (or null for standard tests).
+ * *** MODIFIED: Refined MCQ scoring logic for unanswered/incorrect states. ***
+ * @param {string|null} courseId - The ID of the course (or null for standard tests).
  * @param {object} examState - The final state of the online test.
  * @param {string} examType - Type of exam (e.g., 'practice', 'skip_exam', 'assignment').
  * @returns {Promise<object|null>} The stored exam record including marking results, or null on failure.
@@ -28,10 +37,104 @@ export async function storeExamResult(courseId, examState, examType) {
 
     showLoading("Finalizing and Storing Exam...");
     try {
-        // 1. Mark the exam using AI
-        console.log(`Calling markFullExam for Exam ID: ${examState.examId}`);
-        const markingResults = await markFullExam(examState);
-        console.log(`Marking complete for Exam ID: ${examState.examId}`);
+        let markingResults;
+        const containsProblems = examState.questions?.some(q => q.isProblem);
+
+        if (containsProblems) {
+            // --- Exam contains problems - Use AI Marking ---
+            console.log(`Exam ${examState.examId} contains problems. Calling markFullExam.`);
+            markingResults = await markFullExam(examState);
+            console.log(`AI Marking complete for Exam ID: ${examState.examId}`);
+        } else {
+            // --- Exam is MCQ-only - Score deterministically, skip AI call ---
+            console.log(`Exam ${examState.examId} is MCQ-only. Scoring deterministically.`);
+            markingResults = {
+                totalScore: 0,
+                maxPossibleScore: 0,
+                questionResults: [],
+                overallFeedback: null, // No AI overall feedback for MCQ-only
+                timestamp: Date.now()
+            };
+
+            if (examState.questions && examState.questions.length > 0) {
+                examState.questions.forEach((question, i) => {
+                    // Assign a unique ID if missing
+                    if (!question.id) {
+                         question.id = `q-${i+1}`;
+                    }
+                    const studentAnswer = examState.userAnswers?.[question.id]; // Use optional chaining
+                    const isProblem = question.isProblem || !question.options || question.options.length === 0; // Should be false here
+                    const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
+
+                    // Ensure maxPossibleScore is incremented correctly
+                    if (typeof maxMarks === 'number' && !isNaN(maxMarks)) {
+                         markingResults.maxPossibleScore += maxMarks;
+                    } else {
+                         console.error(`Invalid maxMarks (${maxMarks}) for question ${question.id}. Skipping score calculation for this question.`);
+                         // Optionally push a result indicating an error, or skip entirely
+                           markingResults.questionResults.push({
+                             questionId: question.id, questionIndex: i, score: 0, feedback: "Error: Invalid max marks.", key_points: [], improvement_suggestions: []
+                         });
+                         return; // Skip to next question if maxMarks is invalid
+                    }
+
+
+                    if (!isProblem) { // Double-check it's an MCQ
+                        const correctAnswer = question.correctAnswer; // Usually a string like "A", "B" etc.
+
+                        // *** REFINED CHECKS ***
+                        let isCorrect = false;
+                        let feedback = '';
+
+                        // 1. Check if an answer was provided
+                        if (studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== '') {
+                             // 2. Compare provided answer (case-insensitive, trim whitespace just in case)
+                             if (String(studentAnswer).trim().toUpperCase() === String(correctAnswer).trim().toUpperCase()) {
+                                 isCorrect = true;
+                                 feedback = "Correct.";
+                             } else {
+                                 isCorrect = false;
+                                 feedback = `Incorrect. The correct answer was ${correctAnswer || 'N/A'}.`;
+                             }
+                        } else {
+                             // No answer provided
+                             isCorrect = false;
+                             feedback = `Not answered. The correct answer was ${correctAnswer || 'N/A'}.`;
+                        }
+
+                        const score = isCorrect ? maxMarks : 0;
+                        markingResults.totalScore += score;
+
+                        // Logging for debugging
+                        console.log(`MCQ Scoring Q${i+1} (ID: ${question.id}): ` +
+                                    `Student Answer='${studentAnswer}' (Type: ${typeof studentAnswer}), ` +
+                                    `Correct Answer='${correctAnswer}' (Type: ${typeof correctAnswer}), ` +
+                                    `isCorrect=${isCorrect}, Score=${score}/${maxMarks}`);
+
+                        markingResults.questionResults.push({
+                            questionId: question.id,
+                            questionIndex: i,
+                            score: score,
+                            feedback: feedback, // Use generated feedback
+                            key_points: [],
+                            improvement_suggestions: isCorrect ? [] : ["Review the concepts related to this question."]
+                        });
+                    } else {
+                        // This case shouldn't be hit due to the containsProblems check, but include for safety
+                        console.warn(`Unexpected problem found (ID: ${question.id}) in MCQ-only processing loop.`);
+                         markingResults.questionResults.push({
+                             questionId: question.id, questionIndex: i, score: 0, feedback: "Error: Problem found in MCQ-only exam.", key_points: [], improvement_suggestions: []
+                         });
+                    }
+                });
+            } else {
+                 console.warn("No questions found in MCQ-only examData to mark.");
+                 markingResults.maxPossibleScore = 0; // Ensure max is 0 if no questions
+            }
+            // Clamp total score just in case of weirdness
+            markingResults.totalScore = Math.max(0, Math.min(markingResults.totalScore, markingResults.maxPossibleScore));
+            console.log(`Deterministic scoring complete for Exam ID: ${examState.examId}. Final Score: ${markingResults.totalScore}/${markingResults.maxPossibleScore}`);
+        }
 
 
         // 2. Prepare the complete record for Firestore
@@ -42,11 +145,9 @@ export async function storeExamResult(courseId, examState, examType) {
             type: examType, // e.g., 'practice', 'skip_exam', 'assignment'
             timestamp: examState.startTime, // Use start time as the main timestamp
             durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
-            questions: examState.questions, // Full question details
+            questions: examState.questions, // Full question details (including text, options, correct answer for MCQ, isProblem flag)
             userAnswers: examState.userAnswers, // User's selections/inputs
-            // Correct answers might be redundant if included in questions, but keep for clarity?
-            // correctAnswers: examState.correctAnswers, // Map of correct answers for MCQs
-            markingResults: markingResults, // Store the AI marking object
+            markingResults: markingResults, // Store the generated or AI marking object
             status: 'completed', // Mark as completed
             // Include course context if it exists
             courseContext: examState.courseContext || null
@@ -56,6 +157,8 @@ export async function storeExamResult(courseId, examState, examType) {
         const examDocRef = db.collection('userExams').doc(currentUser.uid)
                            .collection('exams').doc(examState.examId);
 
+        // MODIFIED: Log the data being saved for verification
+        console.log("Saving exam record to Firestore:", JSON.stringify(examRecord, null, 2));
         await examDocRef.set(examRecord);
         console.log(`Exam record ${examState.examId} saved successfully to userExams subcollection.`);
 
@@ -64,8 +167,14 @@ export async function storeExamResult(courseId, examState, examType) {
 
     } catch (error) {
         hideLoading();
+        // MODIFIED: Log the specific Firestore error if available
         console.error(`Error storing exam result ${examState.examId}:`, error);
-        alert(`Error storing exam results: ${error.message}`);
+        // Check if it's a permissions error specifically
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+             alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
+        } else {
+             alert(`Error storing exam results: ${error.message || String(error)}`);
+        }
         return null;
     }
 }
@@ -125,8 +234,9 @@ export async function getExamHistory(userId, courseId = null) {
                 type: data.type,
                 timestamp: data.timestamp,
                 score: data.markingResults?.totalScore ?? 0,
-                maxScore: data.markingResults?.maxPossibleScore ?? 0,
-                courseName: globalCourseDataMap.get(data.courseId)?.name || data.courseId || 'General',
+                maxScore: data.markingResults?.maxPossibleScore ?? (data.questions?.length * 10 || 0), // Estimate max if needed
+                // MODIFIED: Look up course name safely
+                courseName: globalCourseDataMap?.get(data.courseId)?.name || data.courseId || 'General Test',
                 courseId: data.courseId, // Include courseId for filtering/linking
                 status: data.status || 'completed'
             });
@@ -140,13 +250,14 @@ export async function getExamHistory(userId, courseId = null) {
 }
 
 /**
- * Displays the detailed review UI for a specific exam.
+ * Displays the detailed review UI for a specific exam from the `userExams` collection.
  * @param {string} userId - The ID of the user who took the exam.
  * @param {string} examId - The ID of the exam to review.
  */
 export async function showExamReviewUI(userId, examId) {
     if (!userId || !examId) {
-        displayContent('<p class="text-red-500">Cannot show review: User or Exam ID missing.</p>');
+        // MODIFIED: Use displayContent for consistency
+        displayContent('<p class="text-red-500 p-4">Cannot show review: User or Exam ID missing.</p>');
         return;
     }
     showLoading("Loading Exam Review...");
@@ -154,26 +265,45 @@ export async function showExamReviewUI(userId, examId) {
     hideLoading();
 
     if (!examData) {
-        displayContent('<p class="text-red-500">Could not load exam data for review.</p>');
+        // MODIFIED: Use displayContent for consistency
+        displayContent('<p class="text-red-500 p-4">Could not load exam data for review.</p>');
         return;
     }
 
-    const { questions = [], userAnswers = {}, markingResults = {}, courseId, type, timestamp } = examData;
+    // Check if examData.questions is defined and is an array
+    const questions = Array.isArray(examData.questions) ? examData.questions : [];
+    const userAnswers = examData.userAnswers || {};
+    const markingResults = examData.markingResults || {};
+    const courseId = examData.courseId;
+    const type = examData.type || 'Unknown';
+    const timestamp = examData.timestamp || Date.now(); // Fallback timestamp
+
     const score = markingResults.totalScore ?? 0;
-    const maxScore = markingResults.maxPossibleScore ?? (questions.length * 10); // Estimate max score if missing
+    // Calculate maxScore based on actual questions array and types
+    let calculatedMaxScore = 0;
+    questions.forEach(q => {
+        calculatedMaxScore += (q.isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
+    });
+    const maxScore = markingResults.maxPossibleScore > 0 ? markingResults.maxPossibleScore : calculatedMaxScore; // Use calculated if stored is 0
     const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
-    const courseName = globalCourseDataMap.get(courseId)?.name || courseId || 'General Test';
-    const isPassing = percentage >= 50;
+    // MODIFIED: Look up course name safely
+    const courseName = courseId ? (globalCourseDataMap?.get(courseId)?.name || courseId) : 'General Test';
+    const isPassing = percentage >= 50; // General passing threshold (adjust if needed based on type)
+
+    // --- AI Follow-up State ---
+    // We need to manage history *per question* within this UI scope
+    let explanationHistories = {}; // Key: questionIndex, Value: history array
 
     let questionsHtml = questions.map((question, index) => {
-        const result = markingResults.questionResults?.find(r => r.questionId === question.id) || { score: 'N/A', feedback: 'N/A', key_points: [], improvement_suggestions: [] };
-        const questionScore = typeof result.score === 'number' ? result.score : 'N/A';
-        const qMaxScore = question.isProblem ? MAX_MARKS_PER_PROBLEM : 10; // Max score for this question type
-        const isProblem = question.isProblem || !question.options || question.options.length === 0;
+         const result = markingResults.questionResults?.find(r => r.questionId === question.id) || { score: 'N/A', feedback: 'N/A', key_points: [], improvement_suggestions: [] };
+         const questionScore = typeof result.score === 'number' ? result.score : 'N/A';
+         const isProblem = question.isProblem || !question.options || question.options.length === 0;
+         const qMaxScore = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
 
         let studentAnswerHtml = '';
         if (userAnswers[question.id]) {
             // Render potential LaTeX in student answers if needed
+            // MODIFIED: escapeHtml added for safety
             studentAnswerHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(userAnswers[question.id])}</div>`;
         } else {
             studentAnswerHtml = '<span class="text-muted italic">No answer provided</span>';
@@ -185,6 +315,9 @@ export async function showExamReviewUI(userId, examId) {
         } else if(isProblem) {
              correctAnswerHtml = '<i class="text-muted text-xs">(Refer to Feedback/Explanation)</i>';
         }
+
+        // Initialize history for this question
+        explanationHistories[index] = [];
 
         return `
             <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border dark:border-gray-700 mb-4">
@@ -243,22 +376,25 @@ export async function showExamReviewUI(userId, examId) {
                         </ul>
                     </div>` : ''}
 
-                    <div id="ai-explanation-${index}" class="mt-3 ai-explanation-container hidden">
-                        
-                        <div class="p-3 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 rounded">
-                           <p class="font-semibold text-purple-700 dark:text-purple-300 text-sm mb-1">AI Tutor Explanation:</p>
-                           <div class="ai-explanation-content-area text-sm">
-                                <p class="text-muted italic">Loading explanation...</p>
-                           </div>
-                        </div>
+                    <!-- AI Explanation/Chat Area -->
+                    <div id="ai-explanation-${index}" class="mt-3 ai-explanation-container hidden space-y-2">
+                         <p class="font-semibold text-purple-700 dark:text-purple-300 text-sm mb-1">AI Tutor Explanation:</p>
+                         <div class="ai-explanation-content-area p-3 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 rounded text-sm space-y-3">
+                            <!-- Explanations will be loaded here -->
+                         </div>
+                         <!-- Follow-up Input -->
+                         <div class="flex gap-2 mt-2">
+                              <input type="text" id="follow-up-input-${index}" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+                              <button onclick="window.askAIFollowUp('${examId}', ${index})" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
+                         </div>
                     </div>
 
                     <div class="flex justify-end gap-2 pt-3 border-t dark:border-gray-600">
-                        <button onclick="window.showAIExplanation('${examId}', ${index})" class="btn-secondary-small text-xs">
+                        <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs">
                              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                            Get AI Explanation
+                            AI Explanation
                         </button>
-                        <button onclick="window.reportQuestionIssue('${examId}', ${index})" class="btn-warning-small text-xs">
+                        <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs">
                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                             Report Issue
                         </button>
@@ -305,7 +441,7 @@ export async function showExamReviewUI(userId, examId) {
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-4 pb-4 border-b dark:border-gray-600">
                     <div>
                         <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Exam Review</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Course: ${courseName} | Type: ${type} | Date: ${new Date(timestamp).toLocaleString()}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Course: ${escapeHtml(courseName)} | Type: ${escapeHtml(type)} | Date: ${new Date(timestamp).toLocaleString()}</p>
                     </div>
                     <div class="text-right">
                         <p class="text-3xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'}">${score}/${maxScore} (${percentage}%)</p>
@@ -324,6 +460,10 @@ export async function showExamReviewUI(userId, examId) {
     `;
 
     displayContent(html);
+    // Store the explanationHistories object globally or pass it around if needed for state persistence
+    // For simplicity, we'll re-fetch exam data each time an explanation is requested for now.
+    window.currentExplanationHistories = explanationHistories;
+
     // Render MathJax after content is added
     requestAnimationFrame(async () => {
         const container = document.getElementById('review-questions-container');
@@ -336,50 +476,103 @@ export async function showExamReviewUI(userId, examId) {
 }
 
 
-// --- AI Explanation Display ---
-window.showAIExplanation = async (examId, questionIndex) => {
+// --- AI Explanation Display & Follow-up ---
+window.showAIExplanationSection = async (examId, questionIndex) => {
     const explanationContainer = document.getElementById(`ai-explanation-${questionIndex}`);
     const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
     if (!explanationContainer || !explanationContentArea) return;
 
+    const isHidden = explanationContainer.classList.contains('hidden');
     explanationContainer.classList.toggle('hidden');
-    if (explanationContainer.classList.contains('hidden')) return; // Stop if hiding
 
-    // Show loading state only if content isn't already loaded
-    if (explanationContentArea.innerHTML.includes('Loading explanation...')) {
-         explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="ml-2 text-sm text-muted">Generating explanation...</p></div>`;
-    } else {
-         // Content already exists, maybe from a previous click, just ensure it's visible
-         return;
-    }
+    // If revealing and content is empty or just has placeholder, fetch initial explanation
+    if (isHidden && (!explanationContentArea.innerHTML || explanationContentArea.innerHTML.includes('Loading explanation...'))) {
+        explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="ml-2 text-sm text-muted">Generating explanation...</p></div>`;
 
+        const examData = await getExamDetails(currentUser.uid, examId);
+        if (!examData || !examData.questions || !examData.questions[questionIndex]) {
+            explanationContentArea.innerHTML = '<p class="text-danger text-sm">Error: Could not load question data.</p>';
+            return;
+        }
 
-    // Fetch exam data again (could be cached, but this ensures freshness)
-    const examData = await getExamDetails(currentUser.uid, examId); // Fetch for current user
-    if (!examData || !examData.questions || !examData.questions[questionIndex]) {
-        explanationContentArea.innerHTML = '<p class="text-danger text-sm">Error: Could not load question data.</p>';
-        return;
-    }
+        const question = examData.questions[questionIndex];
+        const studentAnswer = examData.userAnswers[question.id];
+        const isProblem = question.isProblem || !question.options || question.options.length === 0;
+        const correctAnswer = isProblem ? null : question.correctAnswer;
 
-    const question = examData.questions[questionIndex];
-    const studentAnswer = examData.userAnswers[question.id];
-    const isProblem = question.isProblem || !question.options || question.options.length === 0;
-    const correctAnswer = isProblem ? null : question.correctAnswer; // Correct answer is null for problems
-
-    try {
-        const explanationHtml = await generateExplanation(question, correctAnswer, studentAnswer);
-        explanationContentArea.innerHTML = explanationHtml;
-        await renderMathIn(explanationContentArea); // Render MathJax in the loaded content
-    } catch (error) {
-        explanationContentArea.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
+        try {
+            // Initial call, no history needed yet
+            const result = await generateExplanation(question, correctAnswer, studentAnswer, []);
+            window.currentExplanationHistories[questionIndex] = result.history; // Store initial history
+            explanationContentArea.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Initial explanation
+            await renderMathIn(explanationContentArea);
+        } catch (error) {
+            explanationContentArea.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
+        }
     }
 };
 
+window.askAIFollowUp = async (examId, questionIndex) => {
+    const inputElement = document.getElementById(`follow-up-input-${questionIndex}`);
+    const explanationContentArea = document.getElementById(`ai-explanation-${questionIndex}`)?.querySelector('.ai-explanation-content-area');
+    if (!inputElement || !explanationContentArea || !window.currentExplanationHistories) return;
+
+    const followUpText = inputElement.value.trim();
+    if (!followUpText) return;
+
+    inputElement.disabled = true;
+    const askButton = inputElement.nextElementSibling; // Get the button
+    if (askButton) askButton.disabled = true;
+
+    // Append user's follow-up to the chat display
+    const userFollowUpHtml = `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`;
+    explanationContentArea.insertAdjacentHTML('beforeend', userFollowUpHtml);
+
+    // Append loading indicator for AI response
+    const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
+    explanationContentArea.insertAdjacentHTML('beforeend', loadingHtml);
+    explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll down
+
+    const history = window.currentExplanationHistories[questionIndex] || [];
+
+    try {
+        // Send follow-up using generateExplanation (which now handles history)
+        // We don't need the original question/answer details for follow-ups,
+        // just the history and the user's text. Pass null for question/correctAnswer.
+        // Pass the followUpText as the 'studentAnswer' argument for this call.
+        const result = await generateExplanation(null, null, followUpText, history);
+
+        // Update history state
+        window.currentExplanationHistories[questionIndex] = result.history;
+
+        // Remove loading indicator
+        const loadingIndicator = explanationContentArea.querySelector('.ai-loading');
+        if (loadingIndicator) loadingIndicator.remove();
+
+        // Append AI's response
+        const aiResponseHtml = `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`;
+        explanationContentArea.insertAdjacentHTML('beforeend', aiResponseHtml);
+        inputElement.value = ''; // Clear input
+        await renderMathIn(explanationContentArea); // Re-render math
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll down
+
+
+    } catch (error) {
+        console.error("Error asking AI follow-up:", error);
+        const loadingIndicator = explanationContentArea.querySelector('.ai-loading');
+        if (loadingIndicator) loadingIndicator.remove();
+        explanationContentArea.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+    } finally {
+        inputElement.disabled = false;
+        if (askButton) askButton.disabled = false;
+    }
+};
 
 // --- Issue Reporting ---
 
 /**
  * Displays a modal for reporting an issue with a specific question or its marking.
+ * (This function remains largely the same, but we ensure it's exported and available)
  */
 export function showIssueReportingModal(examId, questionIndex) {
     // Remove existing modal first
@@ -390,7 +583,7 @@ export function showIssueReportingModal(examId, questionIndex) {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="issue-report-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Report Issue for Question ${questionIndex + 1}</h3>
-                    <button onclick="document.getElementById('issue-report-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                    <button onclick="document.getElementById('issue-report-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
                 </div>
                 <div class="space-y-4">
                     <div>
@@ -398,8 +591,8 @@ export function showIssueReportingModal(examId, questionIndex) {
                         <select id="issue-type" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500">
                             <option value="incorrect_marking">Incorrect AI Marking/Score</option>
                             <option value="unclear_feedback">Unclear AI Feedback</option>
+                            <option value="incorrect_explanation">Incorrect AI Explanation</option>
                             <option value="question_ambiguous">Question is Ambiguous/Unclear</option>
-                             ${ /* Add option if MC */ '' }
                             <option value="incorrect_mcq_answer">MCQ Correct Answer Seems Wrong</option>
                             <option value="technical_error">Display/Technical Error</option>
                             <option value="other">Other</option>
@@ -427,6 +620,7 @@ export function showIssueReportingModal(examId, questionIndex) {
 
 /**
  * Submits the issue report to Firestore.
+ * (This function remains largely the same, uses imported submitFeedback)
  */
 export async function submitIssueReport(examId, questionIndex) {
     const issueType = document.getElementById('issue-type')?.value;
@@ -452,29 +646,24 @@ export async function submitIssueReport(examId, questionIndex) {
         // Fetch question details to include context in the report
         const examData = await getExamDetails(currentUser.uid, examId);
         const questionData = examData?.questions?.[questionIndex];
+        const markingResultData = examData?.markingResults?.questionResults?.find(r => r.questionId === questionData?.id);
 
-        const reportData = {
-            examId: examId,
-            questionIndex: questionIndex,
-            questionId: questionData?.id || 'N/A', // Include question ID if available
-            issueType: issueType,
-            description: description,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            status: 'pending', // 'pending', 'resolved', 'wontfix'
-            userId: currentUser.uid,
-             userName: currentUser.displayName || currentUser.email,
-            // Add context if available
-             questionTextContext: questionData?.text?.substring(0, 200) || 'N/A', // Snippet of question
-             userAnswerContext: examData?.userAnswers?.[questionData?.id]?.substring(0, 200) || 'N/A', // Snippet of answer
-             aiFeedbackContext: examData?.markingResults?.questionResults?.find(r => r.questionId === questionData?.id)?.feedback?.substring(0, 200) || 'N/A' // Snippet of AI feedback
+        const reportPayload = {
+            subjectId: examData?.courseId || 'Standard Test', // Use courseId or default
+            questionId: questionData?.id || `Exam-${examId}-Q${questionIndex+1}`, // Best available ID
+            feedbackText: `Issue Type: ${issueType}\n\nDescription:\n${description}\n\n------ Context ------\nExam ID: ${examId}\nQuestion Index: ${questionIndex}\nQuestion Text Snippet: ${questionData?.text?.substring(0, 200) || 'N/A'}\nUser Answer Snippet: ${examData?.userAnswers?.[questionData?.id]?.substring(0, 200) || 'N/A'}\nAI Feedback Snippet: ${markingResultData?.feedback?.substring(0, 200) || 'N/A'}`,
+            context: `Exam Issue Report (Exam: ${examId}, Q: ${questionIndex+1})`
         };
 
-        // Save to a dedicated 'examIssues' collection (or similar)
-        await db.collection('examIssues').add(reportData);
+        const success = await submitFeedback(reportPayload, currentUser);
 
         hideLoading();
-        alert('Report submitted successfully. Thank you for your feedback!');
-        document.getElementById('issue-report-modal')?.remove(); // Close modal
+        if(success) {
+            alert('Report submitted successfully. Thank you for your feedback!');
+            document.getElementById('issue-report-modal')?.remove(); // Close modal
+        } else {
+             alert('Failed to submit report. Please try again.');
+        }
 
     } catch (error) {
         hideLoading();
@@ -482,5 +671,6 @@ export async function submitIssueReport(examId, questionIndex) {
         alert(`Failed to submit report: ${error.message}`);
     }
 }
+
 
 // --- END OF FILE exam_storage.js ---

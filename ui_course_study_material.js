@@ -1,16 +1,17 @@
+// --- START OF FILE ui_course_study_material.js ---
+
 // ui_course_study_material.js
 
 import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress } from './state.js';
-// MODIFIED: Import saveUserCourseProgress, loadFormulaSheet, saveFormulaSheet, loadChapterSummary, saveChapterSummary
-// *** UPDATED Imports: Use user-specific save/load functions ***
-import { saveUserCourseProgress, markChapterStudiedInCourse, saveFormulaSheet as saveUserFormulaSheet, loadFormulaSheet as loadUserFormulaSheet, saveChapterSummary as saveUserChapterSummary, loadChapterSummary as loadUserChapterSummary } from './firebase_firestore.js';
+// MODIFIED: Import USER-SPECIFIC save/load functions for sheets/summaries
+import { saveUserCourseProgress, markChapterStudiedInCourse, saveUserFormulaSheet, loadUserFormulaSheet, saveUserChapterSummary, loadUserChapterSummary } from './firebase_firestore.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 // *** Corrected base path import + added new config value ***
 import { COURSE_TRANSCRIPTION_BASE_PATH, PDF_WORKER_SRC, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS, COURSE_PDF_BASE_PATH, YOUTUBE_API_KEY } from './config.js'; // Added YT Key
 // MODIFIED: Import generateSkipExam from ai_integration (not ui_test_generation)
-// *** UPDATED Imports: Use user-specific save/load functions ***
-import { generateFormulaSheet, explainStudyMaterialSnippet, generateSkipExam, getExplanationForPdfSnapshot, getAllPdfTextForAI, generateChapterSummary } from './ai_integration.js';
+// *** UPDATED Imports: Use USER-SPECIFIC save/load functions and WHOLE PDF AI ***
+import { generateFormulaSheet, explainStudyMaterialSnippet, generateSkipExam, getExplanationForPdfSnapshot, getAllPdfTextForAI, generateChapterSummary, askAboutPdfDocument } from './ai_integration.js';
 import { parseSkipExamText } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { generateAndDownloadPdfWithMathJax } from './ui_pdf_generation.js';
@@ -51,6 +52,13 @@ const VIDEO_WATCH_THRESHOLD_PERCENT = 0.9; // Watch 90% to count as 'watched' fo
 // Chapter Video State
 let chapterLectureVideos = [];
 let currentVideoIndex = 0;
+
+// AI Explanation/Chat History (for this UI context)
+let currentExplanationHistory = [];
+let currentPdfExplanationHistory = [];
+let currentTranscriptionExplanationHistory = [];
+
+
 // --- End Module State ---
 
 
@@ -256,9 +264,9 @@ function onPlayerReady(event, elementId) {
         playerState.totalDuration = duration;
         videoDurationMap[playerState.videoId] = duration; // Cache duration globally
 
-        // Initialize progress tracking
+        // Initialize progress tracking only if not in viewer mode
         const progress = userCourseProgressMap.get(currentCourseIdInternal);
-        if (progress) {
+        if (progress && progress.enrollmentMode !== 'viewer') {
              progress.watchedVideoDurations = progress.watchedVideoDurations || {};
              progress.watchedVideoDurations[currentChapterNumber] = progress.watchedVideoDurations[currentChapterNumber] || {};
              if (progress.watchedVideoDurations[currentChapterNumber][playerState.videoId] === undefined) {
@@ -269,6 +277,8 @@ function onPlayerReady(event, elementId) {
                  isComplete: false,
                  lastTrackedTime: null // Initialize last tracked time
              };
+        } else {
+            videoWatchStatus[playerState.videoId] = { watchedDuration: 0, isComplete: false, lastTrackedTime: null }; // Initialize for viewers, but don't save
         }
         console.log(`Video ${playerState.videoId} Duration: ${playerState.totalDuration}s`);
     } catch (e) {
@@ -297,13 +307,16 @@ function onPlayerError(event, videoId, elementId) {
 function onPlayerStateChange(event, videoId, elementId) {
     const playerState = ytPlayers[elementId];
     if (!playerState) return;
+    // Only track/save if not in viewer mode
+    const progress = userCourseProgressMap.get(currentCourseIdInternal);
+    const isViewer = progress?.enrollmentMode === 'viewer';
 
     if (event.data === YT.PlayerState.PLAYING) {
         console.log(`Video playing: ${videoId}`);
         if (playerState.intervalId === null) {
             if(playerState.intervalId) clearInterval(playerState.intervalId); // Clear any stale interval just in case
             playerState.intervalId = setInterval(() => {
-                trackWatchTime(videoId, elementId);
+                if (!isViewer) trackWatchTime(videoId, elementId); // Only track time if not viewer
                 highlightTranscriptionLine();
             }, 1000);
         }
@@ -312,11 +325,11 @@ function onPlayerStateChange(event, videoId, elementId) {
             clearInterval(playerState.intervalId);
             playerState.intervalId = null;
             console.log(`Watch time tracking stopped for ${videoId}`);
-            saveVideoWatchProgress(videoId); // Save progress when paused/stopped
+            if (!isViewer) saveVideoWatchProgress(videoId); // Save progress when paused/stopped only if not viewer
         }
         if (event.data == YT.PlayerState.ENDED) {
             console.log(`Video ended: ${videoId}`);
-            // Check if watched enough, update status
+            // Check if watched enough, update status (even for viewer, just locally)
             if (videoWatchStatus[videoId] && playerState.totalDuration) {
                  const progressPercent = (videoWatchStatus[videoId].watchedDuration / playerState.totalDuration);
                  if (progressPercent >= VIDEO_WATCH_THRESHOLD_PERCENT) {
@@ -326,10 +339,12 @@ function onPlayerStateChange(event, videoId, elementId) {
                       console.log(`Video ${videoId} ended but watch threshold (${VIDEO_WATCH_THRESHOLD_PERCENT*100}%) not met (${(progressPercent*100).toFixed(1)}%).`);
                  }
             }
-            // Save final progress and check chapter completion
-            saveVideoWatchProgress(videoId).then(() => {
-                checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
-            });
+            // Save final progress and check chapter completion only if not viewer
+            if (!isViewer) {
+                saveVideoWatchProgress(videoId).then(() => {
+                    checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+                });
+            }
         }
     }
 }
@@ -337,6 +352,10 @@ function onPlayerStateChange(event, videoId, elementId) {
 async function trackWatchTime(videoId, elementId) { // Make async
     const playerState = ytPlayers[elementId];
     if (!playerState || !playerState.player || typeof playerState.player.getCurrentTime !== 'function') return;
+    // Double check viewer mode before tracking
+    const progress = userCourseProgressMap.get(currentCourseIdInternal);
+    if (progress?.enrollmentMode === 'viewer') return;
+
 
     try {
          const currentTime = playerState.player.getCurrentTime();
@@ -368,7 +387,8 @@ async function saveVideoWatchProgress(videoId) {
           return Promise.resolve(); // Return resolved promise
      }
      const progress = userCourseProgressMap.get(currentCourseIdInternal);
-     if (!progress) return Promise.resolve();
+     // DO NOT SAVE if viewer mode
+     if (!progress || progress.enrollmentMode === 'viewer') return Promise.resolve();
 
      progress.watchedVideoDurations = progress.watchedVideoDurations || {};
      progress.watchedVideoDurations[currentChapterNumber] = progress.watchedVideoDurations[currentChapterNumber] || {};
@@ -394,13 +414,11 @@ async function saveVideoWatchProgress(videoId) {
 // Function triggered after video ends and progress is saved
 export async function handleVideoWatched(videoId) {
     console.log(`handleVideoWatched called for video ${videoId}.`);
-    // The main logic is now handled by checkAndMarkChapterStudied,
-    // which is called after saving progress in onPlayerStateChange(ENDED) and periodically in trackWatchTime.
-    // This function can be simplified or removed if not needed elsewhere,
-    // but keeping it ensures the export exists as script.js expects it.
-    // It might be useful for triggering specific actions right when a video ends,
-    // beyond just checking the overall chapter progress.
-    await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+    // Only check if not in viewer mode
+    const progress = userCourseProgressMap.get(currentCourseIdInternal);
+    if (progress?.enrollmentMode !== 'viewer') {
+        await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+    }
 }
 
 // --- Combined Progress Calculation ---
@@ -413,6 +431,11 @@ export async function handleVideoWatched(videoId) {
  * @returns {{ percent: number, watchedStr: string, totalStr: string }}
  */
 export function calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo) {
+    // Return 0 if viewer mode
+    if (progress?.enrollmentMode === 'viewer') {
+         return { percent: 0, watchedStr: "N/A", totalStr: "N/A" };
+     }
+
     const watchedVideoDurations = progress.watchedVideoDurations?.[chapterNum] || {};
     // Use pdfProgress data directly from the user's state
     const chapterPdfProgress = progress.pdfProgress?.[chapterNum];
@@ -492,6 +515,9 @@ async function checkAndMarkChapterStudied(courseId, chapterNum) {
     const progress = userCourseProgressMap.get(courseId);
     const courseDef = globalCourseDataMap.get(courseId);
     if (!progress || !courseDef) return;
+
+    // Do not mark studied if viewer mode
+    if (progress.enrollmentMode === 'viewer') return;
 
     // Skip if already studied via this method
     if (progress.courseStudiedChapters?.includes(chapterNum)) {
@@ -739,10 +765,11 @@ export async function initPdfViewer(pdfPath) {
             pdfTotalPages = pdfDoc.numPages; // Store total pages
             console.log('PDF loaded successfully:', pdfTotalPages, 'pages');
 
-            // Initialize PDF progress in state
+            // Initialize PDF progress in state only if not viewer mode
             const progress = userCourseProgressMap.get(currentCourseIdInternal);
+            const isViewer = progress?.enrollmentMode === 'viewer';
             let initialPageNum = 1;
-            if (progress) {
+            if (progress && !isViewer) {
                 progress.pdfProgress = progress.pdfProgress || {};
                 progress.pdfProgress[currentChapterNumber] = progress.pdfProgress[currentChapterNumber] || { currentPage: 0, totalPages: 0 };
                 // Set total pages if not set or different
@@ -756,6 +783,8 @@ export async function initPdfViewer(pdfPath) {
                 initialPageNum = Math.min(initialPageNum, pdfTotalPages); // Ensure within bounds
                 pdfPageNum = initialPageNum; // Update module state variable
                 console.log(`Restored PDF to page ${pdfPageNum} from progress.`);
+            } else {
+                 pdfPageNum = 1; // Start at page 1 for viewers or if no progress
             }
 
             pdfControls.classList.remove('hidden');
@@ -772,8 +801,8 @@ export async function initPdfViewer(pdfPath) {
             document.getElementById('pdf-prev').onclick = onPrevPage;
             document.getElementById('pdf-next').onclick = onNextPage;
 
-            // Update progress even on initial load if it wasn't already current
-            if (progress && progress.pdfProgress[currentChapterNumber].currentPage !== pdfPageNum) {
+            // Update progress even on initial load if it wasn't already current (and not viewer)
+            if (progress && !isViewer && progress.pdfProgress[currentChapterNumber].currentPage !== pdfPageNum) {
                 updatePdfProgressAndCheckCompletion(pdfPageNum);
             }
 
@@ -843,17 +872,23 @@ async function renderPdfPage(num) {
  }
 function queueRenderPage(num) { if (pdfPageRendering) pdfPageNumPending = num; else renderPdfPage(num); }
 
-// MODIFIED: Update progress on page change
+// MODIFIED: Update progress on page change only if not viewer
 function onPrevPage() {
     if (pdfPageNum <= 1) return;
     pdfPageNum--;
-    updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress
+    const progress = userCourseProgressMap.get(currentCourseIdInternal);
+    if (progress?.enrollmentMode !== 'viewer') {
+        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress if not viewer
+    }
     queueRenderPage(pdfPageNum);
 }
 function onNextPage() {
     if (!pdfDoc || pdfPageNum >= pdfDoc.numPages) return;
     pdfPageNum++;
-    updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress
+     const progress = userCourseProgressMap.get(currentCourseIdInternal);
+     if (progress?.enrollmentMode !== 'viewer') {
+        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress if not viewer
+    }
     queueRenderPage(pdfPageNum);
 }
 
@@ -861,7 +896,8 @@ function onNextPage() {
 async function updatePdfProgressAndCheckCompletion(newPageNum) {
      if (!currentUser || !currentCourseIdInternal || !currentChapterNumber) return;
      const progress = userCourseProgressMap.get(currentCourseIdInternal);
-     if (!progress) return;
+     // Do nothing if viewer mode
+     if (!progress || progress.enrollmentMode === 'viewer') return;
 
      progress.pdfProgress = progress.pdfProgress || {};
      progress.pdfProgress[currentChapterNumber] = progress.pdfProgress[currentChapterNumber] || { currentPage: 0, totalPages: pdfTotalPages || 0 };
@@ -900,6 +936,10 @@ export async function handlePdfSnapshotForAI() {
      const explanationArea = document.getElementById('ai-explanation-area');
      const explanationContent = document.getElementById('ai-explanation-content');
      if (!explanationArea || !explanationContent) { hideLoading(); return; }
+
+     // Clear previous history when asking about a new snapshot
+     currentPdfExplanationHistory = [];
+
      explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Generating explanation...</p></div>`;
      explanationArea.classList.remove('hidden');
      try {
@@ -907,9 +947,22 @@ export async function handlePdfSnapshotForAI() {
           const base64ImageData = imageDataUrl.split(',')[1];
           if (!base64ImageData) throw new Error("Failed to capture image data.");
           const context = `PDF page ${pdfPageNum} for Chapter ${currentChapterNumber}.`;
+
+          // Call AI explanation function (assume it doesn't use history for snapshot yet)
+          // TODO: Modify getExplanationForPdfSnapshot to handle history like generateExplanation if follow-up is needed here too
           const explanationHtml = await getExplanationForPdfSnapshot(userQuestion, base64ImageData, context);
-          explanationContent.innerHTML = explanationHtml;
+
+          explanationContent.innerHTML = explanationHtml; // Initial explanation
           await renderMathIn(explanationContent);
+
+          // Add follow-up input if desired for snapshot explanations
+           const followUpInputHtml = `
+               <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
+                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+                   <button onclick="window.askPdfFollowUp()" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
+               </div>`;
+           explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
+
           hideLoading();
      } catch(error) {
           hideLoading();
@@ -917,237 +970,166 @@ export async function handlePdfSnapshotForAI() {
           explanationContent.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
      }
 }
+// MODIFIED: Renamed original function to Internal
+async function handleExplainSelectionInternal(selectedText, context, source) { // source: 'transcription' or 'pdf'
+    const explanationArea = document.getElementById('ai-explanation-area');
+    const explanationContent = document.getElementById('ai-explanation-content');
+    if (!explanationArea || !explanationContent) return;
 
-// --- Main UI Function ---
-export async function showCourseStudyMaterial(courseId, chapterNum, videoIdx = 0) {
-    window.cleanupPdfViewer?.();
-    window.cleanupYouTubePlayers?.();
+    // Reset history based on source
+    if(source === 'transcription') currentTranscriptionExplanationHistory = [];
+    // else if (source === 'pdf') // PDF text selection not implemented yet
 
-    currentCourseIdInternal = courseId;
-    currentChapterNumber = chapterNum;
-    currentVideoIndex = videoIdx;
-    isTranscriptionExpanded = false; // Reset transcription view state
-    setLastViewedChapterForNotes(chapterNum); // Track the last viewed chapter for notes
+    explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Generating explanation...</p></div>`;
+    explanationArea.classList.remove('hidden');
 
-    if (!currentUser || !courseId || !chapterNum) { return; }
-    setActiveCourseId(courseId);
-    setActiveSidebarLink('sidebar-study-material-link', 'sidebar-course-nav'); // Highlight Study Material
-
-    const courseDef = globalCourseDataMap.get(courseId);
-    if (!courseDef) { return; }
-    if (chapterNum < 1 || chapterNum > courseDef.totalChapters) {
-        console.warn(`Invalid chapter number ${chapterNum} requested for course ${courseId}`);
-        showCurrentCourseDashboard(courseId); // Go back to dashboard if invalid chapter
-        return;
-    }
-
-    let chapterTitle = `Chapter ${chapterNum}`;
-    if (courseDef.chapters && Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterNum) {
-        chapterTitle = courseDef.chapters[chapterNum - 1] || chapterTitle;
-    }
-    const totalChapters = courseDef.totalChapters;
-
-    const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
-    chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
-
-    if (currentVideoIndex < 0 || currentVideoIndex >= chapterLectureVideos.length) {
-         currentVideoIndex = 0;
-    }
-
-    const currentVideo = chapterLectureVideos[currentVideoIndex];
-    const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
-
-    showLoading(`Loading Chapter ${chapterNum} Material...`);
-    currentTranscriptionData = [];
-    let transcriptionFullPath = null;
-    if (currentVideo && currentVideo.title) {
-         const srtFilename = getSrtFilenameFromTitle(currentVideo.title);
-         if (srtFilename) {
-              transcriptionFullPath = `${COURSE_TRANSCRIPTION_BASE_PATH}${srtFilename}`;
-              console.log(`Attempting to fetch transcription from: ${transcriptionFullPath}`);
-              currentTranscriptionData = await fetchAndParseSrt(transcriptionFullPath);
-         } else { console.warn(`Could not generate SRT filename for title: ${currentVideo.title}`); }
-    } else { console.log("No current video or title to fetch transcription for."); }
-    currentPdfTextContent = null; // Reset AI text cache
-
-    // Pre-fetch video durations if not already cached
-    const videoIdsInChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id);
-    await fetchVideoDurationsIfNeeded(videoIdsInChapter);
-
-    hideLoading();
-
-    // --- Generate HTML ---
-    let studyMaterialHtml = `<div class="space-y-6">`;
-    // Navigation and Title
-    studyMaterialHtml += `
-       <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
-           <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(chapterTitle)}</h2>
-           <div class="flex space-x-2">
-               <button onclick="window.navigateChapterMaterial('${courseId}', ${chapterNum - 1})" ${chapterNum <= 1 ? 'disabled' : ''} class="btn-secondary-small" title="Previous Chapter">Prev Ch</button>
-               <button onclick="window.navigateChapterMaterial('${courseId}', ${chapterNum + 1})" ${chapterNum >= totalChapters ? 'disabled' : ''} class="btn-secondary-small" title="Next Chapter">Next Ch</button>
-               <button onclick="window.displayCourseContentMenu('${courseId}')" class="btn-secondary-small" title="Back to Chapter List">Chapters</button>
-           </div>
-       </div>`;
-
-    // Lecture Video Section
-    studyMaterialHtml += `<div class="content-card">`;
-    studyMaterialHtml += `<h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Lecture Video</h3>`;
-    if (chapterLectureVideos.length > 0) {
-         const currentVideoTitle = currentVideo?.title || 'Video';
-         const videoId = currentVideo ? getYouTubeVideoId(currentVideo.url) : null;
-         const playerId = `ytplayer-${chapterNum}-${currentVideoIndex}`;
-         studyMaterialHtml += `<div class="mb-3 flex justify-between items-center">`;
-         studyMaterialHtml += `<p class="text-sm font-medium text-gray-600 dark:text-gray-400">Lecture ${currentVideoIndex + 1} of ${chapterLectureVideos.length}: ${escapeHtml(currentVideoTitle)}</p>`;
-         studyMaterialHtml += `<div class="flex space-x-1"> <button onclick="window.switchVideo(${currentVideoIndex - 1})" ${currentVideoIndex <= 0 ? 'disabled' : ''} class="btn-secondary-small text-xs" title="Previous Video"><svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M12.79 5.23a.75.75 0 0 1-.02 1.06L8.832 10l3.938 3.71a.75.75 0 1 1-1.04 1.08l-4.5-4.25a.75.75 0 0 1 0-1.08l4.5-4.25a.75.75 0 0 1 1.06.02Z' clip-rule='evenodd' /></svg></button> <button onclick="window.switchVideo(${currentVideoIndex + 1})" ${currentVideoIndex >= chapterLectureVideos.length - 1 ? 'disabled' : ''} class="btn-secondary-small text-xs" title="Next Video"><svg class='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'><path fill-rule='evenodd' d='M7.21 14.77a.75.75 0 0 1 .02-1.06L11.168 10 7.23 6.29a.75.75 0 1 1 1.04-1.08l4.5 4.25a.75.75 0 0 1 0 1.08l-4.5 4.25a.75.75 0 0 1-1.06-.02Z' clip-rule='evenodd' /></svg></button> </div>`; studyMaterialHtml += `</div>`;
-         if (videoId) { studyMaterialHtml += `<div class="aspect-w-16 aspect-h-9 bg-black rounded shadow"><div id="${playerId}">Loading Player...</div></div>`; }
-         else { studyMaterialHtml += `<p class="text-sm text-red-500">Error: Could not get video ID for <a href="${escapeHtml(currentVideo?.url || '#')}" target="_blank" class="link">this video</a>.</p>`; }
-    } else { studyMaterialHtml += `<p class="text-sm text-muted">No lecture videos assigned to this chapter.</p>`; }
-    studyMaterialHtml += `</div>`;
-
-    // Transcription Section
-    studyMaterialHtml += `<div class="content-card">`;
-    studyMaterialHtml += `<div class="flex justify-between items-center mb-3"> <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Lecture Transcription</h3> <button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs" title="Show the full transcription text" ${currentTranscriptionData.length === 0 ? 'disabled' : ''}>${isTranscriptionExpanded ? 'Collapse Transcription' : 'Expand Transcription'}</button> </div>`;
-    studyMaterialHtml += `<div id="transcription-content" class="text-sm leading-relaxed ${isTranscriptionExpanded ? 'max-h-96' : 'max-h-32'} overflow-y-auto p-3 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 whitespace-normal font-mono text-xs shadow-inner"> </div>`;
-    if (currentTranscriptionData && currentTranscriptionData.length > 0) { studyMaterialHtml += `<div class="mt-3"> <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs">Explain Selected Text (AI)</button> <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small ml-2 text-xs">Ask Question (AI)</button> </div>`; }
-    studyMaterialHtml += `</div>`;
-
-    // PDF Viewer Section
-    studyMaterialHtml += `<div class="content-card">`;
-    studyMaterialHtml += `<h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Chapter PDF</h3>`;
-    if (pdfPath) {
-         studyMaterialHtml += ` <div id="pdf-viewer-wrapper" class="mb-4"> <div id="pdf-viewer-container" class="h-[70vh] max-h-[800px] mb-2 bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 overflow-auto shadow-inner rounded"></div> <div id="pdf-controls" class="hidden items-center justify-center space-x-4 mt-2"> <button id="pdf-prev" class="btn-secondary-small">< Prev</button> <span>Page <span id="pdf-page-num">1</span> / <span id="pdf-page-count">?</span></span> <button id="pdf-next" class="btn-secondary-small">Next ></button> </div> </div> <button id="pdf-explain-button" onclick="window.handlePdfSnapshotForAI()" class="btn-secondary-small text-xs" disabled>Ask AI About This Page</button> <a href="${escapeHtml(encodeURI(pdfPath))}" target="_blank" class="link text-xs ml-4">(Open PDF in new tab)</a>`;
-     } else { studyMaterialHtml += `<p class="text-sm text-muted">No PDF available for this chapter.</p>`; }
-    studyMaterialHtml += `</div>`;
-
-    // Actions & Resources Section
-    studyMaterialHtml += `<div class="content-card"> <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Actions & Resources</h3> <div class="flex flex-wrap gap-3 mb-4">`;
-    const canUseAI = (currentTranscriptionData && currentTranscriptionData.length > 0) || pdfPath;
-    studyMaterialHtml += `<button id="view-formula-btn" onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary flex-1" ${!canUseAI ? 'disabled' : ''} title="${canUseAI ? 'Generate formula sheet using AI' : 'Requires Transcription or PDF'}">View Formula Sheet (AI)</button>`;
-    // Skip Exam button (always enable if content exists, logic handled on click/result)
-    studyMaterialHtml += `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning flex-1" ${!canUseAI ? 'disabled' : ''} title="${canUseAI ? `Take exam (${SKIP_EXAM_PASSING_PERCENT}%) to achieve 100% progress for this chapter` : 'Requires Transcription or PDF'}">Take Skip Exam (AI)</button>`;
-    // Add Summary button
-    studyMaterialHtml += `<button id="view-summary-btn" onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary flex-1" ${!canUseAI ? 'disabled' : ''} title="${canUseAI ? 'Generate summary using AI' : 'Requires Transcription or PDF'}">View Summary (AI)</button>`;
-
-    studyMaterialHtml += `</div>`;
-    // Formula Sheet Area
-    studyMaterialHtml += `<div id="formula-sheet-area" class="mt-4 hidden border-t dark:border-gray-700 pt-4"> <div class="flex justify-between items-center mb-2"> <h4 class="text-base font-semibold text-gray-700 dark:text-gray-300">Generated Formula Sheet</h4> <button id="download-formula-pdf-btn" class="btn-secondary-small text-xs hidden" onclick="window.downloadFormulaSheetPdf()">Download PDF</button> </div> <div id="formula-sheet-content" class="prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600"></div> </div>`;
-    // Chapter Summary Area
-    studyMaterialHtml += `<div id="chapter-summary-area" class="mt-4 hidden border-t dark:border-gray-700 pt-4"> <div class="flex justify-between items-center mb-2"> <h4 class="text-base font-semibold text-gray-700 dark:text-gray-300">Generated Chapter Summary</h4> <button id="download-summary-pdf-btn" class="btn-secondary-small text-xs hidden" onclick="window.downloadChapterSummaryPdf()">Download PDF</button> </div> <div id="chapter-summary-content" class="prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600"></div> </div>`;
-
-    studyMaterialHtml += `</div>`; // Close Actions card
-
-
-    // AI Explanation Area
-    studyMaterialHtml += `<div id="ai-explanation-area" class="content-card fixed bottom-4 right-4 w-full max-w-md bg-white dark:bg-gray-800 border dark:border-gray-600 shadow-xl rounded-lg p-4 z-50 hidden max-h-[45vh] overflow-y-auto transition-all duration-300 ease-out">`;
-    studyMaterialHtml += `<div class="flex justify-between items-center mb-2"> <h4 class="text-base font-semibold text-purple-700 dark:text-purple-300">AI Explanation</h4> <button onclick="document.getElementById('ai-explanation-area').classList.add('hidden');" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl leading-none p-1">×</button> </div>`;
-    studyMaterialHtml += `<div id="ai-explanation-content" class="text-sm"></div>`;
-    studyMaterialHtml += `</div>`;
-
-
-    studyMaterialHtml += `</div>`; // Close main container
-    displayContent(studyMaterialHtml, 'course-dashboard-area');
-
-    // --- Post-Render Initializations ---
-    if (pdfPath) { requestAnimationFrame(() => initPdfViewer(pdfPath)); }
-    else { const pdfContainer = document.getElementById('pdf-viewer-container'); if (pdfContainer) { pdfContainer.innerHTML = '<p class="text-muted italic p-4 text-center">No PDF configured for this chapter.</p>'; } }
-    if (currentVideo) { const videoId = getYouTubeVideoId(currentVideo.url); const playerId = `ytplayer-${chapterNum}-${currentVideoIndex}`; if (videoId) { requestAnimationFrame(() => { createYTPlayer(playerId, videoId); }); } }
-    renderTranscriptionLines();
-    if (currentTranscriptionData && currentTranscriptionData.length > 0) { if (transcriptionHighlightInterval) clearInterval(transcriptionHighlightInterval); transcriptionHighlightInterval = setInterval(highlightTranscriptionLine, 500); }
-}
-
-// --- Other Functions (Skip Exam, AI Explanation, Formula Sheet, Navigation) ---
-export async function triggerSkipExamGeneration(courseId, chapterNum) {
-    if (!currentUser) {
-        alert("Please log in.");
-        return;
-    }
-
-    // Check if chapter already studied (skip exam passed or 100% progress)
-    const progress = userCourseProgressMap.get(courseId);
-    if (progress?.courseStudiedChapters?.includes(chapterNum)) {
-         if (confirm(`Chapter ${chapterNum} is already marked as studied. Do you want to retake the skip exam anyway?`)) {
-             // Allow retake if confirmed
-         } else {
-             return; // Cancel if already studied and user doesn't want to retake
-         }
-    } else if (!window.confirm(`Generate and start a skip exam for Chapter ${chapterNum}? Passing this exam (${SKIP_EXAM_PASSING_PERCENT}%) will mark the chapter as fully studied.`)) {
-        return; // Cancel if user doesn't confirm
-    }
-
-
-    showLoading(`Generating Skip Exam for Chapter ${chapterNum}...`);
     try {
-         // GenerateSkipExam now primarily gets MCQs based on content
-        const examMCQText = await generateSkipExam(courseId, chapterNum); // Fetch content inside AI function
-        if (!examMCQText) throw new Error("Failed to generate exam MCQ content.");
+        // Initial call, empty history
+        const result = await explainStudyMaterialSnippet(selectedText, context, []);
+        explanationContent.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Wrap initial response
+        await renderMathIn(explanationContent);
 
-        // Parse only the MCQ part
-        const parsedMCQs = parseSkipExamText(examMCQText, chapterNum);
-        if (!parsedMCQs || parsedMCQs.questions.length === 0) {
-             console.warn("AI generated skip exam text, but no MCQs could be parsed. Format might be incorrect.");
-             // Proceed to try and parse problems
-        }
+        // Store history for this source
+         if(source === 'transcription') currentTranscriptionExplanationHistory = result.history;
 
-        // Get predefined problems for the chapter (from test_logic)
-        await parseChapterProblems(); // Ensure problem cache is loaded
-        const problems = selectProblemsForExam(chapterNum, 5); // Aim for 5 problems
+        // Add follow-up input
+        const followUpInputHtml = `
+            <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
+                 <input type="text" id="text-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+                 <button onclick="window.askTextFollowUp('${source}')" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
+            </div>`;
+        explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
 
-        // Combine parsed MCQs and problems
-        // Target around 10-15 total questions for a skip exam
-        const combinedExamItems = combineProblemsWithQuestions(problems, parsedMCQs?.questions || [], 15);
 
-        if (combinedExamItems.length === 0) {
-             throw new Error("Failed to generate or select any questions/problems for the skip exam.");
-        }
-
-        // Prepare answers map - only for MCQs
-        const answersMap = {};
-        combinedExamItems.forEach(item => {
-             if (!item.isProblem && item.answer) { // Only add answers for MCQs
-                 answersMap[item.id] = item.answer;
-             }
-        });
-
-        const examId = `SkipExam-C${chapterNum}-${Date.now().toString().slice(-6)}`;
-        const examState = {
-            examId: examId,
-            questions: combinedExamItems, // Combined list
-            correctAnswers: answersMap, // Only MCQ answers
-            userAnswers: {}, // User answers for both MCQs and problems
-            allocation: null, // Allocation not applicable for generated exams like this
-            startTime: Date.now(),
-            timerInterval: null,
-            currentQuestionIndex: 0,
-            status: 'active',
-            durationMinutes: Math.max(15, Math.min(60, combinedExamItems.length * 2)), // Adjust duration based on count
-            courseContext: {
-                isCourseActivity: true,
-                isSkipExam: true,
-                courseId: courseId,
-                activityType: 'skip_exam',
-                activityId: `chapter${chapterNum}`,
-                chapterNum: chapterNum
-            }
-        };
-
-        setCurrentOnlineTestState(examState);
-        hideLoading();
-        launchOnlineTestUI();
     } catch (error) {
-        hideLoading();
-        console.error(`Error generating or launching skip exam for Chapter ${chapterNum}:`, error);
-        alert(`Failed to start Skip Exam: ${error.message}`);
+        console.error("Error getting explanation:", error);
+        explanationContent.innerHTML = `<p class="text-danger text-sm">Error: ${error.message}</p>`;
     }
 }
-async function handleExplainSelectionInternal(selectedText, context) {
-     const explanationArea = document.getElementById('ai-explanation-area'); const explanationContent = document.getElementById('ai-explanation-content'); if (!explanationArea || !explanationContent) return; explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Generating explanation...</p></div>`; explanationArea.classList.remove('hidden'); try { const explanationHtml = await explainStudyMaterialSnippet(selectedText, context); explanationContent.innerHTML = explanationHtml; await renderMathIn(explanationContent); } catch (error) { console.error("Error getting explanation:", error); explanationContent.innerHTML = `<p class="text-danger text-sm">Error: ${error.message}</p>`; }
- }
+// MODIFIED: Wrapper function
 export function handleExplainSelection(sourceType) {
-    if (sourceType !== 'transcription') return; let selectedText = window.getSelection()?.toString().trim(); if (!selectedText) { alert("Please select text from the transcription to explain."); return; } if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) { alert("Cannot explain: Transcription context missing."); return; } const context = `From Transcription for Chapter ${currentChapterNumber}.`; const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' '); handleExplainSelectionInternal(selectedText, `Context: ${context}\nFull Transcription Text (for context): ${fullTranscriptionText.substring(0, 5000)}...`);
+    if (sourceType !== 'transcription') {
+        // Currently only supporting transcription selection
+        alert("Text selection explanation is only available for transcriptions currently.");
+        return;
+    }
+    let selectedText = window.getSelection()?.toString().trim();
+    if (!selectedText) {
+        alert("Please select text from the transcription to explain.");
+        return;
+    }
+    if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) {
+        alert("Cannot explain: Transcription context missing.");
+        return;
+    }
+    const context = `From Transcription for Chapter ${currentChapterNumber}.`;
+    const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' ');
+    handleExplainSelectionInternal(selectedText, `Context: ${context}\nFull Transcription Text (for context): ${fullTranscriptionText.substring(0, 5000)}...`, 'transcription');
 }
+// MODIFIED: Wrapper function
 export function askQuestionAboutTranscription() {
-     if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) { alert("Cannot ask question: Transcription context missing."); return; } const userQuestion = prompt(`Ask a question about the transcription for Chapter ${currentChapterNumber}:`); if (!userQuestion || userQuestion.trim() === "") return; const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' '); handleExplainSelectionInternal(userQuestion, `Context: Chapter ${currentChapterNumber} Transcription.\nFull Text (for context): ${fullTranscriptionText.substring(0, 8000)}...`);
+     if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) { alert("Cannot ask question: Transcription context missing."); return; }
+     const userQuestion = prompt(`Ask a question about the transcription for Chapter ${currentChapterNumber}:`);
+     if (!userQuestion || userQuestion.trim() === "") return;
+     const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' ');
+     handleExplainSelectionInternal(userQuestion, `Context: Chapter ${currentChapterNumber} Transcription.\nFull Text (for context): ${fullTranscriptionText.substring(0, 8000)}...`, 'transcription');
 }
+// NEW: Follow-up function for text explanations
+window.askTextFollowUp = async (source) => {
+    const inputElement = document.getElementById('text-follow-up-input');
+    const explanationArea = document.getElementById('ai-explanation-area');
+    const explanationContent = explanationArea?.querySelector('#ai-explanation-content'); // Target specific content area
+    let history = (source === 'transcription') ? currentTranscriptionExplanationHistory : []; // Add logic for PDF later if needed
+
+    if (!inputElement || !explanationContent || !history) return;
+
+    const followUpText = inputElement.value.trim();
+    if (!followUpText) return;
+
+    inputElement.disabled = true;
+    const askButton = inputElement.nextElementSibling;
+    if (askButton) askButton.disabled = true;
+
+    // Append user follow-up
+    explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
+
+    // Append loading indicator
+    const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
+    explanationContent.insertAdjacentHTML('beforeend', loadingHtml);
+    explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container
+
+    try {
+        // Call API using history
+        const result = await explainStudyMaterialSnippet(followUpText, null, history); // Pass follow-up as snippet, null context, use history
+
+        // Update history
+        if(source === 'transcription') currentTranscriptionExplanationHistory = result.history;
+
+        explanationContent.querySelector('.ai-loading')?.remove(); // Remove loader
+        explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+        inputElement.value = '';
+        await renderMathIn(explanationContent);
+        explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container
+
+    } catch (error) {
+        console.error("Error asking follow-up:", error);
+        explanationContent.querySelector('.ai-loading')?.remove();
+        explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+    } finally {
+        inputElement.disabled = false;
+        if (askButton) askButton.disabled = false;
+    }
+};
+// NEW: Follow-up function for PDF Snapshot explanations
+window.askPdfFollowUp = async () => {
+     const inputElement = document.getElementById('pdf-follow-up-input');
+     const explanationArea = document.getElementById('ai-explanation-area');
+     const explanationContent = explanationArea?.querySelector('#ai-explanation-content'); // Target specific content area
+     let history = currentPdfExplanationHistory; // Use PDF specific history
+
+     if (!inputElement || !explanationContent || !history) return;
+
+     const followUpText = inputElement.value.trim();
+     if (!followUpText) return;
+
+     inputElement.disabled = true;
+     const askButton = inputElement.nextElementSibling;
+     if (askButton) askButton.disabled = true;
+
+     explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
+     const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
+     explanationContent.insertAdjacentHTML('beforeend', loadingHtml);
+     explanationArea.scrollTop = explanationArea.scrollHeight;
+
+     try {
+          // Re-call the snapshot explanation function, passing history
+          // NOTE: getExplanationForPdfSnapshot needs modification to accept/use history
+          // For now, let's simulate by just sending the follow-up text as a new query.
+          // This won't have memory of the image, which is a limitation.
+          // A true implementation requires modifying getExplanationForPdfSnapshot AND the Vision API call structure.
+          console.warn("PDF Follow-up Limitation: AI currently lacks memory of the previous image snapshot in follow-up questions.");
+          const result = await explainStudyMaterialSnippet(followUpText, "Follow-up question regarding previous PDF page image.", history); // Simulate
+
+          currentPdfExplanationHistory = result.history; // Update history
+
+          explanationContent.querySelector('.ai-loading')?.remove();
+          explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+          inputElement.value = '';
+          await renderMathIn(explanationContent);
+          explanationArea.scrollTop = explanationArea.scrollHeight;
+
+     } catch (error) {
+          console.error("Error asking PDF follow-up:", error);
+          explanationContent.querySelector('.ai-loading')?.remove();
+          explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+     } finally {
+          inputElement.disabled = false;
+          if (askButton) askButton.disabled = false;
+     }
+};
+
+
+// MODIFIED: Use USER specific load/save
 export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate = false) {
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
@@ -1234,6 +1216,7 @@ export async function downloadFormulaSheetPdf() {
     }
 }
 
+// MODIFIED: Use USER specific load/save
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
@@ -1328,11 +1311,14 @@ export function navigateChapterMaterial(courseId, chapterNum) {
 async function switchVideo(newIndex) {
     if (!currentCourseIdInternal || !currentChapterNumber || !chapterLectureVideos) return;
     if (newIndex >= 0 && newIndex < chapterLectureVideos.length) {
-        // Save progress for the *current* video before switching
-        const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
-        const currentPlayerState = ytPlayers[currentPlayerElementId];
-        if (currentPlayerState && currentPlayerState.player) {
-            await saveVideoWatchProgress(currentPlayerState.videoId); // Await saving
+        // Save progress for the *current* video before switching (only if not viewer)
+        const progress = userCourseProgressMap.get(currentCourseIdInternal);
+        if (progress?.enrollmentMode !== 'viewer') {
+            const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
+            const currentPlayerState = ytPlayers[currentPlayerElementId];
+            if (currentPlayerState && currentPlayerState.player) {
+                await saveVideoWatchProgress(currentPlayerState.videoId); // Await saving
+            }
         }
         // Navigate to the new video within the same chapter view
         showCourseStudyMaterial(currentCourseIdInternal, currentChapterNumber, newIndex);
@@ -1362,3 +1348,248 @@ async function fetchVideoDurationsIfNeeded(videoIds) {
         idsToFetch.forEach(id => { if (videoDurationMap[id] === undefined) videoDurationMap[id] = null; });
     } catch (error) { console.error("Error fetching video durations:", error); idsToFetch.forEach(id => videoDurationMap[id] = null); }
 }
+
+// --- NEW: Ask AI about the entire PDF ---
+async function askAboutFullPdf() {
+     if (!pdfDoc || !currentCourseIdInternal || !currentChapterNumber) {
+         alert("PDF document or course context is not available.");
+         return;
+     }
+     const userQuestion = prompt(`Ask a question about the entire Chapter ${currentChapterNumber} PDF document:`);
+     if (!userQuestion || userQuestion.trim() === "") return;
+
+     const explanationArea = document.getElementById('ai-explanation-area');
+     const explanationContent = document.getElementById('ai-explanation-content');
+     if (!explanationArea || !explanationContent) return;
+
+     // Clear previous history for PDF questions
+     currentPdfExplanationHistory = [];
+
+     explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Analyzing full PDF and generating explanation...</p></div>`;
+     explanationArea.classList.remove('hidden');
+
+     try {
+          const courseDef = globalCourseDataMap.get(currentCourseIdInternal);
+          const chapterResources = courseDef?.chapterResources?.[currentChapterNumber] || {};
+          const pdfPath = chapterResources.pdfPath || courseDef?.pdfPathPattern?.replace('{num}', currentChapterNumber);
+          if (!pdfPath) throw new Error("PDF path not found for this chapter.");
+
+          // Use the imported function from ai_integration.js
+          const explanationResult = await askAboutPdfDocument(userQuestion, pdfPath, currentCourseIdInternal, currentChapterNumber); // Assuming askAboutPdfDocument now returns { explanationHtml, history }
+
+          currentPdfExplanationHistory = explanationResult.history; // Store history
+          explanationContent.innerHTML = `<div class="ai-chat-turn">${explanationResult.explanationHtml}</div>`; // Wrap initial response
+          await renderMathIn(explanationContent);
+
+          // Add follow-up input
+           const followUpInputHtml = `
+               <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
+                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+                   <button onclick="window.askPdfFollowUp()" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
+               </div>`;
+           explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
+
+
+     } catch (error) {
+          console.error("Error asking about PDF document:", error);
+          explanationContent.innerHTML = `<p class="text-danger text-sm">Error processing request: ${error.message}. PDF might be unscannable or too large.</p>`;
+     }
+}
+window.askAboutFullPdf = askAboutFullPdf;
+
+// --- Main UI Function ---
+/**
+ * Displays the study material (videos, PDF, transcription) for a specific chapter.
+ * @param {string} courseId - The ID of the course.
+ * @param {number} chapterNum - The chapter number to display.
+ * @param {number} [initialVideoIndex=0] - The index of the video to show initially.
+ */
+// *** ADDED EXPORT KEYWORD ***
+export async function showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex = 0) {
+     cleanupPdfViewer(); // Clean up previous PDF instance
+     window.cleanupYouTubePlayers(); // Clean up previous players
+     currentCourseIdInternal = courseId; currentChapterNumber = chapterNum;
+     // Update the context for the notes panel
+     setLastViewedChapterForNotes(chapterNum);
+     setActiveSidebarLink('sidebar-study-material-link', 'sidebar-course-nav');
+     displayContent(`<div id="study-material-content-area" class="animate-fade-in"><div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4 text-sm text-muted">Loading Chapter ${chapterNum} materials...</p></div></div>`, 'course-dashboard-area');
+     const contentArea = document.getElementById('study-material-content-area');
+     const courseDef = globalCourseDataMap.get(courseId);
+     if (!courseDef) { contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course definition not found.</p>'; return; }
+     const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`;
+     const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
+     chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
+     const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
+     const currentVideo = chapterLectureVideos[initialVideoIndex];
+     const videoId = currentVideo ? getYouTubeVideoId(currentVideo.url) : null;
+     const totalVideos = chapterLectureVideos.length;
+     currentVideoIndex = initialVideoIndex;
+     currentTranscriptionData = []; // Reset transcription
+     const srtFilename = currentVideo ? getSrtFilenameFromTitle(currentVideo.title) : null;
+     const srtPath = srtFilename ? `${COURSE_TRANSCRIPTION_BASE_PATH}${srtFilename}` : null;
+     const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+     const progress = userCourseProgressMap.get(courseId);
+     const isViewer = progress?.enrollmentMode === 'viewer';
+
+     // --- Fetch necessary data ---
+     if (srtPath) {
+        // *** MODIFIED: Use fetchAndParseSrt instead of fetchSrtText ***
+        currentTranscriptionData = await fetchAndParseSrt(srtPath);
+     }
+     await fetchVideoDurationsIfNeeded(videoIdsForChapter);
+     // --- End Fetching ---
+
+     let videoNavHtml = '';
+     if (totalVideos > 1) {
+          videoNavHtml = `<div class="flex justify-between items-center mt-2 mb-1 text-sm">`;
+          if (initialVideoIndex > 0) videoNavHtml += `<button onclick="window.switchVideo(${initialVideoIndex - 1})" class="btn-secondary-small text-xs">← Previous Video</button>`;
+          else videoNavHtml += `<span></span>`; // Placeholder for spacing
+          videoNavHtml += `<span class="text-muted font-medium">${initialVideoIndex + 1} / ${totalVideos}</span>`;
+          if (initialVideoIndex < totalVideos - 1) videoNavHtml += `<button onclick="window.switchVideo(${initialVideoIndex + 1})" class="btn-secondary-small text-xs">Next Video →</button>`;
+          else videoNavHtml += `<span></span>`; // Placeholder for spacing
+          videoNavHtml += `</div>`;
+     }
+     const videoContainerId = `ytplayer-${chapterNum}-${initialVideoIndex}`;
+     const videoHtml = currentVideo ? `
+        <div class="mb-4">
+             <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">${initialVideoIndex+1}. ${escapeHtml(currentVideo.title)}</h4>
+            ${videoNavHtml}
+             <div id="${videoContainerId}" class="aspect-video bg-black rounded-lg overflow-hidden">
+                <!-- YouTube player will be embedded here -->
+                 <div class="flex items-center justify-center h-full"><p class="text-gray-400">Loading video...</p></div>
+             </div>
+        </div>` : '<p class="text-muted text-center">No primary video available for this chapter part.</p>';
+     const transcriptionHtml = srtPath ? `
+        <div class="mt-4 border-t pt-3 dark:border-gray-700">
+             <h4 class="text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Transcription</h4>
+             <div id="transcription-content" class="text-xs leading-relaxed max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-600 scroll-smooth">
+                 <!-- Transcription lines will be rendered here by JS -->
+             </div>
+              <button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>
+         </div>` : '';
+     const pdfHtml = pdfPath ? `
+        <div class="mb-4 border-t pt-4 dark:border-gray-700">
+            <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
+            <div id="pdf-controls" class="mb-2 hidden items-center gap-3 justify-center">
+                 <button id="pdf-prev" class="btn-secondary-small text-xs">Prev</button>
+                 <span class="text-xs">Page <span id="pdf-page-num">1</span> / <span id="pdf-page-count">?</span></span>
+                 <button id="pdf-next" class="btn-secondary-small text-xs">Next</button>
+                 <button id="pdf-explain-button" onclick="window.handlePdfSnapshotForAI()" class="btn-secondary-small text-xs ml-auto" disabled title="Ask AI about the current page view">Ask AI (Page)</button>
+                 <button onclick="window.askAboutFullPdf()" class="btn-secondary-small text-xs" title="Ask AI about the entire PDF document">Ask AI (Doc)</button>
+            </div>
+            <div id="pdf-viewer-container" class="h-[70vh] relative overflow-auto border dark:border-gray-600 rounded bg-gray-200 dark:bg-gray-700">
+                <!-- PDF will be rendered here -->
+                <p class="text-center p-4 text-muted">Loading PDF...</p>
+            </div>
+        </div>` : '<p class="text-muted text-center">No PDF available for this chapter.</p>';
+     const aiExplanationHtml = `
+         <div id="ai-explanation-area" class="fixed bottom-4 right-4 w-80 max-h-[60vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 hidden flex flex-col z-50 animate-fade-in">
+             <div class="flex justify-between items-center p-2 border-b dark:border-gray-600 flex-shrink-0">
+                 <h5 class="text-sm font-semibold text-purple-700 dark:text-purple-300">AI Tutor</h5>
+                 <button onclick="this.closest('#ai-explanation-area').classList.add('hidden'); this.closest('#ai-explanation-area').innerHTML = '';" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+             </div>
+             <div id="ai-explanation-content" class="p-3 overflow-y-auto text-sm flex-grow">
+                 <!-- AI content loads here -->
+             </div>
+             <!-- Follow-up input will be added dynamically -->
+         </div>`;
+     const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
+     const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
+     contentArea.innerHTML = `
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
+             <div class="flex gap-2">
+                ${skipExamButtonHtml}
+                 <button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary-small text-xs">Back to Dashboard</button>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+             <!-- Left Column: Video & Transcription -->
+             <div> ${videoHtml} ${transcriptionHtml} </div>
+             <!-- Right Column: PDF & Quick Actions -->
+             <div> ${pdfHtml}
+                  <div class="mt-4 border-t pt-4 dark:border-gray-700">
+                      <h4 class="text-md font-medium mb-2">Chapter Tools</h4>
+                      <div class="flex flex-wrap gap-2">
+                           <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI)">Formulas</button>
+                           <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI)">Summary</button>
+                           <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
+                           <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
+                      </div>
+                       <!-- Formula/Summary Display Area -->
+                       <div id="formula-sheet-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
+                            <div class="flex justify-between items-center mb-1"><span class="text-sm font-semibold">Formula Sheet</span><button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button></div>
+                            <div id="formula-sheet-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
+                       </div>
+                       <div id="chapter-summary-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
+                            <div class="flex justify-between items-center mb-1"><span class="text-sm font-semibold">Chapter Summary</span><button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button></div>
+                            <div id="chapter-summary-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
+                       </div>
+                  </div>
+            </div>
+        </div>
+        ${aiExplanationHtml}
+     `;
+     if (videoId) createYTPlayer(videoContainerId, videoId);
+     if (srtPath) renderTranscriptionLines(); // Render initial transcription state
+     if (pdfPath) await initPdfViewer(pdfPath); // Initialize PDF viewer
+     highlightTranscriptionLine(); // Initial highlight attempt
+     checkAndMarkChapterStudied(courseId, chapterNum); // Check status on load
+}
+// Assign to window scope for onclick handlers
+window.showCourseStudyMaterial = showCourseStudyMaterial;
+
+// MODIFIED: Define triggerSkipExamGeneration within this module
+export async function triggerSkipExamGeneration(courseId, chapterNum) {
+     if (!currentUser) { alert("Log in required."); return; }
+     if (!confirm(`Generate and start a Skip Exam for Chapter ${chapterNum}? Passing this exam will mark the chapter as studied.`)) return;
+     showLoading(`Generating Skip Exam for Chapter ${chapterNum}...`);
+     try {
+          // 1. Generate the raw exam text (MCQs only from AI)
+          const rawMcqText = await generateSkipExam(courseId, chapterNum);
+          if (!rawMcqText) throw new Error("AI failed to generate MCQ content.");
+
+          // 2. Parse the raw text to get structured MCQs and answers
+          const { questions: parsedMcqs, answers: mcqAnswers } = parseSkipExamText(rawMcqText, chapterNum);
+          if (!parsedMcqs || parsedMcqs.length === 0) {
+               throw new Error("Failed to parse valid MCQs from the generated text. AI output might be malformed.");
+          }
+          console.log(`Parsed ${parsedMcqs.length} MCQs for skip exam.`);
+
+          // 3. Prepare the online test state
+          const examId = `${courseId}-skip-ch${chapterNum}-${Date.now()}`;
+          const onlineTestState = {
+               examId: examId,
+               questions: parsedMcqs, // Use only parsed MCQs for skip exam
+               correctAnswers: mcqAnswers,
+               userAnswers: {},
+               allocation: null, // No complex allocation for skip exam
+               startTime: Date.now(),
+               timerInterval: null,
+               currentQuestionIndex: 0,
+               status: 'active',
+               // Shorter duration for skip exam (e.g., 1.5 min per MCQ)
+               durationMinutes: Math.max(15, Math.min(60, parsedMcqs.length * 1.5)),
+               courseContext: {
+                    isCourseActivity: true, // It's part of the course flow
+                    courseId: courseId,
+                    activityType: 'skip_exam',
+                    activityId: `chapter${chapterNum}`, // Unique identifier
+                    chapterNum: chapterNum,
+                    isSkipExam: true // Explicit flag
+               }
+          };
+          setCurrentOnlineTestState(onlineTestState);
+
+          hideLoading();
+          launchOnlineTestUI();
+
+     } catch (error) {
+          hideLoading();
+          console.error(`Error generating/starting Skip Exam for Chapter ${chapterNum}:`, error);
+          alert(`Could not start Skip Exam: ${error.message}`);
+     }
+}
+window.triggerSkipExamGeneration = triggerSkipExamGeneration; // Assign to window scope
+
+// --- END OF FILE ui_course_study_material.js ---

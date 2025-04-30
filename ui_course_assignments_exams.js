@@ -6,8 +6,8 @@ import { currentUser, userCourseProgressMap, globalCourseDataMap, activeCourseId
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 // MODIFIED: Added daysBetween import
 import { showLoading, hideLoading, escapeHtml, getFormattedDate, daysBetween } from './utils.js';
-// MODIFIED: Import problem selection/combination functions
-import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
+// *** MODIFIED: Import selectNewQuestionsAndUpdate from test_logic ***
+import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { ONLINE_TEST_DURATION_MINUTES, FOP_COURSE_ID } from './config.js'; // Added FOP_COURSE_ID for subject check
@@ -18,7 +18,8 @@ async function getSubjectMarkdown(subject) {
     // Use subject.fileName, default logic might need adjustment based on expected import data format
     const fileName = subject.fileName || (subject.name === "Fundamentals of Physics" ? "chapters.md" : `${subject.name}.md`);
     const safeFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const url = `${safeFileName}?t=${new Date().getTime()}`; // Add cache buster
+    // MODIFIED: Use relative path
+    const url = `./${safeFileName}?t=${new Date().getTime()}`; // Add cache buster
 
     console.log(`Fetching Markdown for subject ${subject.name} from: ${url}`);
     try {
@@ -175,6 +176,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
     if (progress.lastSkipExamScore) {
         for (let i = 1; i <= courseTotalChapters; i++) {
             const skipScore = progress.lastSkipExamScore[i] || progress.lastSkipExamScore[String(i)];
+            // Use config value for passing threshold
             if (skipScore !== undefined && skipScore !== null && skipScore >= (courseDef.skipExamPassingPercent || 70)) {
                 studiedChaptersSet.add(i);
             }
@@ -232,28 +234,31 @@ export async function startAssignmentOrExam(courseId, type, id) {
         }
 
         // --- Fetch Problems ---
-        await parseChapterProblems(); // Ensure problem cache is populated
+        // MODIFIED: Pass subject to problem parser
+        await parseChapterProblems(subject); // Ensure problem cache is populated for this subject
         let selectedProblems = [];
         chaptersToInclude.forEach(chapNum => {
-            // Select a small number of problems per chapter, e.g., 1-2 for assignments, more for exams
+            // Select a small number of problems per chapter, adjust counts per type
             let problemCount = 0;
-            if (type === 'assignment') problemCount = 1;
-            else if (type === 'weekly_exam') problemCount = 2;
-            else if (type === 'midcourse') problemCount = 3;
-            else if (type === 'final') problemCount = Math.max(1, Math.floor(5 / chaptersToInclude.length)); // Approx 5 total problems for final
+            if (type === 'assignment') problemCount = 2; // Example: 2 problems for daily
+            else if (type === 'weekly_exam') problemCount = 5; // Example: 5 problems for weekly
+            else if (type === 'midcourse') problemCount = 8; // Example: 8 problems for mid
+            else if (type === 'final') problemCount = 10; // Example: 10 problems for final
 
              if (problemCount > 0) {
-                 selectedProblems.push(...selectProblemsForExam(chapNum, problemCount));
+                 // MODIFIED: Pass subject.id
+                 selectedProblems.push(...selectProblemsForExam(chapNum, problemCount, subject.id));
              }
         });
         console.log(`Selected ${selectedProblems.length} problems.`);
 
         // --- Determine MCQ Count & Allocate ---
-        const problemRatio = 0.5; // Target 50% problems
-        const defaultCounts = { assignment: 10, weekly_exam: 20, midcourse: 30, final: 42 };
-        const totalTargetQuestions = defaultCounts[type] || 15;
-        const targetProblemCount = Math.min(selectedProblems.length, Math.floor(totalTargetQuestions * problemRatio));
+        // *** MODIFIED: Use specific counts from Requirement 5 ***
+        const defaultCounts = { assignment: 10, weekly_exam: 30, midcourse: 50, final: 60 };
+        const totalTargetQuestions = defaultCounts[type] || 15; // Fallback if type is somehow wrong
+        const targetProblemCount = Math.min(selectedProblems.length, Math.floor(totalTargetQuestions * 0.5)); // Still aim for ~50% problems if possible
         const targetMcqCount = totalTargetQuestions - targetProblemCount;
+
 
         let selectedMcqs = [];
         let mcqAnswers = {};
@@ -262,6 +267,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
             let totalAvailableMcqsInScope = 0;
             chaptersToInclude.forEach(chapNum => {
                 const c = subject.chapters[chapNum];
+                // Use 'available_questions' which is the list of question numbers
                 if (c && c.available_questions?.length > 0) {
                      relevantChaptersForAllocation[chapNum] = c;
                      totalAvailableMcqsInScope += c.available_questions.length;
@@ -270,30 +276,33 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
             if (totalAvailableMcqsInScope > 0) {
                 const finalMcqCount = Math.min(targetMcqCount, totalAvailableMcqsInScope);
-                const allocationCounts = allocateQuestions(relevantChaptersForAllocation, finalMcqCount);
-                const totalAllocatedMcqs = Object.values(allocationCounts).reduce((a, b) => a + b, 0);
+                 if (finalMcqCount > 0) { // Check if we actually need MCQs after min()
+                    const allocationCounts = allocateQuestions(relevantChaptersForAllocation, finalMcqCount);
+                    const totalAllocatedMcqs = Object.values(allocationCounts).reduce((a, b) => a + b, 0);
 
-                if (totalAllocatedMcqs > 0) {
-                    const selectedQuestionsMap = {};
-                    let actualTotalSelectedMcqs = 0;
-                    for (const chapNum in allocationCounts) {
-                        const n = allocationCounts[chapNum];
-                        if (n > 0) {
-                            const chap = subject.chapters[chapNum];
-                             const selected = selectQuestions(chap.available_questions, n, chap.total_questions); // Use non-updating select here
-                             if (selected.length > 0) {
-                                 selectedQuestionsMap[chapNum] = selected;
-                                 actualTotalSelectedMcqs += selected.length;
+                    if (totalAllocatedMcqs > 0) {
+                        const selectedQuestionsMap = {};
+                        let actualTotalSelectedMcqs = 0;
+                        for (const chapNum in allocationCounts) {
+                            const n = allocationCounts[chapNum];
+                            if (n > 0) {
+                                const chap = subject.chapters[chapNum];
+                                // *** CORRECTED: Use imported function ***
+                                 const selected = selectNewQuestionsAndUpdate(chap, n);
+                                 if (selected.length > 0) {
+                                     selectedQuestionsMap[chapNum] = selected;
+                                     actualTotalSelectedMcqs += selected.length;
+                                }
                             }
                         }
+                        if (actualTotalSelectedMcqs > 0) {
+                            const { questions: extractedMcqs, answers } = extractQuestionsFromMarkdown(subjectMd, selectedQuestionsMap);
+                            selectedMcqs = extractedMcqs;
+                            mcqAnswers = answers;
+                            console.log(`Selected ${selectedMcqs.length} MCQs.`);
+                        }
                     }
-                    if (actualTotalSelectedMcqs > 0) {
-                        const { questions: extractedMcqs, answers } = extractQuestionsFromMarkdown(subjectMd, selectedQuestionsMap);
-                        selectedMcqs = extractedMcqs;
-                        mcqAnswers = answers;
-                        console.log(`Selected ${selectedMcqs.length} MCQs.`);
-                    }
-                }
+                 } else { console.log("Skipping MCQ selection as finalMcqCount is 0.");}
             }
         } else if (targetMcqCount > 0 && !subjectMd) {
              console.warn("Targeted MCQs but Markdown content is missing.");
@@ -319,9 +328,19 @@ export async function startAssignmentOrExam(courseId, type, id) {
             currentQuestionIndex: 0,
             status: 'active',
             // Set duration based on type and final item count
-            durationMinutes: Math.max(15, Math.min(120, finalExamItems.length * 2.5)), // e.g., 2.5 mins per item
+            durationMinutes: Math.max(15, Math.min(180, finalExamItems.length * 2.5)), // Adjusted max duration, e.g., 3 hours max
             courseContext: { isCourseActivity: true, courseId: courseId, activityType: type, activityId: id }
         };
+
+        // Add chapterNum context specifically for skip exams
+        if (type === 'skip_exam') {
+            const chapNumMatch = id.match(/chapter(\d+)/i); // Assuming id is like 'chapterX' for skip exams
+            if (chapNumMatch) {
+                onlineTestState.courseContext.chapterNum = parseInt(chapNumMatch[1]);
+            }
+        }
+
+
         setCurrentOnlineTestState(onlineTestState);
         hideLoading();
         launchOnlineTestUI();
