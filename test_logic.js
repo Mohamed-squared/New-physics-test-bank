@@ -1,10 +1,10 @@
 // --- START OF FILE test_logic.js ---
 
 import { currentSubject } from './state.js'; // Import currentSubject state
+import { showLoading, hideLoading } from './utils.js';
+import { DEFAULT_MCQ_PROBLEM_RATIO } from './config.js'; // Import default ratio
 
 // --- Difficulty & Allocation ---
-
-import { showLoading, hideLoading } from './utils.js';
 
 export function calculateDifficulty(chap) {
     if (!chap) return 100; // Default difficulty if no chapter data
@@ -38,13 +38,221 @@ export function calculateDifficulty(chap) {
     return 100;
 }
 
+// --- Problem Parsing and Selection ---
+
+// MODIFIED: Cache now per subject ID
+const subjectProblemCache = new Map();
+
+/**
+ * Parses the Problems Markdown file specific to the given subject and caches the result.
+ * Assumes format like `SubjectName_problems.md`.
+ * @param {object} subject - The subject object (must contain `id` and `name` or `fileName`).
+ * @returns {Promise<object>} A promise that resolves to an object where keys are chapter numbers
+ *                           and values are arrays of problem objects for that subject. Returns empty object on error.
+ */
+export async function parseChapterProblems(subject = currentSubject) {
+    if (!subject || !subject.id) {
+        console.error("parseChapterProblems: Invalid or missing subject provided.");
+        return {};
+    }
+    const subjectId = subject.id;
+
+    if (subjectProblemCache.has(subjectId)) {
+        // console.log(`Using cached problems for subject: ${subjectId}`);
+        return subjectProblemCache.get(subjectId);
+    }
+
+    // Determine filename (convention: use subject.fileName if exists, else generate)
+    let problemsFileName;
+    if (subject.fileName && subject.fileName.includes('_problems.md')) {
+         problemsFileName = subject.fileName; // Assume filename already specified correctly
+    } else if (subject.fileName) {
+         // Try replacing .md with _problems.md
+         problemsFileName = subject.fileName.replace(/\.md$/i, '_problems.md');
+    } else if (subject.name) {
+         // Generate from name
+         problemsFileName = `${subject.name}_problems.md`.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
+    } else {
+        console.error(`Cannot determine problems filename for subject ID ${subjectId}. Missing name and fileName.`);
+        subjectProblemCache.set(subjectId, {});
+        return {};
+    }
+
+
+    console.log(`Parsing problems for subject "${subject.name || subjectId}" from file: ${problemsFileName}...`);
+
+    try {
+        // Assume problems files are relative to index.html
+        const response = await fetch(`./${problemsFileName}?t=${Date.now()}`); // Cache bust
+        if (!response.ok) {
+             if (response.status === 404) {
+                console.warn(`Problem file "${problemsFileName}" not found for subject ${subject.name}. No problems will be available.`);
+                 subjectProblemCache.set(subjectId, {}); // Cache empty object if file not found
+                return {};
+             }
+             throw new Error(`Failed to fetch problems file "${problemsFileName}": ${response.status}`);
+        }
+        const content = await response.text();
+
+        const problems = {};
+        let currentChapter = null;
+        let currentProblem = null;
+        let problemCounter = 0; // Unique ID counter *per subject file parse*
+
+        // Split content into lines and process
+        const lines = content.split('\n');
+        for (let line of lines) {
+            const trimmedLine = line.trim();
+
+            // Chapter header (Assuming format like # Chapter 1: ...)
+            const chapterMatch = trimmedLine.match(/^#\s+Chapter\s+(\d+):?/i);
+            if (chapterMatch) {
+                // Finalize previous problem if any
+                if (currentProblem && currentChapter !== null) { // Check currentChapter is not null
+                    if (!problems[currentChapter]) problems[currentChapter] = [];
+                    problems[currentChapter].push(currentProblem);
+                }
+                currentChapter = parseInt(chapterMatch[1]);
+                currentProblem = null; // Reset problem for new chapter
+                if (!problems[currentChapter]) {
+                    problems[currentChapter] = [];
+                }
+                continue; // Move to next line
+            }
+
+            // Problem marker (e.g., 1., 1), a), i) etc.)
+            // Make regex more flexible for problem markers
+            const problemMarkerRegex = /^\s*(?:(\d+)[.)]?\s+|([a-z])\)\s+|([ivx]+)[.)]?\s+)/i;
+            const problemMatch = line.match(problemMarkerRegex);
+
+            if (currentChapter !== null && problemMatch) { // Check currentChapter is not null
+                 // Finalize previous problem before starting new one
+                 if (currentProblem) {
+                    if (!problems[currentChapter]) problems[currentChapter] = [];
+                    problems[currentChapter].push(currentProblem);
+                 }
+
+                // Extract the first line of text after the marker
+                const problemTextStart = line.substring(problemMatch[0].length).trim();
+                problemCounter++;
+                currentProblem = {
+                    id: `subj${subjectId}-chap${currentChapter}-prob${problemCounter}`, // More unique ID
+                    chapter: currentChapter,
+                    text: problemTextStart,
+                    type: 'Problem', // Default type
+                    difficulty: null,
+                    topics: [],
+                    answer: null, // Problems don't have predefined single answers
+                    parts: {} // Store sub-parts if any
+                };
+                continue;
+            }
+
+            // Problem attributes (indented with -)
+            if (currentProblem && trimmedLine.startsWith('- ')) {
+                const attributeLine = trimmedLine.substring(2).trim();
+                const separatorIndex = attributeLine.indexOf(':');
+                if (separatorIndex > 0) {
+                     const key = attributeLine.substring(0, separatorIndex).trim().toLowerCase();
+                     const value = attributeLine.substring(separatorIndex + 1).trim();
+                    switch (key) {
+                        case 'type': currentProblem.type = value; break;
+                        case 'difficulty': currentProblem.difficulty = value; break;
+                        case 'topics': currentProblem.topics = value.split(',').map(t => t.trim()); break;
+                         // Ignore 'answer' for problems from this file
+                    }
+                }
+                continue; // Don't append attribute lines to problem text
+            }
+
+            // If it's not a chapter, marker, or attribute, append to current problem text
+            if (currentProblem && line.length > 0) { // Check line length > 0 to avoid adding empty lines
+                currentProblem.text += '\n' + line; // Preserve original spacing for multi-line text
+            }
+        }
+
+        // Add the very last problem if it exists
+        if (currentProblem && currentChapter !== null) {
+            if (!problems[currentChapter]) problems[currentChapter] = [];
+            problems[currentChapter].push(currentProblem);
+        }
+
+        // Clean up text for each problem (remove leading/trailing whitespace)
+        Object.values(problems).forEach(chapterProblems => {
+            chapterProblems.forEach(prob => prob.text = prob.text.trim());
+        });
+
+        console.log(`Finished parsing problems for subject ${subjectId}. Found problems for ${Object.keys(problems).length} chapters.`);
+        subjectProblemCache.set(subjectId, problems); // Cache the result for this subject
+        return problems;
+    } catch (error) {
+        console.error(`Error parsing problems file "${problemsFileName}" for subject ${subjectId}:`, error);
+        subjectProblemCache.set(subjectId, {}); // Cache empty object on error
+        return {};
+    }
+}
+
+/**
+ * Selects a specified number of problems for a given chapter *from the correct subject's cache*.
+ * Tries to get a mix based on available metadata if possible.
+ * @param {number} chapterNum The chapter number.
+ * @param {number} count The desired number of problems.
+ * @param {string} [subjectId=currentSubject.id] The ID of the subject whose problems to use.
+ * @returns {Array<object>} An array of selected problem objects, formatted for exams.
+ */
+export function selectProblemsForExam(chapterNum, count = 5, subjectId = currentSubject?.id) {
+    if (!subjectId || !subjectProblemCache.has(subjectId)) {
+        console.error(`Problem cache not initialized or missing for subject ${subjectId}. Call parseChapterProblems first.`);
+        return [];
+    }
+    const subjectProblems = subjectProblemCache.get(subjectId);
+    const chapterProblems = subjectProblems[chapterNum] || [];
+
+    if (chapterProblems.length === 0) {
+        // console.warn(`No pre-defined problems available for Chapter ${chapterNum} in subject ${subjectId}`);
+        return [];
+    }
+
+    const actualCount = Math.min(count, chapterProblems.length);
+    if (actualCount <= 0) return [];
+
+    // Simple random selection for now
+    const shuffledProblems = [...chapterProblems].sort(() => 0.5 - Math.random());
+    const selectedRawProblems = shuffledProblems.slice(0, actualCount);
+
+    // Convert problems to the expected exam question format
+    return selectedRawProblems.map((problem, index) => {
+        return {
+            id: problem.id || `c${chapterNum}p${index + 1}-rand`, // Use parsed ID or generate one
+            chapter: String(chapterNum),
+            // Relative number within the selected problems for this test/chapter combo
+            number: index + 1,
+            text: problem.text,
+            options: [], // Problems don't have MCQ options
+            image: null, // Assume no images for now
+            answer: null, // No predefined correct answer
+            type: problem.type || 'Problem', // Use parsed type or default
+            difficulty: problem.difficulty, // Include metadata if available
+            topics: problem.topics || [], // Include metadata if available
+            isProblem: true // Flag to identify this as a non-MCQ problem
+        };
+    });
+}
+
+// --- Allocation and Selection (Combined) ---
+
 export function allocateQuestions(chaptersToConsider, total_test_questions) {
+    // This function remains largely the same as provided, focusing on chapter difficulty/mastery
+    // It allocates a *total* number of questions per chapter, not distinguishing MCQ/Problem yet.
+    // ... (Keep the existing implementation from ui_test_generation.js/bank1.py) ...
+    // Ensure it handles edge cases gracefully (zero weights, low availability)
     let weights = {};
     let chapterDetails = []; // Store details for easier processing
 
     // 1. Calculate weights for each chapter
     for (let chap_num in chaptersToConsider) {
         let chap = chaptersToConsider[chap_num];
+        // Check total_questions > 0 AND available_questions.length > 0
         if (chap && chap.total_questions > 0 && chap.available_questions && chap.available_questions.length > 0) {
             let mastery = chap.consecutive_mastery || 0;
             // Apply weight reduction based on mastery (more mastered = lower weight)
@@ -174,7 +382,6 @@ export function allocateQuestions(chaptersToConsider, total_test_questions) {
         }
     }
 
-
     if (final_allocated_sum < total_test_questions && final_allocated_sum > 0) {
          console.warn(`Final allocation (${final_allocated_sum}) is less than requested (${total_test_questions}) due to availability limits.`);
     } else if (final_allocated_sum === 0) {
@@ -184,9 +391,6 @@ export function allocateQuestions(chaptersToConsider, total_test_questions) {
     console.log("Final Allocation Result:", finalAllocations);
     return finalAllocations;
 }
-
-
-// --- Question Selection ---
 
 // Selects 'n' questions trying to distribute them across the chapter range
 export function selectQuestions(available, n, totalChapterQuestions) {
@@ -257,7 +461,6 @@ export function selectQuestions(available, n, totalChapterQuestions) {
     return selected.sort((a, b) => a - b);
 }
 
-
 // Selects questions for a specific chapter *without* modifying the chapter data directly
 export function selectNewQuestionsAndUpdate(chap, n) {
     if (!chap || n <= 0 || !chap.available_questions || !Array.isArray(chap.available_questions)) {
@@ -271,258 +474,60 @@ export function selectNewQuestionsAndUpdate(chap, n) {
     let selected = selectQuestions(available, n, chap.total_questions);
 
     if (selected.length < n) {
-         console.warn(`Chapter ${chap.number || 'Unknown'}: Selected only ${selected.length} questions out of requested ${n}.`);
+         console.warn(`Chapter ${chap.number || 'Unknown'}: Selected only ${selected.length} MCQs out of requested ${n}.`);
      }
 
-    // This function *only returns the selected questions*.
-    // The calling function (e.g., startTestGeneration) is responsible for updating
-    // the actual chapter data (removing selected questions from available_questions)
-    // after the test is finalized/submitted.
+    // This function *only returns the selected MCQ numbers*.
+    // The calling function is responsible for updating chapter data *after submission*.
     return selected.sort((a, b) => a - b);
 }
 
-// --- NEW: Problem Parsing and Selection ---
-
-// MODIFIED: Cache now per subject ID
-const subjectProblemCache = new Map();
-
 /**
- * Parses the Problems Markdown file specific to the given subject and caches the result.
- * @param {object} subject - The subject object (must contain `id` and `fileName`).
- * @returns {Promise<object>} A promise that resolves to an object where keys are chapter numbers
- *                           and values are arrays of problem objects for that subject.
- */
-export async function parseChapterProblems(subject = currentSubject) {
-    if (!subject || !subject.id) {
-        console.error("parseChapterProblems: Invalid or missing subject provided.");
-        return {};
-    }
-    const subjectId = subject.id;
-
-    if (subjectProblemCache.has(subjectId)) {
-        // console.log(`Using cached problems for subject: ${subjectId}`);
-        return subjectProblemCache.get(subjectId);
-    }
-
-    // MODIFIED: Determine filename (convention: subjectName_problems.md or use subject.fileName)
-    let problemsFileName = `${subject.name}_problems.md`.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    // Optionally allow override via subject.problemFileName if needed later
-    // if (subject.problemFileName) { problemsFileName = subject.problemFileName; }
-
-    console.log(`Parsing problems for subject "${subject.name}" from file: ${problemsFileName}...`);
-
-    try {
-        const response = await fetch(`${problemsFileName}?t=${Date.now()}`); // Cache bust
-        if (!response.ok) {
-             if (response.status === 404) {
-                console.warn(`Problem file "${problemsFileName}" not found for subject ${subject.name}. No problems will be available.`);
-                 subjectProblemCache.set(subjectId, {}); // Cache empty object if file not found
-                return {};
-             }
-             throw new Error(`Failed to fetch problems file "${problemsFileName}": ${response.status}`);
-        }
-        const content = await response.text();
-
-        const problems = {};
-        let currentChapter = null;
-        let currentProblem = null;
-        let problemCounter = 0; // Unique ID counter *per subject file parse*
-
-        // Split content into lines and process
-        const lines = content.split('\n');
-        for (let line of lines) {
-            const trimmedLine = line.trim();
-
-            // Chapter header (Assuming format like # Chapter 1: ...)
-            const chapterMatch = trimmedLine.match(/^#\s+Chapter\s+(\d+):?/i);
-            if (chapterMatch) {
-                // Finalize previous problem if any
-                if (currentProblem && currentChapter !== null) { // Check currentChapter is not null
-                    if (!problems[currentChapter]) problems[currentChapter] = [];
-                    problems[currentChapter].push(currentProblem);
-                    // console.log(`Added problem ${currentProblem.id} to Chapter ${currentChapter}`);
-                }
-                currentChapter = parseInt(chapterMatch[1]);
-                currentProblem = null; // Reset problem for new chapter
-                if (!problems[currentChapter]) {
-                    problems[currentChapter] = [];
-                }
-                // console.log(`Found Chapter ${currentChapter} in problems file.`);
-                continue; // Move to next line
-            }
-
-            // Problem marker (e.g., 1., 1), a), i) etc.)
-            // Make regex more flexible for problem markers
-            const problemMarkerRegex = /^\s*(?:(\d+)[.)]?\s+|([a-z])\)\s+|([ivx]+)[.)]?\s+)/i;
-            const problemMatch = line.match(problemMarkerRegex);
-
-            if (currentChapter !== null && problemMatch) { // Check currentChapter is not null
-                 // Finalize previous problem before starting new one
-                 if (currentProblem) {
-                    if (!problems[currentChapter]) problems[currentChapter] = [];
-                    problems[currentChapter].push(currentProblem);
-                    // console.log(`Added problem ${currentProblem.id} to Chapter ${currentChapter}`);
-                 }
-
-                // Extract the first line of text after the marker
-                const problemTextStart = line.substring(problemMatch[0].length).trim();
-                problemCounter++;
-                currentProblem = {
-                    id: `subj${subjectId}-chap${currentChapter}-prob${problemCounter}`, // More unique ID
-                    chapter: currentChapter,
-                    text: problemTextStart,
-                    type: 'Problem', // Default type
-                    difficulty: null,
-                    topics: [],
-                    answer: null, // Problems don't have predefined single answers
-                    parts: {} // Store sub-parts if any
-                };
-                // console.log(`Started problem ${currentProblem.id}`);
-                continue;
-            }
-
-            // Problem attributes (indented with -)
-            if (currentProblem && trimmedLine.startsWith('- ')) {
-                const attributeLine = trimmedLine.substring(2).trim();
-                const separatorIndex = attributeLine.indexOf(':');
-                if (separatorIndex > 0) {
-                     const key = attributeLine.substring(0, separatorIndex).trim().toLowerCase();
-                     const value = attributeLine.substring(separatorIndex + 1).trim();
-                    switch (key) {
-                        case 'type': currentProblem.type = value; break;
-                        case 'difficulty': currentProblem.difficulty = value; break;
-                        case 'topics': currentProblem.topics = value.split(',').map(t => t.trim()); break;
-                         // Ignore 'answer' for problems from this file
-                    }
-                }
-                continue; // Don't append attribute lines to problem text
-            }
-
-            // If it's not a chapter, marker, or attribute, append to current problem text
-            if (currentProblem && trimmedLine.length > 0) {
-                currentProblem.text += '\n' + line; // Preserve original spacing for multi-line text
-            }
-        }
-
-        // Add the very last problem if it exists
-        if (currentProblem && currentChapter !== null) {
-            if (!problems[currentChapter]) problems[currentChapter] = [];
-            problems[currentChapter].push(currentProblem);
-            // console.log(`Added final problem ${currentProblem.id} to Chapter ${currentChapter}`);
-        }
-
-        // Clean up text for each problem (remove leading/trailing whitespace)
-        Object.values(problems).forEach(chapterProblems => {
-            chapterProblems.forEach(prob => prob.text = prob.text.trim());
-        });
-
-        console.log(`Finished parsing problems for subject ${subjectId}. Found problems for ${Object.keys(problems).length} chapters.`);
-        subjectProblemCache.set(subjectId, problems); // Cache the result for this subject
-        return problems;
-    } catch (error) {
-        console.error(`Error parsing problems file "${problemsFileName}" for subject ${subjectId}:`, error);
-        subjectProblemCache.set(subjectId, {}); // Cache empty object on error
-        return {};
-    }
-}
-
-/**
- * Selects a specified number of problems for a given chapter *from the correct subject's cache*.
- * Tries to get a mix based on available metadata if possible.
- * @param {number} chapterNum The chapter number.
- * @param {number} count The desired number of problems.
- * @param {string} [subjectId=currentSubject.id] The ID of the subject whose problems to use.
- * @returns {Array<object>} An array of selected problem objects, formatted for exams.
- */
-export function selectProblemsForExam(chapterNum, count = 5, subjectId = currentSubject?.id) {
-    // MODIFIED: Use subject-specific cache
-    if (!subjectId || !subjectProblemCache.has(subjectId)) {
-        console.error(`Problem cache not initialized or missing for subject ${subjectId}. Call parseChapterProblems first.`);
-        return [];
-    }
-    const subjectProblems = subjectProblemCache.get(subjectId);
-    const chapterProblems = subjectProblems[chapterNum] || [];
-
-    if (chapterProblems.length === 0) {
-        // console.warn(`No pre-defined problems available for Chapter ${chapterNum} in subject ${subjectId}`);
-        return [];
-    }
-
-    const actualCount = Math.min(count, chapterProblems.length);
-    if (actualCount <= 0) return [];
-
-    // Simple random selection for now
-    const shuffledProblems = [...chapterProblems].sort(() => 0.5 - Math.random());
-    const selectedRawProblems = shuffledProblems.slice(0, actualCount);
-
-    // Convert problems to the expected exam question format
-    return selectedRawProblems.map((problem, index) => {
-        return {
-            id: problem.id || `c${chapterNum}p${index + 1}`, // Use parsed ID or generate one
-            chapter: String(chapterNum),
-            // MODIFIED: Use a unique identifier within the *selected* problems for this chapter/test, not overall index
-            number: index + 1, // Relative number within the selected problems for this test/chapter combo
-            text: problem.text,
-            options: [], // Problems don't have MCQ options
-            image: null, // Assume no images for now
-            answer: null, // No predefined correct answer
-            type: problem.type || 'Problem', // Use parsed type or default
-            difficulty: problem.difficulty, // Include metadata if available
-            topics: problem.topics || [], // Include metadata if available
-            isProblem: true // Flag to identify this as a non-MCQ problem
-        };
-    });
-}
-
-/**
- * Combines pre-defined problems with AI-generated/extracted questions for a final exam list.
- * Aims for roughly a 50/50 split if possible, adjusted based on availability.
- * @param {Array<object>} predefinedProblems - Problems selected from the subject's problems file.
- * @param {Array<object>} mcqQuestions - MCQs generated by AI or extracted from subject MD.
- * @param {number} targetTotalQuestions - The desired total number of questions in the final exam.
+ * Combines pre-defined problems with extracted MCQs for a final exam list,
+ * respecting the target ratio.
+ * @param {Array<object>} problems - Selected problem objects.
+ * @param {Array<object>} mcqs - Extracted MCQ objects.
+ * @param {number} targetTotalQuestions - The desired total number of questions.
+ * @param {number} [mcqRatio=DEFAULT_MCQ_PROBLEM_RATIO] - The desired ratio of MCQs (0.0 to 1.0).
  * @returns {Array<object>} A shuffled array containing the combined questions and problems.
  */
-export function combineProblemsWithQuestions(predefinedProblems, mcqQuestions, targetTotalQuestions) {
+export function combineProblemsWithQuestions(problems, mcqs, targetTotalQuestions, mcqRatio = DEFAULT_MCQ_PROBLEM_RATIO) {
     const finalExam = [];
-    const availableProblems = predefinedProblems || [];
-    const availableMcqs = mcqQuestions || [];
+    const availableProblems = problems || [];
+    const availableMcqs = mcqs || [];
 
     const totalAvailable = availableProblems.length + availableMcqs.length;
     const actualTotal = Math.min(targetTotalQuestions, totalAvailable);
 
-    // Determine counts, aiming for 50% problems, respecting availability
-    let targetProblemCount = Math.min(availableProblems.length, Math.floor(actualTotal * 0.5));
-    let targetMcqCount = actualTotal - targetProblemCount;
+    // Determine target counts based on the ratio and availability
+    let targetMcqCount = Math.min(availableMcqs.length, Math.round(actualTotal * mcqRatio));
+    let targetProblemCount = Math.min(availableProblems.length, actualTotal - targetMcqCount);
 
-    // Adjust counts if one type is scarce
-    if (targetMcqCount > availableMcqs.length) {
-        const mcqDeficit = targetMcqCount - availableMcqs.length;
-        targetMcqCount = availableMcqs.length;
-        targetProblemCount = Math.min(availableProblems.length, targetProblemCount + mcqDeficit); // Try to fill gap with problems
-    } else if (targetProblemCount > availableProblems.length) {
-        const problemDeficit = targetProblemCount - availableProblems.length;
-        targetProblemCount = availableProblems.length;
-        targetMcqCount = Math.min(availableMcqs.length, targetMcqCount + problemDeficit); // Try to fill gap with MCQs
+    // If the initial counts don't sum to the actualTotal (due to rounding or availability limits), adjust.
+    // Prioritize meeting the actualTotal by adjusting the type that has more available.
+    if (targetMcqCount + targetProblemCount < actualTotal) {
+        const deficit = actualTotal - (targetMcqCount + targetProblemCount);
+        if (availableMcqs.length > targetMcqCount && availableProblems.length === targetProblemCount) {
+             // Add more MCQs if possible
+             targetMcqCount = Math.min(availableMcqs.length, targetMcqCount + deficit);
+        } else if (availableProblems.length > targetProblemCount && availableMcqs.length === targetMcqCount) {
+             // Add more Problems if possible
+             targetProblemCount = Math.min(availableProblems.length, targetProblemCount + deficit);
+        } else {
+             // If both have more available, distribute deficit proportionally (simplified: add to MCQs first)
+             const mcqToAdd = Math.min(deficit, availableMcqs.length - targetMcqCount);
+             targetMcqCount += mcqToAdd;
+             targetProblemCount = Math.min(actualTotal - targetMcqCount, availableProblems.length); // Recalc problems
+        }
     }
 
-    // Ensure the final counts don't exceed the targetTotal
-    const finalCombinedCount = targetProblemCount + targetMcqCount;
-    if (finalCombinedCount > actualTotal) {
-        // This shouldn't typically happen with the logic above, but as a failsafe,
-        // prioritize reducing MCQs slightly if over target.
-        const excess = finalCombinedCount - actualTotal;
-        targetMcqCount = Math.max(0, targetMcqCount - excess);
-        console.warn(`combineProblemsWithQuestions: Had to reduce target counts slightly to meet overall target ${actualTotal}`);
-    }
-
-
-    console.log(`Combining Exam: Target=${actualTotal}, Problems=${targetProblemCount}, MCQs=${targetMcqCount}`);
+    console.log(`Combining Exam: Target=${actualTotal}, Ratio=${mcqRatio}, Final Problems=${targetProblemCount}, Final MCQs=${targetMcqCount}`);
 
     // Randomly select problems
     const shuffledProblems = [...availableProblems].sort(() => 0.5 - Math.random());
     finalExam.push(...shuffledProblems.slice(0, targetProblemCount));
 
-    // Randomly select questions
+    // Randomly select MCQs
     const shuffledMcqs = [...availableMcqs].sort(() => 0.5 - Math.random());
     finalExam.push(...shuffledMcqs.slice(0, targetMcqCount));
 
@@ -533,16 +538,11 @@ export function combineProblemsWithQuestions(predefinedProblems, mcqQuestions, t
     }
 
     // Re-number questions sequentially in the final list for display consistency
-    // The original 'number' field from MD parsing or problem selection is less relevant now.
-    // The unique 'id' (e.g., c1q5, prob-subj1-chap1-prob3) is the important identifier.
     finalExam.forEach((item, index) => {
          item.displayNumber = index + 1; // Add a field for display order
     });
 
-
     console.log(`Final combined exam length: ${finalExam.length}`);
     return finalExam;
 }
-
-
 // --- END OF FILE test_logic.js ---

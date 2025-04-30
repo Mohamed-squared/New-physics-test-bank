@@ -7,8 +7,8 @@ import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } 
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
-// *** MODIFIED: Added PASSING_GRADE_PERCENT to import ***
-import { ONLINE_TEST_DURATION_MINUTES, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+// *** MODIFIED: Removed direct duration import, added pass thresholds ***
+import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 // MODIFIED: Import necessary functions from exam_storage.js
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 // AI Marking is handled within exam_storage.js now
@@ -27,18 +27,40 @@ export function launchOnlineTestUI() {
     testArea.classList.remove('hidden'); // Show the test area
 
     const totalQuestions = currentOnlineTestState.questions.length;
-    const durationMinutes = currentOnlineTestState.durationMinutes ?? ONLINE_TEST_DURATION_MINUTES; // Use specific duration if set, else default
-    const durationMillis = durationMinutes * 60 * 1000;
+    // *** MODIFIED: Get duration from the state object ***
+    const durationMinutes = currentOnlineTestState.durationMinutes; // Duration is now set when state is created
+    if (!durationMinutes || durationMinutes <= 0) {
+         console.error("Invalid duration in test state:", durationMinutes);
+         // Optionally set a fallback or alert user
+         currentOnlineTestState.durationMinutes = 60; // Fallback to 60 mins
+    }
+    const durationMillis = currentOnlineTestState.durationMinutes * 60 * 1000;
     currentOnlineTestState.endTime = currentOnlineTestState.startTime + durationMillis;
-     currentOnlineTestState.status = 'active'; // Ensure status is active
+    currentOnlineTestState.status = 'active'; // Ensure status is active
+
+    // Determine display title
+    let displayTitle = currentOnlineTestState.examId;
+    if (currentOnlineTestState.courseContext?.isSkipExam) {
+        displayTitle = `Chapter ${currentOnlineTestState.courseContext.chapterNum} Skip Exam`;
+    } else if (currentOnlineTestState.courseContext?.activityType) {
+        const type = currentOnlineTestState.courseContext.activityType.replace(/_/g, ' ');
+        const idPart = currentOnlineTestState.courseContext.activityId || '';
+        displayTitle = `${type.charAt(0).toUpperCase() + type.slice(1)} ${idPart}`; // e.g., "Assignment day1"
+        if(currentOnlineTestState.courseContext.courseId) {
+            const courseName = globalCourseDataMap.get(currentOnlineTestState.courseContext.courseId)?.name || '';
+            if(courseName) displayTitle += ` (${courseName})`;
+        }
+    } else if (currentOnlineTestState.subjectId) {
+         const subjectName = window.data?.subjects?.[currentOnlineTestState.subjectId]?.name || 'TestGen';
+         displayTitle = `${subjectName} Test`;
+    }
 
     // Set the HTML structure for the test UI
     testArea.innerHTML =  `
     <div class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow z-40 border-b dark:border-gray-700">
         <div class="container mx-auto flex justify-between items-center">
-
             <span class="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate max-w-[calc(100% - 250px)]" title="${escapeHtml(currentOnlineTestState.examId)}">
-                ${escapeHtml(currentOnlineTestState.courseContext?.isSkipExam ? `Chapter ${currentOnlineTestState.courseContext.chapterNum} Skip Exam` : currentOnlineTestState.examId)}
+                ${escapeHtml(displayTitle)} <!-- Use generated display title -->
             </span>
             <div class="flex items-center space-x-4">
                 <button id="force-submit-btn" onclick="window.confirmForceSubmit()" class="btn-danger-small hidden flex-shrink-0">Submit Now</button>
@@ -47,7 +69,7 @@ export function launchOnlineTestUI() {
         </div>
     </div>
     <div id="question-container" class="pt-20 pb-24 container mx-auto px-4">
-
+        <!-- Loading message -->
         <div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4">Loading first question...</p></div>
     </div>
     <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow-up z-40 border-t dark:border-gray-700">
@@ -77,19 +99,32 @@ export function startTimer() {
     const timerElement = document.getElementById('timer'); if (!timerElement || !currentOnlineTestState) return;
     if (currentOnlineTestState.timerInterval) { clearInterval(currentOnlineTestState.timerInterval); }
     function updateTimerDisplay() {
-        if (!currentOnlineTestState || !currentOnlineTestState.endTime || currentOnlineTestState.status === 'submitting') { if(currentOnlineTestState?.timerInterval) clearInterval(currentOnlineTestState.timerInterval); return; }
+        if (!currentOnlineTestState || !currentOnlineTestState.endTime || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed') {
+             if(currentOnlineTestState?.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
+             currentOnlineTestState.timerInterval = null;
+             // Ensure timer shows 00:00:00 if stopped prematurely or completed
+             if(timerElement) timerElement.textContent = "00:00:00";
+             return;
+        }
         const now = Date.now(); const remaining = currentOnlineTestState.endTime - now;
         if (remaining <= 0) {
-            clearInterval(currentOnlineTestState.timerInterval); timerElement.textContent = "00:00:00"; timerElement.classList.add('text-red-500');
-            if (currentOnlineTestState.status !== 'submitting') { currentOnlineTestState.status = 'submitting'; alert("Time's up! Submitting test."); submitOnlineTest(); }
+            clearInterval(currentOnlineTestState.timerInterval);
+            currentOnlineTestState.timerInterval = null;
+            if (timerElement) { timerElement.textContent = "00:00:00"; timerElement.classList.add('text-red-500'); }
+            if (currentOnlineTestState.status !== 'submitting' && currentOnlineTestState.status !== 'completed') {
+                 currentOnlineTestState.status = 'submitting';
+                 alert("Time's up! Submitting test.");
+                 submitOnlineTest(); // Auto-submit
+            }
         } else {
             const h = Math.floor(remaining / 3600000); const m = Math.floor((remaining % 3600000) / 60000); const s = Math.floor((remaining % 60000) / 1000);
-             timerElement.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-             const forceSubmitBtn = document.getElementById('force-submit-btn'); if (forceSubmitBtn) { forceSubmitBtn.classList.toggle('hidden', remaining / 60000 >= 5); }
-              timerElement.classList.remove('text-red-500');
+             if(timerElement) timerElement.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+             const forceSubmitBtn = document.getElementById('force-submit-btn'); if (forceSubmitBtn) { forceSubmitBtn.classList.toggle('hidden', remaining / 60000 >= 5); } // Show submit button in last 5 mins
+              if(timerElement) timerElement.classList.remove('text-red-500');
         }
     }
-    updateTimerDisplay(); currentOnlineTestState.timerInterval = setInterval(updateTimerDisplay, 1000);
+    updateTimerDisplay(); // Initial display
+    currentOnlineTestState.timerInterval = setInterval(updateTimerDisplay, 1000);
 }
 
 export async function displayCurrentQuestion() {
@@ -177,60 +212,69 @@ export function confirmSubmitOnlineTest() {
 export function confirmForceSubmit() { if (confirm("Submit test now?")) submitOnlineTest(); }
 
 /**
- * Handles the final submission of the online test, including AI marking and result storage.
+ * Handles the final submission of the online test, including marking and result storage.
  */
 export async function submitOnlineTest() {
-    if (!currentOnlineTestState || currentOnlineTestState.status === 'submitting' || !currentUser) {
-        if (currentOnlineTestState?.status !== 'submitting') { alert("Error: Missing test data or user session."); }
-        console.error("Submit Error: State missing or already submitting.");
+    if (!currentOnlineTestState || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed' || !currentUser) {
+        if (currentOnlineTestState?.status !== 'submitting' && currentOnlineTestState?.status !== 'completed') {
+             alert("Error: Missing test data, user session, or test already submitted.");
+        }
+        console.error("Submit Error: State missing, already submitting, or completed.");
         hideLoading();
         return;
     }
+
+    showLoading("Submitting and marking exam...");
+    currentOnlineTestState.status = 'submitting'; // Mark as submitting to prevent double submission
+    if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
+    currentOnlineTestState.timerInterval = null;
+    document.getElementById('online-test-area')?.classList.add('hidden'); // Hide test area UI
+    await new Promise(resolve => setTimeout(resolve, 100)); // Short delay for UI
+
+    // Determine context
     const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
     const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
     const courseId = currentOnlineTestState.courseContext?.courseId;
-    const activityType = currentOnlineTestState.courseContext?.activityType || 'practice'; // Default to 'practice'
+    // Default to 'testgen' if no specific course context type
+    const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen';
     const activityId = currentOnlineTestState.courseContext?.activityId;
     const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
-
-    showLoading("Submitting and marking exam...");
-    currentOnlineTestState.status = 'submitting';
-    if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
-    currentOnlineTestState.timerInterval = null;
-    document.getElementById('online-test-area')?.classList.add('hidden');
-    await new Promise(resolve => setTimeout(resolve, 100)); // Short delay for UI
 
     try {
         console.log(`Submitting exam ${currentOnlineTestState.examId} of type ${activityType}`);
         // Store and mark the exam using the centralized function
-        // MODIFIED: Pass courseId to storeExamResult
         const examRecord = await storeExamResult(
-            courseId,
-            currentOnlineTestState,
-            activityType
+            courseId, // Pass courseId (null for TestGen)
+            currentOnlineTestState, // Pass the full state
+            activityType // Pass the determined type
         );
 
         if (!examRecord || !examRecord.markingResults) {
-            // Error already logged and alerted inside storeExamResult if it failed there
-             hideLoading(); // Make sure loading is hidden
-             // Attempt to navigate back gracefully
-              if (isCourseActivity && courseId) {
-                  window.showCurrentAssignmentsExams?.(courseId);
-              } else {
-                  showTestGenerationDashboard();
-              }
-             return; // Stop processing if storing/marking failed
+             // Error already handled inside storeExamResult
+             hideLoading();
+              // Attempt to navigate back gracefully even on failure
+               if (isCourseActivity && courseId) {
+                   window.showCurrentAssignmentsExams?.(courseId); // Use optional chaining
+               } else {
+                   showTestGenerationDashboard();
+               }
+              // Clear state even on failure to store? Maybe keep it for retry? Let's clear it for now.
+              setCurrentOnlineTestState(null);
+             return;
         }
+
+        // Successfully stored and marked
+        currentOnlineTestState.status = 'completed'; // Mark state as completed
         hideLoading(); // Hide loading *after* marking and storage attempt SUCCEEDS
 
         // Display results UI using the stored/marked record
         displayOnlineTestResults(examRecord); // Pass the full record
 
-        // Post-submission logic (like marking chapter studied)
+        // --- Post-submission logic ---
+
+        // 1. Handle Skip Exam pass/fail and update course progress
         if (isSkipExam && chapterNumForSkipExam && courseId && examRecord.markingResults.maxPossibleScore > 0) {
             const percentage = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100;
-
-            // Update skip exam score in progress data
             const progress = userCourseProgressMap.get(courseId);
             if (progress) {
                  progress.lastSkipExamScore = progress.lastSkipExamScore || {};
@@ -238,7 +282,6 @@ export async function submitOnlineTest() {
                  progress.skipExamAttempts = progress.skipExamAttempts || {};
                  progress.skipExamAttempts[chapterNumForSkipExam] = (progress.skipExamAttempts[chapterNumForSkipExam] || 0) + 1;
 
-                 // Log attempt pass/fail in daily progress
                  const todayStr = getFormattedDate();
                  progress.dailyProgress = progress.dailyProgress || {};
                  progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
@@ -252,32 +295,59 @@ export async function submitOnlineTest() {
                       await saveUserCourseProgress(currentUser.uid, courseId, progress);
                  }
             }
-        } else if (!isCourseActivity && currentSubject) {
-             // Update standard test gen subject data (remove used questions)
+        }
+        // 2. Handle TestGen exam (update chapter stats in appData)
+        else if (!isCourseActivity && currentSubject && data?.subjects?.[currentSubject.id]) {
              let chaptersDataModified = false;
-             if (examRecord.questions) {
-                 examRecord.questions.forEach(q => {
-                      // MODIFIED: Only remove MCQs from standard pool
-                      if (!q.isProblem) {
-                           const globalChap = currentSubject.chapters[q.chapter];
-                           if (globalChap?.available_questions?.includes(q.number)) {
-                                const qIndex = globalChap.available_questions.indexOf(q.number);
-                                if (qIndex > -1) {
-                                     globalChap.available_questions.splice(qIndex, 1);
+             const subjectToUpdate = data.subjects[currentSubject.id]; // Get reference to subject in data
+             if (examRecord.questions && examRecord.markingResults?.questionResults) {
+                  examRecord.markingResults.questionResults.forEach(result => {
+                      const question = examRecord.questions.find(q => q.id === result.questionId);
+                      if (question && question.chapter) { // Check if question has chapter info
+                           const chap = subjectToUpdate.chapters[question.chapter];
+                           if (chap) {
+                                // Only update stats for MCQs in TestGen flow
+                                if (!question.isProblem) {
+                                     chap.total_attempted = (chap.total_attempted || 0) + 1;
+                                     const isCorrect = result.score > 0; // Check if score is positive
+                                     if (!isCorrect) {
+                                          chap.total_wrong = (chap.total_wrong || 0) + 1;
+                                     }
+                                     // Update mastery/mistake history
+                                     chap.mistake_history = chap.mistake_history || [];
+                                     chap.mistake_history.push(isCorrect ? 0 : 1); // Add 1 wrong if incorrect
+                                     if (chap.mistake_history.length > 20) chap.mistake_history.shift();
+                                     chap.consecutive_mastery = isCorrect ? (chap.consecutive_mastery || 0) + 1 : 0;
                                      chaptersDataModified = true;
+
+                                     // Remove the attempted MCQ from available_questions
+                                      if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
+                                          const qIndex = chap.available_questions.indexOf(question.number);
+                                          if (qIndex > -1) {
+                                               chap.available_questions.splice(qIndex, 1);
+                                               console.log(`Removed MCQ Q${question.number} from Ch ${question.chapter} available list.`);
+                                          } else {
+                                              console.warn(`MCQ Q${question.number} (Ch ${question.chapter}) not found in available list during post-exam update.`);
+                                          }
+                                      }
                                 }
+                           } else {
+                                console.warn(`Chapter ${question.chapter} not found in currentSubject data for stats update.`);
                            }
                       }
-                 });
+                  });
              }
              if (chaptersDataModified) {
-                  Object.values(currentSubject.chapters).forEach(chap => chap.available_questions?.sort((a,b) => a-b));
-                  await saveUserData(currentUser.uid); // Save updated appData
-                  console.log("Removed used MCQs from standard test gen pool.");
+                  // Ensure sorting just in case
+                  Object.values(subjectToUpdate.chapters).forEach(chap => chap.available_questions?.sort((a,b) => a-b));
+                  await saveUserData(currentUser.uid, data); // Save the updated 'data' object
+                  console.log("TestGen Exam: Updated chapter stats and removed used MCQs.");
              }
         }
+        // Note: Course assignments/exams results are stored in userCourseProgress and handled there.
 
-        setCurrentOnlineTestState(null); // Clear the state after successful submission and processing
+        // Clear the state AFTER successful submission and processing
+        setCurrentOnlineTestState(null);
 
     } catch (error) {
         hideLoading();
@@ -375,7 +445,7 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
 
             <div class="flex justify-center gap-4 flex-wrap">
                 <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.15.15 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.15.15 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
                     View Detailed Review
                 </button>
                 <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">

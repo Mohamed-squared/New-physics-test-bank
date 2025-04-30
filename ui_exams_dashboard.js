@@ -4,33 +4,47 @@
 
 import { currentSubject, currentUser, data, setData, db } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
-import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js'; // Added escapeHtml
+import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js';
 import { saveUserData, submitFeedback } from './firebase_firestore.js';
 import { showManageSubjects } from './ui_subjects.js';
-import { getAIExplanation } from './ai_integration.js';
 import { ADMIN_UID } from './config.js';
-// Import new exam storage functions (for potential future use or if combining histories)
-// For now, this dashboard primarily handles the old `appData.subjects[id].exam_history`
-import { getExamHistory, getExamDetails } from './exam_storage.js';
+// Import NEW exam storage functions
+import { getExamHistory, getExamDetails, showExamReviewUI } from './exam_storage.js';
 
-// --- Exams Dashboard & Results Management (Handles Standard Test Gen History) ---
+// --- Exams Dashboard & Results Management ---
 
-export function showExamsDashboard() {
-     if (!currentSubject) {
-         displayContent('<p class="text-yellow-500 p-4">Please select a subject to view its exam history.</p><button onclick="window.showManageSubjects()" class="btn-secondary mt-2">Manage Subjects</button>');
-         setActiveSidebarLink('showExamsDashboard'); // Still set active link even if showing message
+// This dashboard will now PRIMARILY show history from the userExams collection.
+// The PDF pending list from appData remains for entering results for older PDF exams.
+
+export async function showExamsDashboard() {
+     if (!currentUser) {
+         displayContent('<p class="text-yellow-500 p-4">Please log in to view exams.</p>');
+         setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
          return;
      }
-    // Combine pending and completed sections
-    const pendingHtml = showEnterResults(); // Handles pending PDF exams from appData
-    const completedHtml = showCompletedExams(); // Handles completed exams from appData.subjects[id].exam_history
-    const html = `<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4">
-            <h2 class="text-xl font-semibold mb-4 text-primary-600 dark:text-primary-400">Exams Dashboard (${escapeHtml(currentSubject.name || 'Unnamed')})</h2>
+    // Filter ID depends on whether we're showing TestGen or Course Exams
+    // For now, this dashboard is linked from TestGen, so filter by currentSubject
+    const subjectId = currentSubject?.id || null;
+    const subjectName = currentSubject?.name || 'All Standard Tests'; // Show subject name or generic
+
+    showLoading("Loading exam history...");
+
+    // Fetch history from the new centralized store, filtered by SUBJECT for TestGen
+    // (Course exams are shown via the course dashboard)
+    const completedExams = await getExamHistory(currentUser.uid, subjectId, 'subject');
+    hideLoading();
+
+    const pendingHtml = showEnterResults(); // Still shows pending PDF exams from appData
+    const completedListHtml = renderCompletedExamsList(completedExams);
+
+    const html = `
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4">
+            <h2 class="text-xl font-semibold mb-4 text-primary-600 dark:text-primary-400">Exams Dashboard (${escapeHtml(subjectName)})</h2>
             ${pendingHtml}
-            ${completedHtml}
+            ${completedListHtml}
             </div>`;
     displayContent(html);
-    setActiveSidebarLink('showExamsDashboard'); // Set the active link
+    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
 }
 
 // --- PDF Exam Result Entry ---
@@ -415,5 +429,80 @@ export async function deleteCompletedExam(index) {
          setActiveSidebarLink('showExamsDashboard');
      }
 }
+
+// --- Completed Exams List (New: Fetches from userExams) ---
+function renderCompletedExamsList(completedExams) {
+    if (!completedExams || completedExams.length === 0) {
+        return '<p class="text-sm text-gray-500 dark:text-gray-400 mt-4">No completed exam history found for this subject.</p>';
+    }
+
+    let output = '<h3 class="text-lg font-semibold mb-3 mt-6 text-green-600 dark:text-green-400">Completed Exam History</h3><div class="space-y-2">';
+    completedExams.forEach((exam) => {
+        // Ensure exam.id exists before proceeding
+        if (!exam || !exam.id) {
+             console.error("Skipping rendering completed exam due to missing ID:", exam);
+             return; // Skip this exam if ID is missing
+        }
+        const displayScore = exam.score ?? 0;
+        const maxScore = exam.maxScore || 0;
+        const percentage = maxScore > 0 ? ((displayScore / maxScore) * 100).toFixed(1) : 0;
+        const date = exam.timestamp ? new Date(exam.timestamp).toLocaleString() : 'N/A';
+        const typeDisplay = exam.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()); // Format type nicely
+        // Basic pass/fail indication (adjust threshold if needed)
+        const passOrFailClass = parseFloat(percentage) >= 50 ? 'text-green-500' : 'text-red-500';
+
+        output += `
+        <div class="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+             <div class="flex flex-wrap justify-between items-center mb-1 gap-x-4 gap-y-1">
+                 <span class="text-sm font-medium flex items-center flex-grow min-w-0">
+                     <span class="truncate" title="${escapeHtml(exam.id)}">${escapeHtml(exam.id)}</span>
+                     <span class="ml-2 text-xs bg-blue-200 text-blue-800 dark:bg-blue-700 dark:text-blue-200 px-1.5 py-0.5 rounded flex-shrink-0">${escapeHtml(typeDisplay)}</span>
+                 </span>
+                 <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">${date}</span>
+             </div>
+             <div class="flex justify-between items-center">
+                 <span class="font-semibold ${passOrFailClass}">${displayScore.toFixed(0)} / ${maxScore.toFixed(0)} (${percentage}%)</span>
+                 <div class="flex-shrink-0 flex space-x-2">
+                      <button onclick="window.showExamReviewUI('${currentUser.uid}', '${exam.id}')" title="View Exam Review" class="btn-secondary-small">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639l4.458-4.458a1.012 1.012 0 0 1 1.414 0l4.458 4.458a1.012 1.012 0 0 1 0 .639l-4.458 4.458a1.012 1.012 0 0 1-1.414 0l-4.458-4.458Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>Review
+                      </button>
+                      <button onclick="window.confirmDeleteCompletedExamV2('${exam.id}')" title="Delete History Entry" class="btn-danger-small">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>Delete
+                      </button>
+                 </div>
+             </div>
+        </div>`;
+    });
+    output += '</div>';
+    return output;
+}
+
+// --- NEW: Delete Completed Exam from userExams Collection ---
+export function confirmDeleteCompletedExamV2(examId) {
+    if (!examId) { console.error("No exam ID provided for deletion."); return; }
+    const confirmation = confirm(`Permanently delete history for exam "${escapeHtml(examId)}"?\n\nWARNING: This cannot be undone. Related question availability will NOT be automatically restored.`);
+    if (confirmation) deleteCompletedExamV2(examId);
+}
+window.confirmDeleteCompletedExamV2 = confirmDeleteCompletedExamV2; // Assign to window
+
+async function deleteCompletedExamV2(examId) {
+     if (!currentUser || !db || !examId) { alert("Error deleting history: Critical data missing."); return; }
+     showLoading("Deleting Exam History...");
+     try {
+          const examRef = db.collection('userExams').doc(currentUser.uid).collection('exams').doc(examId);
+          await examRef.delete();
+          console.log(`Exam history ${examId} deleted from userExams collection.`);
+          hideLoading();
+          showExamsDashboard(); // Refresh dashboard view
+          const successMsgHtml = `<div class="toast-notification toast-warning animate-fade-in"><p>Exam ${escapeHtml(examId)} history deleted.</p></div>`;
+          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 4000);
+     } catch (error) {
+          hideLoading();
+          console.error("Error deleting completed exam history (V2):", error);
+          alert("Failed to delete exam history: " + error.message);
+          showExamsDashboard(); // Refresh view even on error
+     }
+}
+window.deleteCompletedExamV2 = deleteCompletedExamV2; // Assign to window
 
 // --- END OF FILE ui_exams_dashboard.js ---

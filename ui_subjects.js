@@ -1,11 +1,13 @@
 // --- START OF FILE ui_subjects.js ---
 
-import { data, setData, currentSubject, setCurrentSubject, currentUser } from './state.js';
+import { data, setData, currentSubject, setCurrentSubject, currentUser, db } from './state.js';
 import { displayContent, updateSubjectInfo, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { saveUserData, loadUserData } from './firebase_firestore.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showHomeDashboard } from './ui_home_dashboard.js';
+// Import defaults from config
+import { DEFAULT_MAX_QUESTIONS, DEFAULT_MCQ_PROBLEM_RATIO, DEFAULT_ONLINE_TEST_DURATION_MINUTES } from './config.js';
 
 // --- Subject Management ---
 
@@ -170,7 +172,6 @@ export async function selectSubject(id) {
          console.error("Error saving last selected subject ID:", error);
     }
 
-
     showHomeDashboard(); // Go to home for the new subject
 
     hideLoading();
@@ -232,33 +233,47 @@ export async function updateSubject(event, id) {
 
     const nameInput = document.getElementById('edit-subject-name');
     const filenameInput = document.getElementById('edit-subject-filename');
+    const problemsFilenameInput = document.getElementById('edit-subject-problems-filename');
     const maxQuestionsInput = document.getElementById('edit-max-questions');
+    const ratioInput = document.getElementById('edit-mcq-problem-ratio');
+    const durationInput = document.getElementById('edit-default-duration');
+
     const newName = nameInput?.value.trim();
     const newFilename = filenameInput?.value.trim();
+    const newProblemsFilename = problemsFilenameInput?.value.trim() || null; // Optional
     const newMaxQuestions = parseInt(maxQuestionsInput?.value);
+    const newRatioPercent = parseFloat(ratioInput?.value);
+    const newDuration = parseInt(durationInput?.value);
 
     // Validation...
-    if (!newFilename || !newFilename.endsWith('.md') || /[\/\\]/.test(newFilename)) { alert("Invalid filename..."); filenameInput?.focus(); return; }
-    if (!newName || isNaN(newMaxQuestions) || newMaxQuestions < 1) { alert("Invalid name or max questions..."); return; }
+    if (!newFilename || !newFilename.endsWith('.md') || /[\/\\]/.test(newFilename)) { alert("Invalid MCQ filename..."); filenameInput?.focus(); return; }
+    if (newProblemsFilename && (!newProblemsFilename.endsWith('.md') || /[\/\\]/.test(newProblemsFilename))) { alert("Invalid Problems filename..."); problemsFilenameInput?.focus(); return; }
+    if (!newName) { alert("Subject Name is required."); nameInput?.focus(); return; }
+    if (isNaN(newMaxQuestions) || newMaxQuestions < 1) { alert("Invalid Max Questions..."); maxQuestionsInput?.focus(); return; }
+    if (isNaN(newRatioPercent) || newRatioPercent < 0 || newRatioPercent > 100) { alert("Invalid MCQ Ratio..."); ratioInput?.focus(); return; }
+    if (isNaN(newDuration) || newDuration < 5) { alert("Invalid Default Duration..."); durationInput?.focus(); return; }
 
     showLoading("Saving Subject Changes...");
     try {
         const subjectToUpdate = data.subjects[id];
         let needsDataReload = false;
-        if (subjectToUpdate.fileName !== newFilename) {
-             console.log(`Filename changed from ${subjectToUpdate.fileName} to ${newFilename}. Data reload will be triggered.`);
+        if (subjectToUpdate.fileName !== newFilename || subjectToUpdate.problemsFileName !== newProblemsFilename) {
+             console.log(`Filename changed. MCQ: ${subjectToUpdate.fileName} -> ${newFilename}, Problems: ${subjectToUpdate.problemsFileName || 'Default'} -> ${newProblemsFilename || 'Default'}. Data reload will be triggered.`);
              needsDataReload = true;
-             // Clear existing chapter data as it's now invalid
+             // Clear existing chapter data and problem cache as it's now invalid
              subjectToUpdate.chapters = {};
              subjectToUpdate.studied_chapters = []; // Reset studied status too
+             window.subjectProblemCache?.delete(id); // Clear problem cache if exists
         }
 
         subjectToUpdate.name = newName;
         subjectToUpdate.fileName = newFilename;
+        subjectToUpdate.problemsFileName = newProblemsFilename; // Update problems filename
         subjectToUpdate.max_questions_per_test = newMaxQuestions;
+        subjectToUpdate.mcqProblemRatio = newRatioPercent / 100.0;
+        subjectToUpdate.defaultTestDurationMinutes = newDuration;
 
-        // Save the entire updated data object
-        await saveUserData(currentUser.uid);
+        await saveUserData(currentUser.uid); // Save the entire updated data object
         hideLoading();
 
         // Update current subject state if it was the one being edited
@@ -269,16 +284,16 @@ export async function updateSubject(event, id) {
 
         if (needsDataReload) {
              // Show toast about reload
-             const reloadMsgHtml = `<div class="toast-notification toast-info animate-fade-in"><p>Subject updated. Reloading data for new file...</p></div>`;
+             const reloadMsgHtml = `<div class="toast-notification toast-info animate-fade-in"><p>Subject updated. Reloading data for new file(s)...</p></div>`;
              const msgContainer1 = document.createElement('div'); msgContainer1.innerHTML = reloadMsgHtml; document.body.appendChild(msgContainer1); setTimeout(() => { msgContainer1.remove(); }, 5000);
 
              await loadUserData(currentUser.uid); // reload user data to sync chapters
-             showManageSubjects(); // Show the list again after reload (will call setActive)
+             showManageSubjects(); // Show the list again after reload
         } else {
              // Show success toast
              const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p>Subject '${escapeHtml(newName)}' updated!</p></div>`;
              const msgContainer2 = document.createElement('div'); msgContainer2.innerHTML = successMsgHtml; document.body.appendChild(msgContainer2); setTimeout(() => { msgContainer2.remove(); }, 4000);
-            showManageSubjects(); // Go back to the list view (will call setActive)
+            showManageSubjects(); // Go back to the list view
         }
 
     } catch (error) {
@@ -347,6 +362,7 @@ export async function deleteSubject(id) {
         }
 
         delete data.subjects[id]; // Delete from local state
+        window.subjectProblemCache?.delete(id); // Clear problem cache for deleted subject
         await saveUserData(currentUser.uid); // Save the modified data object
         hideLoading();
 
@@ -354,7 +370,7 @@ export async function deleteSubject(id) {
          const successMsgHtml = `<div class="toast-notification toast-warning animate-fade-in"><p>Subject "${escapeHtml(deletedSubjectName)}" deleted.</p></div>`;
          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
 
-        showManageSubjects(); // Refresh view (will call setActive)
+        showManageSubjects(); // Refresh view
 
     } catch (error) {
         console.error("Error deleting subject:", error);

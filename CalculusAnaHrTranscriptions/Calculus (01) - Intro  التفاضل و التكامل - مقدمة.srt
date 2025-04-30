@@ -1,0 +1,923 @@
+1
+00:00:20,179 --> 00:00:20,839
+Peace be upon you.
+
+2
+00:00:22,239 --> 00:00:27,079
+This video, God willing, will be an introduction to the topic we will talk about in the upcoming course,
+
+3
+00:00:27,979 --> 00:00:32,139
+which is... Calculus.
+
+4
+00:00:34,349 --> 00:00:43,609
+And Calculus, we know it by the name Differentiation and Integration.
+
+5
+00:00:45,549 --> 00:00:52,119
+What brought a word like Calculus to Differentiation and Integration? Let's clear up the ambiguity of this naming first, and then continue our discussion.
+
+6
+00:00:52,669 --> 00:00:54,819
+Calculus consists of two main branches.
+
+7
+00:00:54,819 --> 00:01:03,399
+One is called Differential Calculus.
+
+8
+00:01:04,699 --> 00:01:11,589
+The other is called Integral Calculus.
+
+9
+00:01:12,139 --> 00:01:14,899
+For brevity, they are both referred to as Calculus.
+
+10
+00:01:15,269 --> 00:01:20,919
+Differentiation, which is 'differentiation' or 'differential calculus', and Integration, which is 'integration' or 'integral calculus'.
+
+11
+00:01:24,409 --> 00:01:28,119
+Before we leave this point, there's also a small note I want to mention.
+
+12
+00:01:28,119 --> 00:01:39,099
+Many people think that you must study differentiation first to study integration, and that integration is built upon differentiation. And this is not entirely correct.
+
+13
+00:01:41,119 --> 00:01:46,709
+You can normally study integration before differentiation. There is a relationship... the two are considered two sides of the same coin.
+
+14
+00:01:46,709 --> 00:01:50,739
+And in a specific example like this, they are considered opposites of each other.
+
+15
+00:01:51,709 --> 00:01:54,999
+But it's not necessary to study this one first and then study that one.
+
+16
+00:01:55,719 --> 00:02:05,029
+Mostly, in most courses, including the course we will work on today, or rather, that I will work on in this course, God willing, we will study differentiation and then integration, but this is not a requirement.
+
+17
+00:02:05,029 --> 00:02:11,419
+In fact, one of the two who invented Calculus published integration first, before... before differentiation.
+
+18
+00:02:11,419 --> 00:02:21,049
+And I believe in the 100-200 years after the invention of Calculus, most books discussed the two separately. You would pick up a book for integration and then pick up a book for differentiation, and there was no problem with that at all.
+
+19
+00:02:21,329 --> 00:02:23,799
+I just wanted to clarify this point initially.
+
+20
+00:02:24,049 --> 00:02:24,349
+Okay.
+
+21
+00:02:25,649 --> 00:02:26,619
+What does Calculus mean?
+
+22
+00:02:28,479 --> 00:02:43,599
+Many people enter a stage like this in the course, and they come and draw a graph for you and tell you that Calculus is the rate of change, and that it's the slope of the tangent line at a point on a curve, or that integration is the area under the curve or part of the curve.
+
+23
+00:02:44,589 --> 00:02:55,999
+And if they want to delve deeper into the topic, they'll give you the example of velocity, the change of distance over time, and acceleration, which is the change of velocity over time, and so on.
+
+24
+00:02:56,599 --> 00:03:11,019
+I feel that this discussion is a bit early. Meaning, you can't jump into this topic at a stage like this. If we were to give an example, it should be more profound and simpler to understand, so we know what Calculus is talking about.
+
+25
+00:03:11,739 --> 00:03:25,339
+Honestly, the example of... or rather, the definition of Calculus within the framework I just mentioned a moment ago, I see it as not very precise, because these, frankly, are the tools or what Calculus does.
+
+26
+00:03:25,879 --> 00:03:30,959
+But the specific problem that Calculus addresses, this is what we need to talk about a bit.
+
+27
+00:03:31,249 --> 00:03:31,549
+Okay.
+
+28
+00:03:33,459 --> 00:03:41,149
+I will say one sentence about Calculus before moving on to the historical part that explains to us the circumstances of the emergence of Calculus.
+
+29
+00:03:41,929 --> 00:03:50,859
+If I wanted to give a definition for Calculus, I could say, I personally call it, the art of dealing with narrow spaces.
+
+30
+00:03:51,759 --> 00:03:55,989
+Keep this sentence in your mind for now, it will become clear later.
+
+31
+00:03:59,759 --> 00:04:06,609
+When we mention the word Calculus, two names appear immediately: Isaac Newton and Gottfried Leibniz.
+
+32
+00:04:07,529 --> 00:04:09,269
+Isaac Newton is more famous than fire on a flagstaff (very famous).
+
+33
+00:04:09,679 --> 00:04:24,539
+An English scientist, the king of gravity for at least 200 years, Newton's laws, he had achievements in optics and many other things, and he is the one who invented Calculus.
+
+34
+00:04:26,269 --> 00:04:29,289
+Leibniz is less famous than him, although he is also a heavyweight scientist.
+
+35
+00:04:29,699 --> 00:04:37,059
+He was originally a German scientist, studied law in Germany, and then moved to France. He studied Calculus... studied mathematics a bit, liked it, and continued with it.
+
+36
+00:04:37,599 --> 00:04:39,679
+And then he invented Calculus for us too.
+
+37
+00:04:40,409 --> 00:04:53,819
+Well, honestly, he didn't just invent Calculus, he also had achievements in many other things, among them is that he invented the binary system of 0s and 1s that we use today in computer systems. This was in the second half of the 17th century.
+
+38
+00:04:55,829 --> 00:05:00,179
+The question here is, what makes two scientists invent Calculus at the same time?
+
+39
+00:00:00,179 --> 00:00:00,179
+Of course,
+
+40
+00:05:00,179 --> 00:05:17,419
+when Leibniz and Newton started publishing their work on Calculus, Europe, in every sense of the word, before Calculus, or before Leibniz and Newton started talking about their achievements in Calculus, was one thing, and after Calculus, it was something else.
+
+41
+00:05:17,419 --> 00:05:22,909
+I personally almost assert that Europe's real renaissance began with Calculus.
+
+42
+00:05:23,549 --> 00:05:32,569
+Calculus, without any exaggeration, is the foundation of modern science that you see around you today in this form.
+
+43
+00:05:33,299 --> 00:05:39,479
+Without Calculus, you actually go back with technology to roughly the beginning of the 18th century.
+
+44
+00:05:40,539 --> 00:05:56,839
+So, Calculus is one of the important topics, it must be studied deeply, because any career you want to pursue, whether in physics, engineering, or any kind of science, even including advanced things in mathematics, Calculus is what holds this whole thing together.
+
+45
+00:05:58,269 --> 00:06:07,209
+Something of this importance, when someone like Newton and someone like Leibniz come and say we invented Calculus, Europe and the scientific community within it stood up on its feet.
+
+46
+00:06:08,219 --> 00:06:14,369
+And a big fight ensued between the two over who among them had the right to claim they invented Calculus.
+
+47
+00:06:14,819 --> 00:06:26,419
+Newton would say "I did it," Leibniz would say "No, I did it." And a huge debate occurred in the scientific circles in Europe for tens of years, even after the death of Leibniz and Newton, to say who really invented Calculus.
+
+48
+00:06:27,259 --> 00:06:35,549
+And historians settled on the conclusion that Newton and Leibniz invented Calculus independently, meaning separately.
+
+49
+00:06:37,349 --> 00:06:44,959
+And of course, there was much evidence for this claim. One of them was the difference in timing and the notes they were writing.
+
+50
+00:06:45,469 --> 00:07:00,359
+And the more important difference, or rather, the more important point that supported the idea that they both did it separately, is that the two of them, despite reaching the same result in the end in Calculus, the approach of each one of them was completely different.
+
+51
+00:07:01,039 --> 00:07:04,859
+Newton and Leibniz looked at Calculus from two completely different perspectives.
+
+52
+00:07:05,259 --> 00:07:07,039
+And this is an important point you need to be aware of.
+
+53
+00:07:07,589 --> 00:07:22,249
+Because sometimes when we talk about Calculus, we look at it from a very narrow perspective, which is the rate of change. Of course, the rate of change is the most important thing, but we take it as if it's only in physics and that it fixes velocity and acceleration, and that's the end of the story.
+
+54
+00:07:22,569 --> 00:07:28,809
+Calculus is actually very important, for example, you'd be surprised that Calculus is used very heavily in finance and economics.
+
+55
+00:07:29,519 --> 00:07:34,709
+So, Calculus is much broader than the narrow perspective we sometimes confine ourselves to.
+
+56
+00:07:36,659 --> 00:07:38,049
+Let's return to the more important question.
+
+57
+00:07:38,379 --> 00:07:49,809
+What makes someone like Newton and someone like Leibniz, living in different countries, think about something as important as this, like Calculus, and roughly at the same time?
+
+58
+00:07:51,399 --> 00:08:02,059
+Calculus wasn't a luxury, meaning Newton and Leibniz weren't just sitting around idly and said, "Let's invent something new," so they made Calculus. No. And this is a very important point you need to be aware of.
+
+59
+00:08:02,719 --> 00:08:14,799
+Calculus was a cure for a problem that already existed. And this problem grew and reached a stage where the sciences, especially physics, became stuck, unable to move forward.
+
+60
+00:08:15,819 --> 00:08:18,899
+The problem itself has existed perhaps for thousands of years.
+
+61
+00:08:19,339 --> 00:08:28,959
+To understand this problem, let's go back to the example I wanted to mention, which I told you about earlier and said we wanted to talk about, which is an example considered very fundamental in explaining what the problem of Calculus is.
+
+62
+00:08:29,649 --> 00:08:31,909
+This example dates back to the time of the Greeks.
+
+63
+00:08:32,419 --> 00:08:40,519
+Specifically, Archimedes. Of course, we know the Greeks were obsessed with geometry. Geometry, for them, wasn't just a part of mathematics, it was practically their life in geometry.
+
+64
+00:08:40,959 --> 00:08:45,089
+So, Archimedes was trying to calculate the area of a circle.
+
+65
+00:08:45,089 --> 00:08:50,249
+Of course, when I tell you Archimedes was trying to calculate the area of a circle, I am greatly simplifying what Archimedes was doing.
+
+66
+00:08:50,249 --> 00:08:57,619
+Archimedes was actually trying to find the closest value for pi, to calculate the area of the circle and its circumference.
+
+67
+00:08:57,619 --> 00:09:00,689
+But for simplicity, we'll say he wanted to calculate the area of the circle.
+
+68
+00:09:01,089 --> 00:09:15,409
+And also for simplicity, we won't delve into the entire approach he took, because his approach was large and had many details. We'll just take a specific part of it to lead us to the problem he faced, and which later Newton and Leibniz solved with Calculus.
+
+69
+00:09:19,839 --> 00:09:37,439
+To make this point clear, let's go to the computer and see the model in GeoGebra, what it looks like, and try to solve the problem that... or try to represent what Archimedes did around 200 BC.
+
+70
+00:09:40,459 --> 00:09:42,909
+Okay. This is the circle in front of us that we'll work on.
+
+71
+00:09:43,819 --> 00:09:48,599
+And we want to see what Archimedes did to calculate its area.
+
+72
+00:09:49,639 --> 00:09:55,699
+Archimedes couldn't, or didn't have a way to calculate the area of the circle in the traditional way, because it's a curve.
+
+73
+00:09:56,579 --> 00:10:06,359
+They could calculate the area and perimeter of shapes made up of straight lines, like triangles, squares, rectangles, polygons, and so on.
+
+74
+00:10:06,359 --> 00:10:17,369
+So he said, okay, let's put a shape made of these straight lines, whose area we can calculate, and put it inside the circle such that it occupies the largest possible area, and thus, this would be approximately the area of the circle.
+
+75
+00:10:17,929 --> 00:10:23,419
+So he came and put a hexagon, or a polygon with six sides.
+
+76
+00:10:23,729 --> 00:10:28,959
+Of course, why did he start with six sides, or the hexagon? Because the hexagon has important symmetry.
+
+77
+00:10:29,249 --> 00:10:38,309
+Every side of the sides you see in front of you from the hexagon equals the radius of the circle that circumscribes it from the six vertices.
+
+78
+00:10:39,019 --> 00:10:41,029
+So this is something that distinguishes the hexagon,
+
+79
+00:10:41,029 --> 00:10:49,069
+that's why he started from this part, because it provided him with very important information that facilitated the proof he was working on.
+
+80
+00:10:49,069 --> 00:11:00,989
+As we said, there are many details in the work Archimedes did in calculating pi or the circumference or the area of the circle, which we won't discuss. I'm just interested in a specific point in illustrating the problem that Calculus tries to solve.
+
+81
+01:01,969 --> 01:09,389
+Okay. If we look at the green hexagon, it occupies a considerable area of the circle. We still have some small things here, which are the white parts.
+
+82
+01:10,149 --> 01:17,949
+We can increase the accuracy of our reading for the area if we increase the number of sides of the polygon.
+
+83
+01:18,519 --> 01:26,659
+So we started with six, now we've increased it or put another polygon, making it 12 sides. And here we want to look at something.
+
+84
+01:27,689 --> 01:36,849
+The first side, or the side of the hexagon when it had six sides, is longer than each side in the polygon when it had 12 sides.
+
+85
+01:38,549 --> 01:39,059
+Okay.
+
+86
+01:41,949 --> 01:58,619
+The point, or the distance between the two points, as a result of the side of the polygon becoming shorter, the distance between the two points became shorter. Instead of the distance between the two points looking like this, the distance between the two points decreased by approximately half, or specifically by half.
+
+87
+01:58,929 --> 02:01,439
+Keep this in mind, we'll come back to it later.
+
+88
+02:02,319 --> 02:04,079
+I still have a white part.
+
+89
+02:04,899 --> 02:12,269
+True, the accuracy of my reading of the area increased, but I still have a white part here that I haven't covered.
+
+90
+02:12,749 --> 02:18,339
+Okay. If I increased the number of sides of the polygon? I started with 6, now 12, let's make them 24.
+
+91
+02:19,069 --> 02:22,559
+Ah, now it's clear that we've what? Finished almost the entire circle.
+
+92
+02:22,929 --> 02:24,359
+But I said what? Approximately.
+
+93
+02:24,629 --> 02:30,459
+Why? Because even though you might not notice it now, there are still white parts.
+
+94
+02:30,819 --> 02:38,119
+And to see these white parts, if we zoom in, it might become clearer.
+
+95
+02:42,259 --> 02:54,089
+You'll notice that here, the white distance here started to grow. And not just grow, I started to notice that these two points, after being very close to each other, moved apart.
+
+96
+02:54,429 --> 02:58,629
+And this is a very important point. After I did the zoom in, the distance between the points grew.
+
+97
+02:59,439 --> 03:07,559
+And I was able to show you that the white part here exists. No, there's a part of the circle we still couldn't calculate its area.
+
+98
+03:07,919 --> 03:13,779
+Okay. If we increased the number of sides of the polygon again and made them 48?
+
+99
+03:14,429 --> 03:17,299
+Ah, okay, now we've almost finished the what? Finished the circle entirely.
+
+100
+03:17,579 --> 03:23,749
+But also, if you focus a bit here, you'll find that there's still a white area or distance here.
+
+101
+03:23,989 --> 03:37,649
+And if we zoom in more, you'll notice that every time I zoom in, the distance... the two points move apart, I stretch them, and the white area or distance here becomes visible in front of me.
+
+102
+03:38,079 --> 03:40,619
+And this is something extremely important.
+
+103
+03:40,919 --> 03:54,539
+Okay, let's look at what we did. First, we put the hexagon, which has six sides, then we made them 12 sides, covering a larger area, then we made 48 sides, covering a larger area, and then we made... no, it was 6, 12, 24, and then 48.
+
+104
+03:55,119 --> 04:07,849
+The conclusion here is what? It's clear that no matter how much we keep increasing the number of sides of the polygon, there will always be a part of the circle that we still can't cover with the area.
+
+105
+04:08,219 --> 04:18,279
+Because the two points, any two points, no matter how close I bring them together, I can zoom in on them and show you that between them is a large area. We'll talk about this topic in detail later.
+
+106
+04:19,059 --> 04:31,929
+The question here is, when does the length of this polygon, or the side of this polygon, cover the circle without there being a gap, without this white gap existing?
+
+107
+04:32,419 --> 04:45,889
+The answer is when this point sticks to this point, such that the length of the side of the polygon is the point itself, it's just a point on the circle.
+
+108
+04:46,279 --> 04:50,269
+The problem is that this, mathematically, is impossible.
+
+109
+04:50,829 --> 04:53,159
+Why? Let's go to the board and see.
+
+110
+04:54,889 --> 04:58,079
+I think now we understand what Archimedes was trying to do.
+
+111
+04:58,779 --> 05:09,819
+And we understood that his problem was that always, no matter how many sides he added, he would have a side that creates a gap between it and the circle, because the circle is a curve and the side is a straight line.
+
+112
+05:10,269 --> 05:22,719
+And we said that it's impossible for this side to stick to the circle and eliminate all the gap to calculate it, except when this point sticks to this point.
+
+113
+05:24,789 --> 05:31,849
+The problem is that for this to happen, we need to understand how real numbers work.
+
+114
+05:32,629 --> 05:34,849
+Because here there is a contradiction.
+
+115
+05:35,199 --> 05:41,819
+If we look at the number line, let's talk about natural numbers first. Let's say here is 0, here is 1, here is 2, and here is 3.
+
+116
+05:42,269 --> 05:44,739
+And we are talking here about natural numbers.
+
+117
+05:45,999 --> 05:58,139
+If I came and asked you, what are the numbers between 1 and 3? You would say what? You would say 2. And your answer would be 100% correct, because natural numbers only contain whole positive numbers.
+
+118
+05:59,869 --> 06:04,099
+In this situation, we are not dealing with natural numbers.
+
+119
+06:04,599 --> 06:08,709
+We are dealing with the set of real numbers.
+
+120
+06:09,649 --> 06:12,049
+And the set of real numbers is different from natural numbers.
+
+121
+06:12,519 --> 06:26,959
+Because the set of real numbers, if I asked you what are the real numbers between 1 and 3? You'd say 2, and 1.5, and 2.5, and 2 and 3/4, and 2.999999... It's infinity.
+
+122
+06:27,509 --> 06:31,019
+The number of numbers between 1 and 3 is infinity.
+
+123
+06:31,559 --> 06:33,909
+The number of numbers between 1 and 2 is infinity.
+
+124
+06:34,229 --> 06:42,829
+The number of numbers between any two numbers, no matter how small the distance between them is on the real number line, is infinity.
+
+125
+06:43,259 --> 06:54,069
+Any two points you might place, I can zoom in like I was doing for you in the program earlier, and show you an infinite number of numbers between them, no matter how small the distance between them was originally.
+
+126
+06:55,389 --> 06:56,559
+Same problem here.
+
+127
+06:56,889 --> 07:09,159
+For me to connect this point to this point, such that the length of this side is the distance between two points on the circle, and there's nothing between these two points, this is impossible because there are no two points in the real numbers that don't have something between them.
+
+128
+07:12,829 --> 07:14,489
+And this was the dilemma.
+
+129
+07:15,089 --> 07:16,029
+This is Calculus.
+
+130
+07:17,279 --> 07:29,569
+So Archimedes imagined something and gave it a name back then, it's not the name we will use later, but he imagined that there is a number very, very, very, very small, but not zero.
+
+131
+07:30,679 --> 07:33,649
+And this concept, we will return to it later, but keep this idea in your mind.
+
+132
+07:34,479 --> 07:40,459
+This problem existed long ago, since the time, as we said, of Archimedes, and it remained with scientists for a long time.
+
+133
+07:40,459 --> 07:47,329
+When did serious work happen to solve... or in an attempt to solve this problem?
+
+134
+07:47,329 --> 07:49,729
+This was in the first half of the 17th century.
+
+135
+07:50,549 --> 07:57,579
+You have scientists like Kepler, Descartes, Fermat, Pascal, all these people tried to solve this problem.
+
+136
+07:57,899 --> 08:09,489
+Specifically, they weren't trying to solve this problem exactly, they were trying to solve the problem we mentioned at the beginning of the video, which is the tangent line at a point on a curve, and the area under the curve.
+
+137
+08:10,639 --> 08:12,959
+This problem is the same as this problem.
+
+138
+08:13,639 --> 08:16,119
+How? That's what we'll see, God willing, in the course.
+
+139
+08:17,469 --> 08:37,789
+Specifically, this problem, or solving something like this, is easy if I can manage this problem, because the only obstacle preventing me from getting the tangent line and the area under the curve is reaching the point or, rather, the distance between two points such that there is nothing between them. And the real numbers don't allow me to do something like that.
+
+140
+08:39,259 --> 08:41,879
+As we said, many scientists tried this topic,
+
+141
+08:43,069 --> 08:44,999
+and some of their techniques worked.
+
+142
+08:45,489 --> 08:57,129
+Their problem was that they were somewhat isolated, meaning this technique works for this graph, but doesn't work for another graph, or it works for this type of problem but doesn't work for other problems, or it produces errors in this case and doesn't produce errors in other cases.
+
+143
+08:57,129 --> 09:02,979
+So the matter wasn't consistent, it couldn't be generalized and become something that works for all graphs.
+
+144
+09:03,829 --> 09:07,949
+And here is the achievement made by Newton and Leibniz.
+
+145
+09:08,439 --> 09:18,239
+Newton and Leibniz sat down, studied the experiments done by those before them very carefully and very focusedly, and they learned from all the mistakes they made.
+
+146
+09:18,579 --> 09:24,989
+And they gathered all this and came up with the technique which is Calculus, specifically Integration and Differentiation.
+
+147
+09:25,739 --> 09:30,819
+Their problem was that the foundation supporting them wasn't strong. The tool was working.
+
+148
+09:31,259 --> 09:38,229
+Indeed, it caused a revolution in the scientific community in Europe, because truly, without this, physics... physics was stuck.
+
+149
+09:38,519 --> 09:50,099
+Because all the modern problems of physics depend on the rate of change, depend on irregular shapes. Traditional mathematics like arithmetic, algebra, geometry, and trigonometry
+
+150
+09:52,369 --> 09:56,739
+cannot solve the real problems found in the real world.
+
+151
+09:56,739 --> 09:58,909
+So physics had indeed reached a point where it was stuck.
+
+152
+09:59,509 --> 10:02,519
+So Calculus was the only solution, and that's why I always say that
+
+153
+10:03,659 --> 10:18,959
+if Newton and Leibniz hadn't invented it, someone else would have. One of the scientists who was working on these things would have eventually reached a solution, because physics wouldn't have progressed further... further than... I mean, it wouldn't have advanced if Calculus hadn't appeared.
+
+154
+10:20,769 --> 10:32,919
+As we said, Newton and Leibniz created the technique, but the foundation supporting the technique, from the perspective of mathematical fundamentals and mathematical reasoning, was very weak, because they couldn't find a solution to this problem.
+
+155
+10:33,299 --> 10:37,979
+In the end, they kind of faked it. And specifically Leibniz, they made a shortcut.
+
+156
+10:38,279 --> 10:38,809
+They said what?
+
+157
+10:39,889 --> 11:01,699
+They said, "We don't know how to... we can't solve this issue," so they came and invented a new term for you called... well, it's not a new term, they took the same idea from Archimedes but gave it a fancier name, called Infinitesimal Numbers or Quantities.
+
+158
+11:02,479 --> 11:03,519
+What do they mean?
+
+159
+11:03,769 --> 11:18,069
+These folks say that there is a number very, very, very small, smaller than anything you can imagine, and smaller than anything you can measure, but it is greater than zero. It's still in the positive numbers.
+
+160
+11:19,109 --> 11:20,429
+What is this number? We don't know.
+
+161
+11:21,679 --> 11:22,369
+It exists.
+
+162
+11:23,249 --> 11:28,359
+And this was the problem with the Calculus of Newton and Leibniz.
+
+163
+11:29,599 --> 11:46,519
+Of course, all mathematicians and philosophers who existed at that time criticized this concept because there's nothing to say about it, there's nothing... you're not holding onto anything tangible. You can't build an important branch of mathematics on a strange concept like this.
+
+164
+11:47,269 --> 11:52,289
+But Calculus was working. You take the equations of Calculus, apply them, it works perfectly.
+
+165
+11:52,659 --> 11:54,839
+But the foundation had a major problem.
+
+166
+11:54,839 --> 12:08,659
+It had such a big problem that there was a famous person named Berkeley, who, around... he wrote an article after the death of Newton and Leibniz by about 10 or 20, maybe even 30 years, criticizing the foundation of Calculus very strongly. It was perhaps one of the most scathing critiques of the foundation of Calculus.
+
+167
+12:10,799 --> 12:18,989
+And he described the infinitesimal numbers, he called them "the ghosts of departed quantities."
+
+168
+12:19,399 --> 12:29,199
+In short, he wanted to say what? That Newton and Leibniz are talking about a number that died, and now we are dealing with its ghost. Or, I mean, that's exactly what he meant.
+
+169
+12:29,199 --> 12:31,869
+So, of course, there was a big problem with the topic.
+
+170
+12:31,869 --> 12:38,969
+This problem was solved later. We'll come to that topic after a little while.
+
+171
+12:38,969 --> 12:53,039
+In the late 17th century and early 18th century, or in the first half of the 18th century, another group of scientists appeared who contributed to the development of Calculus and the development of mathematics in general, but I'm interested in three of them here: Taylor, Euler, and Fourier.
+
+172
+12:54,719 --> 13:12,719
+These three had contributions in mathematics in general, but the three of them had a common factor: they were masters in two areas, which are Sequences and Series.
+
+173
+13:13,349 --> 13:22,799
+Of course, sequences and series as concepts aren't new, meaning they didn't appear in the 17th or 18th century, but they existed since the time of Fibonacci, things like that maybe 300-400 years before. So the concept is old.
+
+174
+13:23,799 --> 13:31,939
+But with the emergence of Calculus, they started looking at sequences and series differently, and they started talking more deeply about infinite series.
+
+175
+13:32,609 --> 13:39,599
+And this led to the emergence of another concept later, which we will talk about, that corrected the issue of infinitesimal numbers.
+
+176
+13:41,689 --> 13:44,889
+And here comes the role of the scientist after him, whose name is Cauchy.
+
+177
+13:44,889 --> 13:54,929
+He was a French scientist, who was in the late 18th century and early 19th century, or the first half of the 19th century.
+
+178
+13:56,099 --> 14:04,639
+Cauchy was the first one to introduce the concept... let's put it here now because this is its place... the concept of Limits.
+
+179
+14:04,639 --> 14:05,979
+And let's put this in a box.
+
+180
+14:06,599 --> 14:10,479
+Limits are the foundation upon which Calculus rests.
+
+181
+14:10,939 --> 14:14,419
+Limits are the concept that replaced infinitesimal numbers.
+
+182
+14:15,019 --> 14:31,829
+And Limits were formed after a major development in mathematics, and one of the most important things that contributed to Cauchy being able to grasp the concept of limits and present it was sequences and series. That's why I mentioned it. It's one of the very important things in Calculus because it strongly affects the understanding of limits.
+
+183
+14:32,459 --> 14:42,639
+Cauchy was the first one to introduce or talk about the concept of limits. After more than 130 years since the Calculus made by Newton and Leibniz.
+
+184
+14:43,379 --> 14:53,109
+To the extent that some people consider Cauchy the true inventor or the true discoverer of Calculus because he introduced the concept of limits. Because for many people, Limits are Calculus.
+
+185
+14:53,639 --> 15:01,229
+Differentiation and integration are just the tools you use to solve physics problems or mathematical problems you have. But the concept,
+
+186
+15:01,689 --> 15:10,619
+the foundation, the mathematical reasoning behind Calculus lies almost exclusively in Limits.
+
+187
+15:11,319 --> 15:19,059
+Understanding Limits is not easy. Understanding Limits requires work from you, because if you understand it, the rest will be a piece of cake.
+
+188
+15:20,169 --> 15:38,389
+Infinitesimal numbers started to shake, until someone came after Cauchy, a German scientist, who refined Limits, because Cauchy's Limits had some... يعني... ambiguity, so he refined them, and that was the last nail in the coffin of infinitesimal numbers, and Limits, after that, took off.
+
+189
+15:41,809 --> 15:46,129
+Limits were trying specifically to address this problem.
+
+190
+15:46,589 --> 15:49,869
+And indeed, they addressed it to a very, very, very large extent.
+
+191
+15:51,039 --> 16:09,369
+After this, a bit later, in the late 18th century... no, sorry. In the late 19th century and the beginning of the 20th century, or, I mean, the first period of the 20th century, another scientist appeared.
+
+192
+16:10,839 --> 16:14,829
+And this man, in particular, I must write his name.
+
+193
+16:14,829 --> 16:21,309
+This man's name is George Cantor.
+
+194
+16:23,139 --> 16:29,079
+George Cantor, if a movie hasn't been made about his life yet, one must be made about him.
+
+195
+16:29,809 --> 16:41,259
+This man's life story was tragic, it was very exciting and sad, and unfortunately, quite unfortunate.
+
+196
+16:42,429 --> 16:47,269
+This man started talking about very important theories in this area.
+
+197
+16:47,269 --> 16:49,689
+This man, in short, is the master of real numbers.
+
+198
+16:50,339 --> 16:53,929
+He didn't talk about limits specifically, or rather, his contributions weren't specifically in limits.
+
+199
+16:53,929 --> 17:05,429
+His contributions were in changing the perspective of mathematicians towards numbers, and specifically real numbers, which directly affects people's understanding of limits.
+
+200
+17:07,149 --> 17:15,889
+This man introduced Set Theory, Number Theory, the Continuum, Cardinality, the Cardinality of the Continuum, Nested Intervals...
+
+201
+17:16,519 --> 17:26,399
+The number of theorems this man created, he introduced practically a new chapter in mathematics, which we now, almost all of it falls under the name Set Theory.
+
+202
+17:27,599 --> 17:36,929
+The problem is that when he introduced these concepts initially, nobody paid attention to him.
+
+203
+17:37,309 --> 17:45,939
+Despite him being a renowned scientist, I mean, he was originally a German scientist but was born in Russia and returned to Germany later, and studied mathematics in famous German universities.
+
+204
+17:46,349 --> 17:50,939
+But when he started talking about Set Theory and such things, nobody paid attention to him.
+
+205
+17:51,809 --> 18:10,549
+Not only that, but they started attacking him to a degree that was somewhat insulting, and they stalled his career at many stages because, for example, he had an opportunity to take a prestigious position, say at the University of Berlin, his professor, who didn't agree with his theories, blocked him. His professor was one of the people who most negatively impacted his life.
+
+206
+18:10,549 --> 18:25,969
+He even called him the... I think he called him "the corruptor of the youth," something like that, meaning, in short, he wanted to say he was a spoiled young man and corrupting the youth around him because he was teaching these techniques to his colleagues, or rather, his peers in Karrl Mathematics.
+
+207
+18:27,139 --> 18:38,779
+The man... the situation became so bad for him that he fell into depression, entered into depression, and spent the last 15 or 20 years of his life moving from one mental institution to another.
+
+208
+18:38,779 --> 18:41,769
+Yes, people complicated the man's life.
+
+209
+18:42,769 --> 19:13,149
+And his son died during that period, and his condition worsened. He would go in and out [of institutions], work a little, they would mess things up for him more, he'd go back to the hospital, come out... المهم, in the end, it reached a stage where he gave up mathematics and went to study philosophy, and then he left philosophy and started teaching literature, specializing in the literature of the Shakespearean era and Queen Elizabeth and stuff. And then he returned to mathematics. المهم, in the end, the man kept going in and out of mental institutions until he died in the last one he entered, he entered about four or five times, and died in 1918 in the last mental institution he entered.
+
+210
+19:14,839 --> 19:21,959
+Towards the end of his life, people started realizing that this man wasn't crazy. This man was talking about very important things.
+
+211
+19:22,509 --> 19:34,589
+And today, one of the most important branches of mathematics, and one of the branches of mathematics considered very advanced, are the theories this man practically founded.
+
+212
+19:35,129 --> 19:40,309
+Why are we saying this? Because this man changed people's concept of real numbers.
+
+213
+19:40,879 --> 19:48,829
+And as long as you change your concept of real numbers, then you change your concept of limits. And to understand limits correctly,
+
+214
+19:48,829 --> 20:02,309
+you must understand the next point, which is the Properties of Numbers in general.
+
+215
+20:03,709 --> 20:07,499
+This is our course.
+
+216
+20:08,139 --> 20:12,109
+We'll talk initially about the properties of numbers,
+
+217
+20:12,499 --> 20:14,309
+then we'll talk about functions.
+
+218
+20:14,309 --> 20:19,939
+Of course, functions are the most important concept in mathematics generally. So we'll talk about functions... where should I write it? Write it here.
+
+219
+20:21,059 --> 20:22,659
+Functions.
+
+220
+20:24,029 --> 20:30,179
+So we'll talk here, get into functions, and from functions, we get into limits, and from limits, we get into differentiation and integration.
+
+221
+20:30,649 --> 20:33,809
+Sequences and series will be in different places throughout the course.
+
+222
+20:33,989 --> 20:41,159
+We'll talk about complex numbers, which are also related to the properties of numbers,
+
+223
+20:42,459 --> 20:45,159
+because they introduce us to a new type of numbers.
+
+224
+20:46,559 --> 21:06,469
+So, the purpose of this introduction was to show you that Calculus is not just differentiation and integration, and not just limits, it's many things together, because Calculus as a topic is part of a larger branch in mathematics called Real Analysis.
+
+225
+21:07,619 --> 21:30,379
+And this is one of the important fields in mathematics. We don't necessarily need to go into it, but at the very least, we must understand this framework well if you want to have a strong future in any study in physics, and any study in engineering, or, of course, consequently, in any advanced mathematics you'll work on, God willing, in the future.
+
+226
+21:31,429 --> 21:34,609
+Now for the source we will use... work from in this course.
+
+227
+21:34,609 --> 21:35,889
+There are, of course, many books.
+
+228
+21:36,219 --> 21:44,529
+The most famous book considered as an introduction to Calculus and Real Analysis is a book by an American scientist named Michael Spivak.
+
+229
+21:44,899 --> 22:08,819
+I believe the man is still alive, he was born in 1940. He wrote the book we will work from, or the first edition of it, or the first version of it was in '67, meaning he was 27 years old. This is the year he got his PhD. Despite him writing the book when he was very young, as I told you, this book is considered *the* Calculus book for many people. Meaning, they consider that to study Calculus, you must read this book at some stage... or in any stage of your life, so that you can say you've studied Calculus.
+
+230
+22:09,129 --> 22:11,539
+This is the book we will work from, God willing.
+
+231
+22:12,869 --> 22:15,829
+See you in the next video. Peace be upon you.

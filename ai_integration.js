@@ -18,15 +18,23 @@ try {
     GoogleGenerativeAI = genAIModule.GoogleGenerativeAI;
 } catch (e) {
     console.error("Google AI SDK class not found. AI Features disabled.", e);
+    // Submit feedback about SDK loading failure
+    if (currentUser) {
+        submitFeedback({
+            subjectId: "AI SDK Load Error",
+            questionId: null,
+            feedbackText: `Failed to load Google AI SDK: ${e.message}`,
+            context: "System Error - AI SDK Load"
+        }, currentUser).catch(e => console.error("Failed to submit feedback for SDK load error:", e));
+    }
 }
 
 // PDF.js library (dynamically check if loaded - needed for PDF text extraction)
 let pdfjsLib = window.pdfjsLib;
 
-// Define models (Consider using latest stable or appropriate versions)
-// MODIFIED: Use Gemini 1.5 Pro for potentially larger context window
-const TEXT_MODEL_NAME = "gemini-1.5-pro-latest"; // Using latest stable 1.5 pro
-const VISION_MODEL_NAME = "gemini-1.5-pro-latest"; // Using latest stable 1.5 pro (also vision capable)
+// Define models (Using latest stable versions)
+const TEXT_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable 1.5 pro
+const VISION_MODEL_NAME = "gemini-1.5-pro-vision"; // Using latest stable vision model
 
 
 // --- Helper: Fetch Text File (SRT Parser) ---
@@ -111,7 +119,6 @@ window.getAllPdfTextForAI = getAllPdfTextForAI; // Assign to window scope
 
 
 // --- API Call Helpers ---
-// MODIFIED: Added tokenLimitCheck function
 /**
  * Checks if the prompt length likely exceeds a safe token limit.
  * Sends feedback if the limit is exceeded.
@@ -128,8 +135,7 @@ async function tokenLimitCheck(contextText, charLimit = 1800000) { // Approx 1.8
             feedbackText: `AI prompt context length (${contextText.length}) exceeded the safety limit (${charLimit}) for a function call. Context might be too large. Context type: ${contextText.substring(0, 100)}...`,
             context: "System Error - AI Context Length Limit"
         };
-        // Use the imported currentUser from state
-        if (currentUser) { // Check if user is available before submitting feedback
+        if (currentUser) {
             await submitFeedback(feedbackData, currentUser).catch(e => console.error("Failed to submit feedback for context limit error:", e));
         }
         return false; // Exceeds limit
@@ -144,96 +150,76 @@ async function tokenLimitCheck(contextText, charLimit = 1800000) { // Approx 1.8
  * @param {Array | null} history - The conversation history array (if continuing a conversation).
  * @returns {Promise<string>} - The AI's text response.
  */
-export async function callGeminiTextAPI(prompt, history = null) { // Added history parameter
+export async function callGeminiTextAPI(prompt, history = null) {
     if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
     if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY") throw new Error("API Key not configured.");
 
-    // Determine content to send (either prompt or history)
-    let requestContents;
-    let contextToCheck = ''; // Text content to check against limit
-
-    if (history && history.length > 0) {
-        requestContents = history;
-        // Estimate context size from history for limit check
-        contextToCheck = history.map(turn => turn.parts.map(part => part.text || '').join(' ')).join('\n');
-        console.log(`Sending TEXT prompt (HISTORY mode) to Gemini (${TEXT_MODEL_NAME}). History length: ${history.length}, Estimated context length: ${contextToCheck.length}`);
-    } else if (prompt) {
-        requestContents = [{ role: "user", parts: [{ text: prompt }] }];
-        contextToCheck = prompt;
-        console.log(`Sending TEXT prompt (SINGLE mode) to Gemini (${TEXT_MODEL_NAME}). Length: ${prompt.length}`);
-    } else {
-        throw new Error("callGeminiTextAPI requires either a prompt or a history array.");
+    // Check token limit
+    if (!await tokenLimitCheck(prompt)) {
+        throw new Error("Prompt exceeds token limit. Please reduce the context size.");
     }
 
-
-    // MODIFIED: Check token limit BEFORE sending based on estimated context
-    if (!await tokenLimitCheck(contextToCheck)) {
-        throw new Error("The content or conversation history is too large for the AI model to process. Feedback was sent to the admin.");
-    }
+    // Prepare request contents
+    const requestContents = history ? [
+        ...history.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] })),
+        { role: "user", parts: [{ text: prompt }] }
+    ] : [{ role: "user", parts: [{ text: prompt }] }];
 
     try {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: TEXT_MODEL_NAME });
 
-        // Basic safety settings (adjust as needed)
+        // Enhanced safety settings
         const safetySettings = [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
         ];
-        // Add generation config
+
+        // Optimized generation config
         const generationConfig = {
             temperature: 0.6, // Slightly lower temp for more focused generation
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 8192, // Increase max output tokens if needed
+            maxOutputTokens: 8192, // Increased max output tokens
+            stopSequences: ["\n\n\n"] // Prevent excessive newlines
         };
 
-        // Use generateContent for both single and multi-turn
-        const result = await model.generateContent({ contents: requestContents, safetySettings, generationConfig });
-        const response = result.response; // Access response directly
+        const result = await model.generateContent({ 
+            contents: requestContents, 
+            safetySettings, 
+            generationConfig 
+        });
+        const response = result.response;
 
-        // Check for blocking first
+        // Enhanced error handling
         if (response.promptFeedback?.blockReason) {
             console.error("Prompt blocked by safety settings:", response.promptFeedback.blockReason);
             throw new Error(`AI request blocked due to safety settings: ${response.promptFeedback.blockReason}`);
         }
         if (!response.candidates || response.candidates.length === 0) {
-             console.warn("Gemini response has no candidates:", response);
-             throw new Error("AI response was empty or missing content.");
+            console.warn("Gemini response has no candidates:", response);
+            throw new Error("AI response was empty or missing content.");
         }
-         if (response.candidates[0].finishReason === 'SAFETY') {
-              console.error("Response candidate blocked by safety settings.");
-              throw new Error("AI response blocked due to safety settings.");
-         }
-          // Check finishReason for other issues like MAX_TOKENS
-          if (response.candidates[0].finishReason === 'MAX_TOKENS') {
-               console.warn("Gemini response stopped due to MAX_TOKENS limit.");
-               // Return truncated text but warn the user
-               // alert("Warning: The AI response may have been cut short due to length limits.");
-          } else if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
-               console.warn(`Gemini response finished with reason: ${response.candidates[0].finishReason}`);
-          }
+        if (response.candidates[0].finishReason === 'SAFETY') {
+            console.error("Response candidate blocked by safety settings.");
+            throw new Error("AI response blocked due to safety settings.");
+        }
 
-         if (!response.candidates[0].content?.parts?.[0]?.text) {
-              console.warn("Could not extract text from Gemini response structure:", response);
-              throw new Error("AI response format unclear or content missing.");
-         }
-
-        const text = response.candidates[0].content.parts[0].text;
-        console.log("Received AI text response.");
-        return text;
+        return response.candidates[0].content.parts[0].text;
     } catch (error) {
-        console.error("Error calling Gemini Text API:", error);
-        let errorMessage = `Gemini API Error: ${error.message || 'Unknown error'}.`;
-        if (error.message?.toLowerCase().includes('api key not valid')) { errorMessage = "Invalid API Key."; }
-        else if (error.message?.includes('quota')) { errorMessage = "Quota exceeded."; }
-        else if (error.message?.includes('safety settings')) { /* Already specific */ }
-        else if (error.toString().includes('API key not valid')) { errorMessage = "Invalid API Key."; }
-        // Catch our custom error
-        else if (error.message?.includes('too large for the AI model')) { errorMessage = error.message; }
-        throw new Error(errorMessage); // Re-throw handled error
+        console.error("Error in callGeminiTextAPI:", error);
+        // Submit feedback about API error
+        if (currentUser) {
+            submitFeedback({
+                subjectId: "AI API Error",
+                questionId: null,
+                feedbackText: `Error in callGeminiTextAPI: ${error.message}`,
+                context: "System Error - AI API Call"
+            }, currentUser).catch(e => console.error("Failed to submit feedback for API error:", e));
+        }
+        throw error;
     }
 }
 
@@ -800,12 +786,18 @@ export async function reviewNoteWithAI(noteContent, courseId, chapterNum) {
     console.log(`Requesting AI review for note (length: ${noteContent.length}) for Course ${courseId}, Chapter ${chapterNum}`);
     showLoading(`Gathering content for Ch ${chapterNum} Note Review...`);
 
-    const courseDef = globalCourseDataMap.get(courseId); if (!courseDef) { hideLoading(); return `<p class="text-danger">Course definition not found.</p>`; }
+    const courseDef = globalCourseDataMap.get(courseId); 
+    if (!courseDef) { 
+        hideLoading(); 
+        return `<p class="text-danger">Course definition not found.</p>`; 
+    }
+
     const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
     const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
     const lectureUrls = (chapterResources.lectureUrls || []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
 
-    let transcriptionText = null; let fullPdfText = null;
+    let transcriptionText = null; 
+    let fullPdfText = null;
 
     // Fetch Transcription(s)
     if (lectureUrls.length > 0) {
@@ -871,8 +863,9 @@ Format the response clearly using Markdown (bold, lists). Use LaTeX ($$, $) for 
         hideLoading();
         return formatResponseAsHtml(reviewText);
     } catch (error) {
-        console.error(`Error reviewing note for Ch ${chapterNum}:`, error); hideLoading();
-        return `<p class="text-danger">Error generating note review: ${error.message}</p>`; // Display error
+        console.error(`Error reviewing note for Ch ${chapterNum}:`, error); 
+        hideLoading();
+        return `<p class="text-danger">Error generating note review: ${error.message}</p>`;
     }
 }
 

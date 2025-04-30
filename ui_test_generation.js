@@ -1,17 +1,21 @@
 // --- START OF FILE ui_test_generation.js ---
 
 import { currentSubject, currentUser, data } from './state.js';
-import { displayContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
-// MODIFIED: Import parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions
-import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
+import { displayContent, setActiveSidebarLink } from './ui_core.js';
+// Import test_logic functions
+import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { generateAndDownloadPdfWithMathJax, generatePdfHtml, generateTexSource, downloadTexFile } from './ui_pdf_generation.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { saveUserData } from './firebase_firestore.js';
-import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml
+import { showLoading, hideLoading, escapeHtml } from './utils.js';
 import { showManageSubjects } from './ui_subjects.js';
 import { showManageStudiedChapters } from './ui_studied_chapters.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
+// Import storage function
+import { storeExamResult } from './exam_storage.js';
+// Import config defaults
+import { DEFAULT_MCQ_PROBLEM_RATIO, DEFAULT_ONLINE_TEST_DURATION_MINUTES } from './config.js';
 // Removed AI imports, handled elsewhere
 // Removed parseSkipExamText import, handled elsewhere
 
@@ -152,79 +156,86 @@ export function getSelectedChaptersAndPromptTestType() {
 export function promptTestType(mode, selectedChapters = null) {
      if (!currentSubject || !currentSubject.chapters) {
          displayContent('<p class="text-red-500 p-4">Error: Subject data is missing.</p>');
-         // MODIFIED: Target correct nav section
-         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
          return;
      }
 
     let chapterScopeDescription = "";
     let relevantChapters = {};
     let chapterCount = 0;
-    let totalAvailableInScope = 0;
+    let totalAvailableMcqsInScope = 0;
+    let chaptersInScopeNumbers = []; // Store chapter numbers for problem check
 
     if (mode === 'studied') {
         const studied = currentSubject.studied_chapters || [];
-        if (studied.length === 0) {
-            displayContent('<p class="text-red-500 p-4">No chapters marked as studied.</p><button onclick="window.showManageStudiedChapters()" class="btn-secondary mt-4">Manage Studied Chapters</button>');
-            // MODIFIED: Target correct nav section
-             setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
-            return;
-        }
+        if (studied.length === 0) { hideLoading(); displayContent('<p class="text-red-500 p-4">No chapters marked as studied.</p><button onclick="window.showManageStudiedChapters()" class="btn-secondary mt-4">Manage Studied Chapters</button>'); return; }
         studied.forEach(chapNum => {
             const chap = currentSubject.chapters[chapNum];
-            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) { // Check available > 0
+            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
                 relevantChapters[chapNum] = chap;
-                totalAvailableInScope += chap.available_questions.length;
+                totalAvailableMcqsInScope += chap.available_questions.length;
             }
+            if (chap) chaptersInScopeNumbers.push(chapNum); // Add even if no MCQs for problem check
         });
         chapterCount = Object.keys(relevantChapters).length;
-        if (chapterCount === 0) {
-             displayContent('<p class="text-yellow-500 p-4">None of your studied chapters have available questions.</p>');
-              // MODIFIED: Target correct nav section
-              setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+        if (chapterCount === 0 && totalAvailableMcqsInScope === 0) { // Check MCQs specifically
+             displayContent('<p class="text-yellow-500 p-4">None of your studied chapters have available MCQs.</p>');
+             setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
              return;
         }
-        chapterScopeDescription = `Based on your ${chapterCount} studied chapter(s) (${totalAvailableInScope} questions available).`;
+        chapterScopeDescription = `Based on your ${chapterCount} studied chapter(s) with available MCQs (${totalAvailableMcqsInScope} MCQs available).`;
     } else if (mode === 'specific' && selectedChapters) {
         selectedChapters.forEach(chapNum => {
              const chap = currentSubject.chapters[chapNum];
-            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) { // Check available > 0
+            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
                 relevantChapters[chapNum] = chap;
-                 totalAvailableInScope += chap.available_questions.length;
+                 totalAvailableMcqsInScope += chap.available_questions.length;
             }
+            if(chap) chaptersInScopeNumbers.push(chapNum); // Add even if no MCQs for problem check
         });
         chapterCount = Object.keys(relevantChapters).length;
-         if (chapterCount === 0) {
-              displayContent('<p class="text-yellow-500 p-4">None of the selected chapters have available questions.</p>');
-               // MODIFIED: Target correct nav section
-               setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+         if (chapterCount === 0 && totalAvailableMcqsInScope === 0) {
+              displayContent('<p class="text-yellow-500 p-4">None of the selected chapters have available MCQs.</p>');
+               setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
               return;
          }
-        chapterScopeDescription = `Based on the ${chapterCount} selected chapter(s) (${totalAvailableInScope} questions available).`;
+        chapterScopeDescription = `Based on the ${selectedChapters.length} selected chapter(s) (${totalAvailableMcqsInScope} MCQs available).`;
     } else {
          displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
-          // MODIFIED: Target correct nav section
-          setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+          setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
          return;
     }
 
-     if (totalAvailableInScope === 0) {
-        displayContent(`<p class="text-yellow-500 p-4">The chapters in scope have no available questions currently.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
-         // MODIFIED: Target correct nav section
-         setActiveSidebarLink('showTestGenerationDashboard', 'sidebar-standard-nav');
+    // Check for available problems in the scope
+    let totalAvailableProblemsInScope = 0;
+    if (window.subjectProblemCache && window.subjectProblemCache.has(currentSubject.id)) {
+        const problemCache = window.subjectProblemCache.get(currentSubject.id);
+        chaptersInScopeNumbers.forEach(chapNum => {
+            totalAvailableProblemsInScope += (problemCache[chapNum]?.length || 0);
+        });
+    }
+    chapterScopeDescription += ` ${totalAvailableProblemsInScope} Problems available.`;
+
+    if (totalAvailableMcqsInScope === 0 && totalAvailableProblemsInScope === 0) {
+        displayContent(`<p class="text-yellow-500 p-4">The chapters in scope have no available questions or problems currently.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
+         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
-     }
+    }
 
     const maxTestSize = currentSubject.max_questions_per_test || 42;
-    const actualTestSize = Math.min(maxTestSize, totalAvailableInScope);
+    // Calculate max possible based on BOTH available MCQs and Problems
+    const actualMaxPossible = totalAvailableMcqsInScope + totalAvailableProblemsInScope;
+    const actualTestSize = Math.min(maxTestSize, actualMaxPossible); // Limited by overall availability
+    const mcqRatio = currentSubject.mcqProblemRatio ?? DEFAULT_MCQ_PROBLEM_RATIO;
+    const ratioPercent = (mcqRatio * 100).toFixed(0);
 
     const html = `
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4">
             <h2 class="text-xl font-semibold mb-4 text-primary-600 dark:text-primary-400">Choose Test Format</h2>
             <p class="text-gray-600 dark:text-gray-400 mb-6">
                 ${chapterScopeDescription}<br>
-                Generating a test with <strong>${actualTestSize} questions</strong> (Max: ${maxTestSize}, Available: ${totalAvailableInScope}).
-                 <span class="text-xs block mt-1">Test will include a mix of MCQs and Problems (approx. 50/50 if available).</span>
+                Generating a test with <strong>${actualTestSize} questions</strong> (Max: ${maxTestSize}, Available: ${actualMaxPossible}).
+                 <span class="text-xs block mt-1">Test will include ~${ratioPercent}% MCQs and ~${100-ratioPercent}% Problems, based on availability.</span>
             </p>
             <div class="space-y-3">
                  <button onclick='window.startTestGeneration(${JSON.stringify(mode)}, ${JSON.stringify(selectedChapters)}, "online")' class="w-full btn-primary">
@@ -243,7 +254,6 @@ export function promptTestType(mode, selectedChapters = null) {
         </div>
     `;
     displayContent(html);
-    // MODIFIED: Target correct nav section and dropdown item if applicable
     setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
@@ -256,148 +266,202 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
     showLoading(`Generating ${testType === 'online' ? 'Online Test' : 'Test Files'}...`);
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Fetch the correct Markdown content for the current subject (for MCQs)
+    // Fetch resources needed
     const subjectMarkdownContent = await getCurrentSubjectMarkdown();
-    // MODIFIED: Pass currentSubject to problem parser
-    await parseChapterProblems(currentSubject); // Ensure problem cache is populated for this subject
+    await parseChapterProblems(currentSubject); // Ensure problem cache is populated
 
     let relevantChaptersForAllocation = {};
-    let chaptersInScope = [];
+    let chaptersInScopeNumbers = []; // Track chapter numbers in scope
     let chapterScopeDescription = "";
     let totalAvailableMcqsInScope = 0;
 
-    // 1. Determine scope
+    // 1. Determine scope and available MCQs
     if (mode === 'studied') {
         const studied = currentSubject.studied_chapters || [];
         if (studied.length === 0) { hideLoading(); displayContent('<p class="text-red-500 p-4">No chapters marked as studied.</p><button onclick="window.showManageStudiedChapters()" class="btn-secondary mt-4">Manage Studied Chapters</button>'); return; }
-        chaptersInScope = studied;
-        chapterScopeDescription = `Based on your ${chaptersInScope.length} studied chapter(s)`;
+        studied.forEach(chapNum => {
+            const chap = currentSubject.chapters[chapNum];
+            if (chap) {
+                chaptersInScopeNumbers.push(chapNum); // Add to scope numbers
+                if (chap.total_questions > 0 && chap.available_questions?.length > 0) {
+                    relevantChaptersForAllocation[chapNum] = chap; // Only for allocation if MCQs available
+                    totalAvailableMcqsInScope += chap.available_questions.length;
+                }
+            }
+        });
+        chapterScopeDescription = `Based on your ${chaptersInScopeNumbers.length} studied chapter(s)`;
     } else if (mode === 'specific' && selectedChapters) {
-        chaptersInScope = selectedChapters;
-        chapterScopeDescription = `Based on the ${chaptersInScope.length} selected chapter(s)`;
+        selectedChapters.forEach(chapNum => {
+            const chap = currentSubject.chapters[chapNum];
+            if (chap) {
+                 chaptersInScopeNumbers.push(chapNum); // Add to scope numbers
+                 if (chap.total_questions > 0 && chap.available_questions?.length > 0) {
+                     relevantChaptersForAllocation[chapNum] = chap; // Only for allocation if MCQs available
+                     totalAvailableMcqsInScope += chap.available_questions.length;
+                 }
+            }
+        });
+        chapterScopeDescription = `Based on the ${chaptersInScopeNumbers.length} selected chapter(s)`;
     } else { hideLoading(); displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>'); return; }
 
-    // Filter relevant chapters and count available MCQs
-    chaptersInScope.forEach(chapNum => {
-        const chap = currentSubject.chapters[chapNum];
-        if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
-            relevantChaptersForAllocation[chapNum] = chap;
-            totalAvailableMcqsInScope += chap.available_questions.length;
-        }
-    });
+     // 2. Check for available problems in scope
+     let totalAvailableProblemsInScope = 0;
+     const problemCache = window.subjectProblemCache?.get(currentSubject.id) || {};
+     chaptersInScopeNumbers.forEach(chapNum => {
+          totalAvailableProblemsInScope += (problemCache[chapNum]?.length || 0);
+     });
 
-    const chapterCount = Object.keys(relevantChaptersForAllocation).length;
-    if (chapterCount === 0 && mode === 'studied') { hideLoading(); displayContent('<p class="text-yellow-500 p-4">None of your studied chapters have available MCQs.</p>'); return; }
-    if (chapterCount === 0 && mode === 'specific') { hideLoading(); displayContent('<p class="text-yellow-500 p-4">None of the selected chapters have available MCQs.</p>'); return; }
+     // Exit if no questions or problems available at all
+     if (totalAvailableMcqsInScope === 0 && totalAvailableProblemsInScope === 0) {
+         hideLoading();
+         displayContent(`<p class="text-yellow-500 p-4">The chapters in scope have no available MCQs or Problems currently.</p>`);
+         return;
+     }
 
-    // 2. Select Problems first (approx 50% target)
-    const maxTestSize = currentSubject.max_questions_per_test || 42;
-    const targetProblemRatio = 0.5;
-    let selectedProblems = [];
-    let targetProblemCount = Math.floor(maxTestSize * targetProblemRatio);
-    let problemsPerChapter = targetProblemCount > 0 ? Math.ceil(targetProblemCount / chaptersInScope.length) : 0;
-    if (problemsPerChapter > 0) {
-         chaptersInScope.forEach(chapNum => {
-             // MODIFIED: Pass currentSubject.id to problem selector
-             selectedProblems.push(...selectProblemsForExam(chapNum, problemsPerChapter, currentSubject.id));
-         });
-         // Trim if we selected slightly too many due to ceiling division
-         selectedProblems = selectedProblems.slice(0, targetProblemCount);
+    // 3. Determine Final Test Size & MCQ/Problem Counts
+    const maxTestSize = currentSubject.max_questions_per_test || DEFAULT_MAX_QUESTIONS;
+    const actualTotalAvailable = totalAvailableMcqsInScope + totalAvailableProblemsInScope;
+    const finalTestSize = Math.min(maxTestSize, actualTotalAvailable);
+    const mcqRatio = currentSubject.mcqProblemRatio ?? DEFAULT_MCQ_PROBLEM_RATIO;
+
+    // Calculate target counts based on ratio and *final* test size
+    let targetMcqCount = Math.min(totalAvailableMcqsInScope, Math.round(finalTestSize * mcqRatio));
+    let targetProblemCount = Math.min(totalAvailableProblemsInScope, finalTestSize - targetMcqCount);
+
+    // Adjust if one type is scarce, ensuring we reach finalTestSize if possible
+    if (targetMcqCount + targetProblemCount < finalTestSize) {
+         const deficit = finalTestSize - (targetMcqCount + targetProblemCount);
+         if (totalAvailableMcqsInScope > targetMcqCount) { // Can add more MCQs?
+             targetMcqCount = Math.min(totalAvailableMcqsInScope, targetMcqCount + deficit);
+         } else if (totalAvailableProblemsInScope > targetProblemCount) { // Can add more Problems?
+             targetProblemCount = Math.min(totalAvailableProblemsInScope, targetProblemCount + deficit);
+         }
+         // Recalculate the other type if one was adjusted
+         targetMcqCount = Math.min(totalAvailableMcqsInScope, finalTestSize - targetProblemCount);
+         targetProblemCount = Math.min(totalAvailableProblemsInScope, finalTestSize - targetMcqCount);
     }
-    console.log(`Selected ${selectedProblems.length} problems for subject ${currentSubject.id}.`);
 
-    // 3. Determine needed MCQ count
-    const remainingSlots = maxTestSize - selectedProblems.length;
-    const targetMcqCount = Math.min(remainingSlots, totalAvailableMcqsInScope);
+    console.log(`Final Test Config: Size=${finalTestSize}, Target MCQs=${targetMcqCount}, Target Problems=${targetProblemCount}`);
 
+    // 4. Select Problems
+    let selectedProblems = [];
+    if (targetProblemCount > 0 && totalAvailableProblemsInScope > 0) {
+        // Simple weighted random selection based on chapter problem counts for now
+        let problemAllocation = {};
+        let totalWeight = chaptersInScopeNumbers.reduce((sum, cn) => sum + (problemCache[cn]?.length || 0), 0);
+        if (totalWeight > 0) {
+            chaptersInScopeNumbers.forEach(cn => {
+                const chapterProbCount = problemCache[cn]?.length || 0;
+                problemAllocation[cn] = Math.round((chapterProbCount / totalWeight) * targetProblemCount);
+            });
+            // Adjust rounding errors (simple approach: add/remove from chapter with most/least diff)
+            let currentAllocatedProblems = Object.values(problemAllocation).reduce((s, c) => s + c, 0);
+            let diff = targetProblemCount - currentAllocatedProblems;
+            while (diff !== 0) {
+                 let chapterToAdjust = chaptersInScopeNumbers[Math.floor(Math.random() * chaptersInScopeNumbers.length)];
+                 if (diff > 0 && (problemCache[chapterToAdjust]?.length || 0) > problemAllocation[chapterToAdjust]) {
+                     problemAllocation[chapterToAdjust]++; diff--;
+                 } else if (diff < 0 && problemAllocation[chapterToAdjust] > 0) {
+                     problemAllocation[chapterToAdjust]--; diff++;
+                 }
+                 // Safety break if stuck
+                 if (Math.abs(diff) > targetProblemCount * 2) break;
+            }
+
+            Object.entries(problemAllocation).forEach(([cn, count]) => {
+                 if (count > 0) {
+                     selectedProblems.push(...selectProblemsForExam(cn, count, currentSubject.id));
+                 }
+            });
+        } else {
+             console.warn("No problems available for selection despite target count > 0.");
+             targetProblemCount = 0; // Reset target if none available
+        }
+        selectedProblems = selectedProblems.slice(0, targetProblemCount); // Ensure exact count
+    }
+    console.log(`Selected ${selectedProblems.length} problems.`);
+
+    // 5. Select MCQs
     let selectedMcqs = [];
     let mcqAnswers = {};
-    let selectedMcqMap = {};
-    let allocationDetailsHtml = "";
+    let selectedMcqMap = {}; // Store { chapNum: [qNum1, qNum2] }
     let actualTotalSelectedMcqs = 0;
+    let mcqAllocationDetailsHtml = "";
 
-    if (targetMcqCount > 0 && totalAvailableMcqsInScope > 0) {
-        // 4. Allocate MCQs
-        const allocationCounts = allocateQuestions(relevantChaptersForAllocation, targetMcqCount);
-        const totalAllocatedMcqs = Object.values(allocationCounts).reduce((a, b) => a + b, 0);
-        console.log("MCQ Allocation Counts:", allocationCounts);
+    if (targetMcqCount > 0 && totalAvailableMcqsInScope > 0 && Object.keys(relevantChaptersForAllocation).length > 0) {
+        const mcqAllocationCounts = allocateQuestions(relevantChaptersForAllocation, targetMcqCount);
+        mcqAllocationDetailsHtml = Object.entries(mcqAllocationCounts).sort((a,b) => parseInt(a[0])-parseInt(b[0])).map(([chapNum, qCount]) => `<p>Chapter ${chapNum}: ${qCount} MCQ(s) selected.</p>`).join('');
+        console.log("MCQ Allocation Counts:", mcqAllocationCounts);
 
-        // 5. Select MCQs
-        if (totalAllocatedMcqs > 0) {
-            for (const chapNum in allocationCounts) {
-                const n = allocationCounts[chapNum];
-                if (n > 0) {
-                    const chap = currentSubject.chapters[chapNum];
-                    if (chap) {
-                        // MODIFIED: Call selectNewQuestionsAndUpdate (which calls selectQuestions internally)
-                        const questionsSelected = selectNewQuestionsAndUpdate(chap, n);
-                        if (questionsSelected.length > 0) {
-                            selectedMcqMap[chapNum] = questionsSelected;
-                            actualTotalSelectedMcqs += questionsSelected.length;
-                        }
+        for (const chapNum in mcqAllocationCounts) {
+            const n = mcqAllocationCounts[chapNum];
+            if (n > 0) {
+                const chap = currentSubject.chapters[chapNum];
+                if (chap) {
+                    const questionsSelectedNumbers = selectNewQuestionsAndUpdate(chap, n);
+                    if (questionsSelectedNumbers.length > 0) {
+                        selectedMcqMap[chapNum] = questionsSelectedNumbers;
+                        actualTotalSelectedMcqs += questionsSelectedNumbers.length;
                     }
                 }
             }
         }
 
-        // 6. Extract MCQs if selected and MD exists
         if (actualTotalSelectedMcqs > 0 && subjectMarkdownContent) {
-            const { questions: extractedMcqs, answers } = extractQuestionsFromMarkdown(subjectMarkdownContent, selectedMcqMap);
-            selectedMcqs = extractedMcqs;
-            mcqAnswers = answers;
-             // Sanity check & Correction
-             if (extractedMcqs.length !== actualTotalSelectedMcqs) {
-                  console.warn(`MCQ Selection vs Extraction mismatch: ${actualTotalSelectedMcqs} vs ${extractedMcqs.length}. Using extracted count.`);
-                  actualTotalSelectedMcqs = extractedMcqs.length;
-                   // Rebuild map if mismatch occurred for accuracy
-                   const tempMap = {}; extractedMcqs.forEach(q => { if (!tempMap[q.chapter]) tempMap[q.chapter] = []; tempMap[q.chapter].push(q.number); });
-                   Object.keys(tempMap).forEach(chapNum => tempMap[chapNum].sort((a, b) => a - b));
-                   selectedMcqMap = tempMap; // Overwrite with actual extracted map
-             }
+            const extracted = extractQuestionsFromMarkdown(subjectMarkdownContent, selectedMcqMap);
+            selectedMcqs = extracted.questions;
+            mcqAnswers = extracted.answers;
+            if (selectedMcqs.length !== actualTotalSelectedMcqs) {
+                 console.warn(`MCQ Selection vs Extraction mismatch: ${actualTotalSelectedMcqs} vs ${selectedMcqs.length}. Using extracted count.`);
+                 actualTotalSelectedMcqs = selectedMcqs.length;
+                 // Rebuild map if mismatch occurred for accuracy
+                 const tempMap = {}; selectedMcqs.forEach(q => { if (!tempMap[q.chapter]) tempMap[q.chapter] = []; tempMap[q.chapter].push(q.number); });
+                 Object.keys(tempMap).forEach(chapNum => tempMap[chapNum].sort((a, b) => a - b));
+                 selectedMcqMap = tempMap; // Overwrite with actual extracted map
+                 // Regenerate allocation details string
+                 mcqAllocationDetailsHtml = Object.entries(selectedMcqMap).sort((a,b) => parseInt(a[0])-parseInt(b[0])).map(([chapNum, qList]) => `<p>Chapter ${chapNum}: ${qList.length} MCQ(s) selected.</p>`).join('');
+            }
         } else if (actualTotalSelectedMcqs > 0 && !subjectMarkdownContent) {
              console.error("Error: Selected MCQs but failed to load Markdown content.");
-             hideLoading();
-             displayContent('<p class="text-red-500 p-4">Error: Could not load question definitions from the Markdown file.</p>');
-             return;
+             hideLoading(); displayContent('<p class="text-red-500 p-4">Error: Could not load question definitions from the Markdown file.</p>'); return;
         }
     }
-     console.log("Selected MCQs Map:", selectedMcqMap);
-     console.log(`Selected ${selectedMcqs.length} MCQs.`);
+    console.log("Selected MCQs Map:", selectedMcqMap);
+    console.log(`Selected ${selectedMcqs.length} MCQs.`);
 
-    // 7. Combine Problems and MCQs
-    const finalExamItems = combineProblemsWithQuestions(selectedProblems, selectedMcqs, maxTestSize);
-    const actualTotalQuestions = finalExamItems.length;
+    // 6. Combine and Shuffle Problems and MCQs
+    const finalExamItems = combineProblemsWithQuestions(selectedProblems, selectedMcqs, finalTestSize, mcqRatio);
+    const actualTotalQuestionsGenerated = finalExamItems.length;
 
-    if (actualTotalQuestions === 0) { hideLoading(); displayContent(`<p class="text-yellow-500 p-4">Could not generate any questions or problems for the selected scope.</p>`); return; }
+    if (actualTotalQuestionsGenerated === 0) { hideLoading(); displayContent(`<p class="text-yellow-500 p-4">Could not generate any questions or problems for the selected scope.</p>`); return; }
 
     // Build allocation details string for display
-    allocationDetailsHtml = Object.entries(selectedMcqMap).sort((a,b) => parseInt(a[0])-parseInt(b[0])).map(([chapNum, qList]) => `<p>Chapter ${chapNum}: ${qList.length} MCQ(s) selected.</p>`).join('');
+    let allocationDetailsHtml = mcqAllocationDetailsHtml;
     if (selectedProblems.length > 0) {
          const problemCounts = selectedProblems.reduce((acc, prob) => { acc[prob.chapter] = (acc[prob.chapter] || 0) + 1; return acc; }, {});
          allocationDetailsHtml += `<hr class="my-1"><p>Problems selected: ${selectedProblems.length} total</p>` + Object.entries(problemCounts).sort((a,b) => parseInt(a[0])-parseInt(b[0])).map(([chapNum, count]) => `<p class="text-xs pl-2">Chapter ${chapNum}: ${count} Problem(s)</p>`).join('');
     }
 
+    // 7. Prepare Exam ID
+    const examId = `TestGen-${currentSubject.id || 'SUBJ'}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 
-    // 8. Prepare Exam ID
-    const examId = `Exam-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
-
-    // 9. Branch based on test type
+    // 8. Branch based on test type
     if (testType === 'online') {
-        // Prepare online test state (already shuffled in combine function)
+        const testDuration = currentSubject.defaultTestDurationMinutes || DEFAULT_ONLINE_TEST_DURATION_MINUTES;
         const onlineTestState = {
             examId: examId,
-            questions: finalExamItems, // Combined list
-            correctAnswers: mcqAnswers, // Only MCQ answers
-            userAnswers: {}, // User answers for both MCQs and problems
+            questions: finalExamItems, // Combined & shuffled list
+            correctAnswers: mcqAnswers, // Only MCQ answers stored here (problems marked by AI)
+            userAnswers: {},
             allocation: selectedMcqMap, // Store MCQ allocation map
             problemAllocation: selectedProblems.map(p => ({ chapter: p.chapter, id: p.id })), // Store problem IDs/chapters
             startTime: Date.now(),
             timerInterval: null,
             currentQuestionIndex: 0,
             status: 'active',
-            durationMinutes: Math.max(15, Math.min(120, actualTotalQuestions * 2.5)), // Adjust duration
-            // MODIFIED: Set courseContext to null for standard tests
-            courseContext: null
+            durationMinutes: testDuration, // Use subject's configured duration
+            subjectId: currentSubject.id, // Store subject ID for context
+            courseContext: null // Standard TestGen has no course context
         };
         setCurrentOnlineTestState(onlineTestState);
 
@@ -409,30 +473,33 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
         const { questionHtml, solutionHtml } = generatePdfHtml(examId, finalExamItems);
         const { questionsTex, solutionsTex } = generateTexSource(examId, finalExamItems);
 
-        // Add exam to pending list (store MCQ allocation)
+        // Add exam to OLD pending list (store MCQ allocation and problem details)
         currentSubject.pending_exams = currentSubject.pending_exams || [];
         currentSubject.pending_exams.push({
             id: examId,
             allocation: selectedMcqMap, // Store MCQ map
+            problemAllocation: selectedProblems.map(p => ({ chapter: p.chapter, id: p.id })), // Store problem info
             results_entered: false,
             timestamp: new Date().toISOString(),
-            totalQuestions: actualTotalQuestions, // Total combined count
+            totalQuestions: actualTotalQuestionsGenerated, // Total combined count
         });
-        await saveUserData(currentUser.uid);
-        console.log("Pending PDF exam added to list and data saved.");
+        await saveUserData(currentUser.uid); // Save updated appData (pending list)
+        console.log("Pending PDF exam added to list and appData saved.");
 
         // Prepare filenames
-        const questionsPdfFilename = `Exam_${examId.replace('Exam-', '')}`;
-        const solutionsPdfFilename = `SolutionManual_${examId.replace('Exam-', '')}`;
-        const questionsTexFilename = `Exam_${examId.replace('Exam-', '')}.tex`;
-        const solutionsTexFilename = `SolutionManual_${examId.replace('Exam-', '')}.tex`;
+        const safeSubjectName = (currentSubject.name || 'Subject').replace(/\s+/g, '_');
+        const baseFilename = `TestGen_${safeSubjectName}_${examId.split('-').slice(2).join('_')}`; // More readable filename
+        const questionsPdfFilename = `${baseFilename}_Questions`;
+        const solutionsPdfFilename = `${baseFilename}_Solutions`;
+        const questionsTexFilename = `${baseFilename}_Questions.tex`;
+        const solutionsTexFilename = `${baseFilename}_Solutions.tex`;
 
         // Display download buttons
         displayContent(`
             <div class="bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md mb-6">
                 <p class="font-medium">PDF Test Files Ready</p>
                 <p>Exam ID: ${escapeHtml(examId)}</p>
-                <p>Total Items: ${actualTotalQuestions} (${selectedMcqs.length} MCQs, ${selectedProblems.length} Problems)</p>
+                <p>Total Items: ${actualTotalQuestionsGenerated} (${selectedMcqs.length} MCQs, ${selectedProblems.length} Problems)</p>
                  <details class="text-sm mt-2 text-gray-600 dark:text-gray-400">
                      <summary class="flex items-center cursor-pointer hover:text-blue-700 dark:hover:text-blue-400">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" /></svg>
@@ -465,7 +532,6 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
              </div>
              <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">This exam is now pending. Enter results manually via the Exams Dashboard when ready.</p>
          `);
-        // MODIFIED: Target correct nav section and dropdown item if applicable
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 
          // Add event listeners for PDF downloads

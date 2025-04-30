@@ -4,13 +4,13 @@
 
 import { currentUser, userCourseProgressMap, globalCourseDataMap, activeCourseId, data } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
-// MODIFIED: Added daysBetween import
 import { showLoading, hideLoading, escapeHtml, getFormattedDate, daysBetween } from './utils.js';
-// *** MODIFIED: Import selectNewQuestionsAndUpdate from test_logic ***
+// Import test_logic functions
 import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
-import { ONLINE_TEST_DURATION_MINUTES, FOP_COURSE_ID } from './config.js'; // Added FOP_COURSE_ID for subject check
+// *** MODIFIED: Import EXAM_DURATIONS_MINUTES and EXAM_QUESTION_COUNTS instead of the old variable ***
+import { EXAM_QUESTION_COUNTS, EXAM_DURATIONS_MINUTES, FOP_COURSE_ID, SKIP_EXAM_PASSING_PERCENT, DEFAULT_MCQ_PROBLEM_RATIO } from './config.js'; // Added FOP_COURSE_ID, thresholds, ratio
 
 // Helper to fetch markdown content (needed for extracting MCQs)
 async function getSubjectMarkdown(subject) {
@@ -52,6 +52,12 @@ export function showCourseAssignmentsExams(courseId = activeCourseId) {
         displayContent(`<p class="text-red-500 p-4">Error: Could not load data for course ID: ${courseId}.</p>`, 'course-dashboard-area');
         return;
     }
+     // MODIFIED: Check viewer mode
+     const isViewer = progress.enrollmentMode === 'viewer';
+     if (isViewer) {
+         displayContent(`<div class="content-card text-center p-6"><p class="text-purple-700 dark:text-purple-300 font-medium">Assignments and Exams are not available in Viewer Mode.</p><button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary mt-4">Back to Dashboard</button></div>`, 'course-dashboard-area');
+         return; // Don't show assignments/exams for viewers
+     }
 
     const enrollmentDate = progress.enrollmentDate instanceof Date && !isNaN(progress.enrollmentDate)
                          ? progress.enrollmentDate
@@ -252,13 +258,38 @@ export async function startAssignmentOrExam(courseId, type, id) {
         });
         console.log(`Selected ${selectedProblems.length} problems.`);
 
-        // --- Determine MCQ Count & Allocate ---
-        // *** MODIFIED: Use specific counts from Requirement 5 ***
-        const defaultCounts = { assignment: 10, weekly_exam: 30, midcourse: 50, final: 60 };
-        const totalTargetQuestions = defaultCounts[type] || 15; // Fallback if type is somehow wrong
-        const targetProblemCount = Math.min(selectedProblems.length, Math.floor(totalTargetQuestions * 0.5)); // Still aim for ~50% problems if possible
-        const targetMcqCount = totalTargetQuestions - targetProblemCount;
+        // --- Determine Target Counts based on Exam Type ---
+        const totalTargetQuestions = EXAM_QUESTION_COUNTS[type] || 15; // Use config counts
+        const actualTotalAvailable = (totalAvailableMcqsInScope + allAvailableProblemsInScope.length); // MCQs counted later
+        const finalTestSize = Math.min(totalTargetQuestions, actualTotalAvailable);
 
+        // Calculate actual target counts based on ratio and availability
+        let targetMcqCount = 0;
+        let targetProblemCount = 0;
+        let totalAvailableMcqsInScope = 0; // Recalculate based *only* on chapters in scope
+
+        chaptersToInclude.forEach(chapNum => {
+             const chap = subject.chapters[chapNum];
+             if (chap && chap.available_questions) {
+                 totalAvailableMcqsInScope += chap.available_questions.length;
+             }
+        });
+
+        targetMcqCount = Math.min(totalAvailableMcqsInScope, Math.round(finalTestSize * subjectMcqRatio));
+        targetProblemCount = Math.min(allAvailableProblemsInScope.length, finalTestSize - targetMcqCount);
+
+        // Adjust if needed
+        if (targetMcqCount + targetProblemCount < finalTestSize) {
+            const deficit = finalTestSize - (targetMcqCount + targetProblemCount);
+            if (totalAvailableMcqsInScope > targetMcqCount) {
+                targetMcqCount = Math.min(totalAvailableMcqsInScope, targetMcqCount + deficit);
+            } else if (allAvailableProblemsInScope.length > targetProblemCount) {
+                targetProblemCount = Math.min(allAvailableProblemsInScope.length, targetProblemCount + deficit);
+            }
+            targetMcqCount = Math.min(totalAvailableMcqsInScope, finalTestSize - targetProblemCount);
+            targetProblemCount = Math.min(allAvailableProblemsInScope.length, finalTestSize - targetMcqCount);
+        }
+        console.log(`Course Exam Counts: Target=${finalTestSize}, MCQs=${targetMcqCount}, Problems=${targetProblemCount}`);
 
         let selectedMcqs = [];
         let mcqAnswers = {};
@@ -316,19 +347,22 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
         // --- Launch Online Test ---
         const examId = `${courseId}-${type}-${id}-${Date.now()}`;
+        // *** MODIFIED: Use EXAM_DURATIONS_MINUTES from config ***
+        const durationMinutes = EXAM_DURATIONS_MINUTES[type] || Math.max(15, Math.min(180, finalExamItems.length * 2.5)); // Fallback if type not in config
 
         const onlineTestState = {
             examId: examId,
             questions: finalExamItems, // Combined and shuffled list
             correctAnswers: mcqAnswers, // Only contains MCQ answers
             userAnswers: {},
-            allocation: null, // Allocation less relevant for combined tests
+            allocation: selectedMcqMap, // Store MCQ allocation
+            problemAllocation: selectedProblems.map(p => ({ chapter: p.chapter, id: p.id })), // Store problem info
             startTime: Date.now(),
             timerInterval: null,
             currentQuestionIndex: 0,
             status: 'active',
-            // Set duration based on type and final item count
-            durationMinutes: Math.max(15, Math.min(180, finalExamItems.length * 2.5)), // Adjusted max duration, e.g., 3 hours max
+            durationMinutes: durationMinutes, // Use duration from config
+            subjectId: subject.id, // Include subject ID for context
             courseContext: { isCourseActivity: true, courseId: courseId, activityType: type, activityId: id }
         };
 

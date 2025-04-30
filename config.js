@@ -33,12 +33,39 @@ export const LATEX_PACKAGES = `\\usepackage{enumitem} % For customizing list lab
 \\usepackage{amssymb} % More symbols
 \\usepackage{xcolor}  % For colors if needed
 \\usepackage{hyperref} % For clickable links if needed
-\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=magenta}
+\\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=magenta}
 `;
 export const LATEX_BEGIN_DOCUMENT = "\\begin{document}";
 export const LATEX_END_DOCUMENT = "\\end{document}";
 
-export const ONLINE_TEST_DURATION_MINUTES = 120; // 2 hours
+// --- Test Generation Settings ---
+export const DEFAULT_MAX_QUESTIONS = 42;
+export const DEFAULT_MCQ_PROBLEM_RATIO = 0.5; // Default 50% MCQs, 50% Problems
+export const DEFAULT_ONLINE_TEST_DURATION_MINUTES = 120; // 2 hours default for TestGen
+
+// *** NEW: Added Max Marks constants ***
+export const MAX_MARKS_PER_PROBLEM = 10; // Max score for a written problem
+export const MAX_MARKS_PER_MCQ = 10;     // Max score for an MCQ (usually all or nothing)
+
+// --- Course Exam Configuration ---
+export const EXAM_QUESTION_COUNTS = {
+    assignment: 10,
+    weekly_exam: 30,
+    midcourse: 50,
+    final: 60,
+    skip_exam: 20 // Number of MCQs for AI generation (problems added separately)
+};
+
+// Calculate durations based on question counts (e.g., 2.5 mins per question)
+const calculateDuration = (count) => Math.max(15, Math.min(180, Math.round(count * 2.5)));
+export const EXAM_DURATIONS_MINUTES = {
+    assignment: calculateDuration(EXAM_QUESTION_COUNTS.assignment),
+    weekly_exam: calculateDuration(EXAM_QUESTION_COUNTS.weekly_exam),
+    midcourse: calculateDuration(EXAM_QUESTION_COUNTS.midcourse),
+    final: calculateDuration(EXAM_QUESTION_COUNTS.final),
+    skip_exam: Math.max(15, Math.min(60, Math.round(EXAM_QUESTION_COUNTS.skip_exam * 1.5))) // Shorter duration for skip MCQs
+};
+
 
 // Default structure for a *new* user's subject data if none exists
 export const initialSubjectData = {
@@ -47,21 +74,25 @@ export const initialSubjectData = {
             "id": "1",
             "name": "Fundamentals of Physics",
             "fileName": "chapters.md", // Default filename for general test gen
-            "max_questions_per_test": 42, // Default max for general test gen
+            "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
+            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO, // Added ratio
+            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES, // Added duration
             "chapters": {}, // Populated by MD parse
-            "studied_chapters": [], // General studied chapters (can be used by course or separately)
-            "pending_exams": [],
-            "exam_history": [] // Old history location - might be deprecated if using userExams
+            "studied_chapters": [],
+            "pending_exams": [], // Old PDF pending list
+            // exam_history is deprecated here, moved to userExams collection
         },
         "2": { // Example unrelated subject
             "id": "2",
             "name": "ABC of Aviation",
             "fileName": "ABC_of_Aviation.md",
-            "max_questions_per_test": 42,
+            "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
+            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO, // Added ratio
+            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES, // Added duration
             "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
             "pending_exams": [],
-            "exam_history": [] // Old history location
+            // exam_history is deprecated here
         }
     }
 };
@@ -76,21 +107,19 @@ export const FOP_COURSE_ID = "fop_physics_v1"; // Unique ID for the Fundamentals
 export const COURSE_PDF_BASE_PATH = "./Fundamentals of Physics PDFs/";
 export const COURSE_TRANSCRIPTION_BASE_PATH = "./Fundamentals of Physics Transcriptions/";
 
-// *** MODIFIED: Course Grading Weights ***
-// Replaced skipExams with chapterCompletion
+// --- Course Grading Weights ---
 export const GRADING_WEIGHTS = {
-    chapterCompletion: 0.20, // 20% based on average chapter progress % across the course
+    chapterCompletion: 0.20,
     assignments: 0.20,
     weeklyExams: 0.15,
     midcourseExams: 0.20,
     finalExams: 0.20,
     attendance: 0.05,
-    extraPracticeBonusMax: 5, // Max 5 bonus points
+    extraPracticeBonusMax: 5,
 };
 
 export const PASSING_GRADE_PERCENT = 65;
-// Passing score specifically for Skip Exams (to achieve 100% chapter progress)
-export const SKIP_EXAM_PASSING_PERCENT = 70; // e.g., 70% needed to mark chapter studied (by achieving 100% progress)
+export const SKIP_EXAM_PASSING_PERCENT = 70;
 
 // Pace multipliers
 export const PACE_MULTIPLIER = {
@@ -100,45 +129,38 @@ export const PACE_MULTIPLIER = {
 };
 
 // PDF.js Worker Source (use CDN)
-export const PDF_WORKER_SRC = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`; // Example CDN path, adjust version if needed
+export const PDF_WORKER_SRC = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
-// NEW: Equivalent study time (in seconds) per PDF page for progress calculation
+// Equivalent study time (in seconds) per PDF page for progress calculation
 export const PDF_PAGE_EQUIVALENT_SECONDS = 6 * 60; // 6 minutes per page
 
 // Course structure details (can be moved to Firestore later)
-// This defines the structure for the specific FoP course
 export const FOP_COURSE_DEFINITION = {
     id: FOP_COURSE_ID,
     name: "Fundamentals of Physics",
     description: "A comprehensive course covering the fundamentals of physics.",
     totalChapters: 44,
-    relatedSubjectId: "1", // Links to the subject in user appData for question bank
-    // Updated: Allow multiple playlist URLs
+    relatedSubjectId: "1",
     youtubePlaylistUrls: [
-        "https://www.youtube.com/playlist?list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr" // Example playlist
-        // Add more playlist URLs here if needed
-        // "https://www.youtube.com/playlist?list=YOUR_OTHER_PLAYLIST_ID"
+        "https://www.youtube.com/playlist?list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr"
     ],
-    pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`, // Pattern for PDF paths
-    // Note: Transcription path pattern is not used if filenames are based on video titles
-    // transcriptionPathPattern: `${COURSE_TRANSCRIPTION_BASE_PATH}chapter{num}.srt`,
-    chapters: [ // List of chapter titles (as provided)
+    pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`,
+    chapters: [
         "Measurement", "Motion Along a Straight Line", "Vectors", "Motion in Two and Three Dimensions",
         "Force and Motion—I", "Force and Motion—II", "Kinetic Energy and Work",
         "Potential Energy and Conservation of Energy", "Center of Mass and Linear Momentum", "Rotation",
         "Rolling, Torque, and Angular Momentum", "Equilibrium and Elasticity", "Gravitation", "Fluids",
         "Oscillations", "Waves—I", "Waves—II", "Temperature, Heat, and the First Law of Thermodynamics",
-        "The Kinetic Theory of Gases", "Entropy and the Second Law of Thermodynamics", "Coulomb’s Law",
-        "Electric Fields", "Gauss’ Law", "Electric Potential", "Capacitance", "Current and Resistance",
+        "The Kinetic Theory of Gases", "Entropy and the Second Law of Thermodynamics", "Coulomb's Law",
+        "Electric Fields", "Gauss' Law", "Electric Potential", "Capacitance", "Current and Resistance",
         "Circuits", "Magnetic Fields", "Magnetic Fields Due to Currents", "Induction and Inductance",
-        "Electromagnetic Oscillations and Alternating Current", "Maxwell’s Equations; Magnetism of Matter",
+        "Electromagnetic Oscillations and Alternating Current", "Maxwell's Equations; Magnetism of Matter",
         "Electromagnetic Waves", "Images", "Interference", "Diffraction", "Relativity",
         "Photons and Matter Waves", "More About Matter Waves", "All About Atoms",
         "Conduction of Electricity in Solids", "Nuclear Physics", "Energy from the Nucleus",
         "Quarks, Leptons, and the Big Bang"
     ],
-    midcourseChapters: [11, 22, 33], // Chapters after which a midcourse occurs
-    // Example chapterResources (Store this in Firestore ideally)
+    midcourseChapters: [11, 22, 33],
     chapterResources: { }
 };
 

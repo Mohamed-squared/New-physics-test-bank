@@ -81,6 +81,9 @@ export function clearUserSession() {
      // Stop any potential PDF viewer or YouTube players
      window.cleanupPdfViewer?.();
      window.cleanupYouTubePlayers?.();
+     // Clear course dashboard area as well
+     document.getElementById('course-dashboard-area')?.replaceChildren();
+     document.getElementById('course-dashboard-area')?.classList.add('hidden');
 }
 
 // --- Structure Update Notes for userCourseProgress items ---
@@ -88,6 +91,7 @@ export function clearUserSession() {
 {
     courseId: string,
     enrollmentDate: timestamp,
+    enrollmentMode: string ('full' or 'viewer'), // NEW
     selectedPace: string ("compact", "mediocre", "lenient", "custom"),
     customPaceDays: number | null,
     baseMediocrePace: number | null, // chapters/day, set after week 1
@@ -98,7 +102,7 @@ export function clearUserSession() {
             chaptersStudied: number[], // Chapters marked studied that day
             assignmentCompleted: boolean,
             assignmentScore: number | null,
-            skipExamsPassed: number[] // NEW: Track skip exams passed on this day
+            skipExamsPassed: number[] // Chapters whose skip exam was passed on this day
         }
     },
     // Tracking media consumption
@@ -108,10 +112,10 @@ export function clearUserSession() {
     skipExamAttempts: { [chapterNum]: number }, // Count attempts per chapter
     lastSkipExamScore: { [chapterNum]: number | null }, // Last percentage score
     // Graded Components
-    assignmentScores: { [assignmentId]: number }, // assignmentId could be "dayX" or "dateString"
+    assignmentScores: { [assignmentId]: number }, // assignmentId could be "dayX"
     weeklyExamScores: { [weekNum]: number },
     midcourseExamScores: { [midcourseNum]: number }, // e.g., 1, 2, 3
-    finalExamScores: number[] | null, // Array of 3 scores
+    finalExamScores: number[] | null, // Array of 3 scores (or null if none taken)
     // Calculated fields / Status
     attendanceScore: number, // Calculated, 0-100
     extraPracticeBonus: number, // 0-5
@@ -122,7 +126,33 @@ export function clearUserSession() {
     lastActivityDate: timestamp,
     currentChapterTarget: number, // Which chapter the user *should* be working on today
     currentDayObjective: string | null // e.g., "Study Chapter 5, Complete Assignment 5"
-}*/
+}
+*/
+
+// --- Subject Data Structure (in user -> appData -> subjects) ---
+/*
+{
+    id: string,
+    name: string,
+    fileName: string, // e.g., "chapters.md" or "QM.md"
+    max_questions_per_test: number,
+    mcqProblemRatio: number (0.0 to 1.0), // NEW: Ratio of MCQs (e.g., 0.6 = 60% MCQs)
+    defaultTestDurationMinutes: number, // NEW: Default duration for TestGen tests
+    chapters: {
+        [chapNum]: {
+            total_questions: number, // Total MCQs defined in MD for this chapter
+            total_attempted: number, // Attempted MCQs (from TestGen)
+            total_wrong: number,     // Wrong MCQs (from TestGen)
+            available_questions: number[], // List of available MCQ numbers
+            mistake_history: number[], // History of #wrong in recent tests
+            consecutive_mastery: number // # of consecutive tests with 0 wrong
+        }
+    },
+    studied_chapters: number[], // List of chapter numbers marked as studied for TestGen
+    pending_exams: [ {id, allocation, results_entered, timestamp, totalQuestions} ], // For old PDF flow
+    // exam_history is DEPRECATED here - Use userExams collection
+}
+*/
 
 
 // --- END OF FILE state.js ---

@@ -1,7 +1,7 @@
 // --- START OF FILE exam_storage.js ---
 
-import { db, currentUser, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
-import { showLoading, hideLoading, escapeHtml } from './utils.js';
+import { db, currentUser, globalCourseDataMap, currentSubject } from './state.js'; // Added currentSubject
+import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
 // MODIFIED: Import AI marking and explanation generation
 import { markFullExam, generateExplanation } from './ai_exam_marking.js';
 import { renderMathIn } from './utils.js'; // Import MathJax renderer
@@ -9,9 +9,8 @@ import { renderMathIn } from './utils.js'; // Import MathJax renderer
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 // MODIFIED: Import submitFeedback from firestore
 import { submitFeedback } from './firebase_firestore.js';
-// MODIFIED: Define MAX_MARKS_PER_PROBLEM if needed for display
-const MAX_MARKS_PER_PROBLEM = 10;
-const MAX_MARKS_PER_MCQ = 10;
+// MODIFIED: Import config for MAX_MARKS
+import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 
 
 // --- Exam Storage and Retrieval Functions ---
@@ -22,7 +21,7 @@ const MAX_MARKS_PER_MCQ = 10;
  * *** MODIFIED: Refined MCQ scoring logic for unanswered/incorrect states. ***
  * @param {string|null} courseId - The ID of the course (or null for standard tests).
  * @param {object} examState - The final state of the online test.
- * @param {string} examType - Type of exam (e.g., 'practice', 'skip_exam', 'assignment').
+ * @param {string} examType - Type of exam (e.g., 'practice', 'skip_exam', 'assignment', 'testgen').
  * @returns {Promise<object|null>} The stored exam record including marking results, or null on failure.
  */
 export async function storeExamResult(courseId, examState, examType) {
@@ -140,9 +139,10 @@ export async function storeExamResult(courseId, examState, examType) {
         // 2. Prepare the complete record for Firestore
         const examRecord = {
             id: examState.examId,
-            userId: currentUser.uid, // Store user ID
+            userId: currentUser.uid,
             courseId: courseId || null, // Store course ID if applicable
-            type: examType, // e.g., 'practice', 'skip_exam', 'assignment'
+            subjectId: examState.subjectId || currentSubject?.id || null, // Store subject ID for TestGen exams
+            type: examType, // e.g., 'practice', 'skip_exam', 'assignment', 'testgen'
             timestamp: examState.startTime, // Use start time as the main timestamp
             durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
             questions: examState.questions, // Full question details (including text, options, correct answer for MCQ, isProblem flag)
@@ -207,44 +207,72 @@ export async function getExamDetails(userId, examId) {
 }
 
 /**
- * Retrieves the exam history for a user (optionally filtered by course).
+ * Retrieves the exam history for a user (optionally filtered by course or subject).
  * @param {string} userId - The ID of the user.
- * @param {string|null} [courseId=null] - Optional course ID to filter by.
+ * @param {string|null} [filterId=null] - Course ID or Subject ID to filter by.
+ * @param {'course' | 'subject' | 'all'} [filterType='all'] - Type of filter.
  * @returns {Promise<Array<object>>} A promise resolving to an array of exam history summaries.
  */
-export async function getExamHistory(userId, courseId = null) {
+export async function getExamHistory(userId, filterId = null, filterType = 'all') {
     if (!db || !userId) {
         console.error("Cannot get exam history: Missing DB or userId.");
         return [];
     }
     try {
         let query = db.collection('userExams').doc(userId).collection('exams');
-        if (courseId) {
-            query = query.where('courseId', '==', courseId);
+
+        if (filterType === 'course' && filterId) {
+            query = query.where('courseId', '==', filterId);
+            console.log(`Filtering exam history by courseId: ${filterId}`);
+        } else if (filterType === 'subject' && filterId) {
+            // Filter where courseId is explicitly null (TestGen) AND subjectId matches
+            query = query.where('courseId', '==', null).where('subjectId', '==', filterId);
+            console.log(`Filtering exam history by subjectId: ${filterId} (and courseId == null)`);
+        } else if (filterType === 'all') {
+            console.log(`Fetching all exam history for user ${userId}`);
+            // No specific filter applied here
         }
+
         query = query.orderBy('timestamp', 'desc').limit(50); // Order by most recent, limit results
 
         const snapshot = await query.get();
         const history = [];
         snapshot.forEach(doc => {
             const data = doc.data();
-            // Create a summary object for the list view
+            const isCourseExam = !!data.courseId;
+            // Use global state 'data' to access subject names
+            const subjectName = !isCourseExam && data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name || data.subjectId) : null;
+            const courseName = isCourseExam ? (globalCourseDataMap?.get(data.courseId)?.name || data.courseId) : null;
+
+            // Estimate max score if missing or zero
+            let maxScore = data.markingResults?.maxPossibleScore;
+            if (!maxScore || maxScore <= 0) {
+                 maxScore = (data.questions || []).reduce((sum, q) => {
+                      const isProblem = q.isProblem || !q.options || q.options.length === 0;
+                      return sum + (isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
+                 }, 0);
+            }
+
             history.push({
                 id: data.id,
-                type: data.type,
+                type: data.type || 'unknown',
                 timestamp: data.timestamp,
                 score: data.markingResults?.totalScore ?? 0,
-                maxScore: data.markingResults?.maxPossibleScore ?? (data.questions?.length * 10 || 0), // Estimate max if needed
-                // MODIFIED: Look up course name safely
-                courseName: globalCourseDataMap?.get(data.courseId)?.name || data.courseId || 'General Test',
-                courseId: data.courseId, // Include courseId for filtering/linking
+                maxScore: maxScore || 0, // Ensure maxScore is at least 0
+                name: courseName || subjectName || 'Unknown Context', // Display Course or Subject Name
+                courseId: data.courseId,
+                subjectId: data.subjectId,
                 status: data.status || 'completed'
             });
         });
-        console.log(`Retrieved ${history.length} exam history entries for user ${userId} ${courseId ? `(course: ${courseId})` : ''}`);
+        console.log(`Retrieved ${history.length} exam history entries for user ${userId} (Filter: ${filterType}, ID: ${filterId || 'None'})`);
         return history;
     } catch (error) {
         console.error(`Error retrieving exam history for user ${userId}:`, error);
+        if (error.code === 'failed-precondition' && error.message.includes('index')) {
+            console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions or create a composite index based on your filtering needs (e.g., [courseId, timestamp desc], [subjectId, courseId, timestamp desc]) for the userExams/{userId}/exams collection.");
+            alert("Error fetching history: Database index required. Please contact support or check the developer console.");
+        }
         return [];
     }
 }
@@ -275,20 +303,28 @@ export async function showExamReviewUI(userId, examId) {
     const userAnswers = examData.userAnswers || {};
     const markingResults = examData.markingResults || {};
     const courseId = examData.courseId;
+    const subjectId = examData.subjectId;
     const type = examData.type || 'Unknown';
-    const timestamp = examData.timestamp || Date.now(); // Fallback timestamp
+    const timestamp = examData.timestamp || Date.now();
 
     const score = markingResults.totalScore ?? 0;
-    // Calculate maxScore based on actual questions array and types
     let calculatedMaxScore = 0;
     questions.forEach(q => {
-        calculatedMaxScore += (q.isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
+        calculatedMaxScore += ((q.isProblem || !q.options || q.options.length === 0) ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
     });
-    const maxScore = markingResults.maxPossibleScore > 0 ? markingResults.maxPossibleScore : calculatedMaxScore; // Use calculated if stored is 0
+    const maxScore = markingResults.maxPossibleScore > 0 ? markingResults.maxPossibleScore : calculatedMaxScore;
     const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
-    // MODIFIED: Look up course name safely
-    const courseName = courseId ? (globalCourseDataMap?.get(courseId)?.name || courseId) : 'General Test';
-    const isPassing = percentage >= 50; // General passing threshold (adjust if needed based on type)
+
+    const contextName = courseId ? (globalCourseDataMap?.get(courseId)?.name || courseId)
+                       : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
+                       : 'General Test';
+    const contextType = courseId ? 'Course' : 'Subject';
+
+    // Determine if passing (use appropriate threshold based on exam type)
+    let passingThreshold = 50; // Default pass mark
+    if (type === 'skip_exam') passingThreshold = SKIP_EXAM_PASSING_PERCENT;
+    else if (courseId) passingThreshold = PASSING_GRADE_PERCENT; // Use course passing grade if it's a course exam
+    const isPassing = parseFloat(percentage) >= passingThreshold;
 
     // --- AI Follow-up State ---
     // We need to manage history *per question* within this UI scope
@@ -441,11 +477,11 @@ export async function showExamReviewUI(userId, examId) {
                 <div class="flex flex-wrap justify-between items-center gap-2 mb-4 pb-4 border-b dark:border-gray-600">
                     <div>
                         <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Exam Review</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Course: ${escapeHtml(courseName)} | Type: ${escapeHtml(type)} | Date: ${new Date(timestamp).toLocaleString()}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">${contextType}: ${escapeHtml(contextName)} | Type: ${escapeHtml(type)} | Date: ${new Date(timestamp).toLocaleString()}</p>
                     </div>
                     <div class="text-right">
-                        <p class="text-3xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'}">${score}/${maxScore} (${percentage}%)</p>
-                        <p class="text-lg font-medium ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'}</p>
+                        <p class="text-3xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'}">${score.toFixed(0)}/${maxScore.toFixed(0)} (${percentage}%)</p>
+                        <p class="text-lg font-medium ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passingThreshold}%)</p>
                     </div>
                 </div>
                  ${overallFeedbackHtml}
@@ -625,52 +661,39 @@ export function showIssueReportingModal(examId, questionIndex) {
 export async function submitIssueReport(examId, questionIndex) {
     const issueType = document.getElementById('issue-type')?.value;
     const description = document.getElementById('issue-description')?.value.trim();
-
-    if (!description) {
-        alert('Please provide a description of the issue.');
-        document.getElementById('issue-description')?.focus();
-        return;
-    }
-     if (!issueType) {
-         alert('Please select an issue type.');
-         return;
-     }
-    if (!currentUser || !db) {
-         alert('Error: Could not submit report. User or DB connection missing.');
-         return;
-     }
+    if (!description || !issueType) { alert('Please select an issue type and provide a description.'); return; }
+    if (!currentUser || !db) { alert('Error: Cannot submit report. User or DB missing.'); return; }
 
     showLoading('Submitting report...');
-
     try {
-        // Fetch question details to include context in the report
         const examData = await getExamDetails(currentUser.uid, examId);
         const questionData = examData?.questions?.[questionIndex];
-        const markingResultData = examData?.markingResults?.questionResults?.find(r => r.questionId === questionData?.id);
+        const qId = questionData?.id || `Exam-${examId}-Q${questionIndex+1}`;
+        const markingResultData = examData?.markingResults?.questionResults?.find(r => r.questionId === qId);
+        const subjectContext = examData?.courseId ? `Course: ${examData.courseId}` : (examData?.subjectId ? `Subject: ${examData.subjectId}` : 'N/A');
 
         const reportPayload = {
-            subjectId: examData?.courseId || 'Standard Test', // Use courseId or default
-            questionId: questionData?.id || `Exam-${examId}-Q${questionIndex+1}`, // Best available ID
-            feedbackText: `Issue Type: ${issueType}\n\nDescription:\n${description}\n\n------ Context ------\nExam ID: ${examId}\nQuestion Index: ${questionIndex}\nQuestion Text Snippet: ${questionData?.text?.substring(0, 200) || 'N/A'}\nUser Answer Snippet: ${examData?.userAnswers?.[questionData?.id]?.substring(0, 200) || 'N/A'}\nAI Feedback Snippet: ${markingResultData?.feedback?.substring(0, 200) || 'N/A'}`,
+            subjectId: subjectContext, // Use combined context
+            questionId: qId,
+            feedbackText: `Issue Type: ${issueType}\n\nDescription:\n${description}\n\n------ Context ------\nExam ID: ${examId}\nQuestion Index: ${questionIndex}\nQuestion Text Snippet: ${questionData?.text?.substring(0, 200) || 'N/A'}\nUser Answer Snippet: ${examData?.userAnswers?.[qId]?.substring(0, 200) || 'N/A'}\nAI Feedback Snippet: ${markingResultData?.feedback?.substring(0, 200) || 'N/A'}`,
             context: `Exam Issue Report (Exam: ${examId}, Q: ${questionIndex+1})`
         };
 
-        const success = await submitFeedback(reportPayload, currentUser);
-
+        const success = await submitFeedback(reportPayload, currentUser); // submitFeedback now uses 'examIssues' collection
         hideLoading();
         if(success) {
-            alert('Report submitted successfully. Thank you for your feedback!');
-            document.getElementById('issue-report-modal')?.remove(); // Close modal
+            alert('Report submitted successfully. Thank you!');
+            document.getElementById('issue-report-modal')?.remove();
         } else {
              alert('Failed to submit report. Please try again.');
         }
-
     } catch (error) {
         hideLoading();
         console.error("Error submitting issue report:", error);
         alert(`Failed to submit report: ${error.message}`);
     }
 }
+window.submitIssueReport = submitIssueReport; // Assign to window
 
 
 // --- END OF FILE exam_storage.js ---

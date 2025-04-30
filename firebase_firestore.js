@@ -9,7 +9,7 @@ import {
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
-// *** MODIFIED: Import new GRADING_WEIGHTS from config ***
+// Import ALL needed config values
 import { initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, SKIP_EXAM_PASSING_PERCENT } from './config.js'; // Added SKIP_EXAM_PASSING_PERCENT
 import { updateSubjectInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
@@ -25,7 +25,13 @@ import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './
 async function fetchMarkdownForSubject(subject) {
      if (!subject) return null;
     // Use subject.fileName, default logic might need adjustment based on expected import data format
-    const fileName = subject.fileName || (subject.name === "Fundamentals of Physics" ? "chapters.md" : `${subject.name}.md`);
+    let fileName = subject.fileName;
+    if (!fileName) {
+         // Fallback logic if fileName is missing
+         fileName = (subject.name === "Fundamentals of Physics") ? "chapters.md" : `${subject.name}.md`;
+         console.warn(`Subject ${subject.id} missing fileName, falling back to ${fileName}`);
+    }
+    // Sanitize filename: replace spaces with underscores, remove invalid chars
     const safeFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
     const url = `./${safeFileName}?t=${new Date().getTime()}`; // Add cache buster - Use relative path from index.html
 
@@ -44,7 +50,6 @@ async function fetchMarkdownForSubject(subject) {
         return mdContent;
     } catch (error) {
         console.error(`Error fetching Markdown for subject ${subject.name} (${url}):`, error);
-        // Don't alert during load, just log the error
         return null; // Indicate fetch failure
     }
 }
@@ -58,9 +63,8 @@ async function fetchMarkdownForSubject(subject) {
  * @param {string} uid - The user's unique ID.
  * @param {object} [appDataToSave=data] - Optional: The app data object to save (defaults to global `data`).
  */
-export async function saveUserData(uid, appDataToSave = data) { // Added optional param
+export async function saveUserData(uid, appDataToSave = data) {
     if (!db) { console.error("Firestore DB not initialized"); return; }
-    // MODIFIED: Check appDataToSave instead of global 'data'
     if (!uid || !appDataToSave) {
         console.warn("Attempted to save user appData without UID or data object.");
         return;
@@ -70,6 +74,30 @@ export async function saveUserData(uid, appDataToSave = data) { // Added optiona
         // Only save the 'appData' part (subjects, history, settings etc.)
         // Ensure data is serializable (no undefined values, classes etc.)
         const cleanData = JSON.parse(JSON.stringify(appDataToSave));
+
+        // --- Validation/Cleanup before save ---
+        if (cleanData && cleanData.subjects) {
+             Object.values(cleanData.subjects).forEach(subject => {
+                 if (subject && subject.chapters) {
+                      Object.values(subject.chapters).forEach(chap => {
+                          // Ensure numeric fields are numbers, default to 0
+                          chap.total_questions = Number(chap.total_questions) || 0;
+                          chap.total_attempted = Number(chap.total_attempted) || 0;
+                          chap.total_wrong = Number(chap.total_wrong) || 0;
+                          chap.consecutive_mastery = Number(chap.consecutive_mastery) || 0;
+                          // Ensure arrays are arrays, default to empty
+                          chap.available_questions = Array.isArray(chap.available_questions) ? chap.available_questions : [];
+                          chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
+                      });
+                 }
+                 // Ensure arrays exist at subject level
+                 subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
+                 subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams : [];
+                 // exam_history is deprecated here
+             });
+        }
+        // --- End Validation ---
+
         await userRef.update({
             appData: cleanData
             // Consider adding a lastAppDataUpdate timestamp here if needed
@@ -328,14 +356,12 @@ export async function loadGlobalCourseDefinitions() {
                  console.warn(`Firestore doc for ${FOP_COURSE_ID} missing chapters, merging with local config.`);
                  finalCourseData = { ...FOP_COURSE_DEFINITION, ...courseData, id: FOP_COURSE_ID };
             }
-            // Ensure chapterResources exists
-            finalCourseData.chapterResources = finalCourseData.chapterResources || {};
-            // Ensure youtubePlaylistUrls exists
-            if (!finalCourseData.youtubePlaylistUrls && finalCourseData.youtubePlaylistUrl) {
-                 finalCourseData.youtubePlaylistUrls = [finalCourseData.youtubePlaylistUrl];
-            } else {
-                 finalCourseData.youtubePlaylistUrls = finalCourseData.youtubePlaylistUrls || [];
-            }
+            // Ensure essential fields exist and have correct types
+            finalCourseData.chapterResources = typeof finalCourseData.chapterResources === 'object' ? finalCourseData.chapterResources : {};
+            finalCourseData.youtubePlaylistUrls = Array.isArray(finalCourseData.youtubePlaylistUrls) ? finalCourseData.youtubePlaylistUrls : (finalCourseData.youtubePlaylistUrl ? [finalCourseData.youtubePlaylistUrl] : []);
+            finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
+            finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
+            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || 0;
 
             updateGlobalCourseData(doc.id, finalCourseData);
             console.log(`Loaded global course definition: ${finalCourseData.name} (${doc.id}), Status: ${finalCourseData.status || 'N/A'}`);
@@ -344,7 +370,10 @@ export async function loadGlobalCourseDefinitions() {
               console.log(`FOP course ${FOP_COURSE_ID} not found in Firestore, loading from local config.`);
               const fopDef = {...FOP_COURSE_DEFINITION}; // Clone
               fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
-              fopDef.chapterResources = fopDef.chapterResources || {}; // Initialize if missing
+              fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {};
+              fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
+              fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
+              fopDef.totalChapters = Number(fopDef.totalChapters) || 0;
               updateGlobalCourseData(FOP_COURSE_ID, fopDef);
          }
     } catch (error) {
@@ -430,23 +459,26 @@ export async function loadUserData(uid) {
                      // Subject fields
                      if (!subject.name) { subject.name = `Subject ${subjectId}`; needsAppDataSaveAfterLoad = true; }
                      if (!subject.fileName) { subject.fileName = `${subject.name}.md`.replace(/\s+/g, '_'); needsAppDataSaveAfterLoad = true; }
-                     subject.studied_chapters = subject.studied_chapters || [];
-                     subject.pending_exams = (subject.pending_exams || []).map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` }));
-                     subject.exam_history = (subject.exam_history || []); // Keep old history for now
-                     subject.max_questions_per_test = subject.max_questions_per_test || 42;
-                     subject.chapters = subject.chapters || {};
+                     subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
+                     subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
+                     // Ensure numeric defaults for ratio/duration/maxQ
+                     subject.mcqProblemRatio = typeof subject.mcqProblemRatio === 'number' ? subject.mcqProblemRatio : 0.5;
+                     subject.defaultTestDurationMinutes = Number(subject.defaultTestDurationMinutes) || 120;
+                     subject.max_questions_per_test = Number(subject.max_questions_per_test) || 42;
+
+                     subject.chapters = typeof subject.chapters === 'object' ? subject.chapters : {};
                      // Chapter fields
                      for (const chapNum in subject.chapters) {
                         const chap = subject.chapters[chapNum];
                         if (!chap) continue;
-                        chap.total_questions = chap.total_questions ?? 0;
-                        chap.total_attempted = chap.total_attempted ?? 0;
-                        chap.total_wrong = chap.total_wrong ?? 0;
-                        chap.mistake_history = chap.mistake_history ?? [];
-                        chap.consecutive_mastery = chap.consecutive_mastery ?? 0;
+                        chap.total_questions = Number(chap.total_questions) ?? 0;
+                        chap.total_attempted = Number(chap.total_attempted) ?? 0;
+                        chap.total_wrong = Number(chap.total_wrong) ?? 0;
+                        chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
+                        chap.consecutive_mastery = Number(chap.consecutive_mastery) ?? 0;
                         // Validate available_questions
                         const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
-                        const currentAvailableSet = new Set(chap.available_questions || []);
+                        const currentAvailableSet = new Set(Array.isArray(chap.available_questions) ? chap.available_questions : []);
                         const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
                         if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
                              chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
@@ -575,11 +607,13 @@ export async function checkOnboarding(uid) {
 export async function submitFeedback(feedbackData, user) {
     if (!db || !user) { console.error("Cannot submit feedback: DB/User missing."); alert("Error: User not identified."); return false; }
     if (!feedbackData.feedbackText) { console.error("Feedback text missing."); alert("Error: Feedback text cannot be empty."); return false; }
-    const feedbackRef = db.collection('feedback').doc();
+    // Choose collection based on context
+    const collectionName = feedbackData.context?.toLowerCase().includes('exam issue report') ? 'examIssues' : 'feedback';
+    const feedbackRef = db.collection(collectionName).doc();
     try {
         await feedbackRef.set({ subjectId: feedbackData.subjectId || 'N/A', questionId: feedbackData.questionId || 'N/A', feedbackText: feedbackData.feedbackText, context: feedbackData.context || null, userId: user.uid, username: user.displayName || user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp(), status: 'new' });
-        console.log("Feedback submitted successfully:", feedbackRef.id); return true;
-    } catch (error) { console.error("Error submitting feedback:", error); alert("Failed to submit feedback: " + error.message); return false; }
+        console.log(`Feedback/Issue submitted successfully to ${collectionName}:`, feedbackRef.id); return true;
+    } catch (error) { console.error(`Error submitting to ${collectionName}:`, error); alert(`Failed to submit: ${error.message}`); return false; }
 }
 
 // --- Inbox/Messaging ---
