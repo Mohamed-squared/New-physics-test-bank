@@ -131,7 +131,6 @@ export async function displayCurrentQuestion() {
     console.log("displayCurrentQuestion START");
     if (!currentOnlineTestState) { console.error("HALTED: currentOnlineTestState is null."); return; }
     const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
-    // MODIFIED: Check questions is array
     if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) {
          console.error(`HALTED: Invalid index ${index}/${questions?.length}`);
          const c = document.getElementById('question-container');
@@ -140,34 +139,35 @@ export async function displayCurrentQuestion() {
      }
     const question = questions[index]; const container = document.getElementById('question-container'); const totalQuestions = questions.length;
     if (!question || !container) { console.error("HALTED: Missing question object or container."); return; }
-    console.log(`Displaying question ${question.id} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
+
+    // Ensure question has an ID
+    const questionId = question.id || `q-${index+1}`;
+    console.log(`Displaying question ${questionId} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
 
     let imageHtml = question.image ? `<img src="${question.image}" alt="Question Image" class="max-w-full h-auto mx-auto my-4 border dark:border-gray-600 rounded" onerror="this.style.display='none';">` : '';
     let answerAreaHtml = '';
 
     if (question.isProblem) {
-         // Display area for problem-solving work
-         const currentAnswer = currentOnlineTestState.userAnswers[question.id] || '';
+         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
          answerAreaHtml = `
          <div class="mt-4">
-             <label for="problem-answer-${question.id}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Answer / Solution Steps:</label>
-             <textarea id="problem-answer-${question.id}" name="problemAnswer" rows="8"
+             <label for="problem-answer-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Answer / Solution Steps:</label>
+             <textarea id="problem-answer-${questionId}" name="problemAnswer" rows="8"
                        class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
                        placeholder="Show your work and final answer here..."
-                       oninput="window.recordAnswer('${question.id}', this.value)">${escapeHtml(currentAnswer)}</textarea>
+                       oninput="window.recordAnswer('${questionId}', this.value)">${escapeHtml(currentAnswer)}</textarea>
               <p class="text-xs text-muted mt-1">Explain your reasoning and show key steps. Use basic text formatting and simple math notation (e.g., ^ for power, * for multiply). Full LaTeX is not supported here.</p>
          </div>`;
-    } else {
-         // Display MCQ options
+    } else { // MCQ
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => `
-             <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
-                 <input type="radio" name="mcqOption-${question.id}" value="${opt.letter}" class="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-1" ${currentOnlineTestState.userAnswers[question.id] === opt.letter ? 'checked' : ''} onchange="window.recordAnswer('${question.id}', this.value)">
-                 <div class="flex items-baseline w-full"><span class="font-medium w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div>
+             <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150 option-label">
+                 <input type="radio" name="mcqOption-${questionId}" value="${opt.letter}" class="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-1" ${currentOnlineTestState.userAnswers[questionId] === opt.letter ? 'checked' : ''} onchange="window.recordAnswer('${questionId}', this.value)">
+                 <div class="flex items-baseline w-full"><span class="font-mono w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div>
              </label>`).join('') + `</div>` : '<p class="text-sm text-yellow-600 mt-4">(No MC options found)</p>';
     }
 
     const htmlContent = `
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-4 animate-fade-in">
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-4 animate-fade-in question-card">
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Question ${index + 1} / ${totalQuestions} ${question.chapter ? `(Chapter ${question.chapter})` : ''}</p>
         ${imageHtml}
         <div class="prose dark:prose-invert max-w-none mb-4 question-text-container">${question.text}</div>
@@ -252,14 +252,12 @@ export async function submitOnlineTest() {
         if (!examRecord || !examRecord.markingResults) {
              // Error already handled inside storeExamResult
              hideLoading();
-              // Attempt to navigate back gracefully even on failure
                if (isCourseActivity && courseId) {
                    window.showCurrentAssignmentsExams?.(courseId); // Use optional chaining
                } else {
                    showTestGenerationDashboard();
                }
-              // Clear state even on failure to store? Maybe keep it for retry? Let's clear it for now.
-              setCurrentOnlineTestState(null);
+              setCurrentOnlineTestState(null); // Clear state on failure
              return;
         }
 
@@ -367,36 +365,41 @@ export async function submitOnlineTest() {
  * Displays the results page after an online test is submitted and marked.
  * @param {object} examRecord - The complete exam record, including markingResults.
  */
-export async function displayOnlineTestResults(examRecord) { // Made async for MathJax
-    clearContent(); // Clear previous content
+export async function displayOnlineTestResults(examRecord) {
+    clearContent();
     if (!examRecord || !examRecord.markingResults) {
          console.error("Cannot display results: Invalid examRecord or missing markingResults.");
          displayContent('<p class="text-red-500 p-4">Error displaying test results.</p>');
          return;
     }
 
-    const { examId, markingResults, courseContext, timestamp } = examRecord;
-    // Use stored questions if available, otherwise use from markingResults (should be same)
-    const questions = examRecord.questions || markingResults.questionResults?.map(qr => examData.questions.find(q => q.id === qr.questionId)) || [];
+    const { examId, markingResults, courseContext, timestamp, type, subjectId, courseId } = examRecord;
     const score = markingResults.totalScore;
     const maxScore = markingResults.maxPossibleScore;
     const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
     const date = new Date(timestamp).toLocaleString();
-    const isCourse = courseContext?.isCourseActivity ?? false;
-    const isSkip = courseContext?.activityType === 'skip_exam';
-    const courseId = courseContext?.courseId;
-    // *** MODIFIED: Use imported config values ***
-    const passThreshold = isSkip ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
-    const isPassing = parseFloat(percentage) >= passThreshold; // Use parseFloat for comparison
-    const courseName = isCourse && courseId ? (globalCourseDataMap.get(courseId)?.name || courseId) : 'Standard Test';
     const durationMinutes = examRecord.durationMinutes;
+    const isCourse = !!courseId;
+    const isSkip = type === 'skip_exam';
 
-    // *** MODIFIED: Changed 'html' to 'resultsHtml' ***
+    // Determine context name (Course or Subject)
+    const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId)
+                       : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
+                       : 'Standard Test';
+
+    // Determine passing threshold
+    let passThreshold = PASSING_GRADE_PERCENT; // Default
+    if (isSkip) { passThreshold = SKIP_EXAM_PASSING_PERCENT; }
+    else if (isCourse) { passThreshold = PASSING_GRADE_PERCENT; } // Use general course pass mark for assignments/exams
+
+    const isPassing = parseFloat(percentage) >= passThreshold;
+
     const resultsHtml = `
         <div class="space-y-6 animate-fade-in max-w-3xl mx-auto">
             <div class="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border dark:border-gray-700">
                 <h2 class="text-2xl font-bold mb-2">Exam Results</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Exam ID: ${escapeHtml(examId)}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Context: ${escapeHtml(contextName)} (${isCourse ? 'Course' : 'Subject'}) | Type: ${escapeHtml(type)}</p>
                 <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
                 <div class="text-5xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'} mb-2">
                     ${percentage}%
@@ -405,62 +408,44 @@ export async function displayOnlineTestResults(examRecord) { // Made async for M
                     ${score.toFixed(1)} out of ${maxScore.toFixed(1)} points
                 </p>
                 <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">
-                    ${isPassing ? 'PASS' : 'FAIL'} ${isSkip ? `(Threshold: ${passThreshold}%)` : `(Threshold: ${PASSING_GRADE_PERCENT}%)`}
+                    ${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passThreshold}%)
                 </p>
-                 ${isSkip && isPassing ? `<p class="text-sm text-green-600 mt-1">Chapter ${courseContext.chapterNum} marked as studied!</p>` : ''}
+                 ${isSkip && isPassing ? `<p class="text-sm text-green-600 mt-1">Chapter ${courseContext?.chapterNum || '?'} marked as studied!</p>` : ''}
                  ${isSkip && !isPassing ? `<p class="text-sm text-red-600 mt-1">Needed ${passThreshold}% to pass the skip exam.</p>` : ''}
             </div>
 
             <!-- Overall Feedback -->
             ${markingResults.overallFeedback ? `
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700 overall-feedback-area">
                 <h3 class="text-lg font-semibold mb-4">Overall AI Feedback</h3>
                 <div class="space-y-4 text-sm">
                     <p class="text-gray-700 dark:text-gray-300">${escapeHtml(markingResults.overallFeedback.overall_feedback || 'N/A')}</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <h4 class="font-medium text-green-600 mb-2">Strengths</h4>
-                            <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                                ${markingResults.overallFeedback.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4>
-                            <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                                ${markingResults.overallFeedback.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}
-                            </ul>
-                        </div>
+                        <div><h4 class="font-medium text-green-600 mb-2">Strengths</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
+                        <div><h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
                     </div>
                     ${markingResults.overallFeedback.study_recommendations ? `
-                    <div class="mt-4">
-                        <h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4>
-                        <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                            ${markingResults.overallFeedback.study_recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}
-                        </ul>
-                    </div>` : '' }
+                    <div class="mt-4"><h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.study_recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}</ul></div>` : '' }
                 </div>
             </div>
             ` : '<p class="text-muted italic text-center my-4">No overall feedback available.</p>'}
 
-
             <div class="flex justify-center gap-4 flex-wrap">
-                <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.15.15 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
+                <button onclick="window.showExamReviewUI('${currentUser.uid}', \`${examId}\`)" class="btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
                     View Detailed Review
                 </button>
                 <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
-                    ${isCourse ? 'Back to Course Exams' : 'View All Standard Exams'}
+                    ${isCourse ? 'Back to Course Exams' : 'Back to TestGen Exams'}
                 </button>
                  ${!isCourse ? `<button onclick="window.showTestGenerationDashboard()" class="btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Generate New Test</button>` : ''}
             </div>
         </div>`;
-    // MODIFIED: Target main content area & use correct variable name
-    displayContent(resultsHtml, 'content'); // Display in the main content area
-    setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'sidebar-standard-nav');
+    displayContent(resultsHtml, 'content');
+    setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'testgen-dropdown-content');
 
-    // Render math in the overall feedback if needed (unlikely but possible)
-    const overallFeedbackArea = document.querySelector('.overall-feedback-area'); // Add a class if needed
+    const overallFeedbackArea = document.querySelector('.overall-feedback-area');
     if (overallFeedbackArea) await renderMathIn(overallFeedbackArea);
 }
 

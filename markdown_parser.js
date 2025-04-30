@@ -111,22 +111,37 @@ export function parseChaptersFromMarkdown(mdContent) {
 }
 
 export function extractQuestionsFromMarkdown(mdContent, selectedQuestionsMap) {
-    const extracted = { questions: [], answers: {} };
+    const extracted = { questions: [] };
     if (!mdContent || !selectedQuestionsMap || Object.keys(selectedQuestionsMap).length === 0) { console.error("Invalid args for extractQuestionsFromMarkdown."); return extracted; }
     const lines = mdContent.split('\n'); let currentChapter = null; let currentQuestion = null; let processingState = 'seeking_chapter';
-    // Regex definitions remain the same
     const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i; const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/; const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/; const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i; const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
 
     function finalizeQuestion() {
         if (currentQuestion && currentChapter) {
             const questionId = `c${currentChapter}q${currentQuestion.number}`; let rawText = currentQuestion.textLines.join('\n').trim(); let answer = null; let imageUrl = null;
-            if (currentQuestion.answerLine) { const m = currentQuestion.answerLine.match(answerRegex); if (m) answer = m[1].toUpperCase(); if (currentQuestion.textLines.length > 0 && currentQuestion.textLines[currentQuestion.textLines.length - 1]?.trim() === currentQuestion.answerLine) { currentQuestion.textLines.pop(); rawText = currentQuestion.textLines.join('\n').trim(); } }
-            const imgMatch = rawText.match(/!\[.*?]\]\((.*?)\)/); if (imgMatch) { imageUrl = imgMatch[1]; rawText = rawText.replace(imageMarkdownRegex, '').trim(); }
+            if (currentQuestion.answerLine) {
+                const m = currentQuestion.answerLine.match(answerRegex);
+                if (m) answer = m[1].toUpperCase();
+                if (currentQuestion.textLines.length > 0 && currentQuestion.textLines[currentQuestion.textLines.length - 1]?.trim() === currentQuestion.answerLine) {
+                     currentQuestion.textLines.pop();
+                     rawText = currentQuestion.textLines.join('\n').trim();
+                 }
+            }
+            const imgMatch = rawText.match(/!\[.*?\]\((.*?)\)/); if (imgMatch) { imageUrl = imgMatch[1]; rawText = rawText.replace(imageMarkdownRegex, '').trim(); }
             const formattedOptions = currentQuestion.options.map(opt => ({ letter: opt.letter, text: opt.text.trim() }));
-            // Add the isProblem flag - MCQs are NOT problems
-            extracted.questions.push({ id: questionId, chapter: currentChapter, number: currentQuestion.number, text: rawText, options: formattedOptions, image: imageUrl, answer: answer, isProblem: false });
-            if (answer) extracted.answers[questionId] = answer; else console.warn(`Answer missing for Q ${questionId}.`);
-        } currentQuestion = null;
+            extracted.questions.push({
+                id: questionId,
+                chapter: currentChapter,
+                number: currentQuestion.number,
+                text: rawText,
+                options: formattedOptions,
+                image: imageUrl,
+                correctAnswer: answer,
+                isProblem: false
+             });
+            if (!answer) console.warn(`Answer missing for Q ${questionId}.`);
+        }
+        currentQuestion = null;
     }
 
     for (let i = 0; i < lines.length; i++) {
@@ -155,7 +170,7 @@ export function extractQuestionsFromMarkdown(mdContent, selectedQuestionsMap) {
     console.log(`Extraction finished. Found ${extracted.questions.length} questions.`);
     const totalSelectedCount = Object.values(selectedQuestionsMap).reduce((sum, arr) => sum + (arr?.length || 0), 0);
     if (extracted.questions.length < totalSelectedCount && totalSelectedCount > 0) { console.warn(`Extraction Warning: Selected ${totalSelectedCount} but only extracted ${extracted.questions.length}. Check MD formatting for selected questions.`); }
-    return extracted;
+    return { questions: extracted.questions };
 }
 
 
@@ -163,45 +178,38 @@ export function extractQuestionsFromMarkdown(mdContent, selectedQuestionsMap) {
 export function parseSkipExamText(rawText, chapterNum) {
     if (!rawText || !chapterNum) { console.error("parseSkipExamText: Missing args."); return { questions: [], answers: {} }; } // Return empty structure on error
     console.log(`Parsing Skip Exam Text for Chapter ${chapterNum}...`);
-    const extracted = { questions: [], answers: {} };
-    // Split by lines, removing empty lines first
+    const extracted = { questions: [], answers: {} }; // Keep answers map here for skip exam specific flow if needed downstream, though less necessary now
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     let currentQuestion = null; let questionNumFromText = 0; let questionTextBuffer = []; let optionsBuffer = []; let answerLineBuffer = null;
 
-    // Regex (allow optional space after marker, make case insensitive)
     const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/i;
-    // Allow A-E options
     const optionRegex = /^\s*([A-Ea-e])\s*[\.\)]\s*(.*)/i;
     const answerRegex = /^\s*(?:ans|answer)\s*:\s*([A-Ea-e])\s*$/i; // Allow A-E
 
     function finalizeCurrentQuestion() {
-        if (questionNumFromText > 0 && questionTextBuffer.length > 0 && optionsBuffer.length >= 2 && answerLineBuffer) { // Require at least 2 options
+        if (questionNumFromText > 0 && questionTextBuffer.length > 0 && optionsBuffer.length >= 2 && answerLineBuffer) {
             const answerMatch = answerLineBuffer.match(answerRegex);
             const answer = answerMatch ? answerMatch[1].toUpperCase() : null;
             if (answer) {
-                 const questionId = `c${chapterNum}q${questionNumFromText}-skip`; // Add -skip suffix for clarity
+                 const questionId = `c${chapterNum}q${questionNumFromText}-skip`;
                  extracted.questions.push({
                     id: questionId,
                     chapter: String(chapterNum),
                     number: questionNumFromText,
-                    text: questionTextBuffer.join(' ').trim(), // Join multi-line question text
+                    text: questionTextBuffer.join(' ').trim(),
                     options: optionsBuffer.map(opt => ({ letter: opt.letter, text: opt.text.trim() })),
-                    image: null, // Skip exam likely won't have images from AI
-                    answer: answer,
-                    isProblem: false, // Skip exams from AI currently only generate MCQs
-                    type: 'mcq-skip' // Specific type
+                    image: null,
+                    correctAnswer: answer, // Use correctAnswer
+                    isProblem: false,
+                    type: 'mcq-skip'
                  });
-                 extracted.answers[questionId] = answer;
+                 extracted.answers[questionId] = answer; // Keep this map for skip exam flow if useful
             } else {
                  console.warn(`Skipping Skip MCQ block ending near line buffer: Invalid or missing answer. Q#${questionNumFromText}`);
-                 console.warn("Q Text:", questionTextBuffer.join(' '));
-                 console.warn("Options:", optionsBuffer);
-                 console.warn("Ans Line:", answerLineBuffer);
             }
         } else if (questionNumFromText > 0) {
              console.warn(`Discarding incomplete Skip MCQ block for question number ${questionNumFromText}. Missing text, options (<2), or answer.`);
         }
-        // Reset buffers
         currentQuestion = null; questionNumFromText = 0; questionTextBuffer = []; optionsBuffer = []; answerLineBuffer = null;
     }
 
@@ -212,36 +220,30 @@ export function parseSkipExamText(rawText, chapterNum) {
         const answerMatch = line.match(answerRegex);
 
         if (questionMatch) {
-            finalizeCurrentQuestion(); // Finalize previous before starting new
+            finalizeCurrentQuestion();
             questionNumFromText = parseInt(questionMatch[1]);
-            questionTextBuffer = [questionMatch[2].trim()]; // Start with first line of text
+            questionTextBuffer = [questionMatch[2].trim()];
         } else if (optionMatch && questionNumFromText > 0) {
-            // Found an option for the current question
             optionsBuffer.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2].trim() });
-            answerLineBuffer = null; // Reset answer buffer if options are found after it
+            answerLineBuffer = null;
         } else if (answerMatch && questionNumFromText > 0 && optionsBuffer.length > 0) {
-            // Found potential answer line *after* options
             answerLineBuffer = line;
-            // Don't finalize yet, wait for next question or end of file
-        } else if (questionNumFromText > 0) { // Belongs to the current question block
+        } else if (questionNumFromText > 0) {
             if (optionsBuffer.length > 0 && !answerLineBuffer) {
-                // Append to the text of the LAST option if no answer yet seen
                 optionsBuffer[optionsBuffer.length - 1].text += ' ' + line;
             } else if (optionsBuffer.length === 0 && !answerLineBuffer) {
-                // Append to question text if before options and answer
                 questionTextBuffer.push(line);
             }
-            // Ignore lines after a potential answer line until a new question starts
         }
     }
-    finalizeCurrentQuestion(); // Finalize the very last question block
+    finalizeCurrentQuestion();
 
     console.log(`Parsed ${extracted.questions.length} potentially valid MCQs from Skip Exam text.`);
     if (extracted.questions.length === 0 && lines.length > 5) {
         console.error("Parsing failed: Extracted 0 MCQs. Check AI output format against expected structure (Num. Text \\n A. Text \\n ... \\n ans: X).");
-        // Return empty structure on failure, don't return null
+        // Return empty structure on failure
         return { questions: [], answers: {} };
-    } else if (extracted.questions.length < 10 && lines.length > 50) { // Heuristic check
+    } else if (extracted.questions.length < 10 && lines.length > 50) {
         console.warn(`Parsed only ${extracted.questions.length} MCQs. AI might not have generated the full requested amount or format was inconsistent.`);
     }
 

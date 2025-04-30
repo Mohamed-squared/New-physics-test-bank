@@ -3,7 +3,7 @@
 // ai_exam_marking.js
 
 // MODIFIED: Import escapeHtml from utils
-import { callGeminiTextAPI } from './ai_integration.js';
+import { callGeminiTextAPI, tokenLimitCheck } from './ai_integration.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml import
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ } from './config.js'; // Import constants
 
@@ -105,6 +105,7 @@ export async function markFullExam(examData) {
         study_recommendations: []
     };
     let overallResponse = null;
+    let cleanedResponse = ''; // Define here for access in catch block
 
     try {
         console.log(`Marking full exam: ${examData.examId}, Questions: ${examData.questions?.length}`);
@@ -132,7 +133,6 @@ export async function markFullExam(examData) {
                  } else {
                      // Score MCQs deterministically immediately
                      console.log(`Scoring MCQ Q${i+1} (ID: ${question.id}). Answer: "${studentAnswer}", Correct: "${question.correctAnswer}"`);
-                     // Refined correctness check (case-insensitive, handle null/undefined)
                      const correctAnswerStr = String(question.correctAnswer ?? '').trim().toUpperCase();
                      const studentAnswerStr = String(studentAnswer ?? '').trim().toUpperCase();
                      const isCorrect = correctAnswerStr !== '' && studentAnswerStr === correctAnswerStr;
@@ -145,30 +145,28 @@ export async function markFullExam(examData) {
                          key_points: [],
                          improvement_suggestions: isCorrect ? [] : ["Review the concepts related to this question."]
                      };
-                     // Push MCQ result directly (no promise)
-                     results.questionResults[i] = { // Use index to maintain order
+                     results.questionResults[i] = {
                          questionId: question.id,
                          questionIndex: i,
                          ...mcqResult,
-                         score: score // Ensure score is stored
+                         score: score
                      };
-                     results.totalScore += score; // Add score immediately
+                     results.totalScore += score;
                      console.log(`Result for MCQ Q${i+1}: Score=${score}/${maxMarks}`);
                  }
              }
 
-             // Wait for all AI marking promises to resolve
              if (markingPromises.length > 0) {
                   console.log(`Waiting for ${markingPromises.length} AI problem marking tasks...`);
                   const settledResults = await Promise.allSettled(markingPromises);
                   console.log("AI marking tasks settled.");
 
-                  settledResults.forEach(settled => {
+                  settledResults.forEach((settled, promiseIndex) => {
                      if (settled.status === 'fulfilled') {
                           const { index, result } = settled.value;
                           const scoreToAdd = Number(result.score) || 0;
                           results.totalScore += scoreToAdd;
-                          results.questionResults[index] = { // Place result at correct index
+                          results.questionResults[index] = {
                               questionId: examData.questions[index].id,
                               questionIndex: index,
                               ...result,
@@ -176,21 +174,20 @@ export async function markFullExam(examData) {
                           };
                            console.log(`Result for Problem Q${index+1}: Score=${scoreToAdd}/${MAX_MARKS_PER_PROBLEM}`);
                       } else {
-                          // Handle rejected promises (AI call failed)
-                          const originalPromiseInfo = markingPromises[settledResults.indexOf(settled)]; // Need a way to map back, index might work if order preserved
-                          const failedIndex = originalPromiseInfo?.index ?? -1; // Requires index to be part of the error/value payload
-                          if (failedIndex !== -1) {
-                                console.error(`AI Marking Error for Q${failedIndex + 1}:`, settled.reason);
-                                results.questionResults[failedIndex] = { // Place error result at correct index
+                          const failedIndex = markingPromises[promiseIndex]?.index ?? -1;
+                          const reason = settled.reason;
+                          if (failedIndex !== -1 && examData.questions[failedIndex]) {
+                                console.error(`AI Marking Error for Q${failedIndex + 1}:`, reason);
+                                results.questionResults[failedIndex] = {
                                     questionId: examData.questions[failedIndex].id,
                                     questionIndex: failedIndex,
                                     score: 0,
-                                    feedback: `Error during AI marking: ${settled.reason?.message || 'Unknown error'}.`,
+                                    feedback: `Error during AI marking: ${reason?.message || 'Unknown error'}.`,
                                     key_points: [],
                                     improvement_suggestions: []
                                 };
                             } else {
-                                 console.error(`AI Marking Error for unknown question:`, settled.reason); // Log general error if index mapping fails
+                                 console.error(`AI Marking Error for unknown question (index mapping failed or missing question data):`, reason);
                             }
                       }
                   });
@@ -199,45 +196,74 @@ export async function markFullExam(examData) {
              console.warn("No questions found in examData to mark.");
         }
 
-        // Generate overall feedback only if there were questions and marking occurred
         if (results.questionResults.length > 0 && results.maxPossibleScore > 0) {
-            const performanceSummary = results.questionResults.map(r => {
-                if (!r) return `  Q?: Error during marking.`; // Handle cases where result might be missing due to error
-                const q = examData.questions.find(q => q.id === r.questionId);
-                const qType = (q?.isProblem || !q?.options || q.options.length === 0) ? 'Problem' : 'MCQ';
-                const qMax = qType === 'Problem' ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
-                return `\n  Q${r.questionIndex + 1} (${qType}): ${r.score}/${qMax} - Feedback snippet: ${r.feedback?.substring(0, 70) || 'N/A'}...`;
-            }).join('');
+            // *** MODIFIED: Construct detailed summary ***
+            let detailedSummary = "";
+            examData.questions.forEach((q, index) => {
+                const result = results.questionResults.find(r => r.questionId === q.id);
+                const score = result?.score ?? 'N/A';
+                const max = (q.isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
+                const userAnswer = examData.userAnswers?.[q.id] || "Not Answered";
+                detailedSummary += `\n\nQuestion ${index + 1} (Type: ${q.isProblem ? 'Problem' : 'MCQ'}, Chapter: ${q.chapter || 'N/A'}):\n`;
+                detailedSummary += `Text: ${q.text}\n`;
+                if (!q.isProblem && q.options) {
+                    detailedSummary += `Options: ${q.options.map(o => `${o.letter}. ${o.text}`).join('; ')}\n`;
+                    detailedSummary += `Correct Answer: ${q.correctAnswer || 'N/A'}\n`;
+                }
+                detailedSummary += `Student Answer: ${userAnswer}\n`;
+                detailedSummary += `Score: ${score}/${max}\n`;
+                detailedSummary += `Feedback Snippet: ${result?.feedback?.substring(0,100) || 'N/A'}...\n`;
+            });
 
-            const overallPrompt = `You are an expert examiner providing summative feedback on a physics/mathematics exam. Based on the following detailed results for each question, provide overall feedback and recommendations.
+            const overallPrompt = `You are an expert examiner providing summative feedback on a physics/mathematics exam. The student achieved ${results.totalScore}/${results.maxPossibleScore} (${results.maxPossibleScore > 0 ? ((results.totalScore / results.maxPossibleScore) * 100).toFixed(1) : 0}%).
 
-Exam Summary:
-- Total Score: ${results.totalScore}/${results.maxPossibleScore} (${results.maxPossibleScore > 0 ? ((results.totalScore / results.maxPossibleScore) * 100).toFixed(1) : 0}%)
-- Number of Questions Marked: ${results.questionResults.length}
-- Performance by Question: ${performanceSummary}
+Analyze the student's performance based *specifically* on the following questions, their answers, and the marking:
+${detailedSummary}
+---
+Provide constructive, material-based overall feedback. Focus on patterns of errors related to specific concepts or topics covered in the questions.
 
-Provide your response ONLY in this strict JSON format:
+Respond ONLY in this strict JSON format:
 {
-    "overall_feedback": "[Provide a concise (2-4 sentences) general assessment of the student's performance, mentioning the overall score range.]",
-    "strengths": ["[List 2-3 specific concepts or types of problems the student seems to understand well based on higher scores or positive feedback.]"],
-    "weaknesses": ["[List 2-3 specific concepts, topics, or types of errors observed frequently where the student struggled, based on lower scores or negative feedback.]"],
-    "study_recommendations": ["[Provide 2-3 actionable study recommendations focusing on the identified weaknesses. Suggest specific topics or skills to review.]"]
+    "overall_feedback": "[Provide a concise (2-4 sentences) overall assessment, mentioning score range and core performance observations based *on the material*.]",
+    "strengths": ["[List 2-3 specific concepts or topics the student demonstrated understanding of, referencing specific question numbers if possible.]"],
+    "weaknesses": ["[List 2-3 specific concepts or topics where the student struggled, referencing specific question numbers or error patterns.]"],
+    "study_recommendations": ["[Provide 2-3 actionable study recommendations *directly related* to the identified weaknesses and the material covered in the exam questions.]"]
 }`;
 
-            try {
-                 console.log("Generating overall feedback...");
-                 overallResponse = await callGeminiTextAPI(overallPrompt); // Request JSON
-                 results.overallFeedback = JSON.parse(overallResponse);
-                 // Validate structure
-                 results.overallFeedback.strengths = Array.isArray(results.overallFeedback.strengths) ? results.overallFeedback.strengths : [];
-                 results.overallFeedback.weaknesses = Array.isArray(results.overallFeedback.weaknesses) ? results.overallFeedback.weaknesses : [];
-                 results.overallFeedback.study_recommendations = Array.isArray(results.overallFeedback.study_recommendations) ? results.overallFeedback.study_recommendations : [];
-
-            } catch (parseOrApiError) {
-                 console.error("Error generating or parsing overall feedback:", parseOrApiError, "\nRaw Response:", overallResponse);
-                 results.overallFeedback = { ...defaultOverallFeedback };
-                 results.overallFeedback.overall_feedback = `Error processing overall feedback. ${parseOrApiError.message}. Raw: ${escapeHtml(overallResponse || 'No response')}`;
+            // *** MODIFIED: Check token limit before API call ***
+            if (!await tokenLimitCheck(overallPrompt)) {
+                 console.warn("Overall feedback prompt exceeds token limit. Generating generic feedback.");
+                 results.overallFeedback = { ...defaultOverallFeedback, overall_feedback: "Overall feedback could not be generated due to content length limits." };
+                 overallResponse = null; // Ensure no API call happens
+            } else {
+                console.log("Generating overall feedback with detailed context...");
+                overallResponse = await callGeminiTextAPI(overallPrompt);
             }
+
+            if (overallResponse) {
+                 try {
+                      cleanedResponse = overallResponse.trim();
+                      if (cleanedResponse.startsWith('```json')) { cleanedResponse = cleanedResponse.substring(7); }
+                      else if (cleanedResponse.startsWith('```')) { cleanedResponse = cleanedResponse.substring(3); }
+                      if (cleanedResponse.endsWith('```')) { cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3); }
+                      cleanedResponse = cleanedResponse.trim();
+                      if (cleanedResponse.startsWith('"') && cleanedResponse.endsWith('"')) {
+                          try { const innerJson = JSON.parse(cleanedResponse); if (typeof innerJson === 'string') { cleanedResponse = innerJson; } } catch (e) { /* Ignore */ }
+                      }
+
+                      results.overallFeedback = JSON.parse(cleanedResponse);
+                      results.overallFeedback.strengths = Array.isArray(results.overallFeedback.strengths) ? results.overallFeedback.strengths : [];
+                      results.overallFeedback.weaknesses = Array.isArray(results.overallFeedback.weaknesses) ? results.overallFeedback.weaknesses : [];
+                      results.overallFeedback.study_recommendations = Array.isArray(results.overallFeedback.study_recommendations) ? results.overallFeedback.study_recommendations : [];
+
+                 } catch (parseOrApiError) {
+                      console.error("Error generating or parsing overall feedback:", parseOrApiError, "\nCleaned Response Attempted:", cleanedResponse, "\nRaw Response:", overallResponse);
+                      results.overallFeedback = { ...defaultOverallFeedback };
+                      results.overallFeedback.overall_feedback = `Error processing overall feedback. ${parseOrApiError.message || 'Unknown error'}. Raw AI Response: ${escapeHtml(overallResponse || 'No response received from API')}`;
+                 }
+             } else if (!results.overallFeedback) {
+                  results.overallFeedback = { ...defaultOverallFeedback, overall_feedback: "Overall feedback could not be generated due to content length limits." };
+             }
         } else {
              results.overallFeedback = { ...defaultOverallFeedback };
              results.overallFeedback.overall_feedback = "No questions were marked or max score is zero, cannot provide overall feedback.";
@@ -251,15 +277,13 @@ Provide your response ONLY in this strict JSON format:
         hideLoading();
     }
 
-    // Ensure all question results have a score property, even if 0
     results.questionResults = results.questionResults.map((r, i) => {
-         if (!r) { // Handle potential undefined entry if an AI call failed critically before insertion
+         if (!r) {
               console.error(`Missing result for question index ${i} in final processing.`);
               return { questionId: examData.questions[i]?.id || `q-${i+1}`, questionIndex: i, score: 0, feedback: "Marking Error", key_points: [], improvement_suggestions: [] };
          }
          return { ...r, score: Number(r?.score) || 0 };
     });
-    // Clamp total score just in case
     results.totalScore = Math.max(0, Math.min(results.totalScore, results.maxPossibleScore));
 
     console.log("Full exam marking complete:", results);
@@ -268,8 +292,8 @@ Provide your response ONLY in this strict JSON format:
 
 /**
  * Generates an AI explanation for a specific question, considering the student's answer. Handles follow-ups.
- * @param {object | null} question - The question object (null for follow-ups based on history).
- * @param {string|null} correctAnswer - The correct answer (null for problems or follow-ups).
+ * @param {object | null} question - The question object (null for follow-ups based on history). Should have `correctAnswer` property for MCQs.
+ * @param {string|null} correctAnswer - The correct answer (null for problems or follow-ups). **DEPRECATED** - Use question.correctAnswer instead.
  * @param {string|null} studentAnswer - The student's answer OR the follow-up question text.
  * @param {Array} [history=[]] - Optional: Conversation history for follow-ups.
  * @returns {Promise<{explanationHtml: string, history: Array}>} - HTML formatted explanation and updated history.
@@ -279,12 +303,12 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
     let currentPromptText = '';
 
     if (isFollowUp) {
-        currentPromptText = studentAnswer; // User's follow-up question
+        currentPromptText = studentAnswer;
         console.log("Generating follow-up explanation based on history and new query:", currentPromptText);
     } else {
-        // Initial explanation request
         if (!question) throw new Error("Initial explanation requires a question object.");
         const isProblem = question.isProblem || !question.options || question.options.length === 0;
+        const actualCorrectAnswer = isProblem ? null : question.correctAnswer;
 
         currentPromptText = `As a physics and mathematics tutor, provide a detailed explanation for the following question.\n\n`;
         currentPromptText += `**Question:** ${question.text}\n\n`;
@@ -292,16 +316,16 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
         if (isProblem) {
             currentPromptText += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
             currentPromptText += `Explain the correct concepts and steps required to solve this problem. If the student provided an answer, analyze their likely approach and point out potential errors or correct steps they took. Provide the final correct reasoning or expected form of the answer if applicable. Use LaTeX ($$, $) for math.`;
-        } else { // MCQ
+        } else {
             currentPromptText += `**Options:**\n`;
             question.options.forEach(opt => { currentPromptText += `${opt.letter}. ${opt.text}\n`; });
-            currentPromptText += `\n**Correct Answer:** ${correctAnswer}\n`;
+            currentPromptText += `\n**Correct Answer:** ${actualCorrectAnswer || 'N/A'}\n`;
             currentPromptText += `**Student's Answer:** ${studentAnswer || "Not answered"}\n\n`;
             currentPromptText += `Explain step-by-step:\n`;
-            currentPromptText += `1. Why the correct answer (${correctAnswer}) is right, focusing on the underlying principle.\n`;
-            if (studentAnswer && studentAnswer !== correctAnswer) {
+            currentPromptText += `1. Why the correct answer (${actualCorrectAnswer || 'N/A'}) is right, focusing on the underlying principle.\n`;
+            if (studentAnswer && studentAnswer !== actualCorrectAnswer) {
                 currentPromptText += `2. Why the student's choice (${studentAnswer}) is incorrect.\n`;
-            } else if (studentAnswer === correctAnswer) {
+            } else if (studentAnswer === actualCorrectAnswer) {
                 currentPromptText += `2. Briefly confirm the student chose correctly.\n`;
             } else {
                 currentPromptText += `2. The student did not select an answer.\n`;
@@ -311,12 +335,27 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
          console.log("Generating initial explanation for:", question.id);
     }
 
-    // Construct the history object for the API call
     const currentHistory = [...history, { role: "user", parts: [{ text: currentPromptText }] }];
 
     try {
-        const explanationText = await callGeminiTextAPI(null, currentHistory); // Pass null for prompt, use history
-        const updatedHistory = [...currentHistory, { role: "model", parts: [{ text: explanationText }] }];
+        // *** ADDED ROBUST VALIDATION before API call ***
+        const validatedHistory = currentHistory.filter(turn =>
+            turn && turn.role && Array.isArray(turn.parts) && turn.parts.length > 0 &&
+            turn.parts.every(part => part && ( (typeof part.text === 'string' && part.text.trim() !== '') || part.inlineData))
+        );
+
+        if (validatedHistory.length === 0 ) {
+             throw new Error("Invalid history: History became empty after validation.");
+        }
+        if (validatedHistory[validatedHistory.length - 1].role !== 'user'){
+            throw new Error("Invalid history state for API call: Last valid turn is not from the user.");
+        }
+        if (JSON.stringify(validatedHistory) !== JSON.stringify(currentHistory)){
+            console.warn("History was filtered before API call:", {original: currentHistory, filtered: validatedHistory });
+        }
+
+        const explanationText = await callGeminiTextAPI(null, validatedHistory);
+        const updatedHistory = [...validatedHistory, { role: "model", parts: [{ text: explanationText }] }];
 
         return {
             explanationHtml: formatResponseAsHtml(explanationText),
@@ -326,7 +365,7 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
         console.error("Error generating explanation:", error);
         return {
              explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
-             history: currentHistory // Return history up to the point of error
+             history: currentHistory
          };
     }
 }

@@ -1,0 +1,683 @@
+1
+00:00:18,869 --> 00:00:19,859
+Hello.
+
+2
+00:00:20,709 --> 00:00:31,719
+In the last video, we started talking about the properties of numbers, and we discussed properties one through eight. Specifically, there were four properties for addition corresponding to four in multiplication.
+
+3
+00:00:32,949 --> 00:00:41,359
+Today, God willing, we will continue our discussion on the properties of numbers, and it will be about the ninth property, and only that. The entire video today, God willing, will be about the ninth property.
+
+4
+00:00:41,909 --> 00:00:51,449
+This is due to its importance and its high frequency of use in mathematics, arithmetic, and algebra in general, not just in calculus, as we will see in this video today, God willing.
+
+5
+00:00:52,189 --> 00:00:52,679
+Okay.
+
+6
+00:00:53,889 --> 00:01:11,589
+What does the property itself say? The property says: If A, B, and C are any numbers, then...
+
+7
+00:01:18,159 --> 00:01:28,999
+A * (B + C) = A * B + A * C.
+
+8
+00:01:30,709 --> 00:01:32,269
+What does this mean?
+
+9
+00:01:35,719 --> 00:01:45,019
+We have all seen this property in one way or another during our work in past years in mathematics in general. This is the distributive property or the property or law of distribution.
+
+10
+00:01:45,839 --> 00:02:01,189
+Meaning, if I have a number multiplied by a number, plus the same number multiplied by another number, I can factor out the common number and add the other two numbers inside parentheses. That is, A is multiplied by B, and A is multiplied by C, so I factor the A out and add B and C together.
+
+11
+00:02:02,879 --> 00:02:10,519
+The first thing that distinguishes this property is that it combines the two: addition and multiplication. I have addition here and multiplication.
+
+12
+00:02:11,189 --> 00:02:25,379
+The previous properties, four of them were exclusively for addition, and four of them were exclusively for multiplication. This property combines the two. And honestly, this might be the reason that gives the ninth property a somewhat special importance.
+
+13
+00:02:25,879 --> 00:02:26,859
+As we will see shortly.
+
+14
+00:02:27,429 --> 00:02:35,119
+Let's start with the proofs. The very first problem we had in the last video, which we said could be solved with the ninth property, was related to subtraction.
+
+15
+00:02:35,319 --> 00:02:48,519
+When we said that A - B = B - A, and we said that this statement is true in only one case, which is when A = B.
+
+16
+00:02:49,269 --> 00:02:52,289
+This property can prove this statement for me. How?
+
+17
+00:02:52,899 --> 00:03:00,119
+And by the way, it wasn't possible to prove it with anything else, or with any combination of properties one through eight; they couldn't prove this simple concept for me.
+
+18
+00:03:00,469 --> 00:03:04,039
+Only the ninth property can prove something like this for me. Okay, so how does this work?
+
+19
+00:03:06,159 --> 00:03:14,429
+Let's first write down A - B = B - A.
+
+20
+00:03:15,819 --> 00:03:18,109
+What do we want to prove? We want to prove that A equals B.
+
+21
+00:03:18,379 --> 00:03:22,359
+Okay, so we want A on this side and B on this side. So we want to get rid of the B on this side first.
+
+22
+00:03:22,769 --> 00:03:38,519
+We get rid of it using the inverse property of addition. As we said, A... we'll write this down as it is and add positive B to them to cancel these two [-B and +B]. And of course, since we added positive B on this side, we must add it on the other side.
+
+23
+00:03:39,89 --> 00:03:45,069
+This becomes zero, so A will come down as it is. I'll shorten things a bit this time; we know this from the previous properties.
+
+24
+00:03:45,559 --> 00:03:54,189
+And here I will use the [commutative/associative] property for arrangement by moving the B to the other side [conceptually] to group the Bs together, leaving me with negative A at the end.
+
+25
+00:03:55,59 --> 00:03:57,899
+Okay, so I got A alone on the other side.
+
+26
+00:03:58,309 --> 00:04:01,129
+Here I only want the Bs, and therefore, we want to get rid of the A.
+
+27
+00:04:01,449 --> 00:04:11,649
+Okay, how do we get rid of the A? Also using the inverse property of A. So we'll say B + B - A + A. Since I added positive A on this side, I must also add it on the other side.
+
+28
+00:04:12,399 --> 00:04:18,639
+These [-A and +A] will become zero, so B + B remains, and on the other side, A + A.
+
+29
+00:04:19,619 --> 00:04:28,519
+It looks good, promising, but this isn't what I want. I have two A's here, I want one A. And I have two B's here, I want just one.
+
+30
+00:04:29,629 --> 00:04:36,619
+Okay, if we look now... until now, we haven't talked about property nine. All the work we've been doing is actually using the four properties of addition.
+
+31
+00:04:37,279 --> 00:04:42,719
+If we look at the ninth property now, we'll notice there's a similarity here. What is it?
+
+32
+00:04:43,779 --> 00:04:49,199
+The A here plus A, I have two [terms of] A on this side [A+A], and there are two [terms of] B on this side [B+B].
+
+33
+00:04:49,839 --> 00:04:55,529
+And I actually want to make them one A, according to... this is what I want to prove in the end.
+
+34
+00:04:56,159 --> 00:04:58,689
+And the other form here has one A.
+
+35
+00:04:59,779 --> 00:05:02,839
+The question here in this form [A*(B+C)] is, where is the B and where is the C?
+
+36
+00:05:04,39 --> 00:05:18,189
+This means I want to say that this A, I will multiply it by something, plus this A, I will multiply it by something... forget the Bs, we'll get to them shortly... such that the value of A doesn't change.
+
+37
+00:05:18,499 --> 00:05:24,449
+What number do I multiply by A to give me A? The identity of the multiplication operation. This number will be one.
+
+38
+00:05:25,229 --> 00:05:33,379
+The same system will be applied to the other side. B * 1 + B * 1.
+
+39
+00:05:34,19 --> 00:05:43,189
+Now I have this form. The only difference is that B and C are both equal, they equal one. But I can apply the ninth property to it. And get a single A.
+
+40
+00:05:43,579 --> 00:05:50,359
+So I have A here and A here, I factor them out and multiply by (1 + 1), which are the two remaining ones here.
+
+41
+00:05:50,619 --> 00:05:54,529
+Same system on the other side. Equals B * (1 + 1). Finished.
+
+42
+00:05:54,779 --> 00:06:04,389
+This is it, this is the part. Look at this long proof, and there are still a few other steps. Only these two steps were related to the ninth property. Without them, I wouldn't have known how to continue.
+
+43
+00:06:05,979 --> 00:06:11,389
+Okay. A * 2... one and one equals 2... equals B * 2.
+
+44
+00:06:11,749 --> 00:06:24,849
+How do I get rid of the two? Normal stuff now, which is the inverse property. The inverse property of the multiplication operation, which is [A *] 2 * 2⁻¹ = B * 2 * 2⁻¹. All of this [2 * 2⁻¹] is one.
+
+45
+00:06:25,329 --> 00:06:32,659
+So A * 1 = B * 1. The identity of the multiplication operation again. So A = B.
+
+46
+00:06:33,439 --> 00:06:35,329
+Which is what was required to be proven (Q.E.D.).
+
+47
+00:06:36,419 --> 00:06:38,109
+That was the first example we had.
+
+48
+00:06:38,829 --> 00:06:50,169
+The second example that we can use, or use the ninth property in its proof, is something we used a lot in the previous videos, in the last video, but we didn't prove it.
+
+49
+00:06:50,549 --> 00:06:53,339
+This rule says that A * 0 = 0.
+
+50
+00:06:53,649 --> 00:07:00,999
+We used this statement more than once, but we sort of turned a blind eye to its proof until we prove it here.
+
+51
+00:07:01,389 --> 00:07:03,469
+How do we prove this rule using the ninth property?
+
+52
+00:07:03,979 --> 00:07:08,049
+Let's look at A * 0.
+
+53
+00:07:08,569 --> 00:07:14,279
+And let's also add to it, plus A * 0.
+
+54
+00:07:15,799 --> 00:07:17,899
+This statement resembles that statement.
+
+55
+00:07:19,149 --> 00:07:28,049
+So I have A and A, I'll factor it out and leave the zero and zero to be added together. So A * (0 + 0).
+
+56
+00:07:29,849 --> 00:07:34,179
+0 + 0 = 0. So A * 0.
+
+57
+00:07:34,719 --> 00:07:41,479
+This comes down as it is. A * 0 + A * 0.
+
+58
+00:07:42,909 --> 00:07:49,369
+Okay, what do I want to prove? I want A * 0 on this side here. And I have A * 0 + A * 0 here.
+
+59
+00:07:49,589 --> 00:07:56,569
+So let's get rid of this A * 0 on this side. And these are added together, so I use the inverse property of the addition operation, which is to add the negative of this number. So...
+
+60
+00:07:56,879 --> 00:08:04,259
+A * 0 + A * 0 - (A * 0) to get rid of one of them.
+
+61
+00:08:04,689 --> 00:08:12,659
+Equals A * 0, which is this one... So, [subtract] -(A * 0) [from both sides].
+
+62
+00:08:14,259 --> 00:08:19,189
+These will cancel each other out, leaving me with A * 0 on this side.
+
+63
+00:08:20,369 --> 00:08:30,189
+Equals... what's this? A * 0 - (A * 0). A number minus the same number equals zero.
+
+64
+00:08:30,409 --> 00:08:39,759
+This is the inverse property, I don't need to do anything else with it. So here too, I was able... this was a quick and simple proof. A * 0 = 0... the [expression involving] A * 0 I started with [equals zero].
+
+65
+00:08:41,269 --> 00:08:41,929
+Okay.
+
+66
+00:08:42,629 --> 00:09:02,589
+The ninth property has another very important use, which talks about a famous rule we've all used a lot. Umm... Let's first clean the board and work on this rule cleanly. Perhaps this is the most important rule we will prove using the ninth property.
+
+67
+00:09:03,39 --> 00:09:04,019
+See you in a minute.
+
+68
+00:09:06,709 --> 00:09:07,639
+Okay.
+
+69
+00:09:08,119 --> 00:09:20,129
+The important rule we want to prove with the ninth property, which states or determines the relationship of the sign in the multiplication operation. Meaning...
+
+70
+00:09:20,899 --> 00:09:28,489
+...that we have a rule saying that negative times positive gives me negative, and negative times negative gives me positive.
+
+71
+00:09:28,789 --> 00:09:30,349
+Let's prove the first one first.
+
+72
+00:09:30,729 --> 00:09:42,609
+The first one says -A * B = the whole result is A multiplied by B, all together like that, negative [-(A*B)].
+
+73
+00:09:43,349 --> 00:09:55,429
+Meaning, if I have a negative number multiplied by a positive number, the result of this is the product of A and B, and the whole sign, or the entire sign altogether, becomes negative.
+
+74
+00:09:55,749 --> 00:09:57,479
+We want to prove this statement. Okay.
+
+75
+00:09:57,919 --> 00:10:02,069
+Let's start with the part on this side [-A * B].
+
+76
+00:10:02,989 --> 00:10:05,789
+We have -A * B.
+
+77
+00:10:06,319 --> 00:10:10,439
+Let's add A * B to them.
+
+78
+00:10:11,849 --> 00:10:17,599
+There's B here and B here. Using the ninth property, we can factor it out. So we'll say this equals...
+
+79
+00:10:18,569 --> 00:10:28,219
+...put big parentheses here, put inside them -A + A, and the B that we factored outside.
+
+80
+00:10:28,639 --> 00:10:32,999
+Of course, I can put it here... it's placed on this side, I can put it on the other side, it won't make a difference.
+
+81
+00:10:33,569 --> 00:10:45,249
+-A multiplied by... Aaah sorry, this is positive! This is the plus. -A + A, that's the inverse property, so this became zero.
+
+82
+00:10:45,669 --> 00:10:50,659
+So all of this became 0 * B.
+
+83
+00:10:51,549 --> 00:10:56,769
+Okay, I just now proved that anything times zero gives me zero. So this side is finished, it's zero.
+
+84
+00:10:57,419 --> 00:11:04,289
+And on this side, I have... bring this down as it is: -A * B + A * B.
+
+85
+00:11:04,599 --> 00:11:09,969
+Okay, what did I start with? With -A * B, which is this one. Okay, I want to get rid of this one [A*B]? The inverse property.
+
+86
+00:11:10,729 --> 00:11:31,709
+-A * B + A * B... let's put them in parentheses because we will subtract shortly after... we will subtract here... so [we subtract A*B from both sides]... equals 0... minus... we will subtract A * B.
+
+87
+00:11:33,879 --> 00:11:41,989
+Okay, this [A*B - A*B] will go, all this part will go, it will be zero, and this zero will also [not] go [0 - (A*B)].
+
+88
+00:11:42,569 --> 00:11:51,489
+So we are left with -A * B = -(A * B).
+
+89
+00:11:51,759 --> 00:11:52,429
+The same start.
+
+90
+00:11:52,919 --> 00:12:02,319
+So, a negative number multiplied by a positive number gives me the product of the two numbers A * B, and the sign altogether at the end is negative.
+
+91
+00:12:03,149 --> 00:12:10,239
+This is great. So we have thus proven this part or this rule using the ninth property.
+
+92
+00:12:10,669 --> 00:12:14,269
+Now we want to prove that negative times negative gives us positive.
+
+93
+00:12:14,749 --> 00:12:18,129
+Let's remove what's on the board and prove this part now.
+
+94
+00:12:18,759 --> 00:12:30,179
+Okay, a short while ago we proved that -A * (+B) = -(A * B).
+
+95
+00:12:30,979 --> 00:12:33,839
+Negative times positive equals negative.
+
+96
+00:12:34,439 --> 00:12:45,179
+This proof itself, along with property nine, I will use it in the second part now that I want to prove, which says that negative...
+
+97
+00:12:45,939 --> 00:12:53,619
+...times negative equals positive.
+
+98
+00:12:54,919 --> 00:12:57,169
+Okay, how will we prove this statement?
+
+99
+00:12:57,539 --> 00:13:12,049
+Let's work on the part on the left side, (-A)*(-B), and continue with it and see in the end what the result will be. If it gives me positive A * B or A times B, then great, and the proof is working correctly.
+
+100
+00:13:12,629 --> 00:13:15,229
+Okay, so all our work will be on this side.
+
+101
+00:13:16,469 --> 00:13:19,759
+Okay, -A * -B.
+
+102
+00:13:20,359 --> 00:13:31,219
+Let's add this to it... -(A * B).
+
+103
+00:13:33,359 --> 00:13:37,809
+-(A * B) equals this [-A * B].
+
+104
+00:13:38,299 --> 00:13:53,479
+So let's bring down the equation as it is. -A * -B plus... this [-(A*B)] we will expand to this [-A * B], so it becomes -A * B.
+
+105
+00:13:54,539 --> 00:13:58,309
+This form is the same as this form in property nine.
+
+106
+00:13:58,689 --> 00:14:02,089
+I have -A multiplied by a number and -A multiplied by a number.
+
+107
+00:14:02,479 --> 00:14:12,819
+Let's factor -A out. So -A * (-B + B).
+
+108
+00:14:14,599 --> 00:14:24,449
+This is the inverse property of addition. So it's zero. So we have -A * 0. And this statement also equals 0.
+
+109
+00:14:25,599 --> 00:14:32,419
+-A multiplied by anything, or zero multiplied by anything, gives me zero in the end. We just proved this rule a short while ago.
+
+110
+00:14:33,449 --> 00:14:39,179
+Okay, and this statement, of course, the zero equals this same statement we started with, but you know, so we don't keep writing it every time.
+
+111
+00:14:40,399 --> 00:14:46,889
+Okay, I want to go back to what I started with. I added -(A * B) here. So let me remove it.
+
+112
+00:14:47,219 --> 00:14:52,999
+And in the end, what do I have here? Zero on the other side. How do I remove it? With the inverse property.
+
+113
+00:14:53,329 --> 00:14:55,409
+So we will add its positive counterpart to it.
+
+114
+00:14:55,739 --> 00:15:19,459
+So in the end, the equation comes out like this: (-A * -B) + (-A * B) + the positive of this number [A*B] to get rid of [-A*B]... So A * B... equals 0 + A * B.
+
+115
+00:15:22,569 --> 00:15:29,449
+Zero plus anything, this is the identity of addition. So it will come down as it is, A * B.
+
+116
+00:15:30,239 --> 00:15:48,389
+And these, we removed them [-A*B + A*B]. This is also the inverse identity of addition. Negative number plus the same number. So all this will go and become zero. So in the end, I am left with -A * -B or times -B. This is it exactly.
+
+117
+00:15:48,669 --> 00:15:55,289
+The equation I started with. -A * -B gives me positive A B.
+
+118
+00:15:55,659 --> 00:15:58,999
+So I was able to prove that negative times negative equals positive.
+
+119
+00:15:59,529 --> 01:00:02,049
+A rule of utmost importance. And this is the benefit...
+
+120
+01:00:02,449 --> 01:00:12,089
+...of our study of the properties of numbers, because through this, we can find mathematical reasoning and we can find how to connect these rules together.
+
+121
+01:00:12,439 --> 01:00:20,199
+Because it didn't just come arbitrarily, meaning the mathematics folks didn't sit around and... make things up like that, finding that negative times negative looks nice when it's positive? No.
+
+122
+01:00:20,779 --> 01:00:28,099
+It is linked to properties that determine what can be done with numbers and what cannot be done with numbers.
+
+123
+01:00:29,169 --> 01:00:32,489
+The next example, then, is an example of utmost importance, talking about the quadratic equation.
+
+124
+01:00:32,739 --> 01:00:39,339
+We have all worked with the quadratic equation and know what its forms look like and what its graph looks like.
+
+125
+01:00:39,879 --> 01:00:53,429
+The quadratic equation in the end, the method or the two forms of them that we use, which is the factorization we perform on it, is ultimately nothing more than a manifestation of the ninth property, as we will see right now.
+
+126
+01:00:55,19 --> 01:00:59,519
+If we look at the equation that says (x - 1) * (x - 2) = 0.
+
+127
+01:01:10,509 --> 01:01:21,759
+This equation is exactly the same as x² - x [error, should be -3x] + 2 = 0. These two are equal to each other.
+
+128
+01:01:22,699 --> 01:01:32,629
+The question here is, how does the factorization of this quadratic equation happen? As we said, this results from or is done through the use of the ninth property.
+
+129
+01:01:32,899 --> 01:01:35,199
+How is this done? Let's start with the form above.
+
+130
+01:01:38,949 --> 01:01:47,499
+Let's say (x - 1)(x - 2) = ...
+
+131
+01:01:50,449 --> 01:01:51,929
+This is a bit tricky.
+
+132
+01:01:52,469 --> 01:01:58,199
+We will assume that this [(x-1)] is this [A in A*(B+C)].
+
+133
+01:01:58,549 --> 01:02:04,179
+And the (x - 2) is the (B + C).
+
+134
+01:02:04,479 --> 01:02:11,249
+So this, I consider (x - 1)... sorry, the (x - 2) is what I will consider A.
+
+135
+01:02:11,509 --> 01:02:17,509
+And the (x - 1) I will consider it the B + C. And of course, the reverse is also true, but this is the example we will work on.
+
+136
+01:02:17,829 --> 01:02:26,609
+Therefore, to get... so this is in the factored form, to get the expanded form, I will take the (x - 1) and multiply it by the (x - 2) [term by term distribution/FOIL], and so on.
+
+137
+01:02:26,829 --> 01:02:42,609
+Okay, so I will have here x multiplied by (x - 2) plus -1 multiplied by (x - 2).
+
+138
+01:02:44,439 --> 01:02:57,209
+Okay, let's finish this calculation inside. x * x... + (-2) * x... + (-1) * x...
+
+139
+01:03:03,199 --> 01:03:10,939
+...plus (-1) * -2.
+
+140
+01:03:11,589 --> 01:03:14,719
+I multiplied the x by this whole parenthesis and multiplied the -1 by this whole parenthesis.
+
+141
+01:03:15,119 --> 01:03:20,329
+That's it, you then combine them together. Here x * x, that's x².
+
+142
+01:03:20,839 --> 01:03:27,639
+Plus... this is in this form [-2x + -1x], we want to put it in this form [combine terms using reverse distribution].
+
+143
+01:03:28,209 --> 01:03:43,899
+So we'll factor the x out. So you have x, this is now multiplied by (-2 + -1).
+
+144
+01:03:44,989 --> 01:03:50,679
+Plus -1 multiplied by -2.
+
+145
+01:03:52,369 --> 01:03:54,109
+Okay, x².
+
+146
+01:03:54,769 --> 01:04:05,719
+Plus -2 + -1 = -3. So all of this will be -3 multiplied by x.
+
+147
+01:04:06,419 --> 01:04:14,509
+Plus negative times negative, we just said a little while ago that it's positive. So 1 * 2 will be 2. So all of this will remain 2 as it is.
+
+148
+01:04:14,949 --> 01:04:24,159
+That's it, this is the equation above, but if we wanted to adjust it, it would be x² - 3x + 2.
+
+149
+01:04:24,859 --> 01:04:34,939
+So we proved that the factorization part that is done, whether it's switching between the two forms in the quadratic equation or its factorization form, is ultimately a manifestation of the ninth property.
+
+150
+01:04:35,499 --> 01:04:43,199
+Not only that. There's another example now, which I will conclude the video with, perhaps you'll find it maybe... maybe you'll feel it's a bit surprising, but it's a logical matter.
+
+151
+01:04:44,79 --> 01:04:48,489
+The arithmetic operation itself, as we will see in a moment.
+
+152
+01:04:50,589 --> 01:04:51,279
+Okay.
+
+153
+01:04:51,699 --> 01:05:00,339
+The ninth property intervenes in a simple operation like this, like this normal multiplication operation.
+
+154
+01:05:00,739 --> 01:05:03,319
+13 * 24, this gives you...
+
+155
+01:05:03,989 --> 01:05:13,099
+52... 26... and 312. This is the final result.
+
+156
+01:05:15,939 --> 01:05:21,569
+This calculation, the algorithm we worked with here, is derived from the ninth property. How?
+
+157
+01:05:21,939 --> 01:05:25,969
+Let's put this calculation in our usual form.
+
+158
+01:05:26,609 --> 01:05:35,079
+13 here... times... what is this 24 actually? 24 is 20 + 4.
+
+159
+01:05:37,239 --> 01:05:47,979
+If you multiply 13 by 20, and then multiply 13 by 4, and add them together, it will give you the final number, which is 312.
+
+160
+01:05:48,439 --> 01:05:51,989
+Of course, I'm not going to sit and do this arithmetic operation, I'll leave it for you to do, I won't waste time on it.
+
+161
+01:05:52,359 --> 01:06:05,509
+But not just that. You can expand this 20, meaning you can say equals 13 multiplied by... what is this 20 actually? 20 is 10 * 2 + 4.
+
+162
+01:06:07,379 --> 01:06:27,499
+And then you take the 13, you say... multiplying all this, you say 13 * 10 * 2 plus the 13... you will distribute now to the other side, the 13 times 4. So this... so these are like this, just for clarification.
+
+163
+01:06:28,29 --> 01:06:38,819
+Okay? And finish it like this, you say for example that... no, sorry, 13 * 4 to do this. This is 'times', not 'plus'.
+
+164
+01:06:39,589 --> 01:06:47,899
+This is easy, you can say what... 13 * 10 is 130, * 2 is 260, right? 260, something like that.
+
+165
+01:06:48,379 --> 01:07:07,929
+Okay? And this 13, afterwards, you can expand it again, meaning you could, to expand 13 * 4 to get the 52 we got, you'd say that 13 is 10 + 3 multiplied by 4, and then multiply the 4 by 10 and then multiply it by 3, and so on.
+
+166
+01:07:08,309 --> 01:07:19,209
+So in the end, the algorithm of this multiplication operation, of course I won't waste time on it sitting expanding them and multiplying them, if you want to check this matter, sit and work on it. This [13*4 part] in the end will reach 52 with you.
+
+167
+01:07:19,659 --> 01:07:31,669
+What's the summary? That the algorithm we use in arithmetic in an operation like multiplication is also derived from the very important property, which is the ninth property.
+
+168
+01:07:33,449 --> 01:07:39,959
+The next video, God willing, will be the last video in the first chapter, which talks about the properties of numbers.
+
+169
+01:07:40,429 --> 01:07:45,849
+We will continue our talk in it about properties 10, 11, and 12. Easy, God willing, no problems in them.
+
+170
+01:07:46,479 --> 01:07:58,159
+And after that, we'll lay out all the properties together and sit and look at them one last look, and, you know, see what we learned... what we learned from them before we move on to the next chapter, God willing.
+
+171
+01:07:58,579 --> 01:08:00,459
+See you in the next video. Peace be upon you.

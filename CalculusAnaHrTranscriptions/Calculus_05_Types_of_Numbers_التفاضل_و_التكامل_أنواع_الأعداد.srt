@@ -1,0 +1,1057 @@
+1
+00:00:19,787 --> 00:00:20,587
+Hello.
+
+2
+00:00:21,617 --> 00:00:26,387
+In the previous videos, we talked about the
+properties of numbers, which are properties 1 to 12.
+
+3
+00:00:26,857 --> 00:00:32,547
+And we agreed that any dealing we have with numbers
+must happen within the framework of these 12 properties.
+
+4
+00:00:33,367 --> 00:00:39,177
+In this video, or at the end of this video, God willing,
+we will start to discover that these 12 properties have shortcomings.
+
+5
+00:00:39,177 --> 00:00:45,827
+There are some situations and some things related to numbers
+that these properties fail to explain.
+
+6
+00:00:46,277 --> 00:00:51,487
+And we must find another way
+to deal with these situations.
+
+7
+00:00:52,697 --> 00:01:01,937
+Okay, until the last video, we were talking about
+numbers in a somewhat loose way, meaning we weren't
+very precise about the type of numbers we were discussing.
+
+8
+00:01:02,577 --> 00:01:08,617
+In this video, God willing, or specifically from the beginning
+of this video, God willing, we need to be a bit careful in our dealings with numbers.
+
+9
+00:01:08,617 --> 00:01:12,447
+Meaning, when we talk about numbers, we need to know
+which type of numbers we are talking about.
+
+10
+00:01:13,257 --> 00:01:14,947
+Why? We'll see in a bit.
+
+11
+00:01:15,567 --> 00:01:22,887
+The first type we have of numbers is what we call
+the Natural Numbers, and we denote it with the heavy N, like this.
+
+12
+00:01:23,697 --> 00:01:29,117
+We call them the Natural Numbers.
+
+13
+00:01:30,577 --> 00:01:34,027
+Or the Counting Numbers.
+
+14
+00:01:34,027 --> 00:01:39,827
+And from its name, it's clear. We call them Natural Numbers or
+Counting Numbers because these are the numbers we intuitively use for counting.
+
+15
+00:01:39,827 --> 00:01:44,077
+When I give you something like this and ask how many,
+you say one, two, three.
+
+16
+00:01:44,657 --> 00:01:51,357
+So, if we wanted to represent this on the number line,
+we'd find that we put them, for example, like this.
+
+17
+00:01:51,617 --> 00:01:56,007
+We say here 1, 2, 3, to infinity.
+
+18
+00:01:56,407 --> 00:02:01,987
+Therefore, the Natural Numbers are the positive numbers
+from 1 to infinity. This is straightforward.
+
+19
+00:02:02,857 --> 00:02:10,907
+Before we move to the second type of numbers, let's see
+the relationship between the Properties of Numbers and the Natural Numbers.
+
+20
+00:02:11,137 --> 00:02:18,607
+If we look at the Natural Numbers, we'll find that out of the 12 properties
+we talked about, at least three of them don't work with Natural Numbers.
+
+21
+00:02:18,967 --> 00:02:25,297
+These are the second property, the third, and the seventh.
+
+22
+00:02:27,447 --> 00:02:33,107
+The second property stated that A + 0 = A. This was the identity.
+
+23
+00:02:34,417 --> 00:02:44,017
+And the third property stated that A + (-A) = 0. This is the inverse
+of addition. And the inverse of multiplication,
+
+24
+00:02:44,537 --> 00:02:49,737
+which is A * A^(-1), which means A^(-1) is 1/A.
+
+25
+00:02:51,657 --> 00:02:54,147
+These three properties don't work with Natural Numbers. Why?
+
+26
+00:02:54,477 --> 00:02:56,937
+The first one involves zero, and there are no zeros here.
+
+27
+00:02:57,357 --> 00:02:58,657
+Negative, there are no negatives.
+
+28
+00:02:59,217 --> 00:03:02,647
+Quotient, 1/A, there are no fractions here.
+
+29
+00:03:02,787 --> 00:03:04,277
+Therefore, these three properties...
+
+30
+00:03:04,277 --> 00:03:14,597
+Of course, property 10, because it's a combination of some of these,
+but I, you know, removed it. There's no need for us to talk about it now,
+as it's implicitly clear from the same properties because it shares them.
+
+31
+00:03:15,397 --> 00:03:18,387
+So, these three properties, at least, don't work with Natural Numbers.
+
+32
+00:03:19,237 --> 00:03:28,217
+Okay, at some stage in human history, we needed zero.
+Regardless of why and when and all that, the point is, there's a number we added called zero.
+
+33
+00:03:30,637 --> 00:03:34,277
+The Natural Numbers together with zero are called the Whole Numbers.
+
+34
+00:03:34,277 --> 00:03:48,007
+By the way, the 'W' is not a formal symbol. I mean, the 'N' is formal,
+a symbol in mathematics officially representing Natural Numbers.
+Whole Numbers don't have... don't have an agreed-upon symbol,
+
+35
+00:03:48,007 --> 00:03:53,417
+but some people write it as 'W', so I'll write it to represent it,
+but know that this is not quite formal.
+
+36
+00:03:55,167 --> 00:04:02,057
+Okay, the Whole Numbers, by adding zero to them,
+solved the problem of... let me put it in another color...
+
+37
+00:04:02,057 --> 00:04:06,127
+solved the problem, or rather, the second property applies to them
+because there is a zero here. Okay, that's good.
+
+38
+00:04:07,427 --> 00:04:09,777
+But properties three and seven still don't work.
+
+39
+00:04:10,217 --> 00:04:12,137
+There's a note here I want to mention quickly.
+
+40
+00:04:13,147 --> 00:04:20,237
+Some sciences, specifically, especially in computer science,
+consider zero a natural number. Why?
+
+41
+00:04:20,767 --> 00:04:27,747
+Because in computer science and in most programming languages
+- this is due to many reasons we don't want to get into details of -
+counting starts from zero.
+
+42
+00:04:28,617 --> 00:04:36,787
+Based on that, they consider zero to be a natural number for them.
+But in mainstream mathematics, zero is not a natural number.
+
+43
+00:04:36,787 --> 00:04:42,377
+When you don't have anything in front of you to count,
+you don't say zero, one, two, three.
+
+44
+00:04:42,377 --> 00:04:47,867
+When I give you the numbers... I mean, I tell you, for example, count these pens,
+you don't tell me zero, one, two, three. No, you start counting from one.
+
+45
+00:04:48,977 --> 00:04:55,717
+So, this is just a point I wanted to clarify so that if you read in some sources
+that zero is a natural number, you know where this idea comes from.
+
+46
+00:04:57,927 --> 00:04:58,557
+Okay?
+
+47
+00:04:59,227 --> 00:05:08,017
+We have... let's expand the numbers a bit.
+Let's go into the negatives: -1, -2, and so on to infinity in the negative direction.
+
+48
+00:05:08,867 --> 00:05:13,287
+And these, we call them the Integers.
+
+49
+00:05:15,737 --> 00:05:28,257
+The question here is, where does this 'Z' come from? Why do we denote integers
+with the letter Z? Because Z comes from the word "Zahl".
+Let me put it in brackets, it ends with L. I don't know if I'm pronouncing it correctly or not. It's Z-A-H-L.
+
+50
+00:05:28,257 --> 00:05:33,637
+It's actually a German word, German, and it means "number"
+(specifically the whole numbers or integer count), and the Z comes from that.
+
+51
+00:05:35,337 --> 00:05:44,167
+Of course, it's clear that the Whole Numbers... sorry, the Integers
+solved for me the problem, or solved the third property.
+
+52
+00:05:44,767 --> 00:05:46,757
+Because now there are negatives.
+
+53
+00:05:47,327 --> 00:05:47,817
+Okay.
+
+54
+00:05:51,057 --> 00:05:52,807
+Then we said we have fractions.
+
+55
+00:05:53,257 --> 00:06:02,927
+By the way, what I'm saying now is not the historical order of discovering numbers.
+No, I just mean the order I'm explaining is aligned with the properties, nothing more.
+
+56
+00:06:02,927 --> 00:06:11,817
+But of course, fractions were known even before zero in some civilizations.
+So the order here is not meant to be the chronological order of discovering these numbers.
+
+57
+00:06:12,567 --> 00:06:13,097
+Okay.
+
+58
+00:06:13,947 --> 00:06:23,187
+Here, for example, we say 1.5, or we can represent it as 3/2.
+Here, for example, 0.5, we represent it, for example, as 1/2.
+
+59
+00:06:23,947 --> 00:06:33,847
+What we just mentioned, they are called fractions or quotients,
+and this is the last type I have in numbers, in... I mean, not the very last,
+but the last in this part. We call them Quotients.
+
+60
+00:06:37,587 --> 00:06:43,237
+Or the Rational Numbers.
+
+61
+00:06:43,847 --> 00:06:45,617
+We'll get to the "rational" part in a bit.
+
+62
+00:06:46,637 --> 00:06:51,787
+There are a few things here that are very important
+about quotients that we need to be aware of.
+
+63
+00:06:53,137 --> 00:06:57,447
+First thing, quotients are not just the fractions between integers.
+
+64
+00:06:57,447 --> 00:07:01,007
+No, the integers themselves, including zero, are considered quotients.
+
+65
+00:07:01,377 --> 00:07:06,877
+What is a quotient? A quotient is any number
+that you can put in the form of a ratio.
+
+66
+00:07:06,877 --> 00:07:09,607
+And hence the word "rational," which comes from "ratio."
+
+67
+00:07:10,497 --> 00:07:15,577
+Therefore, 1.5, you can put it as 3/2. 0.5 is 1/2.
+
+68
+00:07:15,887 --> 00:07:17,957
+2, you can put it as 2/1.
+
+69
+00:07:18,667 --> 00:07:23,027
+Zero is 0/3. -2 is -2/1.
+
+70
+00:07:23,027 --> 00:07:29,747
+Therefore, everything you see on the number line is a quotient,
+because it can be put in the rational form.
+
+71
+00:07:30,367 --> 00:07:31,557
+This is the first point.
+
+72
+00:07:32,497 --> 00:07:42,277
+The second point, there are numbers that are repeating decimals.
+For example, like 0.3333 and so on. Of course, you can write this like this.
+
+73
+00:07:42,527 --> 00:07:44,937
+Is this number rational or not rational?
+
+74
+00:07:45,667 --> 00:07:51,847
+It is rational. Regardless of the fact that it's a repeating decimal
+and its decimal part doesn't end, it keeps going on here to infinity,
+
+75
+00:07:52,277 --> 00:07:55,437
+but it is rational. Why? Because I can put it in this form.
+
+76
+00:07:56,017 --> 00:07:58,927
+1/3, when you divide 1 by 3, you get this form.
+
+77
+00:07:58,927 --> 00:08:07,917
+You get a repeating decimal like this. Therefore, a number like this
+is considered rational because it can be put in the form of the quotient.
+
+78
+00:08:08,887 --> 00:08:11,247
+Keep this part in mind because I'll need it later.
+
+79
+00:08:12,127 --> 00:08:18,647
+Okay, it's clear, of course, that the rational numbers or quotients
+solved this problem for me because here I started dealing with fractions.
+
+80
+00:08:19,357 --> 00:08:20,407
+This is great.
+
+81
+00:08:22,237 --> 00:08:27,507
+At this stage, you might say, where's the problem? There's no problem.
+I have... we're done. Here, the number line is complete.
+
+82
+00:08:27,877 --> 00:08:39,217
+I have four types of numbers to which... of course, the rest of the properties
+already work starting from the Natural Numbers. We just had a problem with these three.
+We solved them with the three new types of numbers, and it seems clear, we're done. The properties work.
+
+83
+00:08:39,997 --> 00:08:45,167
+But in reality, there is a situation that messed up this whole thing for me.
+
+84
+00:08:45,937 --> 00:08:48,967
+There's a certain type of number that started causing problems.
+
+85
+00:08:49,907 --> 00:08:53,757
+Like what, for example? Like... no, these need to be put in another color.
+
+86
+00:08:53,997 --> 00:08:55,347
+Like who, for example?
+
+87
+00:08:57,367 --> 00:08:58,247
+Pi (π).
+
+88
+00:08:59,587 --> 00:09:00,547
+And Tau (τ).
+
+89
+00:09:00,817 --> 00:09:08,647
+Let me put Tau for you, I mean, we might talk about it later, God willing.
+They are... Tau, which is... Pi * 2.
+
+90
+00:09:10,427 --> 00:09:15,197
+And e, and the Golden Ratio (φ), and the square root of 2 (√2).
+
+91
+00:09:15,977 --> 00:09:23,927
+The numbers we see before us here, all of them,
+cannot be put in the quotient form.
+
+92
+00:09:24,697 --> 00:09:27,017
+Therefore, they are not rational.
+
+93
+00:09:27,917 --> 00:09:35,887
+And because they weren't rational, they couldn't find a name for them
+other than Irrational.
+
+94
+00:09:37,207 --> 00:09:38,487
+What does this mean?
+
+95
+00:09:38,747 --> 00:09:43,717
+It means these numbers - and these are not the only ones,
+there are many, infinitely many -
+
+96
+00:09:44,927 --> 00:09:47,937
+cannot be put in this form.
+
+97
+00:09:48,447 --> 00:09:49,207
+Why?
+
+98
+00:09:49,767 --> 00:09:54,227
+Because they are non-repeating decimals,
+meaning there's no pattern that repeats.
+
+99
+00:09:54,567 --> 00:59:58,977
+For example, if you look at 1/3, it has 0.3... 3333 repeats.
+
+100
+00:59:58,977 --> 01:04,807
+There are other numbers, for instance, you might have 213, 213, 213.
+
+101
+01:04,807 --> 01:09,967
+As long as there's a pattern, no matter how many digits are in the pattern,
+that repeats, then it's rational. I can represent it as a quotient.
+
+102
+01:10,867 --> 01:21,997
+The problem with these gentlemen here is that they are fractions,
+or rather decimals, not integers, and they are non-repeating decimals,
+but they have no pattern.
+
+103
+01:22,387 --> 01:23,987
+Meaning, let's take √2 for example, it's the easiest.
+
+104
+01:24,557 --> 01:36,017
+If we look at it, for example, I have it written here on the margin,
+the value of √2, when you represent it, you'll find it's
+1.414213562...
+
+105
+01:36,387 --> 01:43,987
+These do not have any kind of pattern, and they keep going on like this
+to infinity with strange, jumbled numbers.
+
+106
+01:43,987 --> 01:44,957
+Nothing repeats.
+
+107
+01:44,957 --> 01:56,167
+And that's why √2 cannot be represented... neither it, nor e, nor Pi, nor Tau,
+nor the Golden Ratio, nor many numbers considered irrational numbers...
+they cannot be represented in the form of a ratio. Therefore, we call them irrational,
+
+108
+01:56,727 --> 01:59,777
+the opposite of rational, which means ratio.
+
+109
+02:02,177 --> 02:02,537
+Okay.
+
+110
+02:03,337 --> 02:08,987
+So that we are also... as we got used to, when we have something,
+we need to see its proof. So let's prove...
+
+111
+02:09,457 --> 02:17,907
+Of course, the proof for Pi and e, to prove they are irrational,
+is a bit complicated. We'll talk about them, God willing, later in upcoming videos,
+
+112
+02:17,907 --> 02:22,217
+the upcoming videos, in detail. But √2 is easy, we can finish it quickly.
+
+113
+02:22,567 --> 02:28,207
+So, we will now do the proof that √2 is not rational, it is irrational.
+
+114
+02:29,417 --> 02:30,117
+Okay.
+
+115
+02:30,817 --> 02:37,717
+How do I prove that √2... let's even... let's work here...
+that √2 is irrational?
+
+116
+02:37,967 --> 02:44,537
+The method I will use in this proof... of course, there are about, say, 30 or 40 ways
+you can prove that √2 is irrational.
+
+117
+02:44,787 --> 02:46,297
+But we will only work through one example of them.
+
+118
+02:47,037 --> 02:55,707
+This example uses a proof technique called Proof by Contradiction.
+
+119
+02:56,847 --> 02:58,217
+Meaning, proof by contradiction.
+
+120
+02:58,477 --> 03:06,827
+If you plan to have a career in mathematics, you need to pay attention to this part
+because it's one of the very famous techniques in proofs in mathematics.
+
+121
+03:06,827 --> 03:08,007
+What does this mean?
+
+122
+03:08,197 --> 03:11,697
+It means you want to prove that √2, for example, is irrational.
+
+123
+03:12,737 --> 03:18,137
+To prove it's irrational, the easiest way is to assume it is rational,
+
+124
+03:18,697 --> 03:22,737
+and keep digging around it down there until you find a contradiction,
+until you find a conflict.
+
+125
+03:22,737 --> 03:26,787
+As soon as you find a contradiction with the assumption that it's rational,
+it means it must be irrational.
+
+126
+03:27,217 --> 03:28,667
+That's it, that's the whole thing simply.
+
+127
+03:28,667 --> 03:29,167
+Okay.
+
+128
+03:29,877 --> 03:37,227
+For the square root to be rational, it must be possible to put it in this form.
+
+129
+03:37,517 --> 03:43,707
+Meaning, when you take the square root of a number like 2,
+you get a number you can represent as an integer over an integer.
+
+130
+03:44,077 --> 03:44,527
+Okay.
+
+131
+03:45,027 --> 03:51,307
+And I will also assume that this integer... of course, I know this is not correct.
+I want to prove now that this is not correct in a bit.
+
+132
+03:51,887 --> 03:58,097
+There's another important thing I must mention about the fraction...
+about the quotient before me.
+
+133
+03:58,097 --> 04:03,347
+That the form before me is in its simplest form, meaning it's already
+simplified to the end, meaning there is no...
+
+134
+04:03,837 --> 04:09,167
+no common divisor or factor.
+
+135
+04:09,167 --> 04:17,467
+Meaning, you can't simplify it further. For example, 2/4, no, this is not like that.
+No, you simplify it first, put it as 1/2. So I'm assuming that the form before me
+
+136
+04:17,467 --> 04:24,397
+is already simplified to its simplest possible form. Therefore,
+there are no common factors between them. Okay.
+
+137
+04:25,837 --> 04:30,717
+Let's continue working. Let's first get rid of the square root.
+
+138
+04:31,077 --> 04:32,117
+So, this... let's put this here.
+
+139
+04:32,817 --> 04:39,307
+Let's say it's (P/Q)² = 2. I squared it to get rid of the square root.
+
+140
+04:39,957 --> 04:44,587
+From which, P²/Q² = 2.
+
+141
+04:45,737 --> 04:50,687
+And from that, P² = 2 * Q². And here we pause for a moment.
+
+142
+04:53,767 --> 04:56,757
+This P here is thus even.
+
+143
+04:57,617 --> 05:01,767
+P is even.
+
+144
+05:02,517 --> 05:04,497
+How did I know? From the 2 here.
+
+145
+05:05,137 --> 05:07,867
+P² is equal to a number multiplied by 2.
+
+146
+05:08,427 --> 05:13,417
+As long as this number is multiplied by 2, it means P² is divisible by 2.
+
+147
+05:13,957 --> 05:16,717
+And since it's divisible by 2, it must be even. But that's P².
+
+148
+05:17,797 --> 05:22,647
+Any square whose value is even, its root must have been even. Meaning, 16.
+
+149
+05:23,467 --> 05:28,167
+16 was 4 squared. So 16 is even (square) and 4 is even (root).
+
+150
+05:28,387 --> 05:31,587
+So, since P² is even, then P is even.
+
+151
+05:32,807 --> 05:37,477
+And since P is even, then P can be written in the form... this form.
+
+152
+05:38,117 --> 05:44,687
+= 2k. K is any number, multiplied by 2 gives me P.
+So I assume P is equal to K multiplied by 2. Okay? Because it's even.
+
+153
+05:46,847 --> 05:52,157
+I'll take this form and go back and put it into this equation.
+
+154
+05:54,387 --> 05:56,867
+We'll replace P with 2k. So, (2k)²
+
+155
+05:58,787 --> 06:06,557
+= 2 * Q².
+
+156
+06:07,517 --> 06:07,937
+Okay.
+
+157
+06:08,847 --> 06:14,387
+This means that 4k² = 2Q².
+
+158
+06:16,437 --> 06:21,997
+Cancel the 2 with the 4 here, you're left with 2k² = Q².
+
+159
+06:22,847 --> 06:27,657
+Q² equals a number multiplied by 2, so Q² is even.
+
+160
+06:28,277 --> 06:34,027
+And since Q² is even, then Q is even.
+
+161
+06:37,057 --> 06:46,537
+When I have P being even (an even number) and Q being even (an even number),
+it means that there is at least one common divisor between them, which is 2.
+
+162
+06:47,547 --> 06:52,977
+What does P being even mean? For example, P is 4, and this one is, say, 6. For example.
+
+163
+06:53,327 --> 06:55,867
+So this is the quotient. Okay?
+
+164
+06:56,407 --> 07:03,237
+This means that P can be simplified... I divide by 2, so this becomes 2,
+and I divide 6 by 2, which gives me 3.
+
+165
+07:03,517 --> 07:19,127
+This means that since both are even, there must be at least one common divisor
+between them, which is 2. And this is my contradiction, because I assumed here from the beginning,
+I started on the basis that they are already in the simplest form, there's no common divisor between them.
+
+166
+07:19,127 --> 07:20,277
+And this is the proof by contradiction.
+
+167
+07:20,277 --> 07:27,787
+I started by assuming that √2 equals a quotient, and when I followed this assumption,
+I found a contradiction at the end.
+
+168
+07:28,177 --> 07:35,447
+Therefore, this assumption is wrong. Consequently, this cannot possibly be true.
+
+169
+07:35,447 --> 07:37,937
+And thus, √2 is an irrational number.
+
+170
+07:39,797 --> 07:40,307
+Okay.
+
+171
+07:40,997 --> 07:42,907
+The question here is, what's the problem with this?
+
+172
+07:42,907 --> 07:46,947
+This thing in itself... of course, it's a big problem,
+but it doesn't concern me right now.
+
+173
+07:46,947 --> 07:50,497
+Dealing with irrational numbers in themselves is a big topic
+we don't want to get into the details of.
+
+174
+07:50,937 --> 07:56,197
+I want to understand now, what is the relationship between this
+and the problems in the properties of numbers from 1 to 12?
+
+175
+07:56,997 --> 07:59,597
+Let's look at this table, and what I mean will become clear.
+
+176
+08:01,237 --> 08:01,767
+Okay.
+
+177
+08:03,237 --> 08:05,077
+Here are the 12 properties I have.
+
+178
+08:05,667 --> 08:11,587
+The first type of numbers was the Natural Numbers, and these are
+the properties that work with them and those that don't work with them.
+
+179
+08:12,167 --> 08:15,937
+When we added zero to the Natural Numbers, we got the Whole Numbers,
+and here are their properties.
+
+180
+08:16,267 --> 08:20,407
+So, the second property differentiates between Whole Numbers and Natural Numbers.
+
+181
+08:21,087 --> 08:27,797
+And when we added negative numbers to the Whole Numbers, we got the Integers.
+And here are the properties that align with Integers.
+
+182
+08:27,797 --> 08:31,357
+It's clear that the third property differentiates between Integers and Whole Numbers.
+
+183
+08:32,107 --> 08:44,117
+And when we added... sorry, when we added quotients, we got...
+the quotients or the rational numbers. And here are their properties.
+
+184
+08:44,437 --> 08:51,237
+It's clear that the seventh property differentiates between quotients
+or rational numbers and the integers.
+
+185
+08:52,657 --> 08:55,147
+So it's clear we are moving up a ladder like this.
+
+186
+08:55,147 --> 09:01,647
+We add a type of number, and there's a property that distinguishes
+between the new set of numbers and the set before it.
+
+187
+09:02,067 --> 09:07,427
+And not only that, each set is a part of the larger set than it.
+
+188
+09:08,797 --> 09:11,177
+Suddenly, the irrational numbers appeared to me.
+
+189
+09:11,467 --> 09:18,497
+I didn't invent them; I was confronted by them. Meaning, we didn't make up something
+called √2; it already existed. We just didn't know how to work with it.
+
+190
+09:18,497 --> 09:24,477
+e, e is Euler's number. Pi (π), these are things that exist. Meaning, we ourselves wish
+we had only rational numbers.
+
+191
+09:24,477 --> 09:32,147
+I mean, people spent... many people dedicated their lives trying to find a fixed value
+for these numbers and put them in quotient form, but they couldn't. Nobody knows how to do that.
+
+192
+09:32,497 --> 09:34,167
+Therefore, this is a problem we were confronted with.
+
+193
+09:34,377 --> 09:35,187
+And not only that.
+
+194
+09:35,807 --> 09:43,637
+And this is the big problem. They do not belong to the quotients,
+nor are the quotients part of them. They are like a separate set on their own.
+
+195
+09:44,207 --> 09:45,357
+And not only that.
+
+196
+09:45,667 --> 09:53,837
+The same properties, all of them, from 1 to 12, that work with rational numbers,
+are the exact same properties that work exactly with irrational numbers.
+
+197
+09:54,467 --> 09:58,107
+Therefore, I don't have any type of property that distinguishes between these two large sets.
+
+198
+09:58,107 --> 10:01,957
+Meaning, if we wanted to put this matter in a Venn diagram, it would look like this.
+
+199
+10:02,247 --> 10:04,537
+Here is N, the Natural Numbers.
+
+200
+10:05,187 --> 10:07,357
+Add zero to them, you get W.
+
+201
+10:08,047 --> 10:10,187
+Add negative numbers to them, you get Q...
+
+202
+10:10,747 --> 10:13,677
+sorry, you get Z, which is the Integers.
+
+203
+10:14,287 --> 10:16,517
+Add quotients to them, you get Q.
+
+204
+10:17,817 --> 10:26,777
+The irrational numbers are a separate group here, which we call Irrational Numbers.
+
+205
+10:27,627 --> 10:29,667
+It's a large group, its size is infinite.
+
+206
+10:30,907 --> 10:35,337
+And properties 1 to 12 apply to Q.
+
+207
+10:35,977 --> 10:39,387
+And properties 1 to 12 apply to the irrational numbers.
+
+208
+10:40,767 --> 10:46,147
+Therefore, I cannot use these properties to find the value of √2.
+
+209
+10:46,947 --> 10:47,737
+Keep in mind.
+
+210
+10:47,957 --> 10:54,847
+All I proved in the previous proof was that there is no Q, no rational number,
+that when I square it, gives me 2.
+
+211
+10:54,847 --> 11:04,127
+What I proved here is that x² = (P/Q)² = 2... this situation doesn't exist.
+There's no quotient I can square to get 2. This is all I proved.
+
+212
+11:04,127 --> 11:09,247
+Which is this, from here.
+
+213
+11:10,717 --> 11:14,477
+And I said it's here, among the irrational numbers, but I can't prove it.
+
+214
+11:14,477 --> 11:24,447
+I don't have anything from properties 1 to 12, which are the same properties
+I used in this proof, I can't use them here to say what the value of √2 is.
+I know there is a value for √2.
+
+215
+11:24,447 --> 11:26,817
+The fact that I have a symbol called √2...
+
+216
+11:26,817 --> 11:33,107
+means it has a value. Not only that, geometry tells me there's something called √2.
+Meaning, if we went to Pythagoras,
+
+217
+11:33,787 --> 11:39,977
+if I have a right triangle where these two sides are the unit (1),
+
+218
+11:40,457 --> 11:41,957
+this must be √2.
+
+219
+11:42,557 --> 11:43,967
+This is what Pythagoras says.
+
+220
+11:44,217 --> 11:47,197
+Therefore, I have a value in geometry telling me there's something called √2.
+
+221
+11:47,737 --> 11:56,147
+All I proved is that this √2 is not a quotient, but I didn't prove its value
+as an irrational number. I couldn't even prove it exists basically (algebraically using properties 1-12).
+
+222
+11:56,947 --> 11:59,137
+And this is the problem. I hope it's clear.
+
+223
+11:59,677 --> 12:08,807
+Of course, there could have been a simple solution: we add another property
+that can... Ah, of course, before I forget, the group... this whole group is called Real Numbers.
+
+224
+12:13,997 --> 12:17,797
+The story of this course is all about the topic of Real Numbers.
+
+225
+12:18,787 --> 12:26,427
+As we said, I could add another property and deal with it, live my life with it,
+just like I kept adding properties and numbers. Maybe I just add a property for irrational numbers.
+
+226
+12:26,427 --> 12:31,227
+But the problem is that if I add a property for irrational numbers,
+this approach won't work because...
+
+227
+12:31,727 --> 12:39,637
+the property I would add here would conflict with something else later on.
+I mean, it would clash with another mathematical concept somewhere else.
+
+228
+12:39,637 --> 12:46,207
+Therefore, mathematicians like things to be smooth and consistent.
+Meaning, when I add a rule here, it must work everywhere.
+
+229
+12:46,207 --> 12:51,947
+It's not acceptable to add a rule in one place or a property in a specific place
+that contradicts a rule or law in another place.
+
+230
+12:52,287 --> 12:54,627
+If I did that with irrational numbers, it would lead to problems.
+
+231
+12:54,627 --> 12:57,637
+For example, what is this? Square root of -1 (√-1).
+
+232
+12:58,227 --> 13:03,807
+Give me the value of √-1. This is neither a quotient nor irrational.
+Should I add a property for it too? No.
+
+233
+13:04,497 --> 13:12,797
+Therefore, the author concluded that the solution to this whole dilemma
+lies neither in studying numbers nor in studying the properties of numbers from the start.
+
+234
+13:13,227 --> 13:22,847
+And this is the topic we will start talking about in the upcoming videos,
+God willing, or starting from the next video, which is our discussion about Functions.
+
+235
+13:23,847 --> 13:31,817
+And that the solution and our understanding of Real Numbers will be
+in studying something else entirely, not the numbers.
+
+236
+13:32,347 --> 13:33,877
+See you in the next video, God willing. Goodbye.

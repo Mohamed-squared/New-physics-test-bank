@@ -1,0 +1,851 @@
+1
+0:0:18,450 --> 0:0:19,280
+Peace be upon you.
+
+2
+0:0:20,150 --> 0:0:28,100
+This video, God willing, will be the beginning of our discussion about the Calculus course, which we agreed we would work on from Michael Spivak's Calculus book.
+
+3
+0:0:28,350 --> 0:0:40,810
+As we agreed in the previous introduction, which we talked about in the last video, to understand Calculus well, with its two main branches, differentiation and integration, we must have a deep and strong understanding of limits.
+
+4
+0:0:41,130 --> 0:0:44,780
+And to understand limits well, we must understand real numbers well.
+
+5
+0:0:44,780 --> 0:0:50,10
+And to understand real numbers well, we must understand the building blocks of real numbers, which are numbers.
+
+6
+0:0:50,300 --> 0:0:55,160
+This is the part that the first chapter, the first chapter of this book, covers, which is the Properties of Numbers.
+
+7
+0:0:55,160 --> 0:0:57,300
+Specifically, there are 12 properties.
+
+8
+0:0:59,140 --> 0:1:1,160
+So, what is this topic of Properties of Numbers?
+
+9
+0:1:1,160 --> 0:1:13,690
+As we will see from the moment I start working on them, it's information we already know, things we studied when we were young, or things we've known automatically since we were young, without even thinking about it while performing arithmetic operations.
+
+10
+0:1:14,350 --> 0:1:25,930
+In reality, our work on the Properties of Numbers isn't just a review of what we knew as kids; it's more of a deeper look into the fundamental concepts upon which the rules governing how we work with numbers are built.
+
+11
+0:1:26,720 --> 0:1:31,500
+Meaning, if I perform any arithmetic operation like those we do in mathematics generally,
+
+12
+0:1:37,500 --> 0:1:46,170
+no arithmetic operation, whether in arithmetic, algebra, or trigonometry, can conflict in any way with the properties we will discuss.
+
+13
+0:1:46,170 --> 0:1:49,510
+And not only that, it must comply with *all* the properties.
+
+14
+0:1:49,510 --> 0:1:57,430
+Meaning, if it works with property one but not with property four, it means there's a contradiction, the calculation is wrong, and it needs addressing.
+
+15
+0:1:58,160 --> 0:2:0,510
+Okay, let's work on the properties. The first property we have says...
+
+16
+0:2:3,420 --> 0:2:5,270
+Let's give an example first.
+
+17
+0:2:5,740 --> 0:2:10,900
+If we say, for instance, we have 2 + 3 + 4, and I told you to perform this calculation.
+
+18
+0:2:10,900 --> 0:2:15,880
+We all know we'd say 2 + 3 is 5, and 4 makes 9.
+
+19
+0:2:16,590 --> 0:2:20,80
+Or someone else might say 3 + 4 is 7, and 2 makes 9.
+
+20
+0:2:0,670 --> 0:2:29,240
+Whether you did the first part first then added the other, or did the second part first then added the two, in both cases, the result is correct, and this is the first property.
+
+21
+0:2:30,220 --> 0:2:40,620
+The first property, which is P1, says: If a, b, and c are any numbers, then...
+
+22
+0:2:55,510 --> 0:2:59,950
+Let's... write the rule now in another color...
+
+23
+0:3:1,550 --> 0:3:14,0
+Then a + (b + c) = (a + b) + c. And I'll put the parentheses like this.
+
+24
+0:3:14,0 --> 0:3:18,610
+The parentheses here mean the priority in the arithmetic operation performed on this expression.
+
+25
+0:3:18,610 --> 0:3:25,20
+Meaning, I'm saying these parentheses indicate I'll finish what's inside this parenthesis first, which is b and c first, and then add their result to a.
+
+26
+0:3:25,20 --> 0:3:28,300
+Or, I finish a and b first, and then add c to their result.
+
+27
+0:3:28,300 --> 0:3:36,340
+In other words, we're saying the grouping, or association, in the addition operation doesn't matter; it gives me the same result in the end.
+
+28
+0:3:37,250 --> 0:3:44,610
+What I did with three numbers can be proven for four, five, six, or a million numbers, but of course, it wouldn't be practical.
+
+29
+0:3:44,790 --> 0:3:55,990
+You can actually use this first rule, or property, to deduce that the same rule applies to any number of numbers being added together. But of course, that would be a rigorous proof here before me... I don't think we need to work through it.
+
+30
+0:3:55,990 --> 0:4:4,940
+If you can look it up from another source, that would be good. It's a nice thing to look at if you have some free time.
+
+31
+0:4:6,70 --> 0:4:11,160
+The second property. The second property talks about a rule we also all know, which says...
+
+32
+0:4:12,250 --> 0:4:19,160
+That anything added to zero gives me the same thing, or if zero is added to anything, it gives me the same thing.
+
+33
+0:4:20,400 --> 0:4:26,290
+And this, by the way, is an important property despite its simplicity, and we'll use it a lot in our upcoming work, God willing.
+
+34
+0:4:26,810 --> 0:4:33,630
+The property says: If a is any number, then...
+
+35
+0:4:41,250 --> 0:4:50,360
+a + 0 = 0 + a = a.
+
+36
+0:4:52,860 --> 0:5:2,230
+Meaning, as we said, zero added to anything gives me... sorry, zero added to anything, or anything added to zero, gives me the same number.
+
+37
+0:5:2,640 --> 0:5:8,150
+This property is very important because it talks about a very important concept in mathematics, which is the existence of identity.
+
+38
+0:5:8,150 --> 0:5:11,820
+Meaning, the identity of a specific operation. What does that mean?
+
+39
+0:5:13,200 --> 0:5:16,930
+In the operation of addition, what is the number... which turned out to be zero here?
+
+40
+0:5:16,930 --> 0:5:21,520
+What is the number that, when I add it to any number, gives me the same result as that number?
+
+41
+0:5:21,520 --> 0:5:27,180
+Meaning, the number that goes in comes out the same. 'a' went in, 'a' came out. 'a' went in, 'a' came out.
+
+42
+0:5:27,180 --> 0:5:30,860
+Therefore, we call this the identity or the existence of identity.
+
+43
+0:5:31,670 --> 0:5:34,140
+So, the identity here in the addition operation is zero.
+
+44
+0:5:34,140 --> 0:5:37,540
+Zero is considered the identity of the addition operation.
+
+45
+0:5:38,70 --> 0:5:45,460
+Okay, property 3. Property 3 is also one of the important properties, and we'll use it a lot in this video and upcoming videos, God willing.
+
+46
+0:5:46,450 --> 0:6:9,400
+P3 says: For every number a, there is a number -a such that...
+
+47
+0:6:12,470 --> 0:6:16,950
+Such that what? This is also a property we all know.
+
+48
+0:6:17,620 --> 0:6:27,490
+a + (-a) = (-a) + a = 0.
+
+49
+0:6:28,280 --> 0:6:30,720
+This property is extremely important. It tells me:
+
+50
+0:6:31,640 --> 0:6:36,610
+any number, any number that comes to your mind, has a negative, has an opposite number.
+
+51
+0:6:37,150 --> 0:6:40,830
+We call this the reverse (additive inverse) of number a.
+
+52
+0:6:41,260 --> 0:6:42,960
+By the way, number 'a' doesn't have to be positive.
+
+53
+0:6:42,960 --> 0:6:50,700
+Meaning, if I said... 3, what's the negative of 3? It's -3.
+
+54
+0:6:51,280 --> 0:6:56,500
+Or -3, what's its negative? It's 3, because negative negative is positive.
+
+55
+0:6:56,500 --> 0:6:57,760
+Okay? That's a point.
+
+56
+0:6:58,670 --> 0:7:4,930
+Let's use these three properties to prove something we all know.
+
+57
+0:7:6,220 --> 0:7:12,600
+Let's say, for example, if we want to say... let's use the green color.
+
+58
+0:7:13,230 --> 0:7:21,220
+If we want to say that a + x = a.
+
+59
+0:7:22,230 --> 0:7:30,910
+We all know that if I have 'a' and the result is 'a', it means I added zero to it. So, this 'x' must be zero.
+
+60
+0:7:31,200 --> 0:7:45,670
+Therefore, if I can use the properties before me, these properties, to prove that x equals zero, then I'm sure that these properties are correct, and it's a kind of proof that these properties are correct and don't contradict each other.
+
+61
+0:7:46,660 --> 0:7:49,150
+Okay, let's see how to do this.
+
+62
+0:7:50,30 --> 0:7:51,840
+First, I want to find the value of x here.
+
+63
+0:7:51,840 --> 0:7:54,110
+Okay, to find the value of x, I need to get rid of 'a'.
+
+64
+0:7:54,110 --> 0:7:56,890
+Okay, which of the properties before me gets rid of 'a'?
+
+65
+0:7:56,890 --> 0:8:4,100
+Property 3, because it tells me if you have a number and you add its inverse, or add it to its negative, you get zero.
+
+66
+0:8:4,430 --> 0:8:19,240
+So let's put negative 'a' here + bring these down as they are a + x = a, but in this case, we must add negative 'a' to 'a' because we added negative 'a' to this side. Okay.
+
+67
+0:8:20,120 --> 0:8:24,700
+This part is done; it's already present here in property 3, telling me it equals zero.
+
+68
+0:8:24,700 --> 0:8:27,970
+So this will come down as zero. What do I do with these?
+
+69
+0:8:28,340 --> 0:8:38,340
+For these, we can use property 1, the grouping property, which says (-a + a), put them first, finish them first together, and then add x to them.
+
+70
+0:8:39,320 --> 0:8:40,910
+Okay, the zero comes down as is.
+
+71
+0:8:41,410 --> 0:8:48,120
+This, from the third property, tells me this is zero + + x comes down as is.
+
+72
+0:8:48,490 --> 0:8:51,340
+Okay, now it's time for the second property.
+
+73
+0:8:51,340 --> 0:8:56,980
+The second property tells me 0 + a gives me a, so 0 + x gives me x = 0.
+
+74
+0:8:57,290 --> 0:9:5,650
+This means I have proven that x equals 0. So the three properties work and don't contradict each other, at least in this example.
+
+75
+0:9:6,430 --> 0:9:13,480
+Of course, you'll notice I did a somewhat lengthy proof. I could have shortened it to one step, and maybe I didn't even need to shorten it.
+
+76
+0:9:14,80 --> 0:9:16,850
+But this way of working, this method of analysis, is important.
+
+77
+0:9:16,850 --> 0:9:28,840
+You need to start getting used to it because we will work this way a lot in Calculus, especially when we want to derive the mathematical reasoning behind the rules we will deduce, God willing, during the course.
+
+78
+0:9:30,170 --> 0:9:34,300
+We have one last property left for addition, which is property number four. P4.
+
+79
+0:9:37,290 --> 0:9:42,510
+P4 says... P4 is considered an extension of P1.
+
+80
+0:9:42,740 --> 0:9:49,200
+In P1, you'll notice I didn't say, for example, I didn't give you in the example that 'a' is added to 'c' first and then 'b'.
+
+81
+0:9:49,200 --> 0:9:52,910
+Because here, I wasn't concerned with the order; I was concerned with grouping.
+
+82
+0:9:53,400 --> 0:9:54,590
+Arrangement is another topic.
+
+83
+0:9:54,780 --> 0:9:56,760
+P4 talks about arrangement.
+
+84
+0:9:57,160 --> 1:0:10,380
+P4 says: If a and b are any numbers, then...
+
+85
+1:0:14,720 --> 1:0:16,510
+Then a + b = b + a.
+
+86
+1:0:16,510 --> 1:0:18,30
+We need to pause on this one a bit.
+
+87
+1:0:18,30 --> 1:0:22,520
+Of course, we all know that order doesn't matter in addition.
+
+88
+1:0:22,520 --> 1:0:28,790
+But in subtraction, the situation is different. Meaning, here...
+
+89
+1:0:33,350 --> 1:0:39,160
+I can say, for example, let's give an example with the color... let's add another color.
+
+90
+1:0:40,560 --> 1:0:46,230
+I can say, for example, that 3 + 2 = 2 + 3.
+
+91
+1:0:46,530 --> 1:0:50,890
+In this case, this is five, and in this case, this is also five. No problem with that.
+
+92
+1:0:51,860 --> 1:1:2,20
+But I cannot say that 3 - 2 = 2 - 3. This and these are not equal to each other.
+
+93
+1:1:5,500 --> 1:1:7,380
+However, there's an exception.
+
+94
+1:1:7,610 --> 1:1:14,810
+I mean, I can say that a - b = b - a in only one case: when a = b.
+
+95
+1:1:19,20 --> 1:1:25,140
+Meaning, if a is three and b is three, then 3 - 3 = 3 - 3, so a - b = b - a.
+
+96
+1:1:25,140 --> 1:1:34,640
+Of course, the topic... you might feel I'm going in circles, but this is an important point, a very important point. Why?
+
+97
+1:1:35,220 --> 1:1:45,470
+This rule, despite its simplicity, none of the four properties before me can prove it.
+
+98
+1:1:45,860 --> 1:1:52,570
+And here, the reason why we work with these properties starts to emerge, because of examples like this.
+
+99
+1:1:53,240 --> 1:1:57,620
+The property before me, I can prove it using the properties of multiplication.
+
+100
+1:1:57,620 --> 1:2:0,730
+I cannot prove it using the properties before me [for addition]. Therefore, it's necessary...
+
+101
+1:2:0,730 --> 1:2:5,930
+Now I've encountered a case that has no proof within my [current set of] properties.
+
+102
+1:2:5,930 --> 1:2:12,30
+So, the mathematicians have one of two solutions: either they invent new numbers, or they find a property that addresses this issue.
+
+103
+1:2:12,30 --> 1:2:14,800
+And this is the important part I want to convey to you.
+
+104
+1:2:15,140 --> 1:2:19,930
+So, consequently, there are properties later on that will resolve this dilemma here.
+
+105
+1:2:20,230 --> 1:2:28,810
+We will see them, God willing, when we talk about the property... this will become clear in property number nine when we combine multiplication and addition, God willing.
+
+106
+1:2:29,520 --> 1:2:32,630
+Okay, these are the four properties of addition.
+
+107
+1:2:33,90 --> 1:2:39,50
+Similar to them are four other properties, numbers 5, 6, 7, and 8, for multiplication. Let's go see them now.
+
+108
+1:2:45,570 --> 1:2:52,720
+Okay, we erased the expressions for the four properties of addition. And we put properties 5, 6, 7, and 8.
+
+109
+1:2:57,40 --> 1:3:6,910
+But we didn't remove the wording because, frankly, the properties of multiplication are almost the same as the properties of addition, with slight differences, as we'll see shortly. Okay.
+
+110
+1:3:7,520 --> 1:3:13,550
+The first property in multiplication, which is property number five, says: If a, b, and c are any numbers, then...
+
+111
+1:3:13,550 --> 1:3:16,980
+Same as property number one for addition, but we'll do it for multiplication.
+
+112
+1:3:16,980 --> 1:3:22,360
+It says that a * (b * c) = (a * b) * c.
+
+113
+1:3:22,700 --> 1:3:31,320
+And again, we say that grouping in the multiplication operation doesn't affect the result. Meaning, we can do it with any grouping, just like addition.
+
+114
+1:3:31,770 --> 1:3:34,700
+Of course, there's a point here, which is about this dot.
+
+115
+1:3:34,900 --> 1:3:36,860
+If you haven't seen this notation before,
+
+116
+1:3:37,130 --> 1:3:42,820
+multiplication can be written like this [dot], like this [cross], or like this [parentheses/juxtaposition].
+
+117
+1:3:43,150 --> 1:3:46,500
+These two methods [dot and juxtaposition] are the ones we'll use frequently.
+
+118
+1:3:46,750 --> 1:3:48,220
+We won't use this [cross] very often.
+
+119
+1:3:50,170 --> 1:3:54,560
+The second property, just as there was an identity for addition, there's an identity for multiplication.
+
+120
+1:3:54,560 --> 1:3:55,690
+What is the identity?
+
+121
+1:3:55,980 --> 1:4:2,470
+The identity asks, what number, when I multiply it by any number, 'a', gives me 'a'?
+
+122
+1:4:3,110 --> 1:4:4,80
+That number is one. Therefore...
+
+123
+1:4:6,680 --> 1:4:9,160
+So, one is the identity of multiplication.
+
+124
+1:4:9,500 --> 1:4:12,680
+I think this part is clear, no problem with it.
+
+125
+1:4:13,540 --> 1:4:19,820
+Property number seven, we modified it slightly from property number three which was for addition.
+
+126
+1:4:19,820 --> 1:4:25,200
+Here, the condition is "For every number a," but 'a' cannot be zero, specifically in this case.
+
+127
+1:4:25,740 --> 1:4:35,830
+"There is a number..." In this case, it won't be negative 'a' either; in this case, it will be... forget this, it will be a to the power of -1, such that...
+
+128
+1:4:36,610 --> 1:4:38,80
+What do we want to do here?
+
+129
+1:4:38,80 --> 1:4:40,990
+This property number seven corresponds to property number three.
+
+130
+1:4:40,990 --> 1:4:47,310
+And property number three was the inverse, the opposite, which ultimately gives me... meaning, it cancels out the number I have.
+
+131
+1:4:47,580 --> 1:4:52,50
+Last time, we said a + (-a) was equal to zero.
+
+132
+1:4:52,450 --> 1:5:4,670
+Here, 'a', when you multiply it by its inverse, which is a to the power of -1, will of course equal... the different order... will equal one.
+
+133
+1:5:5,430 --> 1:5:7,620
+First, what is this a to the power of -1?
+
+134
+1:5:8,660 --> 1:5:11,50
+a to the power of -1 equals 1/a.
+
+135
+1:5:11,50 --> 1:5:17,10
+When we have a number over a number... meaning, the number one over the number below it, we can write it like this.
+
+136
+1:5:17,10 --> 1:5:20,830
+And if we have 1/a^2, we can write it as a to the power of -2, and so on.
+
+137
+1:5:21,870 --> 1:5:31,560
+So, this essentially says that a... the part written before me says that 'a' multiplied by 1/a equals a/a, and anything divided by itself gives me one.
+
+138
+1:5:31,560 --> 1:5:32,720
+This is this property.
+
+139
+1:5:32,930 --> 1:5:37,160
+This is the inverse property for the multiplication operation.
+
+140
+1:5:38,240 --> 1:5:41,690
+Okay, let's use these properties to do something useful.
+
+141
+1:5:41,940 --> 1:5:45,920
+Let's give a quick example, perhaps with a different color.
+
+142
+1:5:46,670 --> 1:5:47,740
+Let's say what?
+
+143
+1:5:47,740 --> 1:5:56,390
+That if we have... If a * b = a * c. In this case, if this statement, if this equation or expression is correct,
+
+144
+1:5:56,390 --> 2:0:0,460
+logically, I should deduce that a... sorry, that b = c.
+
+145
+2:0:660 --> 2:0:1,410
+Why? Let's see.
+
+146
+2:0:1,410 --> 2:0:3,910
+If I said I have 2 * something = 2 * something.
+
+147
+2:0:4,430 --> 2:0:9,260
+If I want this expression to be correct, then I must get the same result here equals the same result here.
+
+148
+2:0:9,260 --> 2:0:12,110
+Therefore, I must put the number here, whatever.
+
+149
+2:0:12,110 --> 2:0:18,160
+If I put, say, 4 here, then 2 * 4 is 8, so I must put 4 here to get 8 as the result.
+
+150
+2:0:28,10 --> 2:0:32,530
+Consequently, this expression must lead to b = c. But...
+
+151
+2:0:33,530 --> 2:0:38,580
+'a', which is the first number here, must not be zero.
+
+152
+2:0:38,770 --> 2:0:46,310
+Why? Because if I put zero here and zero here, and I asked you, what number multiplied by zero gives me the same as that number multiplied by zero?
+
+153
+2:0:46,310 --> 2:0:47,860
+Any number. You can put anything.
+
+154
+2:0:47,860 --> 2:0:52,770
+If I put 2 here and 3 here, the result in the end, in both cases, will be zero.
+
+155
+2:0:53,720 --> 2:0:55,910
+So, I think this part is clear.
+
+156
+2:0:56,170 --> 2:1:4,580
+Now we want to prove this using the properties before us, these three properties, assuming that a ≠ 0.
+
+157
+2:1:6,200 --> 2:1:7,200
+Okay, what do we want?
+
+158
+2:1:7,200 --> 2:1:10,350
+We want 'b' and we want 'c'. Meaning, we want to get rid of 'a'.
+
+159
+2:1:0,350 --> 2:1:4,90
+Okay, when we go back to the properties here, which property gets rid of 'a' in multiplication?
+
+160
+2:1:4,90 --> 2:1:5,550
+It's the seventh property.
+
+161
+2:1:6,270 --> 2:1:7,740
+Let's go back to the green color.
+
+162
+2:1:7,960 --> 2:1:32,180
+So we say, in this case, we multiply by a^(-1) * a * b, bring them down as they are = a^(-1) * a . c, bring them down as they are. Okay.
+
+163
+2:1:32,830 --> 2:1:37,480
+Going back to the first property of grouping, we'll put these together.
+
+164
+2:1:37,800 --> 2:1:44,920
+Then we go down to the seventh property again, and say these equal one. So this becomes 1 * b = 1 * c.
+
+165
+2:1:45,830 --> 2:1:57,290
+Then we go back to the sixth property, which says that one multiplied by anything gives the same thing. Therefore, from property number six, we say that b = oops = c,
+
+166
+2:1:57,710 --> 2:2:0,400
+which is the assumption we started with.
+
+167
+2:2:0,770 --> 2:2:6,220
+The three properties gave me the same result and they don't contradict each other.
+
+168
+2:2:6,470 --> 2:2:10,120
+This means we are working in the right direction and the properties are working.
+
+169
+2:2:11,120 --> 2:2:17,970
+Okay, the eighth and final property we'll work on today... or... maybe before we get into the eighth property, let's give an example... another example.
+
+170
+2:2:17,970 --> 2:2:19,490
+Let's give another example.
+
+171
+2:2:22,650 --> 2:2:36,20
+The example says that If a * b = 0, it means that a = 0 or b = 0. We want to prove this.
+
+172
+2:2:39,80 --> 2:2:42,140
+Let's talk about this logically first.
+
+173
+2:2:42,140 --> 2:2:44,740
+If I have two numbers multiplied together giving me zero, then surely one of them must be zero.
+
+174
+2:2:45,90 --> 2:2:50,170
+It's possible both are zero, no problem, but at least one of them must be zero.
+
+175
+2:2:52,50 --> 2:2:57,770
+By the way, this example is extremely important because quadratic equations are solved this way.
+
+176
+2:2:58,720 --> 2:3:3,810
+We might see an example later about quadratic equations, but let's stick to the simple example here. Okay,
+
+177
+2:3:3,810 --> 2:3:7,380
+if I want to prove that one of these two equals zero, let's assume that one of them is *not* equal to zero.
+
+178
+2:3:7,700 --> 2:3:10,790
+So let's say that a ≠ 0.
+
+179
+2:3:10,980 --> 2:3:17,780
+This means if I assume 'a' is not zero, then 'b' *must* be zero. Okay.
+
+180
+2:3:18,500 --> 2:3:19,570
+What do I want?
+
+181
+2:3:19,570 --> 2:3:24,990
+I want to find the value of 'b'. So I want to get rid of 'a' because I know 'a' is not zero, and I want to prove that 'b' is zero, so I want to find the value of 'b'.
+
+182
+2:3:25,160 --> 2:3:26,400
+So let's get rid of 'a'.
+
+183
+2:3:26,650 --> 2:3:28,960
+Back here again, which property got rid of 'a'?
+
+184
+2:3:28,960 --> 2:3:29,640
+It's the seventh property.
+
+185
+2:3:29,870 --> 2:3:39,890
+So I'll say a^(-1) * a * b = 0 * a^(-1) because I multiplied here, so I must multiply by the same number on the other side.
+
+186
+2:3:40,470 --> 2:3:42,420
+By grouping, this will result in one.
+
+187
+2:3:43,150 --> 2:3:46,710
+Here, anything times zero is zero.
+
+188
+2:3:47,800 --> 2:3:48,200
+Okay.
+
+189
+2:3:48,410 --> 2:3:54,880
+And here, this will bring down 1 * b. This looks like a 'Tah', it should be 'b'.
+
+190
+2:3:56,230 --> 2:4:9,180
+And from the second property [actually, property 6], one times anything is the same thing. So this is b = 0. So I was able to prove that when 'a' was not 0, using the three properties before me, I arrived at b = 0.
+
+191
+2:4:10,570 --> 2:4:21,810
+This property, as we said, is extremely important, and we use it very, very, very often, perhaps without even realizing it, in solving quadratic equations which typically have two solutions.
+
+192
+2:4:22,590 --> 2:4:26,200
+Okay, there's another point we didn't clarify in the seventh property,
+
+193
+2:4:26,200 --> 2:4:27,930
+the part about a ≠ 0.
+
+194
+2:4:27,930 --> 2:4:32,850
+I think this should be... if you didn't catch it automatically, let's look at it quickly.
+
+195
+2:4:32,850 --> 2:4:37,610
+If a is 0... if a = 0, if I try to apply this rule,
+
+196
+2:4:37,610 --> 2:4:41,840
+I would have a... let's write it directly. We'd have 0...
+
+197
+2:4:42,650 --> 2:4:46,870
+0 * 0^(-1).
+
+198
+2:4:7,110 --> 2:4:51,770
+This means it is 0 / 0.
+
+199
+2:4:51,770 --> 2:4:55,910
+Of course, division by zero is called undefined.
+
+200
+2:4:56,160 --> 2:5:2,960
+You cannot perform any operation, any arithmetic operation in all of mathematics, that involves division by zero.
+
+201
+2:5:2,960 --> 2:5:6,170
+Mathematics collapses when you try to divide by zero.
+
+202
+2:5:6,460 --> 2:5:12,980
+So, naturally, it was necessary to put this condition here in this property for the property to work.
+
+203
+2:5:13,580 --> 2:5:15,840
+The last property, the eighth property,
+
+204
+2:5:16,280 --> 2:5:22,650
+I think is easy, no problem with it. Just like its counterpart in property number four exactly for addition.
+
+205
+2:5:22,650 --> 2:5:27,940
+It says that a multiplied by b equals b multiplied by a.
+
+206
+2:5:28,110 --> 2:5:36,730
+Meaning, like the same system, an extension of the property, or an extension of property number five. Grouping didn't matter here; here it says the order doesn't matter.
+
+207
+2:5:38,280 --> 2:5:40,660
+We'll stop here, God willing, in this video.
+
+208
+2:5:41,680 --> 2:5:44,610
+The next video, we will talk about property number nine,
+
+209
+2:5:44,610 --> 2:5:49,110
+which is undisputedly the most important property among the 12 properties,
+
+210
+2:5:49,110 --> 2:5:58,810
+and the most used property, perhaps in mathematics in general, or in dealing with numbers and arithmetic operations generally, and in algebra generally, maybe we don't feel it,
+
+211
+2:5:58,810 --> 2:5:59,710
+which is distribution.
+
+212
+2:5:59,890 --> 2:6:5,680
+The rule of distribution, we will see it, God willing, in the next video, and it will likely take the entire next video by itself.
+
+213
+2:6:6,470 --> 2:6:8,330
+See you in the next video, God willing. Peace be upon you.

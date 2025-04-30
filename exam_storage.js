@@ -13,6 +13,7 @@ import { submitFeedback } from './firebase_firestore.js';
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 
 
+
 // --- Exam Storage and Retrieval Functions ---
 
 /**
@@ -35,142 +36,64 @@ export async function storeExamResult(courseId, examState, examType) {
     }
 
     showLoading("Finalizing and Storing Exam...");
+    let examRecord; // Define examRecord in outer scope to log in catch if needed
+
     try {
-        let markingResults;
-        const containsProblems = examState.questions?.some(q => q.isProblem);
+        // Call the central marking function (which handles MCQ vs Problem internally)
+        console.log(`Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
+        const markingResults = await markFullExam(examState);
+        console.log(`Marking complete for Exam ID: ${examState.examId}`);
 
-        if (containsProblems) {
-            // --- Exam contains problems - Use AI Marking ---
-            console.log(`Exam ${examState.examId} contains problems. Calling markFullExam.`);
-            markingResults = await markFullExam(examState);
-            console.log(`AI Marking complete for Exam ID: ${examState.examId}`);
-        } else {
-            // --- Exam is MCQ-only - Score deterministically, skip AI call ---
-            console.log(`Exam ${examState.examId} is MCQ-only. Scoring deterministically.`);
-            markingResults = {
-                totalScore: 0,
-                maxPossibleScore: 0,
-                questionResults: [],
-                overallFeedback: null, // No AI overall feedback for MCQ-only
-                timestamp: Date.now()
-            };
-
-            if (examState.questions && examState.questions.length > 0) {
-                examState.questions.forEach((question, i) => {
-                    // Assign a unique ID if missing
-                    if (!question.id) {
-                         question.id = `q-${i+1}`;
-                    }
-                    const studentAnswer = examState.userAnswers?.[question.id]; // Use optional chaining
-                    const isProblem = question.isProblem || !question.options || question.options.length === 0; // Should be false here
-                    const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
-
-                    // Ensure maxPossibleScore is incremented correctly
-                    if (typeof maxMarks === 'number' && !isNaN(maxMarks)) {
-                         markingResults.maxPossibleScore += maxMarks;
-                    } else {
-                         console.error(`Invalid maxMarks (${maxMarks}) for question ${question.id}. Skipping score calculation for this question.`);
-                         // Optionally push a result indicating an error, or skip entirely
-                           markingResults.questionResults.push({
-                             questionId: question.id, questionIndex: i, score: 0, feedback: "Error: Invalid max marks.", key_points: [], improvement_suggestions: []
-                         });
-                         return; // Skip to next question if maxMarks is invalid
-                    }
-
-
-                    if (!isProblem) { // Double-check it's an MCQ
-                        const correctAnswer = question.correctAnswer; // Usually a string like "A", "B" etc.
-
-                        // *** REFINED CHECKS ***
-                        let isCorrect = false;
-                        let feedback = '';
-
-                        // 1. Check if an answer was provided
-                        if (studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== '') {
-                             // 2. Compare provided answer (case-insensitive, trim whitespace just in case)
-                             if (String(studentAnswer).trim().toUpperCase() === String(correctAnswer).trim().toUpperCase()) {
-                                 isCorrect = true;
-                                 feedback = "Correct.";
-                             } else {
-                                 isCorrect = false;
-                                 feedback = `Incorrect. The correct answer was ${correctAnswer || 'N/A'}.`;
-                             }
-                        } else {
-                             // No answer provided
-                             isCorrect = false;
-                             feedback = `Not answered. The correct answer was ${correctAnswer || 'N/A'}.`;
-                        }
-
-                        const score = isCorrect ? maxMarks : 0;
-                        markingResults.totalScore += score;
-
-                        // Logging for debugging
-                        console.log(`MCQ Scoring Q${i+1} (ID: ${question.id}): ` +
-                                    `Student Answer='${studentAnswer}' (Type: ${typeof studentAnswer}), ` +
-                                    `Correct Answer='${correctAnswer}' (Type: ${typeof correctAnswer}), ` +
-                                    `isCorrect=${isCorrect}, Score=${score}/${maxMarks}`);
-
-                        markingResults.questionResults.push({
-                            questionId: question.id,
-                            questionIndex: i,
-                            score: score,
-                            feedback: feedback, // Use generated feedback
-                            key_points: [],
-                            improvement_suggestions: isCorrect ? [] : ["Review the concepts related to this question."]
-                        });
-                    } else {
-                        // This case shouldn't be hit due to the containsProblems check, but include for safety
-                        console.warn(`Unexpected problem found (ID: ${question.id}) in MCQ-only processing loop.`);
-                         markingResults.questionResults.push({
-                             questionId: question.id, questionIndex: i, score: 0, feedback: "Error: Problem found in MCQ-only exam.", key_points: [], improvement_suggestions: []
-                         });
-                    }
-                });
-            } else {
-                 console.warn("No questions found in MCQ-only examData to mark.");
-                 markingResults.maxPossibleScore = 0; // Ensure max is 0 if no questions
-            }
-            // Clamp total score just in case of weirdness
-            markingResults.totalScore = Math.max(0, Math.min(markingResults.totalScore, markingResults.maxPossibleScore));
-            console.log(`Deterministic scoring complete for Exam ID: ${examState.examId}. Final Score: ${markingResults.totalScore}/${markingResults.maxPossibleScore}`);
-        }
-
-
-        // 2. Prepare the complete record for Firestore
-        const examRecord = {
+        // Prepare the complete record for Firestore
+        examRecord = { // Assign to outer scope variable
             id: examState.examId,
             userId: currentUser.uid,
             courseId: courseId || null, // Store course ID if applicable
-            subjectId: examState.subjectId || currentSubject?.id || null, // Store subject ID for TestGen exams
+            subjectId: examState.subjectId || null,
             type: examType, // e.g., 'practice', 'skip_exam', 'assignment', 'testgen'
             timestamp: examState.startTime, // Use start time as the main timestamp
             durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
-            questions: examState.questions, // Full question details (including text, options, correct answer for MCQ, isProblem flag)
+            questions: examState.questions, // Full question details (should include correctAnswer)
             userAnswers: examState.userAnswers, // User's selections/inputs
             markingResults: markingResults, // Store the generated or AI marking object
             status: 'completed', // Mark as completed
-            // Include course context if it exists
-            courseContext: examState.courseContext || null
+            courseContext: examState.courseContext || null // Include course context if it exists
         };
 
-        // 3. Save to the dedicated subcollection
+        // Save to the dedicated subcollection
         const examDocRef = db.collection('userExams').doc(currentUser.uid)
                            .collection('exams').doc(examState.examId);
 
-        // MODIFIED: Log the data being saved for verification
-        console.log("Saving exam record to Firestore:", JSON.stringify(examRecord, null, 2));
-        await examDocRef.set(examRecord);
-        console.log(`Exam record ${examState.examId} saved successfully to userExams subcollection.`);
+        // *** ADDED Specific Try/Catch for the Firestore write operation ***
+        try {
+            console.log("Attempting to write exam record to Firestore path:", examDocRef.path);
+            // Ensure data is serializable right before saving
+            const cleanExamRecord = JSON.parse(JSON.stringify(examRecord));
+            await examDocRef.set(cleanExamRecord);
+            console.log(`Exam record ${examState.examId} saved successfully to userExams subcollection.`);
+        } catch (writeError) {
+            console.error(`Firestore write error for exam ${examState.examId}:`, writeError);
+            // Log the data that failed to save for easier debugging of serialization issues
+            try { console.error("Data that failed to save:", JSON.stringify(examRecord, null, 2)); } catch { console.error("Data that failed to save (could not stringify):", examRecord); }
+            // Re-throw a more specific error to be caught by the outer catch block
+            throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
+        }
+        // *** END Specific Try/Catch ***
 
         hideLoading();
         return examRecord; // Return the full record including marking
 
-    } catch (error) {
+    } catch (error) { // Outer catch block handles marking errors or re-thrown write errors
         hideLoading();
-        // MODIFIED: Log the specific Firestore error if available
         console.error(`Error storing exam result ${examState.examId}:`, error);
-        // Check if it's a permissions error specifically
-        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+        // Log data if it was prepared before the error
+        if (examRecord) {
+             try { console.error("Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("Exam record state just before error (could not stringify):", examRecord);}
+        }
+        // Provide specific user feedback
+        if (error.message.includes("Failed to save exam data")) { // Check for our re-thrown error
+             alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
+        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
              alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
         } else {
              alert(`Error storing exam results: ${error.message || String(error)}`);
@@ -193,11 +116,13 @@ export async function getExamDetails(userId, examId) {
     try {
         const examDocRef = db.collection('userExams').doc(userId).collection('exams').doc(examId);
         const docSnap = await examDocRef.get();
-        if (docSnap.exists()) {
+        // Use .exists property for compat SDK
+        if (docSnap.exists) {
             console.log(`Exam details retrieved for ${examId}`);
             return docSnap.data();
         } else {
-            console.warn(`Exam document not found: ${examId} for user ${userId}`);
+            // This is where the error currently happens
+            console.warn(`Exam document not found at path: userExams/${userId}/exams/${examId}`);
             return null;
         }
     } catch (error) {
@@ -270,8 +195,12 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
     } catch (error) {
         console.error(`Error retrieving exam history for user ${userId}:`, error);
         if (error.code === 'failed-precondition' && error.message.includes('index')) {
-            console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions or create a composite index based on your filtering needs (e.g., [courseId, timestamp desc], [subjectId, courseId, timestamp desc]) for the userExams/{userId}/exams collection.");
-            alert("Error fetching history: Database index required. Please contact support or check the developer console.");
+            console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions. For the 'subject' filter, you likely need an index on userExams/{userId}/exams where 'courseId' == null and 'subjectId' == [SubjectID], ordered by 'timestamp' descending.");
+            alert("Error fetching history: Database index required. Please check the developer console for details on the required index.");
+        } else if (error.code === 'permission-denied') {
+             alert("Error fetching history: Permission denied. Check Firestore rules for userExams collection.");
+        } else {
+             alert(`Error fetching history: ${error.message}`);
         }
         return [];
     }
@@ -284,233 +213,87 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
  */
 export async function showExamReviewUI(userId, examId) {
     if (!userId || !examId) {
-        // MODIFIED: Use displayContent for consistency
-        displayContent('<p class="text-red-500 p-4">Cannot show review: User or Exam ID missing.</p>');
-        return;
-    }
-    showLoading("Loading Exam Review...");
-    const examData = await getExamDetails(userId, examId);
-    hideLoading();
-
-    if (!examData) {
-        // MODIFIED: Use displayContent for consistency
-        displayContent('<p class="text-red-500 p-4">Could not load exam data for review.</p>');
+        console.error("Cannot show exam review: Missing userId or examId");
         return;
     }
 
-    // Check if examData.questions is defined and is an array
-    const questions = Array.isArray(examData.questions) ? examData.questions : [];
-    const userAnswers = examData.userAnswers || {};
-    const markingResults = examData.markingResults || {};
-    const courseId = examData.courseId;
-    const subjectId = examData.subjectId;
-    const type = examData.type || 'Unknown';
-    const timestamp = examData.timestamp || Date.now();
-
-    const score = markingResults.totalScore ?? 0;
-    let calculatedMaxScore = 0;
-    questions.forEach(q => {
-        calculatedMaxScore += ((q.isProblem || !q.options || q.options.length === 0) ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
-    });
-    const maxScore = markingResults.maxPossibleScore > 0 ? markingResults.maxPossibleScore : calculatedMaxScore;
-    const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
-
-    const contextName = courseId ? (globalCourseDataMap?.get(courseId)?.name || courseId)
-                       : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
-                       : 'General Test';
-    const contextType = courseId ? 'Course' : 'Subject';
-
-    // Determine if passing (use appropriate threshold based on exam type)
-    let passingThreshold = 50; // Default pass mark
-    if (type === 'skip_exam') passingThreshold = SKIP_EXAM_PASSING_PERCENT;
-    else if (courseId) passingThreshold = PASSING_GRADE_PERCENT; // Use course passing grade if it's a course exam
-    const isPassing = parseFloat(percentage) >= passingThreshold;
-
-    // --- AI Follow-up State ---
-    // We need to manage history *per question* within this UI scope
-    let explanationHistories = {}; // Key: questionIndex, Value: history array
-
-    let questionsHtml = questions.map((question, index) => {
-         const result = markingResults.questionResults?.find(r => r.questionId === question.id) || { score: 'N/A', feedback: 'N/A', key_points: [], improvement_suggestions: [] };
-         const questionScore = typeof result.score === 'number' ? result.score : 'N/A';
-         const isProblem = question.isProblem || !question.options || question.options.length === 0;
-         const qMaxScore = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
-
-        let studentAnswerHtml = '';
-        if (userAnswers[question.id]) {
-            // Render potential LaTeX in student answers if needed
-            // MODIFIED: escapeHtml added for safety
-            studentAnswerHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(userAnswers[question.id])}</div>`;
-        } else {
-            studentAnswerHtml = '<span class="text-muted italic">No answer provided</span>';
+    console.log(`Attempting to show exam review for exam ${examId}`);
+    
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails) {
+            console.error(`No exam details found for exam ${examId}`);
+            return;
         }
 
-        let correctAnswerHtml = 'N/A';
-        if (!isProblem && question.correctAnswer) {
-             correctAnswerHtml = escapeHtml(question.correctAnswer);
-        } else if(isProblem) {
-             correctAnswerHtml = '<i class="text-muted text-xs">(Refer to Feedback/Explanation)</i>';
-        }
-
-        // Initialize history for this question
-        explanationHistories[index] = [];
-
-        return `
-            <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md border dark:border-gray-700 mb-4">
-                <div class="flex justify-between items-start mb-3 pb-3 border-b dark:border-gray-600">
-                    <h4 class="font-semibold text-base text-gray-800 dark:text-gray-200">Question ${index + 1} <span class="text-xs font-normal text-gray-500 dark:text-gray-400">(${isProblem ? 'Problem' : 'MCQ'})</span></h4>
-                    <span class="font-bold text-lg ${questionScore !== 'N/A' && questionScore >= (qMaxScore / 2) ? 'text-green-600' : 'text-red-600'}">
-                        ${questionScore}/${qMaxScore}
-                    </span>
-                </div>
-
-                <div class="space-y-3 text-sm">
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Question:</strong>
-                        <div class="prose prose-sm dark:prose-invert max-w-none">${question.text}</div>
-                    </div>
-
-                    ${!isProblem && question.options?.length > 0 ? `
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Options:</strong>
-                        <ul class="list-none pl-0 space-y-1">
-                           ${question.options.map(opt => `<li><strong class="mr-1">${opt.letter}.</strong> <span class="option-text-container">${opt.text}</span></li>`).join('')}
-                        </ul>
-                    </div>` : ''}
-
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Your Answer:</strong>
-                        <div class="p-2 rounded bg-gray-100 dark:bg-gray-700 border dark:border-gray-600 min-h-[3em]">${studentAnswerHtml}</div>
-                    </div>
-
-                     ${!isProblem ? `
-                     <div>
-                         <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Correct Answer:</strong>
-                         <p class="text-gray-800 dark:text-gray-100">${correctAnswerHtml}</p>
-                     </div>
-                     ` : ''}
-
-
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">AI Feedback:</strong>
-                        <div class="prose prose-sm dark:prose-invert max-w-none p-2 rounded bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700">${result.feedback || 'No feedback available.'}</div>
-                    </div>
-
-                    ${result.key_points?.length > 0 ? `
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Key Points:</strong>
-                        <ul class="list-disc list-inside space-y-1 pl-4 text-gray-600 dark:text-gray-400">
-                            ${result.key_points.map(point => `<li>${escapeHtml(point)}</li>`).join('')}
-                        </ul>
-                    </div>` : ''}
-
-                     ${result.improvement_suggestions?.length > 0 ? `
-                    <div>
-                        <strong class="font-medium text-gray-600 dark:text-gray-300 block mb-1">Improvement Suggestions:</strong>
-                        <ul class="list-disc list-inside space-y-1 pl-4 text-gray-600 dark:text-gray-400">
-                            ${result.improvement_suggestions.map(suggestion => `<li>${escapeHtml(suggestion)}</li>`).join('')}
-                        </ul>
-                    </div>` : ''}
-
-                    <!-- AI Explanation/Chat Area -->
-                    <div id="ai-explanation-${index}" class="mt-3 ai-explanation-container hidden space-y-2">
-                         <p class="font-semibold text-purple-700 dark:text-purple-300 text-sm mb-1">AI Tutor Explanation:</p>
-                         <div class="ai-explanation-content-area p-3 border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-900/30 rounded text-sm space-y-3">
-                            <!-- Explanations will be loaded here -->
-                         </div>
-                         <!-- Follow-up Input -->
-                         <div class="flex gap-2 mt-2">
-                              <input type="text" id="follow-up-input-${index}" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
-                              <button onclick="window.askAIFollowUp('${examId}', ${index})" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
-                         </div>
-                    </div>
-
-                    <div class="flex justify-end gap-2 pt-3 border-t dark:border-gray-600">
-                        <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs">
-                             <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                            AI Explanation
-                        </button>
-                        <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                            Report Issue
-                        </button>
-                    </div>
-                </div>
-            </div>
+        console.log(`Successfully fetched exam details for ${examId}`);
+        
+        // Create and show the review UI
+        const reviewContainer = document.createElement('div');
+        reviewContainer.className = 'exam-review-container';
+        
+        // Add exam summary
+        const summaryDiv = document.createElement('div');
+        summaryDiv.className = 'exam-summary';
+        summaryDiv.innerHTML = `
+            <h2>Exam Review</h2>
+            <p>Score: ${examDetails.score}%</p>
+            <p>Time Taken: ${examDetails.timeTaken} minutes</p>
         `;
-    }).join('');
+        reviewContainer.appendChild(summaryDiv);
 
-    const overallFeedbackHtml = markingResults.overallFeedback ? `
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-6 border dark:border-gray-700">
-            <h3 class="text-lg font-semibold mb-4">Overall AI Feedback</h3>
-            <div class="space-y-4 text-sm">
-                <p class="text-gray-700 dark:text-gray-300">${escapeHtml(markingResults.overallFeedback.overall_feedback || 'N/A')}</p>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <h4 class="font-medium text-green-600 mb-2">Strengths</h4>
-                        <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                            ${markingResults.overallFeedback.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}
-                        </ul>
-                    </div>
-                    <div>
-                        <h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4>
-                        <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                            ${markingResults.overallFeedback.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="mt-4">
-                    <h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4>
-                    <ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">
-                        ${markingResults.overallFeedback.study_recommendations?.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    ` : '<p class="text-muted italic text-center my-4">No overall feedback available.</p>';
-
-    const html = `
-        <div class="space-y-6 animate-fade-in">
-            <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
-                <div class="flex flex-wrap justify-between items-center gap-2 mb-4 pb-4 border-b dark:border-gray-600">
-                    <div>
-                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Exam Review</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">${contextType}: ${escapeHtml(contextName)} | Type: ${escapeHtml(type)} | Date: ${new Date(timestamp).toLocaleString()}</p>
-                    </div>
-                    <div class="text-right">
-                        <p class="text-3xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'}">${score.toFixed(0)}/${maxScore.toFixed(0)} (${percentage}%)</p>
-                        <p class="text-lg font-medium ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passingThreshold}%)</p>
-                    </div>
-                </div>
-                 ${overallFeedbackHtml}
-                 <button onclick="window.history.back()" class="btn-secondary w-full mt-4">Go Back</button>
-            </div>
-
-             <h3 class="text-xl font-semibold text-gray-700 dark:text-gray-300 mt-6 mb-4">Question Breakdown</h3>
-             <div id="review-questions-container" class="space-y-4">
-                 ${questionsHtml || '<p class="text-muted italic text-center my-4">No question details found.</p>'}
-             </div>
-        </div>
-    `;
-
-    displayContent(html);
-    // Store the explanationHistories object globally or pass it around if needed for state persistence
-    // For simplicity, we'll re-fetch exam data each time an explanation is requested for now.
-    window.currentExplanationHistories = explanationHistories;
-
-    // Render MathJax after content is added
-    requestAnimationFrame(async () => {
-        const container = document.getElementById('review-questions-container');
-        if (container) {
-            console.log("Rendering MathJax for review questions...");
-            await renderMathIn(container);
-            console.log("MathJax rendering complete for review.");
-        }
-    });
+        // Add questions review
+        const questionsDiv = document.createElement('div');
+        questionsDiv.className = 'questions-review';
+        
+        examDetails.questions.forEach((question, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-review';
+            questionDiv.innerHTML = `
+                <h3>Question ${index + 1}</h3>
+                <p>${question.text}</p>
+                <p>Your answer: ${question.userAnswer}</p>
+                <p>Correct answer: ${question.correctAnswer}</p>
+                <div class="ai-explanation"></div>
+            `;
+            
+            // Add AI explanation
+            const explanationDiv = questionDiv.querySelector('.ai-explanation');
+            generateAIExplanation(question, explanationDiv);
+            
+            questionsDiv.appendChild(questionDiv);
+        });
+        
+        reviewContainer.appendChild(questionsDiv);
+        
+        // Add to DOM
+        document.body.appendChild(reviewContainer);
+        
+    } catch (error) {
+        console.error(`Error showing exam review for ${examId}:`, error);
+        // Show error message to user
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.textContent = 'An error occurred while loading the exam review. Please try again later.';
+        document.body.appendChild(errorDiv);
+    }
 }
 
+async function generateAIExplanation(question, container) {
+    try {
+        const explanation = await getAIExplanation(question);
+        container.innerHTML = `
+            <h4>AI Explanation</h4>
+            <p>${explanation}</p>
+        `;
+    } catch (error) {
+        console.error('Error generating AI explanation:', error);
+        container.innerHTML = `
+            <h4>AI Explanation</h4>
+            <p>Unable to generate explanation at this time.</p>
+        `;
+    }
+}
 
 // --- AI Explanation Display & Follow-up ---
 window.showAIExplanationSection = async (examId, questionIndex) => {
@@ -521,8 +304,8 @@ window.showAIExplanationSection = async (examId, questionIndex) => {
     const isHidden = explanationContainer.classList.contains('hidden');
     explanationContainer.classList.toggle('hidden');
 
-    // If revealing and content is empty or just has placeholder, fetch initial explanation
-    if (isHidden && (!explanationContentArea.innerHTML || explanationContentArea.innerHTML.includes('Loading explanation...'))) {
+    // If revealing and content is empty, fetch initial explanation
+    if (isHidden && !explanationContentArea.innerHTML.trim()) {
         explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="ml-2 text-sm text-muted">Generating explanation...</p></div>`;
 
         const examData = await getExamDetails(currentUser.uid, examId);
@@ -533,16 +316,18 @@ window.showAIExplanationSection = async (examId, questionIndex) => {
 
         const question = examData.questions[questionIndex];
         const studentAnswer = examData.userAnswers[question.id];
+        // Use question.correctAnswer
         const isProblem = question.isProblem || !question.options || question.options.length === 0;
         const correctAnswer = isProblem ? null : question.correctAnswer;
 
         try {
-            // Initial call, no history needed yet
-            const result = await generateExplanation(question, correctAnswer, studentAnswer, []);
+            // Initial call, empty history - Pass question object which now contains correctAnswer
+            const result = await generateExplanation(question, null, studentAnswer, []); // Pass null for deprecated correctAnswer param
             window.currentExplanationHistories[questionIndex] = result.history; // Store initial history
             explanationContentArea.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Initial explanation
             await renderMathIn(explanationContentArea);
         } catch (error) {
+            console.error("Error fetching initial explanation:", error);
             explanationContentArea.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
         }
     }
@@ -557,46 +342,36 @@ window.askAIFollowUp = async (examId, questionIndex) => {
     if (!followUpText) return;
 
     inputElement.disabled = true;
-    const askButton = inputElement.nextElementSibling; // Get the button
+    const askButton = inputElement.nextElementSibling;
     if (askButton) askButton.disabled = true;
 
-    // Append user's follow-up to the chat display
-    const userFollowUpHtml = `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`;
-    explanationContentArea.insertAdjacentHTML('beforeend', userFollowUpHtml);
+    // Append user's follow-up
+    explanationContentArea.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
 
-    // Append loading indicator for AI response
+    // Append loading indicator
     const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
     explanationContentArea.insertAdjacentHTML('beforeend', loadingHtml);
-    explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll down
+    explanationContentArea.scrollTop = explanationContentArea.scrollHeight;
 
     const history = window.currentExplanationHistories[questionIndex] || [];
 
     try {
-        // Send follow-up using generateExplanation (which now handles history)
-        // We don't need the original question/answer details for follow-ups,
-        // just the history and the user's text. Pass null for question/correctAnswer.
-        // Pass the followUpText as the 'studentAnswer' argument for this call.
+        // Pass followUpText as the 'studentAnswer' argument for the API call
         const result = await generateExplanation(null, null, followUpText, history);
 
-        // Update history state
-        window.currentExplanationHistories[questionIndex] = result.history;
+        window.currentExplanationHistories[questionIndex] = result.history; // Update history state
 
-        // Remove loading indicator
-        const loadingIndicator = explanationContentArea.querySelector('.ai-loading');
-        if (loadingIndicator) loadingIndicator.remove();
+        explanationContentArea.querySelector('.ai-loading')?.remove(); // Remove loader
 
         // Append AI's response
-        const aiResponseHtml = `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`;
-        explanationContentArea.insertAdjacentHTML('beforeend', aiResponseHtml);
-        inputElement.value = ''; // Clear input
+        explanationContentArea.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+        inputElement.value = '';
         await renderMathIn(explanationContentArea); // Re-render math
         explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll down
 
-
     } catch (error) {
         console.error("Error asking AI follow-up:", error);
-        const loadingIndicator = explanationContentArea.querySelector('.ai-loading');
-        if (loadingIndicator) loadingIndicator.remove();
+        explanationContentArea.querySelector('.ai-loading')?.remove();
         explanationContentArea.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
     } finally {
         inputElement.disabled = false;
@@ -606,58 +381,25 @@ window.askAIFollowUp = async (examId, questionIndex) => {
 
 // --- Issue Reporting ---
 
-/**
- * Displays a modal for reporting an issue with a specific question or its marking.
- * (This function remains largely the same, but we ensure it's exported and available)
- */
 export function showIssueReportingModal(examId, questionIndex) {
-    // Remove existing modal first
     document.getElementById('issue-report-modal')?.remove();
-
     const modalHtml = `
         <div id="issue-report-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[70] p-4" aria-labelledby="issue-report-title" role="dialog" aria-modal="true">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 id="issue-report-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Report Issue for Question ${questionIndex + 1}</h3>
-                    <button onclick="document.getElementById('issue-report-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
-                </div>
+                <div class="flex justify-between items-center mb-4"><h3 id="issue-report-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Report Issue for Question ${questionIndex + 1}</h3><button onclick="document.getElementById('issue-report-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button></div>
                 <div class="space-y-4">
-                    <div>
-                        <label for="issue-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issue Type</label>
-                        <select id="issue-type" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500">
-                            <option value="incorrect_marking">Incorrect AI Marking/Score</option>
-                            <option value="unclear_feedback">Unclear AI Feedback</option>
-                            <option value="incorrect_explanation">Incorrect AI Explanation</option>
-                            <option value="question_ambiguous">Question is Ambiguous/Unclear</option>
-                            <option value="incorrect_mcq_answer">MCQ Correct Answer Seems Wrong</option>
-                            <option value="technical_error">Display/Technical Error</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="issue-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
-                        <textarea id="issue-description" class="w-full h-32 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500" placeholder="Please provide details about the issue..."></textarea>
-                    </div>
-                    <div class="flex justify-end gap-3">
-                        <button onclick="document.getElementById('issue-report-modal').remove()" class="btn-secondary">
-                            Cancel
-                        </button>
-                        <button onclick="window.submitIssueReport('${examId}', ${questionIndex})" class="btn-primary">
-                            Submit Report
-                        </button>
-                    </div>
+                    <div><label for="issue-type" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Issue Type</label><select id="issue-type" class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"><option value="incorrect_marking">Incorrect AI Marking/Score</option><option value="unclear_feedback">Unclear AI Feedback</option><option value="incorrect_explanation">Incorrect AI Explanation</option><option value="question_ambiguous">Question is Ambiguous/Unclear</option><option value="incorrect_mcq_answer">MCQ Correct Answer Seems Wrong</option><option value="technical_error">Display/Technical Error</option><option value="other">Other</option></select></div>
+                    <div><label for="issue-description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label><textarea id="issue-description" class="w-full h-32 p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500" placeholder="Please provide details..."></textarea></div>
+                    <div class="flex justify-end gap-3"><button onclick="document.getElementById('issue-report-modal').remove()" class="btn-secondary">Cancel</button><button onclick="window.submitIssueReport('${examId}', ${questionIndex})" class="btn-primary">Submit Report</button></div>
                 </div>
             </div>
         </div>
     `;
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    document.getElementById('issue-description').focus(); // Focus description field
+    document.getElementById('issue-description').focus();
 }
+window.showIssueReportingModal = showIssueReportingModal; // Assign to window
 
-/**
- * Submits the issue report to Firestore.
- * (This function remains largely the same, uses imported submitFeedback)
- */
 export async function submitIssueReport(examId, questionIndex) {
     const issueType = document.getElementById('issue-type')?.value;
     const description = document.getElementById('issue-description')?.value.trim();

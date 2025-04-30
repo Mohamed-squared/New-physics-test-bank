@@ -33,8 +33,8 @@ try {
 let pdfjsLib = window.pdfjsLib;
 
 // Define models (Using latest stable versions)
-const TEXT_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable 1.5 pro
-const VISION_MODEL_NAME = "gemini-1.5-pro-vision"; // Using latest stable vision model
+const TEXT_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable 1.5 pro
+const VISION_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable vision model
 
 
 // --- Helper: Fetch Text File (SRT Parser) ---
@@ -126,7 +126,7 @@ window.getAllPdfTextForAI = getAllPdfTextForAI; // Assign to window scope
  * @param {number} [charLimit=1800000] - Approximate character limit (adjust based on model - 1.5 Pro has ~2M token limit).
  * @returns {Promise<boolean>} - True if the prompt is likely within the limit, false otherwise.
  */
-async function tokenLimitCheck(contextText, charLimit = 1800000) { // Approx 1.8M chars for ~2M tokens (safer side)
+export async function tokenLimitCheck(contextText, charLimit = 1800000) { // Approx 1.8M chars for ~2M tokens (safer side)
     if (contextText && contextText.length > charLimit) {
         console.error(`AI Context Exceeds Limit: Length ${contextText.length} > Limit ${charLimit}`);
         const feedbackData = {

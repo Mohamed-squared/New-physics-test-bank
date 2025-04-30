@@ -1,0 +1,339 @@
+1
+00:00:00,400 --> 00:00:00,900
+Peace be upon you.
+
+2
+00:00:20,447 --> 00:00:33,197
+Before we dive into the topic of today's video, let's go back a bit and review the basic points and main topics we discussed in the past few videos, just so the structure of the course doesn't get lost.
+
+3
+00:00:35,137 --> 00:00:44,567
+We started our discussion about Calculus by saying that Calculus consists of two main branches: differentiation and integration.
+
+4
+00:00:45,597 --> 00:00:54,417
+We mentioned that when Newton and Leibniz started talking about these two topics, they relied on a concept that had some issues, which was infinitesimal numbers or infinitesimal values.
+
+5
+00:00:54,897 --> 00:01:03,747
+And this issue was largely resolved when the concept of limits was introduced by the scientist Cauchy.
+
+6
+00:01:04,977 --> 00:01:11,437
+Consequently, before we start working on differentiation and integration, we must have worked well, or sufficiently, on limits.
+
+7
+00:01:11,437 --> 00:01:16,467
+And before working on limits, we said we must understand what functions are.
+
+8
+00:01:17,217 --> 00:01:23,237
+And before talking about functions, we said we would talk about real numbers.
+
+9
+00:01:24,197 --> 00:01:29,157
+Indeed, that was our entry point into the course. We began our discussion talking about real numbers.
+
+10
+00:01:29,157 --> 00:01:34,987
+And we started talking about real numbers by discussing the 12 properties of numbers.
+
+11
+00:01:35,847 --> 00:01:41,867
+And we noticed that not all numbers satisfy all the properties of numbers.
+
+12
+00:01:41,867 --> 00:01:47,977
+Consequently, we discovered that there are different types of numbers: natural numbers, whole numbers, integers, quotients or rational numbers.
+
+13
+00:01:48,247 --> 00:01:54,067
+On the other hand, there was also a large group of numbers which are the irrational numbers. Both together form the real numbers.
+
+14
+00:01:55,017 --> 00:02:06,367
+At this specific point, a problem or dilemma arose for us. Rational numbers and irrational numbers... we know, and have proven, that they are two separate sets, or two distinct types of numbers or numerals.
+
+15
+00:02:07,827 --> 00:02:13,047
+However, we don't have any property among the 12 properties we listed that can distinguish between these two types.
+
+16
+00:02:13,047 --> 00:02:17,457
+So, we had a dilemma here, and felt like we hit a dead end.
+
+17
+00:02:17,797 --> 00:02:22,797
+So, we decided, okay, let's stop talking about real numbers for now and move on to the next topic, which is functions.
+
+18
+00:02:22,997 --> 00:02:27,087
+Perhaps, God willing, the solution to the dilemma of real numbers lies within functions.
+
+19
+00:02:27,417 --> 00:02:31,657
+And that, God willing, is the topic we will start discussing in this video.
+
+20
+00:02:33,367 --> 00:02:43,377
+What does the word "functions" mean? Let's put its corresponding term in Arabic. We call it "Dala" (دالة) or we call it "Al-Iqtiran" (الاقتران).
+
+21
+00:02:45,497 --> 00:02:51,897
+The word "Dala" is more commonly used in Egypt. Jordan, and likely most of the Levant countries, use the word "Al-Iqtiran".
+
+22
+00:02:53,807 --> 00:02:56,207
+We might come back to the topic of "Al-Iqtiran" later. Alright.
+
+23
+00:02:58,147 --> 00:03:03,437
+The best introduction to the topic of functions, honestly, is the introduction given by Michael Spivak in the book we are working from.
+
+24
+00:03:04,417 --> 00:03:10,917
+The man said that, undoubtedly, the most important concept in all of mathematics is the concept of functions.
+
+25
+00:03:11,637 --> 00:03:19,377
+And there is no branch in modern mathematics where functions are not the center of study or the center of research.
+
+26
+00:03:20,847 --> 00:03:22,817
+Of course, this statement needs no explanation.
+
+27
+00:03:22,817 --> 00:03:30,717
+It's clear from these few words that functions are not something we can just skim over. You need to take your time with them and grasp them well.
+
+28
+00:03:31,547 --> 00:03:38,247
+Because, based on this statement and the structure we see before us, everything that comes after will be built upon the concept of functions.
+
+29
+00:03:38,247 --> 00:03:42,767
+And by the way, this isn't just limited to mathematics; it's used in many other fields, like physics, for example.
+
+30
+00:03:43,237 --> 00:03:50,817
+Therefore, you must pay some attention to the concept of functions before moving on to anything else in the remaining branches of mathematics.
+
+31
+00:03:51,937 --> 00:03:54,707
+Alright. Historically, where did these functions come from?
+
+32
+00:03:55,457 --> 00:03:58,407
+Of course, until now, we haven't said what functions are, nor have we discussed the concept of functions.
+
+33
+00:03:58,407 --> 00:04:02,317
+We're just, you know, finding an entry point to the topic now.
+
+34
+00:04:03,797 --> 00:04:13,047
+Functions... it's not known exactly when they started as a concept, but serious discussion about them began around approximately the 14th century.
+
+35
+00:04:14,847 --> 00:04:24,337
+However, the first time someone actually mentioned the word "functions" was specifically in the year 1673.
+
+36
+00:04:25,397 --> 00:04:37,947
+That was the date someone mentioned the word "functions" and gave it a definition that was somewhat close, or a description close to the modern state that we currently use.
+
+37
+00:04:37,947 --> 00:04:46,257
+So, we'll consider that functions appeared specifically around 1673, roughly.
+
+38
+00:04:48,047 --> 00:04:49,337
+Okay, what's special about this date?
+
+39
+00:04:50,087 --> 00:04:59,677
+What's special about this date is that a few years before it, specifically in 1665, Newton began writing his notes on Calculus.
+
+40
+00:05:00,467 --> 00:05:09,457
+And two years after this date, in 1675, Gottfried Leibniz was beginning to write his notes, also on Calculus.
+
+41
+00:05:10,887 --> 00:05:15,017
+So, it's clear that functions appeared right in the midst of the hustle and bustle of Calculus.
+
+42
+00:05:16,077 --> 00:05:20,237
+And at the same time, I'm telling you that functions are what the rest of Calculus was built upon.
+
+43
+00:05:21,877 --> 00:05:29,827
+The strange thing about this is that the person who mentioned the word "functions"... the person who mentioned the word "functions" on that date... was Gottfried Leibniz himself.
+
+44
+00:05:31,177 --> 00:05:38,837
+Meaning, Gottfried Leibniz mentioned functions, and two years later, he talked about Calculus without mentioning functions within it.
+
+45
+00:05:39,207 --> 00:05:41,707
+He was talking about them in a somewhat separate manner.
+
+46
+00:05:42,567 --> 00:05:52,277
+What I want to say here is that functions and Calculus are two things linked together, despite the fact that those who created Calculus and those who created functions were not fully aware of this point.
+
+47
+00:05:52,537 --> 00:05:55,627
+This matter started to become clearer later, in the 18th century.
+
+48
+00:05:56,857 --> 00:06:16,407
+However, because the two problems that functions and Calculus were addressing were very closely related, it was logical and natural that all scientists, including Gottfried Leibniz and Newton, would be trying to explore these two topics without even realizing they were mathematically connected.
+
+49
+00:06:17,677 --> 00:06:20,077
+This complexity will also become somewhat clearer later on.
+
+50
+00:06:20,077 --> 00:06:27,977
+All I wanted to clarify for you here is that Calculus represents for us modern mathematics, or the beginning of modern mathematics and modern science in general.
+
+51
+00:06:28,417 --> 00:06:32,657
+And the function was right in the thick of the development of Calculus.
+
+52
+00:06:33,397 --> 00:06:42,837
+Therefore, I return to the point Michael Spivak made a short while ago when he said that the function is the axis of research in all of modern mathematics.
+
+53
+00:06:43,337 --> 00:06:49,597
+When we look at it even from a historical perspective, we find that history supports this viewpoint. Okay.
+
+54
+00:06:51,737 --> 00:06:53,927
+Before we end this video, there are two things I want to say.
+
+55
+00:06:54,007 --> 00:07:00,407
+First thing, let's give an example of a function, without even writing any mathematical expression.
+
+56
+00:07:00,767 --> 00:07:14,987
+When we want to present the function simply... in a simple form... you can represent functions as follows: a function is essentially a table. Well, not exactly a table, but we can look at it as if it's a table.
+
+57
+00:07:15,847 --> 00:07:19,607
+This table says that a certain number corresponds to another certain number.
+
+58
+00:07:19,607 --> 00:07:24,577
+This number corresponds to that number, and this number corresponds to that number, and so on. Every number corresponds to another number.
+
+59
+00:07:24,577 --> 00:07:25,857
+What is this about?
+
+60
+00:07:26,557 --> 00:07:34,597
+As you can see before you, a function is a rule or a principle that assigns a number to every number from a set of numbers.
+
+61
+00:07:34,597 --> 00:07:41,217
+Meaning, it says, "I have this set of numbers," which is this column. Every number in it will correspond to a specific number.
+
+62
+00:07:42,257 --> 00:07:43,757
+That's it. That's the function.
+
+63
+00:07:44,567 --> 00:07:54,947
+Why did I mention this topic in this way? I mentioned it to tell you that the Arabic term "Al-Iqtiran" (meaning association or coupling) is considered one of the closest terms, truly, to the definition of a function. Perhaps it's better than "Dala" and maybe even better than the word "functions" itself.
+
+64
+00:07:55,377 --> 00:08:01,197
+Because the function is truly a process of association. All you are saying in a function is that this number is *associated* with that number.
+
+65
+08:01,397 --> 00:08:02,777
+It's a matter of association. Okay?
+
+66
+00:08:03,207 --> 00:08:05,997
+It's not a matter of equality. I'm not saying that this number *equals* that number.
+
+67
+00:08:06,327 --> 00:08:10,547
+All I'm saying is, let's say for example, number 2 corresponds to number 4.
+
+68
+00:08:10,917 --> 00:08:15,597
+That's all that the function, from a mathematical perspective, does. This is, of course, in a simplified way.
+
+69
+00:08:17,097 --> 00:08:36,567
+We will see this later, God willing, in detail - what this means, and give examples. But if you wanted to know why something as simple as this is something we're making a big deal out of, saying, you know... In the end, I've just put a table for you, saying that number 2 corresponds to number 4. What's all the big fuss we're making around this topic?
+
+70
+00:08:36,567 --> 00:08:40,547
+To understand something like this, it's simple. Look around you. Look at the universe around you.
+
+71
+00:08:41,077 --> 00:08:43,947
+It's hard to find something, or an event, that happens in isolation.
+
+72
+00:08:44,597 --> 00:08:48,577
+For example, let's take an example... the speed of a car, for instance. You're driving a car...
+
+73
+00:08:48,577 --> 00:08:53,827
+you press the gas pedal more, the car's speed increases. You press the gas pedal more, the car's speed increases even more, and so on.
+
+74
+00:08:53,827 --> 00:09:03,507
+Therefore, the speed of the car, if you put it in this table, and put the amount of gasoline you're adding in this table, you can say that the amount of gasoline being added to the car is associated with the speed of the car, and so on.
+
+75
+00:09:04,317 --> 00:09:13,857
+Apply this analogy to anything else, from population counts to geometric shapes... an example like the car... the load of, say, a truck.
+
+76
+00:09:13,857 --> 00:09:19,067
+If we have a truck, for instance, and we want to find the maximum speed of this truck.
+
+77
+00:09:19,067 --> 00:09:22,997
+If the truck is empty, or the transport vehicle is empty, its maximum speed will be somewhat high.
+
+78
+00:09:23,357 --> 00:09:27,167
+As you add more load to it, its maximum speed tends to decrease, and so on.
+
+79
+00:09:27,167 --> 00:09:31,307
+Therefore, the weight of the load on the vehicle is associated with the maximum speed for that vehicle.
+
+80
+00:09:31,667 --> 00:09:34,907
+Of course, these are simple examples; we will see many more complex ones later.
+
+81
+00:09:35,827 --> 00:09:42,997
+The gist of what I want to tell you is that the world around you, and the universe around you, events within it do not happen in isolation.
+
+82
+00:09:43,307 --> 00:09:45,807
+An event always happens because of another event.
+
+83
+00:09:46,147 --> 00:09:48,847
+The function solves this issue for me.
+
+84
+00:09:49,217 --> 00:09:57,447
+The function allows me to study the interconnected events around me in a simple mathematical way, as we will see later on.
+
+85
+00:09:58,637 --> 01:01,437
+See you in the next video, God willing. Peace be upon you.

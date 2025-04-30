@@ -1,0 +1,579 @@
+1
+00:00:19,400 --> 00:00:20,100
+Peace be upon you.
+
+2
+00:00:21,100 --> 00:00:24,500
+In the last two videos, we talked about properties 1 through 9.
+
+3
+00:00:25,500 --> 00:00:33,500
+In this video, God willing, today we will continue our discussion about the properties of numbers. We will also cover the three remaining properties we have, which are 10, 11, and 12.
+
+4
+00:00:34,100 --> 00:00:42,800
+All the previous properties dealt with equalities. Meaning, if we looked at all the equations we had, they dealt with the equal sign.
+
+5
+00:00:43,300 --> 00:00:55,800
+The properties we have today will deal with inequalities. For example, we say that A is greater than B, and B is less than A, or that A is... A is less than B, and so on.
+
+6
+00:00:56,900 --> 00:01:02,700
+The importance of inequalities in the properties of numbers becomes very clear when we work with zero.
+
+7
+00:01:02,700 --> 00:01:12,300
+Meaning, if I said that A is greater than 0, or that A is less than 0, from this statement, I can say that A is positive or A is negative. Meaning...
+
+8
+00:01:12,300 --> 00:01:25,900
+If I were to place this on the number line and say here is zero, the numbers on this side, we say A is greater than 0. The numbers on the other side, we say A is less than 0. So, these numbers are the positive numbers, and these numbers are the negative numbers.
+
+9
+00:01:27,100 --> 00:01:31,800
+And... what I just said specifically is the first property we have, which is property...
+
+10
+00:01:31,800 --> 00:01:55,800
+The tenth one, which says: for every number A, only one of the following holds.
+
+11
+00:01:56,700 --> 00:02:02,700
+Meaning, for any number A, only one of the three things I'm about to list is true.
+
+12
+00:02:03,200 --> 00:02:08,100
+First thing: A equals 0.
+
+13
+00:02:09,200 --> 00:02:14,800
+Second possibility: A is in P. What is this P? It's the positive numbers.
+
+14
+00:02:15,500 --> 00:02:20,000
+Meaning, I'm saying that A is in the positive numbers, or greater than 0.
+
+15
+00:02:20,800 --> 00:02:28,200
+The third possibility: negative A is in P.
+
+16
+00:02:30,500 --> 00:02:42,600
+Very simply put, the truth is we say that for any number I have, this number will either be zero, or it will be in the positive numbers (meaning it will be greater than zero), or its negative will be greater than zero.
+
+17
+00:02:42,800 --> 00:02:47,800
+This part, we need to pause on for a bit. What is this concept of a negative number being in the positive set?
+
+18
+00:02:48,400 --> 00:02:52,200
+We know that negative is always less than zero.
+
+19
+00:02:53,500 --> 00:03:01,500
+And here we need to pause a bit to reorganize our thoughts regarding the aspect of 'negative'. What does 'negative' mean?
+
+20
+00:03:02,100 --> 00:03:07,000
+We always think that 'negative' means a number less than zero. And that's correct...
+
+21
+00:03:07,500 --> 00:03:13,900
+...to a large extent, until we start talking about this type of mathematical analysis. Meaning, for example, we can say that the positive set...
+
+22
+00:03:14,200 --> 00:03:19,900
+...contains a number like 3, and the negative set contains a number like negative 3.
+
+23
+00:03:20,300 --> 00:03:25,500
+But actually, the meaning of 'negative' is a bit deeper than that. 'Negative' means the inverse of the number. Meaning...
+
+24
+00:03:25,500 --> 00:03:29,100
+...the number could be greater than zero or less than zero. The 'negative'...
+
+25
+00:03:29,500 --> 00:03:40,900
+...flips it to the other side. Meaning, I can say that the negative of negative 3 is 3, and the negative of 3 is negative 3. Meaning...
+
+26
+00:03:41,200 --> 00:03:44,600
+...if I said A equals, for example, 5.
+
+27
+00:03:45,400 --> 00:03:49,200
+Then in this case, negative A equals negative 5.
+
+28
+00:03:49,600 --> 00:03:58,300
+But if A was originally negative 5 from the start, then in this case, negative A equals negative (-5), which equals 5.
+
+29
+00:03:58,600 --> 00:04:02,100
+So I flipped negative 5 to 5. So...
+
+30
+00:04:02,600 --> 00:04:10,500
+...in short, 'negative' is the inverse of the number, whether that number was originally positive or negative. If it was positive, the inverse flips it to negative.
+
+31
+00:04:10,800 --> 00:04:16,200
+And if it was negative, the inverse flips it to positive. Therefore, this statement means...
+
+32
+00:04:16,700 --> 00:04:26,400
+...that 'negative A is in P' means that A itself was originally less than zero; it was already in the negative set. So, applying 'negative' put it in the positive set.
+
+33
+00:04:26,700 --> 00:04:32,900
+And this is a very important concept, keep it in mind because we won't just use it in this video, we will use it in the rest of the course, God willing.
+
+34
+00:04:34,200 --> 00:04:42,400
+Okay, the next property... properties 11 and 12 are very easy, so we'll write them together like this, one after the other.
+
+35
+00:04:43,800 --> 00:04:55,300
+Property 11 says: if A and B are in P. What does 'in P' mean? It means in the positive numbers, meaning greater than 0.
+
+36
+00:04:55,700 --> 00:05:05,700
+If this statement is true, then A + B is in P.
+
+37
+00:05:10,400 --> 00:05:14,300
+The next property, property 12, says...
+
+38
+00:05:14,600 --> 00:05:23,700
+...also the same system: if A and B are in P...
+
+39
+00:05:25,700 --> 00:05:32,400
+...then A * B is in P.
+
+40
+00:05:32,800 --> 00:05:40,600
+What does this mean in short? It means if I have A and B, both in the positive set (both greater than zero), then when you add them together, you get a positive number.
+
+41
+00:05:41,000 --> 00:05:47,900
+Same system: if you multiply them together, you also get a positive number, which will even be greater than the positive number resulting from their sum.
+
+42
+00:05:49,600 --> 00:05:57,900
+Okay, there's a definition we want to work with, but before we work with it, we want to deduce it. Meaning...
+
+43
+00:05:59,400 --> 00:06:14,400
+If we said that... let's say, for example, that A - B is greater than 0.
+
+44
+00:06:15,700 --> 00:06:20,600
+This 'greater than' sign, we treat it exactly the same way as the 'equal' sign. Meaning I can work with it using the same...
+
+45
+00:06:21,600 --> 00:06:27,400
+...the same balance I used with the 'equal' sign. Meaning, I can say...
+
+46
+00:06:28,100 --> 00:06:38,400
+...I want to get rid of this B, so I'll add a positive B to it. So I'll say A - B + B on this side, and the other side will be 0 + B.
+
+47
+00:06:38,800 --> 00:06:45,800
+When I remove these together because they become zero, then A, in this case, is greater than B.
+
+48
+00:06:47,100 --> 00:06:55,400
+So, when A - B is positive (greater than zero), it means that A must be greater than B. And this is the first definition we have.
+
+49
+00:06:55,800 --> 00:07:03,500
+The definition says that... I won't write it in the 'if... then...' format, let's just put it directly. We'll say, for example, that A...
+
+50
+00:07:04,600 --> 00:07:15,400
+...is greater than B means (and it goes both ways, meaning in both directions) that A - B is greater than 0. And the reverse is true.
+
+51
+00:07:15,900 --> 00:07:25,100
+Meaning, if A is less than B, it means that B - A is the one greater than 0.
+
+52
+00:07:25,400 --> 00:07:28,600
+You can even deduce this the same way I deduced the previous one.
+
+53
+00:07:29,500 --> 00:07:33,700
+Okay, let's work through an example.
+
+54
+00:07:35,400 --> 00:07:43,500
+Okay, let's assume that A is less than B, and that B is less than C.
+
+55
+00:07:44,300 --> 00:07:52,400
+This is like what? Like Ahmed is shorter than Mohamed, and Mohamed is shorter than Ali, so surely Ahmed is shorter than Ali. That's what I want to prove.
+
+56
+00:07:52,700 --> 00:07:58,000
+I want to prove that A is less than C. This is the part I want to prove.
+
+57
+00:07:58,600 --> 00:08:08,600
+Okay, let's work on this. From this definition, this means that B - A is greater than 0. In other words, I moved the A to the other side.
+
+58
+00:08:09,400 --> 00:08:15,400
+And this is the same system, it means that C - B is also greater than 0.
+
+59
+00:08:16,100 --> 00:08:24,400
+Okay, this means that this whole business, B - A, since it's greater than 0, it means it's positive. And C - B, since it's greater than 0, means it's positive. Here I'm saying if I have positive and positive, adding them gives me positive.
+
+60
+00:08:24,800 --> 00:08:42,400
+This means I know from these two that (B - A) + (C - B), this expression, is greater than 0.
+
+61
+00:08:43,500 --> 00:08:49,000
+Okay, the B and negative B will cancel out. You are left with C and negative A. So, C - A...
+
+62
+00:08:49,700 --> 00:08:52,000
+...is greater than 0.
+
+63
+00:08:52,600 --> 00:08:56,600
+Move the A to the other side, so C is greater than A.
+
+64
+00:08:57,100 --> 00:09:07,900
+Or, you can derive it directly from the definition here, or you can also say this is the same as A is less than C, which is what I wanted to prove from the beginning.
+
+65
+00:09:09,500 --> 00:09:14,100
+Okay, maybe we can even take another example.
+
+66
+00:09:15,100 --> 00:09:16,100
+Okay.
+
+67
+00:09:17,400 --> 00:09:26,400
+The topic of negative A being positive, or greater than 0, if A was originally less than 0...
+
+68
+00:09:27,600 --> 00:09:32,500
+...is very important for us in our discussion about absolute values. Why?
+
+69
+00:09:33,200 --> 00:09:37,700
+What are absolute values? Let's just quickly review absolute values. Absolute values mean, if I have, for example, a number like 3...
+
+70
+00:09:38,400 --> 00:09:48,000
+...its absolute value, we said, is 3. And if the absolute value of a number like negative 3, it also becomes 3. Okay.
+
+71
+00:09:48,700 --> 00:09:55,800
+Based on this, how do I write the mathematical notation for the absolute value?
+
+72
+00:09:56,800 --> 00:10:07,400
+Using this concept and what's in front of me, I can say that the absolute value of something like a number A will be as follows: it will be A...
+
+73
+00:10:08,400 --> 00:10:11,100
+...or negative A.
+
+74
+00:10:11,700 --> 00:10:17,000
+It is A if A itself was originally greater than or equal to 0.
+
+75
+00:10:17,800 --> 00:10:24,000
+And it will be negative A if A itself was originally less than or equal to 0. Meaning...
+
+76
+00:10:25,300 --> 00:10:39,900
+Here, when 3 was greater than zero, its absolute value was itself. So A was greater than zero, thus its absolute value was A itself, which is the example of 3 here.
+
+77
+00:10:41,100 --> 00:10:54,900
+In this case [referring to -3], negative A [meaning the original number A, which was -3] was less than zero. Consequently, its absolute value was the negative of negative 3, which is negative A (meaning negative of -3). Thus, it gave me the positive of negative 3, which is its inverse.
+
+78
+00:10:55,700 --> 00:11:04,800
+Okay, this part is quite important because we will use it in the upcoming proof of the first theorem. What is this theorem about?
+
+79
+00:11:07,300 --> 00:11:14,300
+The theorem says... this will be Theorem 1.
+
+80
+00:11:15,600 --> 00:11:32,900
+Theorem 1 says that the absolute value of (A + B) must be less than or equal to the absolute value of A alone plus the absolute value of B alone.
+
+81
+00:11:33,400 --> 00:11:43,700
+What does 'theorem' mean? It means someone is stating a rule. And for us to believe this person, follow them, consider this rule correct, and start using it as a law, we must prove it.
+
+82
+00:11:44,400 --> 00:11:47,600
+And that's what we will do in the remaining part of the video.
+
+83
+00:11:48,700 --> 00:12:02,000
+Okay, to prove something like this, we must... look at this value... work on this side alone, and work on this side alone, and compare them.
+
+84
+00:12:03,200 --> 00:12:14,600
+Okay, what are the possibilities for this? The possibilities for A and B, generally, are either they are positive or negative. Of course, it doesn't matter to us if it's zero, because it's known that the absolute value of zero is zero.
+
+85
+00:12:15,300 --> 00:12:22,900
+This is always zero, so we'll exclude it from the calculation for now, meaning we won't include it in the calculation right now. We'll work with greater than zero and less than zero. Okay.
+
+86
+00:12:23,300 --> 00:12:25,000
+Let's draw a line here.
+
+87
+00:12:25,600 --> 00:12:44,300
+The possibilities for A and B are as follows: either A is positive and B is also positive, or A is positive and B is negative, or A is negative and B is positive, or both are negative.
+
+88
+00:12:45,600 --> 00:12:47,200
+Both less than zero.
+
+89
+00:12:49,300 --> 00:12:55,500
+Let's take the first example. Let's number them so they are clear.
+
+90
+00:12:56,500 --> 00:13:00,400
+This is one, two, three, four.
+
+91
+00:13:01,600 --> 00:13:02,500
+Okay.
+
+92
+00:13:05,100 --> 00:13:08,800
+Let's take the first example. A and B are both positive. Okay.
+
+93
+00:13:08,800 --> 00:13:17,300
+Positive + positive, from property number 11, when I add positive to positive, the number inside becomes positive. This means...
+
+94
+00:13:17,600 --> 00:13:26,500
+...since the number inside is positive, I apply this part of the notation. So the absolute value of this whole thing comes out as it is, because its value is positive.
+
+95
+00:13:27,400 --> 00:13:32,800
+Consequently, this part comes down as A + B. Done.
+
+96
+00:13:33,600 --> 00:13:44,900
+This is the same system. A, we said A is positive. Therefore, since it's positive, its result as an absolute value will be positive. And B, the same system. B was positive, we agreed on that here from the first possibility, that it's positive.
+
+97
+00:13:45,100 --> 00:13:54,400
+Consequently, its value also comes out positive, or rather, as it is. So, here A will be A, and B will be B.
+
+98
+00:13:54,700 --> 00:14:05,500
+Therefore, A + B and A + B... these two are equal to each other.
+
+99
+00:14:06,100 --> 00:14:12,300
+And indeed, the theorem tells me that this is less than or equal to this side. So, so far, the theorem holds.
+
+100
+00:14:13,200 --> 00:14:18,000
+Okay, let's take case number four. This was case number one. Let's take case number four.
+
+101
+00:14:18,800 --> 00:14:28,600
+Case number four tells me that both are negative. Okay. When this is negative, and this is negative, negative plus negative gives you negative. So, initially, we will apply...
+
+102
+00:14:29,100 --> 00:14:37,900
+...A + B, we know its result is negative. Therefore, we apply... 'negative' means less than zero, so we take its negative to be the absolute value.
+
+103
+00:14:38,400 --> 00:14:44,800
+So, the business here will be negative (A + B). This is the absolute value of A + B.
+
+104
+00:14:45,000 --> 00:15:02,500
+Why? Because we know that A + B, since A is negative and B is negative, when you add them, you get negative. And as long as this sum inside is negative, you apply this part of the rule because it's less than zero. So its absolute value is its negative. Thus, it's negative (A + B).
+
+105
+00:15:03,400 --> 00:15:16,600
+Same system here. This is A, but we know A is less than zero. Consequently, its absolute value will be negative A. Plus, the absolute value of B, also because it's negative, will be negative B.
+
+106
+00:15:17,800 --> 00:15:22,500
+Okay, let's expand this. This will be negative A, negative B.
+
+107
+00:15:23,400 --> 00:15:27,200
+This is negative A + negative B, meaning negative B.
+
+108
+00:15:27,500 --> 00:15:33,800
+Negative A, negative B; negative A, negative B. This expression equals this expression. So, it also holds.
+
+109
+00:15:34,800 --> 00:15:37,500
+Okay, now let's work on example two.
+
+110
+00:15:41,400 --> 00:15:48,600
+Let's work on the second example or possibility: A is positive and B is negative.
+
+111
+00:15:49,300 --> 00:15:58,900
+Okay, when I have a positive number and I add a negative number to it, will the overall result be positive or negative? The problem is I don't know. It could turn out positive, or it could turn out negative. Let's use a small example.
+
+112
+00:15:59,200 --> 00:16:04,000
+If I said I have 3 + (-1), this equals 2.
+
+113
+00:16:04,500 --> 00:16:17,300
+And if I said 3 + (-4), this equals -1. So this is positive, and this is negative. So I don't know. I might have a number... the result here could be positive or could be negative. So we must work through both possibilities. Okay.
+
+114
+00:16:17,900 --> 00:16:25,100
+Let's first assume it's positive. So let's apply this. In this case, the result here will come out as it is: A + B.
+
+115
+00:16:25,400 --> 00:16:34,700
+Why? Because I assumed the result here is positive, greater than zero. Consequently, its absolute value will come out as it is, the value inside, which is A + B. Okay, on this side...
+
+116
+00:16:34,900 --> 00:16:46,800
+...we are in this example. So A is positive, its absolute value will be A. Plus, B is negative, so its absolute value is its negative. So here, negative B.
+
+117
+00:16:48,800 --> 00:16:56,600
+Okay, so this can be simplified to A - B. And on this side, we have A + B.
+
+118
+00:16:58,000 --> 00:17:06,600
+Okay, let's remove A opposite A. I'm left with B here and negative B here. The question here is...
+
+119
+00:17:06,900 --> 00:17:17,400
+...which one is greater? B or negative B? Let's go back to the original value. What was B originally at the beginning? It was negative, it was less than zero.
+
+120
+00:17:17,800 --> 00:17:25,100
+Consequently, its negative became positive. So this number [-B] is surely greater than this number [B].
+
+121
+00:17:25,400 --> 00:17:41,700
+So B is less than negative B, because B itself was less than zero. Its negative [-B] is definitely positive, based on the properties we discussed. So indeed, B, which came from this side, is less than negative B, which came from this side. Thus, the property indeed holds.
+
+122
+00:17:42,000 --> 00:17:50,200
+This is in the case where the work inside, or the business here, had a value that was positive.
+
+123
+00:17:50,800 --> 00:17:55,100
+Let's try it if it were negative.
+
+124
+00:17:55,600 --> 00:18:01,200
+If it were negative, then this part would apply, so it would be negative (A + B).
+
+125
+00:18:01,800 --> 00:18:12,000
+And in this case, the part here will come out as it is, it will be A - B. Because, as it is, A is positive and B is negative. Okay.
+
+126
+00:18:12,800 --> 00:18:18,500
+The part here then is negative A, negative B. And the other side will be A, negative B.
+
+127
+00:18:19,400 --> 00:18:24,200
+Okay, let's remove negative B with negative B. I'm left with negative A versus A. The question here: is negative A greater...
+
+128
+00:18:25,200 --> 00:18:38,000
+...or is A greater? Let's go back to the origin. What was A? A was positive because it was greater than zero. Consequently, A here... its negative will be the one less than zero. So surely this A is greater than negative A.
+
+129
+00:18:38,300 --> 00:18:44,800
+And indeed, negative A represents this side [- (A+B)], and A represents this side [A + |-B| when result is negative, simplified relative comparison]. Thus, the property also holds.
+
+130
+00:18:46,300 --> 00:18:57,900
+The third possibility, we don't need to work through it because it's the same. All we do is swap: instead of A being positive and B negative, A will be negative and B positive. And it will also turn out the same result in the end.
+
+131
+00:18:58,300 --> 00:19:06,800
+So, by applying the four possibilities for the values of A and B, whether positive or negative, we have proven that the first theorem we have in this course holds in all possibilities.
+
+132
+00:19:11,700 --> 00:19:14,400
+And with that, we have reached the end of Chapter 1.
+
+133
+00:19:15,300 --> 00:19:29,100
+We talked about 12 properties, considered the basic properties of numbers. We started with four properties for addition, مقابلهم (mirrored by) four similar ones with a slight modification for multiplication, and then the ninth property which combined both addition and multiplication.
+
+134
+00:19:29,500 --> 00:19:40,000
+And today, in this video, we talked about the last three properties, which relate to inequalities. Their importance was specifically in differentiating between positive and negative numbers, and their relationship with zero, of course.
+
+135
+00:19:40,700 --> 00:19:46,300
+And we concluded it with the theorem related to the absolute value.
+
+136
+00:19:48,300 --> 00:20:04,500
+The names of the properties - it would be great if you knew them. I won't focus on them in this video; they are presented before you. Each property has a name it's known by. If you can link the name to the property, that's good. If you can't, well, it's not essential.
+
+137
+00:20:04,700 --> 00:20:12,500
+The most important thing is that the property itself and its meaning are present in your mind, and you can recall it when you need it, especially in the videos we will talk about, God willing, in the future.
+
+138
+00:20:13,400 --> 00:20:28,700
+The author concluded his words in the chapter, the first chapter, with a question: Are the 12 properties we discussed, are they all the properties we need to deal with numbers? The answer is no.
+
+139
+00:20:29,700 --> 00:20:34,600
+In reality, not only are the properties insufficient, but the numbers themselves are insufficient.
+
+140
+00:20:35,600 --> 00:20:49,300
+Meaning, we will have to expand our concept of numbers and add new types of numbers. And from here on out, we must be a bit careful in our dealings and our use of the word 'number'. We must understand which type of number we are talking about.
+
+141
+00:20:50,500 --> 00:20:55,200
+The 12 properties have issues when dealing with numbers in their current state.
+
+142
+00:20:55,800 --> 00:21:06,000
+The next chapter will focus on clarifying what the problems are and what shortcoming exists in these 12 properties when dealing with numbers.
+
+143
+00:21:06,500 --> 00:21:12,200
+After that, God willing, Part 2 of the book, specifically from Chapter 3 to Chapter 8, will talk about...
+
+144
+00:21:12,500 --> 00:21:20,300
+...what the new properties are, and what are the new types of numbers that will address the deficiencies we will see, God willing, in the next chapter.
+
+145
+00:21:21,300 --> 00:21:23,400
+See you in the next video, God willing. Peace be upon you.
