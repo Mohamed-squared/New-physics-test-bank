@@ -1134,25 +1134,34 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
     const downloadBtn = document.getElementById('download-formula-pdf-btn');
-    if (!formulaArea || !formulaContent || !downloadBtn || !currentUser) return; // Check currentUser
+    if (!formulaArea || !formulaContent || !downloadBtn || !currentUser) {
+        console.error("Missing UI elements or user context for formula sheet display");
+        return;
+    }
     formulaArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
     formulaContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Formula Sheet...</p></div>`;
-    if (!courseId || !chapterNum) { formulaContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>'; return; }
+    if (!courseId || !chapterNum) {
+        console.error("Missing courseId or chapterNum for formula sheet");
+        formulaContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>';
+        return;
+    }
 
     // --- Check USER cache ---
     let cachedSheet = null;
     if (!forceRegenerate) {
-         try {
-             // Use the user-specific load function
-             cachedSheet = await loadUserFormulaSheet(currentUser.uid, courseId, chapterNum);
-         } catch (error) {
-             console.error("Error loading cached user formula sheet:", error); // Log error but continue
-         }
+        try {
+            console.log(`Attempting to load cached formula sheet for course ${courseId}, chapter ${chapterNum}`);
+            cachedSheet = await loadUserFormulaSheet(currentUser.uid, courseId, chapterNum);
+        } catch (error) {
+            console.error("Error loading cached user formula sheet:", error);
+        }
+    } else {
+        console.log("Force regenerate flag set, skipping cache check");
     }
 
     if (cachedSheet) {
-        console.log("Using cached user formula sheet from Firestore.");
+        console.log("Using cached user formula sheet from Firestore");
         formulaContent.innerHTML = cachedSheet;
         await renderMathIn(formulaContent);
         downloadBtn.classList.remove('hidden');
@@ -1160,24 +1169,26 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
     }
 
     // --- Generate if not cached or forced ---
-    console.log("Generating new formula sheet...");
+    console.log(`Generating new formula sheet for course ${courseId}, chapter ${chapterNum}`);
     try {
         const sheetHtml = await generateFormulaSheet(courseId, chapterNum);
         formulaContent.innerHTML = sheetHtml;
         await renderMathIn(formulaContent);
-        if (!sheetHtml.includes('Error generating') && !sheetHtml.includes('No text content available') && !sheetHtml.includes('bigger than the model')) {
+
+        // Only save and enable download if generation was successful
+        if (!sheetHtml.includes('Error generating') && 
+            !sheetHtml.includes('No text content available') && 
+            !sheetHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
-            // --- Store in USER document ---
             try {
-                 // Use the user-specific save function
-                 await saveUserFormulaSheet(currentUser.uid, courseId, chapterNum, sheetHtml);
+                await saveUserFormulaSheet(currentUser.uid, courseId, chapterNum, sheetHtml);
+                console.log("Successfully saved generated formula sheet to user document");
             } catch (saveError) {
-                 console.error("Failed to save generated formula sheet to user document:", saveError);
-                 // Don't alert user, but log it. Download still works.
+                console.error("Failed to save generated formula sheet:", saveError);
             }
         } else {
-            // Display the error message from generation, don't enable download
-            console.warn("AI generation indicated an issue, not caching or enabling download.");
+            console.warn("AI generation indicated an issue, not caching or enabling download");
+            downloadBtn.classList.add('hidden');
         }
     } catch (error) {
         console.error("Error displaying formula sheet:", error);
@@ -1190,6 +1201,7 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
                 </button>
             </div>
         `;
+        downloadBtn.classList.add('hidden');
     }
 }
 
@@ -1221,25 +1233,34 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
-    if (!summaryArea || !summaryContent || !downloadBtn || !currentUser) return; // Check currentUser
+    if (!summaryArea || !summaryContent || !downloadBtn || !currentUser) {
+        console.error("Missing UI elements or user context for chapter summary display");
+        return;
+    }
     summaryArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
     summaryContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Chapter Summary...</p></div>`;
-    if (!courseId || !chapterNum) { summaryContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>'; return; }
+    if (!courseId || !chapterNum) {
+        console.error("Missing courseId or chapterNum for chapter summary");
+        summaryContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>';
+        return;
+    }
 
     // --- Check USER cache ---
     let cachedSummary = null;
     if (!forceRegenerate) {
-         try {
-             // Use user-specific load function
-             cachedSummary = await loadUserChapterSummary(currentUser.uid, courseId, chapterNum);
-         } catch (error) {
-             console.error("Error loading cached user chapter summary:", error); // Log error but continue
-         }
+        try {
+            console.log(`Attempting to load cached chapter summary for course ${courseId}, chapter ${chapterNum}`);
+            cachedSummary = await loadUserChapterSummary(currentUser.uid, courseId, chapterNum);
+        } catch (error) {
+            console.error("Error loading cached user chapter summary:", error);
+        }
+    } else {
+        console.log("Force regenerate flag set, skipping cache check");
     }
 
     if (cachedSummary) {
-        console.log("Using cached user chapter summary from Firestore.");
+        console.log("Using cached user chapter summary from Firestore");
         summaryContent.innerHTML = cachedSummary;
         await renderMathIn(summaryContent);
         downloadBtn.classList.remove('hidden');
@@ -1247,23 +1268,26 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
     }
 
     // --- Generate if not cached or forced ---
-    console.log("Generating new chapter summary...");
+    console.log(`Generating new chapter summary for course ${courseId}, chapter ${chapterNum}`);
     try {
         const summaryHtml = await generateChapterSummary(courseId, chapterNum);
         summaryContent.innerHTML = summaryHtml;
         await renderMathIn(summaryContent);
-        if (!summaryHtml.includes('Error generating') && !summaryHtml.includes('No text content available') && !summaryHtml.includes('bigger than the model')) {
+
+        // Only save and enable download if generation was successful
+        if (!summaryHtml.includes('Error generating') && 
+            !summaryHtml.includes('No text content available') && 
+            !summaryHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
-            // --- Store in USER document ---
-             try {
-                 // Use user-specific save function
+            try {
                 await saveUserChapterSummary(currentUser.uid, courseId, chapterNum, summaryHtml);
-             } catch (saveError) {
-                  console.error("Failed to save generated chapter summary to user document:", saveError);
-                  // Don't alert user, but log it. Download still works.
-             }
+                console.log("Successfully saved generated chapter summary to user document");
+            } catch (saveError) {
+                console.error("Failed to save generated chapter summary:", saveError);
+            }
         } else {
-             console.warn("AI generation indicated an issue with summary, not caching or enabling download.");
+            console.warn("AI generation indicated an issue, not caching or enabling download");
+            downloadBtn.classList.add('hidden');
         }
     } catch (error) {
         console.error("Error displaying chapter summary:", error);
@@ -1276,6 +1300,7 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
                 </button>
             </div>
         `;
+        downloadBtn.classList.add('hidden');
     }
 }
 

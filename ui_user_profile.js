@@ -137,30 +137,57 @@ export function showUserProfileDashboard() {
                 // This callback receives the cropped image data URL
                 // Update the preview immediately
                 const previewImg = document.getElementById('profile-pic-preview');
+                const originalSrc = previewImg?.src; // Store original src for potential reversion
                 if (previewImg) previewImg.src = imageDataUrl;
-                // We need to save this URL to Firestore.
-                // Option 1: Save immediately here (simpler, but separate from main profile save)
-                // Option 2: Store it temporarily and save with the main "Save Changes" button (more complex state mgmt)
-                // Let's go with Option 1 for simplicity now.
-                 showLoading("Uploading profile picture...");
-                 try {
-                     // In a real app, upload the blob to Firebase Storage and get the URL.
-                     // For this example, we'll just store the Data URL directly in Firestore (not recommended for large images/production).
-                     if (imageDataUrl.length > 1000000) { // Simple check for large data URL (~1MB)
-                          throw new Error("Cropped image data is too large to store directly.");
-                     }
-                     await db.collection('users').doc(currentUser.uid).update({ photoURL: imageDataUrl });
-                     await auth.currentUser.updateProfile({ photoURL: imageDataUrl }); // Update auth profile too
-                     await fetchAndUpdateUserInfo(auth.currentUser); // Refresh header
-                     hideLoading();
-                     alert("Profile picture updated!");
-                 } catch (uploadError) {
-                     hideLoading();
-                     console.error("Error updating profile picture:", uploadError);
-                     alert(`Failed to update profile picture: ${uploadError.message}`);
-                      // Revert preview if upload failed?
-                     // previewImg.src = currentPhotoURL || DEFAULT_PROFILE_PIC_URL;
-                 }
+
+                showLoading("Uploading profile picture...");
+                try {
+                    // Check image size before attempting upload
+                    if (imageDataUrl.length > 1000000) { // ~1MB limit
+                        throw new Error("Image is too large (max ~1MB). Please try a smaller image.");
+                    }
+
+                    // Update Firestore and Auth profile
+                    await Promise.all([
+                        db.collection('users').doc(currentUser.uid).update({ photoURL: imageDataUrl }),
+                        auth.currentUser.updateProfile({ photoURL: imageDataUrl })
+                    ]);
+
+                    // Refresh header with latest data
+                    await fetchAndUpdateUserInfo(auth.currentUser);
+                    
+                    // Show success message
+                    const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Profile picture updated successfully!</p></div>`;
+                    const msgContainer = document.createElement('div');
+                    msgContainer.innerHTML = successMsgHtml;
+                    document.body.appendChild(msgContainer);
+                    setTimeout(() => { msgContainer.remove(); }, 4000);
+
+                } catch (error) {
+                    console.error("Error updating profile picture:", error);
+                    
+                    // Revert preview image if update failed
+                    if (previewImg && originalSrc) {
+                        previewImg.src = originalSrc;
+                    }
+
+                    // Show error message
+                    let errorMessage = "Failed to update profile picture.";
+                    if (error.code === 'auth/invalid-profile-attribute') {
+                        errorMessage = "Invalid image format or size. Please try a different image.";
+                    } else if (error.message) {
+                        errorMessage = error.message;
+                    }
+                    
+                    const errorMsgHtml = `<div class="toast-notification toast-error animate-fade-in"><p class="font-medium">${errorMessage}</p></div>`;
+                    const msgContainer = document.createElement('div');
+                    msgContainer.innerHTML = errorMsgHtml;
+                    document.body.appendChild(msgContainer);
+                    setTimeout(() => { msgContainer.remove(); }, 6000);
+
+                } finally {
+                    hideLoading();
+                }
             }));
         }
 

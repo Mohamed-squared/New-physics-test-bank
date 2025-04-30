@@ -922,39 +922,51 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
 const userFormulaSheetSubCollection = "userFormulaSheets";
 
 export async function saveUserFormulaSheet(userId, courseId, chapterNum, htmlContent) {
-    if (!db || !userId) return false;
+    if (!db || !userId) {
+        console.error("Cannot save formula sheet: DB or userId missing");
+        return false;
+    }
     const docId = `${courseId}_ch${chapterNum}`;
     const sheetRef = db.collection('users').doc(userId)
                        .collection(userFormulaSheetSubCollection).doc(docId);
     try {
+        console.log(`Saving formula sheet for ${docId} to user ${userId}`);
         await sheetRef.set({
-            // No need to store courseId/chapterNum again, it's in the docId/path
-            content: htmlContent, // Store generated HTML
+            content: htmlContent,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log(`Saved USER formula sheet for ${docId}`);
+        console.log(`Successfully saved formula sheet for ${docId}`);
         return true;
     } catch (error) {
-        console.error(`Error saving USER formula sheet for ${docId}:`, error);
+        console.error(`Error saving formula sheet for ${docId}:`, error);
         return false;
     }
 }
 
 export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
-    if (!db || !userId) return null;
+    if (!db || !userId) {
+        console.error("Cannot load formula sheet: DB or userId missing");
+        return null;
+    }
     const docId = `${courseId}_ch${chapterNum}`;
     const sheetRef = db.collection('users').doc(userId)
                        .collection(userFormulaSheetSubCollection).doc(docId);
     try {
+        console.log(`Attempting to load formula sheet ${docId} for user ${userId}`);
         const docSnap = await sheetRef.get();
         if (docSnap.exists) {
-            console.log(`Loaded USER formula sheet for ${docId}`);
-            return docSnap.data().content; // Return the stored HTML
+            const data = docSnap.data();
+            if (!data.content) {
+                console.warn(`Formula sheet ${docId} exists but has no content`);
+                return null;
+            }
+            console.log(`Successfully loaded formula sheet for ${docId}`);
+            return data.content;
         }
-        console.log(`No cached USER formula sheet found for ${docId}`);
+        console.log(`No cached formula sheet found for ${docId}`);
         return null;
     } catch (error) {
-        console.error(`Error loading USER formula sheet for ${docId}:`, error);
+        console.error(`Error loading formula sheet for ${docId}:`, error);
         return null;
     }
 }
@@ -964,38 +976,51 @@ export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
 const userSummarySubCollection = "userChapterSummaries";
 
 export async function saveUserChapterSummary(userId, courseId, chapterNum, htmlContent) {
-    if (!db || !userId) return false;
+    if (!db || !userId) {
+        console.error("Cannot save chapter summary: DB or userId missing");
+        return false;
+    }
     const docId = `${courseId}_ch${chapterNum}`;
     const summaryRef = db.collection('users').doc(userId)
                         .collection(userSummarySubCollection).doc(docId);
     try {
+        console.log(`Saving chapter summary for ${docId} to user ${userId}`);
         await summaryRef.set({
-            content: htmlContent, // Store generated HTML
+            content: htmlContent,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log(`Saved USER chapter summary for ${docId}`);
+        console.log(`Successfully saved chapter summary for ${docId}`);
         return true;
     } catch (error) {
-        console.error(`Error saving USER chapter summary for ${docId}:`, error);
+        console.error(`Error saving chapter summary for ${docId}:`, error);
         return false;
     }
 }
 
 export async function loadUserChapterSummary(userId, courseId, chapterNum) {
-    if (!db || !userId) return null;
+    if (!db || !userId) {
+        console.error("Cannot load chapter summary: DB or userId missing");
+        return null;
+    }
     const docId = `${courseId}_ch${chapterNum}`;
-     const summaryRef = db.collection('users').doc(userId)
+    const summaryRef = db.collection('users').doc(userId)
                         .collection(userSummarySubCollection).doc(docId);
     try {
+        console.log(`Attempting to load chapter summary ${docId} for user ${userId}`);
         const docSnap = await summaryRef.get();
         if (docSnap.exists) {
-            console.log(`Loaded USER chapter summary for ${docId}`);
-            return docSnap.data().content; // Return stored HTML
+            const data = docSnap.data();
+            if (!data.content) {
+                console.warn(`Chapter summary ${docId} exists but has no content`);
+                return null;
+            }
+            console.log(`Successfully loaded chapter summary for ${docId}`);
+            return data.content;
         }
-        console.log(`No cached USER chapter summary found for ${docId}`);
+        console.log(`No cached chapter summary found for ${docId}`);
         return null;
     } catch (error) {
-        console.error(`Error loading USER chapter summary for ${docId}:`, error);
+        console.error(`Error loading chapter summary for ${docId}:`, error);
         return null;
     }
 }
@@ -1101,6 +1126,129 @@ export async function loadSharedNotes(courseId, chapterNum) {
     } catch (error) {
         console.error(`Error loading shared notes for ${courseId} Ch ${chapterNum}:`, error);
         return [];
+    }
+}
+
+// --- Admin Functions for Generated Content Deletion ---
+export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Cannot delete formula sheet: Admin privileges required");
+        return false;
+    }
+    if (!userId || !courseId || !chapterNum) {
+        console.error("Cannot delete formula sheet: Missing required parameters");
+        return false;
+    }
+
+    const docId = `${courseId}_ch${chapterNum}`;
+    const sheetRef = db.collection('users').doc(userId)
+                      .collection(userFormulaSheetSubCollection).doc(docId);
+
+    try {
+        console.log(`Admin attempting to delete formula sheet ${docId} for user ${userId}`);
+        await sheetRef.delete();
+        console.log(`Successfully deleted formula sheet ${docId} for user ${userId}`);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting formula sheet ${docId} for user ${userId}:`, error);
+        return false;
+    }
+}
+
+export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Cannot delete chapter summary: Admin privileges required");
+        return false;
+    }
+    if (!userId || !courseId || !chapterNum) {
+        console.error("Cannot delete chapter summary: Missing required parameters");
+        return false;
+    }
+
+    const docId = `${courseId}_ch${chapterNum}`;
+    const summaryRef = db.collection('users').doc(userId)
+                        .collection(userSummarySubCollection).doc(docId);
+
+    try {
+        console.log(`Admin attempting to delete chapter summary ${docId} for user ${userId}`);
+        await summaryRef.delete();
+        console.log(`Successfully deleted chapter summary ${docId} for user ${userId}`);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting chapter summary ${docId} for user ${userId}:`, error);
+        return false;
+    }
+}
+
+// --- NEW: Delete All Feedback Messages ---
+export async function deleteAllFeedbackMessages() {
+    if (!db) {
+        throw new Error("Cannot delete feedback: DB not initialized");
+    }
+
+    try {
+        const snapshot = await db.collection('feedback')
+                               .limit(500) // Reasonable limit for this app scale
+                               .get();
+
+        if (snapshot.empty) {
+            return 0; // No messages to delete
+        }
+
+        const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(deletePromises);
+        
+        console.log(`Successfully deleted ${snapshot.size} feedback messages`);
+        return snapshot.size;
+    } catch (error) {
+        console.error("Error deleting all feedback messages:", error);
+        throw error;
+    }
+}
+
+// --- NEW: Delete All Exam Issues ---
+export async function deleteAllExamIssues() {
+    if (!db) {
+        throw new Error("Cannot delete exam issues: DB not initialized");
+    }
+
+    try {
+        const snapshot = await db.collection('examIssues')
+                               .limit(500) // Reasonable limit for this app scale
+                               .get();
+
+        if (snapshot.empty) {
+            return 0; // No issues to delete
+        }
+
+        const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
+        await Promise.all(deletePromises);
+        
+        console.log(`Successfully deleted ${snapshot.size} exam issues`);
+        return snapshot.size;
+    } catch (error) {
+        console.error("Error deleting all exam issues:", error);
+        throw error;
+    }
+}
+
+// --- NEW: Delete Inbox Message ---
+export async function deleteInboxMessage(userId, messageId) {
+    if (!db || !userId || !messageId) {
+        console.error("Cannot delete inbox message: Missing DB, userId, or messageId");
+        return false;
+    }
+
+    const messageRef = db.collection('users').doc(userId)
+                        .collection('inbox').doc(messageId);
+
+    try {
+        await messageRef.delete();
+        console.log(`Successfully deleted inbox message ${messageId} for user ${userId}`);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting inbox message ${messageId}:`, error);
+        return false;
     }
 }
 

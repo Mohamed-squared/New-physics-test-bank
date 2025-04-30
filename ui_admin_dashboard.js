@@ -1,5 +1,3 @@
-
-
 // ui_admin_dashboard.js
 
 import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added updateGlobalCourseData
@@ -7,7 +5,7 @@ import { ADMIN_UID, YOUTUBE_API_KEY } from './config.js'; // Import YouTube API 
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 // MODIFIED: Removed deleteFeedbackMessage from this import
-import { sendAdminReply, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, updateCourseDefinition } from './firebase_firestore.js'; // Import badge handlers & course definition update
+import { sendAdminReply, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, updateCourseDefinition, deleteUserFormulaSheet, deleteUserChapterSummary, deleteAllFeedbackMessages, deleteAllExamIssues } from './firebase_firestore.js'; // Import badge handlers & course definition update
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm } from './ui_courses.js';
 // Use the imported escapeHtml from utils.js
@@ -41,7 +39,10 @@ export function showAdminDashboard() {
                     <div id="admin-feedback-area" class="max-h-96 overflow-y-auto pr-2">
                         <p class="text-muted text-sm">Loading feedback...</p>
                     </div>
-                     <button onclick="loadFeedbackForAdmin()" class="btn-secondary-small text-xs mt-3">Refresh Feedback</button>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="loadFeedbackForAdmin()" class="btn-secondary-small text-xs">Refresh Feedback</button>
+                        <button onclick="window.confirmDeleteAllFeedback()" class="btn-danger-small text-xs">Delete ALL Feedback</button>
+                    </div>
                 </div>
 
                 <!-- Course Management Card -->
@@ -101,6 +102,30 @@ export function showAdminDashboard() {
                               <button id="admin-unassign-video-btn" onclick="window.handleUnassignVideoFromChapter()" class="btn-danger-small text-xs" disabled>Unassign Selected</button>
                          </div>
                      </div>
+                </div>
+
+                <!-- Delete Generated Content Card -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Delete Generated Content</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label for="admin-delete-content-user" class="block text-sm font-medium mb-1">User ID or Email</label>
+                            <input type="text" id="admin-delete-content-user" class="w-full text-sm" placeholder="Enter User ID or Email...">
+                        </div>
+                        <div>
+                            <label for="admin-delete-content-course" class="block text-sm font-medium mb-1">Course ID</label>
+                            <input type="text" id="admin-delete-content-course" class="w-full text-sm" placeholder="e.g., fop_physics_v1">
+                        </div>
+                        <div>
+                            <label for="admin-delete-content-chapter" class="block text-sm font-medium mb-1">Chapter Number</label>
+                            <input type="number" id="admin-delete-content-chapter" class="w-full text-sm" min="1" placeholder="e.g., 1">
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <button onclick="window.handleDeleteUserFormulaSheetAdmin()" class="btn-danger-small text-xs">Delete Formula Sheet</button>
+                        <button onclick="window.handleDeleteUserChapterSummaryAdmin()" class="btn-danger-small text-xs">Delete Chapter Summary</button>
+                    </div>
+                    <div id="admin-delete-content-status" class="mt-3 text-sm"></div>
                 </div>
 
             </div>
@@ -875,5 +900,135 @@ window.promptAdminReply = promptAdminReply; // Make sure this is assigned if use
 window.handleCourseApproval = handleCourseApproval; // From ui_courses.js
 window.showCourseDetails = showCourseDetails; // From ui_courses.js
 window.showEditCourseForm = showEditCourseForm; // From ui_courses.js
+
+// Add the new handler functions at the end of the file before the window assignments
+
+async function handleDeleteUserFormulaSheetAdmin() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Admin privileges required.");
+        return;
+    }
+
+    const userInput = document.getElementById('admin-delete-content-user')?.value.trim();
+    const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
+    const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
+    const statusArea = document.getElementById('admin-delete-content-status');
+
+    if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
+        statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
+        return;
+    }
+
+    try {
+        showLoading("Finding user...");
+        const targetUserId = await findUserId(userInput);
+        if (!targetUserId) {
+            hideLoading();
+            statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete the formula sheet for:\nUser: ${userInput}\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
+            hideLoading();
+            return;
+        }
+
+        const success = await deleteUserFormulaSheet(targetUserId, courseId, chapterNum);
+        hideLoading();
+
+        if (success) {
+            statusArea.innerHTML = '<p class="text-green-500">Formula sheet deleted successfully.</p>';
+        } else {
+            statusArea.innerHTML = '<p class="text-red-500">Failed to delete formula sheet. Check console for details.</p>';
+        }
+    } catch (error) {
+        hideLoading();
+        console.error("Error in handleDeleteUserFormulaSheetAdmin:", error);
+        statusArea.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+    }
+}
+
+async function handleDeleteUserChapterSummaryAdmin() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Admin privileges required.");
+        return;
+    }
+
+    const userInput = document.getElementById('admin-delete-content-user')?.value.trim();
+    const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
+    const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
+    const statusArea = document.getElementById('admin-delete-content-status');
+
+    if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
+        statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
+        return;
+    }
+
+    try {
+        showLoading("Finding user...");
+        const targetUserId = await findUserId(userInput);
+        if (!targetUserId) {
+            hideLoading();
+            statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to delete the chapter summary for:\nUser: ${userInput}\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
+            hideLoading();
+            return;
+        }
+
+        const success = await deleteUserChapterSummary(targetUserId, courseId, chapterNum);
+        hideLoading();
+
+        if (success) {
+            statusArea.innerHTML = '<p class="text-green-500">Chapter summary deleted successfully.</p>';
+        } else {
+            statusArea.innerHTML = '<p class="text-red-500">Failed to delete chapter summary. Check console for details.</p>';
+        }
+    } catch (error) {
+        hideLoading();
+        console.error("Error in handleDeleteUserChapterSummaryAdmin:", error);
+        statusArea.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+    }
+}
+
+// Add new functions to window scope
+window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin;
+window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin;
+
+// --- NEW: Delete All Feedback ---
+export function confirmDeleteAllFeedback() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Admin privileges required.");
+        return;
+    }
+
+    if (confirm("⚠️ WARNING: This will permanently delete ALL feedback messages AND exam issue reports. This action cannot be undone. Are you absolutely sure?")) {
+        handleDeleteAllFeedback();
+    }
+}
+window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
+
+async function handleDeleteAllFeedback() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+
+    showLoading("Deleting all feedback...");
+    try {
+        // Delete both feedback and exam issues
+        const [feedbackCount, issuesCount] = await Promise.all([
+            deleteAllFeedbackMessages(),
+            deleteAllExamIssues()
+        ]);
+
+        hideLoading();
+        alert(`Successfully deleted:\n- ${feedbackCount} feedback messages\n- ${issuesCount} exam issues`);
+        loadFeedbackForAdmin(); // Refresh the list
+    } catch (error) {
+        hideLoading();
+        console.error("Error deleting all feedback:", error);
+        alert(`Failed to delete all feedback: ${error.message}`);
+    }
+}
 
 // --- END OF FILE ui_admin_dashboard.js ---

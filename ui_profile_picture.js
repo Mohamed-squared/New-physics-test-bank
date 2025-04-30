@@ -208,8 +208,8 @@ async function handleCropConfirm() {
 
         canvas.toBlob(async (blob) => {
             if (!blob) {
-                 hideLoading(); // Hide loading on blob error
-                 throw new Error("Failed to create image blob.");
+                hideLoading(); // Hide loading on blob error
+                throw new Error("Failed to create image blob.");
             }
 
             const reader = new FileReader();
@@ -217,31 +217,37 @@ async function handleCropConfirm() {
                 const dataUrl = reader.result;
                 if (!dataUrl) {
                     hideLoading(); // Hide loading on reader error
-                     throw new Error("Failed to read blob as Data URL.");
+                    throw new Error("Failed to read blob as Data URL.");
                 }
+
+                // Check data URL size
+                if (dataUrl.length > 1000000) { // ~1MB limit
+                    hideModalAndLoading();
+                    throw new Error("Cropped image is too large (max ~1MB). Please crop a smaller area or use a smaller source image.");
+                }
+
                 try {
-                    await onCropCompleteCallback(dataUrl); // Call the original callback
-                    // Loading/modal hiding is handled within the callback's final success/error
-                    hideModalAndLoading(); // Ensure modal closes and loading stops on success here
-                } catch (error) {
-                    console.error("Error in onCropCompleteCallback:", error);
-                     hideModalAndLoading(); // Ensure modal closes and loading stops on callback error
-                    throw new Error("Failed to update profile: " + error.message);
+                    await onCropCompleteCallback(dataUrl);
+                    hideModalAndLoading(); // Ensure modal closes and loading stops on success
+                } catch (callbackError) {
+                    console.error("Error in onCropCompleteCallback:", callbackError);
+                    hideModalAndLoading();
+                    throw new Error("Failed to update profile: " + callbackError.message);
                 }
             };
             reader.onerror = (error) => {
-                 console.error("FileReader error:", error);
-                  hideModalAndLoading(); // Ensure modal closes and loading stops on reader error
-                 throw new Error("Failed to read cropped image data.");
-            }
+                console.error("FileReader error:", error);
+                hideModalAndLoading();
+                throw new Error("Failed to read cropped image data.");
+            };
             reader.readAsDataURL(blob);
 
         }, 'image/jpeg', 0.9); // Use JPEG with quality 0.9
 
     } catch (error) {
-         console.error("Error during cropping or callback:", error);
-         alert("Error processing image: " + error.message);
-         hideModalAndLoading(); // Ensure modal closes and loading stops on general error
+        console.error("Error during cropping or callback:", error);
+        alert("Error processing image: " + error.message);
+        hideModalAndLoading();
     }
 }
 

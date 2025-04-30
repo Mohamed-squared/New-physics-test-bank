@@ -667,6 +667,7 @@ async function deleteCompletedExamV2(examId) {
 
          hideLoading();
          showExamsDashboard();
+         window.showProgressDashboard(); // Refresh progress dashboard after deletion
 
          const successMsgHtml = `<div class="toast-notification toast-warning animate-fade-in"><p>Exam ${escapeHtml(examId)} history deleted.</p>${appDataModified ? `<p class="text-xs">${questionsRestoredCount} MCQs restored to available pool.</p>` : ''}</div>`;
          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
@@ -718,6 +719,7 @@ async function resetAvailableQuestionsForSubject() {
              const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Available questions reset for ${escapeHtml(subjectName)}.</p></div>`;
              const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 4000);
              showExamsDashboard();
+             window.showProgressDashboard(); // Refresh progress dashboard after reset
          } else {
              hideLoading();
              alert("No changes needed. Available questions already seem complete.");

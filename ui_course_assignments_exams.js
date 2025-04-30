@@ -9,8 +9,10 @@ import { showLoading, hideLoading, escapeHtml, getFormattedDate, daysBetween } f
 import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
-// *** MODIFIED: Import EXAM_DURATIONS_MINUTES and EXAM_QUESTION_COUNTS instead of the old variable ***
-import { EXAM_QUESTION_COUNTS, EXAM_DURATIONS_MINUTES, FOP_COURSE_ID, SKIP_EXAM_PASSING_PERCENT, DEFAULT_MCQ_PROBLEM_RATIO } from './config.js'; // Added FOP_COURSE_ID, thresholds, ratio
+// *** MODIFIED: Import exam history functions ***
+import { getExamHistory } from './exam_storage.js';
+// *** MODIFIED: Import MAX_MARKS constants ***
+import { EXAM_QUESTION_COUNTS, EXAM_DURATIONS_MINUTES, FOP_COURSE_ID, SKIP_EXAM_PASSING_PERCENT, DEFAULT_MCQ_PROBLEM_RATIO, MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ } from './config.js';
 
 // Helper to fetch markdown content (needed for extracting MCQs)
 async function getSubjectMarkdown(subject) {
@@ -41,120 +43,178 @@ async function getSubjectMarkdown(subject) {
     }
 }
 
-
-export function showCourseAssignmentsExams(courseId = activeCourseId) {
-    if (!currentUser || !courseId) return;
-    setActiveSidebarLink('showCurrentAssignmentsExams', 'sidebar-course-nav'); // Corrected ID
-
-    const progress = userCourseProgressMap.get(courseId);
-    const courseDef = globalCourseDataMap.get(courseId);
-    if (!progress || !courseDef) {
-        displayContent(`<p class="text-red-500 p-4">Error: Could not load data for course ID: ${courseId}.</p>`, 'course-dashboard-area');
-        return;
+// Helper function to render course exam history list
+function renderCourseExamHistoryList(exams) {
+    if (!exams || exams.length === 0) {
+        return '<p class="text-sm text-muted text-center">No completed exams found.</p>';
     }
-     // MODIFIED: Check viewer mode
-     const isViewer = progress.enrollmentMode === 'viewer';
-     if (isViewer) {
-         displayContent(`<div class="content-card text-center p-6"><p class="text-purple-700 dark:text-purple-300 font-medium">Assignments and Exams are not available in Viewer Mode.</p><button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary mt-4">Back to Dashboard</button></div>`, 'course-dashboard-area');
-         return; // Don't show assignments/exams for viewers
-     }
 
-    const enrollmentDate = progress.enrollmentDate instanceof Date && !isNaN(progress.enrollmentDate)
-                         ? progress.enrollmentDate
-                         : null; // Ensure it's a valid Date object
+    let html = '<ul class="space-y-2">';
+    exams.forEach(exam => {
+        const score = exam.score || 0;
+        const maxScore = exam.maxScore || 0;
+        const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
+        const date = new Date(exam.timestamp).toLocaleString();
+        const typeDisplay = exam.type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    const today = new Date(); today.setHours(0,0,0,0);
-    const validEnrollmentDate = enrollmentDate instanceof Date;
-    const daysElapsed = validEnrollmentDate ? daysBetween(enrollmentDate, today) : -1; // Use helper, handle invalid date
+        html += `
+            <li class="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md">
+                <div>
+                    <p class="font-medium">${escapeHtml(typeDisplay)}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">${date}</p>
+                    <p class="text-sm ${parseFloat(percentage) >= 70 ? 'text-green-600' : 'text-red-600'}">${percentage}% (${score.toFixed(1)}/${maxScore.toFixed(1)} pts)</p>
+                </div>
+                <button onclick="window.showExamReviewUI('${currentUser.uid}', '${exam.id}')" class="btn-secondary-small">
+                    View Review
+                </button>
+            </li>`;
+    });
+    html += '</ul>';
+    return html;
+}
 
-    // --- NEW: Use combined studied logic ---
-    const studiedChaptersSet = new Set(progress.courseStudiedChapters || []);
-    const totalChapters = courseDef?.totalChapters || 1;
-    if (progress.lastSkipExamScore) {
-        for (let i = 1; i <= totalChapters; i++) {
-            const skipScore = progress.lastSkipExamScore[i] || progress.lastSkipExamScore[String(i)];
-            // Use config value for passing threshold
-            if (skipScore !== undefined && skipScore !== null && skipScore >= (courseDef.skipExamPassingPercent || 70)) {
-                studiedChaptersSet.add(i);
+export async function showCourseAssignmentsExams(courseId = activeCourseId) {
+    if (!currentUser || !courseId) return;
+    setActiveSidebarLink('showCurrentAssignmentsExams', 'sidebar-course-nav');
+
+    showLoading("Loading course assignments and exams...");
+
+    try {
+        const progress = userCourseProgressMap.get(courseId);
+        const courseDef = globalCourseDataMap.get(courseId);
+        if (!progress || !courseDef) {
+            hideLoading();
+            displayContent(`<p class="text-red-500 p-4">Error: Could not load data for course ID: ${courseId}.</p>`, 'course-dashboard-area');
+            return;
+        }
+
+        // Fetch completed exams for this course
+        const completedCourseExams = await getExamHistory(currentUser.uid, courseId, 'course');
+
+        // MODIFIED: Check viewer mode
+        const isViewer = progress.enrollmentMode === 'viewer';
+        if (isViewer) {
+            displayContent(`<div class="content-card text-center p-6"><p class="text-purple-700 dark:text-purple-300 font-medium">Assignments and Exams are not available in Viewer Mode.</p><button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary mt-4">Back to Dashboard</button></div>`, 'course-dashboard-area');
+            return; // Don't show assignments/exams for viewers
+        }
+
+        const enrollmentDate = progress.enrollmentDate instanceof Date && !isNaN(progress.enrollmentDate)
+                             ? progress.enrollmentDate
+                             : null; // Ensure it's a valid Date object
+
+        const today = new Date(); today.setHours(0,0,0,0);
+        const validEnrollmentDate = enrollmentDate instanceof Date;
+        const daysElapsed = validEnrollmentDate ? daysBetween(enrollmentDate, today) : -1; // Use helper, handle invalid date
+
+        // --- NEW: Use combined studied logic ---
+        const studiedChaptersSet = new Set(progress.courseStudiedChapters || []);
+        const totalChapters = courseDef?.totalChapters || 1;
+        if (progress.lastSkipExamScore) {
+            for (let i = 1; i <= totalChapters; i++) {
+                const skipScore = progress.lastSkipExamScore[i] || progress.lastSkipExamScore[String(i)];
+                // Use config value for passing threshold
+                if (skipScore !== undefined && skipScore !== null && skipScore >= (courseDef.skipExamPassingPercent || 70)) {
+                    studiedChaptersSet.add(i);
+                }
             }
         }
-    }
-    const totalChaptersStudied = studiedChaptersSet.size;
+        const totalChaptersStudied = studiedChaptersSet.size;
 
-    // --- Generate Lists ---
-    // Assignments
-    let assignmentsHtml = `<h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Daily Assignments</h3><ul class="space-y-2">`;
-    if (!validEnrollmentDate) {
-         assignmentsHtml += `<li class="text-sm text-red-500">Cannot determine assignments due to invalid enrollment date.</li>`;
-    } else {
-        const maxAssignmentsToShow = Math.min(courseDef.totalChapters, daysElapsed + 1); // Show assignments up to today
-        for (let i = 1; i <= maxAssignmentsToShow; i++) {
-            const dateForAssignment = new Date(enrollmentDate); dateForAssignment.setDate(enrollmentDate.getDate() + i - 1);
-            const dateStr = getFormattedDate(dateForAssignment);
-            const assignmentId = `day${i}`;
-            const score = progress.assignmentScores?.[assignmentId];
-            // Can start assignment 'i' if chapter 'i' is in the studied set (or if it's day 1)
-            const canStart = studiedChaptersSet.has(i) || i === 1;
+        // --- Generate Lists ---
+        // Assignments
+        let assignmentsHtml = `<h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Daily Assignments</h3><ul class="space-y-2">`;
+        if (!validEnrollmentDate) {
+             assignmentsHtml += `<li class="text-sm text-red-500">Cannot determine assignments due to invalid enrollment date.</li>`;
+        } else {
+            const maxAssignmentsToShow = Math.min(courseDef.totalChapters, daysElapsed + 1); // Show assignments up to today
+            for (let i = 1; i <= maxAssignmentsToShow; i++) {
+                const dateForAssignment = new Date(enrollmentDate); dateForAssignment.setDate(enrollmentDate.getDate() + i - 1);
+                const dateStr = getFormattedDate(dateForAssignment);
+                const assignmentId = `day${i}`;
+                const score = progress.assignmentScores?.[assignmentId];
+                // Can start assignment 'i' if chapter 'i' is in the studied set (or if it's day 1)
+                const canStart = studiedChaptersSet.has(i) || i === 1;
 
-            if (score !== undefined) { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - Completed (Score: ${score.toFixed(1)}%)</li>`; }
-            else if (canStart) { assignmentsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'assignment', '${assignmentId}')">Start Assignment ${i}</button> (${dateStr})</li>`; }
-            else { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - (Study Chapter ${i} first)</li>`; }
+                if (score !== undefined) { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+                else if (canStart) { assignmentsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'assignment', '${assignmentId}')">Start Assignment ${i}</button> (${dateStr})</li>`; }
+                else { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - (Study Chapter ${i} first)</li>`; }
+            }
+            if (maxAssignmentsToShow <= 0) assignmentsHtml += `<li class="text-sm text-muted">No assignments generated yet.</li>`;
         }
-        if (maxAssignmentsToShow <= 0) assignmentsHtml += `<li class="text-sm text-muted">No assignments generated yet.</li>`;
-    }
-    assignmentsHtml += `</ul>`;
+        assignmentsHtml += `</ul>`;
 
-    // Weekly Exams
-    let weeklyExamsHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Weekly Exams</h3><ul class="space-y-2">`;
-    if (!validEnrollmentDate) {
-         weeklyExamsHtml += `<li class="text-sm text-red-500">Cannot determine exams due to invalid enrollment date.</li>`;
-    } else {
-        const currentWeek = Math.floor(daysElapsed / 7) + 1;
-        const totalPossibleWeeks = Math.ceil(courseDef.totalChapters / 7); // Estimate total weeks needed
-        for (let i = 1; i <= totalPossibleWeeks; i++) {
-             const weeklyExamId = `week${i}`; const score = progress.weeklyExamScores?.[weeklyExamId];
-             const isDue = daysElapsed >= (i * 7) - 1 ; // Due at end of week i (day 7, 14, 21...)
-             if (score !== undefined) { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
-             else if (isDue) { weeklyExamsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'weekly_exam', '${weeklyExamId}')">Start Weekly Exam ${i}</button></li>`; }
-             else { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} (Available end of week ${i})</li>`; }
+        // Weekly Exams
+        let weeklyExamsHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Weekly Exams</h3><ul class="space-y-2">`;
+        if (!validEnrollmentDate) {
+             weeklyExamsHtml += `<li class="text-sm text-red-500">Cannot determine exams due to invalid enrollment date.</li>`;
+        } else {
+            const currentWeek = Math.floor(daysElapsed / 7) + 1;
+            const totalPossibleWeeks = Math.ceil(courseDef.totalChapters / 7); // Estimate total weeks needed
+            for (let i = 1; i <= totalPossibleWeeks; i++) {
+                 const weeklyExamId = `week${i}`; const score = progress.weeklyExamScores?.[weeklyExamId];
+                 const isDue = daysElapsed >= (i * 7) - 1 ; // Due at end of week i (day 7, 14, 21...)
+                 if (score !== undefined) { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+                 else if (isDue) { weeklyExamsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'weekly_exam', '${weeklyExamId}')">Start Weekly Exam ${i}</button></li>`; }
+                 else { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} (Available end of week ${i})</li>`; }
+            }
+            if (totalPossibleWeeks === 0) weeklyExamsHtml += `<li class="text-sm text-muted">No weekly exams applicable.</li>`;
         }
-        if (totalPossibleWeeks === 0) weeklyExamsHtml += `<li class="text-sm text-muted">No weekly exams applicable.</li>`;
+        weeklyExamsHtml += `</ul>`;
+
+        // Midcourse Exams
+        let midcourseHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Midcourse Exams</h3><ul class="space-y-2">`;
+         (courseDef.midcourseChapters || []).forEach((chapThreshold, index) => {
+             const midNum = index + 1; const midId = `mid${midNum}`; const score = progress.midcourseExamScores?.[midId];
+             const isDue = totalChaptersStudied >= chapThreshold; // Due once chapter threshold reached (using combined studied set)
+             if (score !== undefined) { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+             else if (isDue) { midcourseHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'midcourse', '${midId}')">Start Midcourse Exam ${midNum}</button> (After Ch ${chapThreshold})</li>`; }
+             else { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} (Available after Ch ${chapThreshold})</li>`; }
+         });
+          if ((courseDef.midcourseChapters || []).length === 0) midcourseHtml += `<li class="text-sm text-muted">No midcourse exams defined.</li>`;
+        midcourseHtml += `</ul>`;
+
+        // Final Exams
+        let finalHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Final Exams</h3><ul class="space-y-2">`;
+         const allChaptersDone = totalChaptersStudied >= courseDef.totalChapters;
+         if (allChaptersDone) {
+              for (let i = 1; i <= 3; i++) {
+                  const finalId = `final${i}`; const score = progress.finalExamScores?.[i-1];
+                  if (score === undefined || score === null) { finalHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'final', '${finalId}')">Start Final Exam ${i}</button></li>`; }
+                  else { finalHtml += `<li class="text-sm text-muted">Final Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+              }
+         } else { finalHtml += `<li class="text-sm text-muted">Available after completing all chapters.</li>`; }
+        finalHtml += `</ul>`;
+
+        const html = `
+            <div class="animate-fade-in space-y-6">
+                <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Assignments & Exams for ${escapeHtml(courseDef.name)}</h2>
+                <div class="content-card">${assignmentsHtml}</div>
+                <div class="content-card">${weeklyExamsHtml}</div>
+                <div class="content-card">${midcourseHtml}</div>
+                <div class="content-card">${finalHtml}</div>
+                
+                <!-- Completed Exams History -->
+                <div class="content-card">
+                    <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Completed Exams History</h3>
+                    ${renderCourseExamHistoryList(completedCourseExams)}
+                </div>
+            </div>`;
+
+        displayContent(html, 'course-dashboard-area');
+        hideLoading();
+
+    } catch (error) {
+        console.error('Error loading course assignments and exams:', error);
+        hideLoading();
+        displayContent(`
+            <div class="text-red-500 p-4">
+                <p>Error loading assignments and exams: ${error.message}</p>
+                <button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary mt-4">
+                    Back to Dashboard
+                </button>
+            </div>
+        `, 'course-dashboard-area');
     }
-    weeklyExamsHtml += `</ul>`;
-
-    // Midcourse Exams
-    let midcourseHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Midcourse Exams</h3><ul class="space-y-2">`;
-     (courseDef.midcourseChapters || []).forEach((chapThreshold, index) => {
-         const midNum = index + 1; const midId = `mid${midNum}`; const score = progress.midcourseExamScores?.[midId];
-         const isDue = totalChaptersStudied >= chapThreshold; // Due once chapter threshold reached (using combined studied set)
-         if (score !== undefined) { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
-         else if (isDue) { midcourseHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'midcourse', '${midId}')">Start Midcourse Exam ${midNum}</button> (After Ch ${chapThreshold})</li>`; }
-         else { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} (Available after Ch ${chapThreshold})</li>`; }
-     });
-      if ((courseDef.midcourseChapters || []).length === 0) midcourseHtml += `<li class="text-sm text-muted">No midcourse exams defined.</li>`;
-    midcourseHtml += `</ul>`;
-
-    // Final Exams
-    let finalHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Final Exams</h3><ul class="space-y-2">`;
-     const allChaptersDone = totalChaptersStudied >= courseDef.totalChapters;
-     if (allChaptersDone) {
-          for (let i = 1; i <= 3; i++) {
-              const finalId = `final${i}`; const score = progress.finalExamScores?.[i-1];
-              if (score === undefined || score === null) { finalHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'final', '${finalId}')">Start Final Exam ${i}</button></li>`; }
-              else { finalHtml += `<li class="text-sm text-muted">Final Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
-          }
-     } else { finalHtml += `<li class="text-sm text-muted">Available after completing all chapters.</li>`; }
-    finalHtml += `</ul>`;
-
-    const html = `
-        <div class="animate-fade-in space-y-6">
-             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Assignments & Exams for ${escapeHtml(courseDef.name)}</h2>
-             <div class="content-card">${assignmentsHtml}</div>
-             <div class="content-card">${weeklyExamsHtml}</div>
-             <div class="content-card">${midcourseHtml}</div>
-             <div class="content-card">${finalHtml}</div>
-        </div>`;
-    displayContent(html, 'course-dashboard-area');
 }
 
 // --- Start Exam/Assignment Logic ---
@@ -259,91 +319,127 @@ export async function startAssignmentOrExam(courseId, type, id) {
         console.log(`Selected ${selectedProblems.length} problems.`);
 
         // --- Determine Target Counts based on Exam Type ---
-        const totalTargetQuestions = EXAM_QUESTION_COUNTS[type] || 15; // Use config counts
-        const actualTotalAvailable = (totalAvailableMcqsInScope + allAvailableProblemsInScope.length); // MCQs counted later
-        const finalTestSize = Math.min(totalTargetQuestions, actualTotalAvailable);
+        // First, calculate total available questions within scope
+        let totalAvailableMcqsInScope = 0;
+        let totalAvailableProblemsInScope = 0;
 
-        // Calculate actual target counts based on ratio and availability
-        let targetMcqCount = 0;
-        let targetProblemCount = 0;
-        let totalAvailableMcqsInScope = 0; // Recalculate based *only* on chapters in scope
-
+        // Count available MCQs in scope
         chaptersToInclude.forEach(chapNum => {
-             const chap = subject.chapters[chapNum];
-             if (chap && chap.available_questions) {
-                 totalAvailableMcqsInScope += chap.available_questions.length;
-             }
+            const chap = subject.chapters[chapNum];
+            if (chap && Array.isArray(chap.available_questions)) {
+                totalAvailableMcqsInScope += chap.available_questions.length;
+            }
         });
 
-        targetMcqCount = Math.min(totalAvailableMcqsInScope, Math.round(finalTestSize * subjectMcqRatio));
-        targetProblemCount = Math.min(allAvailableProblemsInScope.length, finalTestSize - targetMcqCount);
+        // Count available problems in scope
+        chaptersToInclude.forEach(chapNum => {
+            const problemsForChapter = window.subjectProblemCache?.get(subject.id)?.[chapNum] || [];
+            totalAvailableProblemsInScope += problemsForChapter.length;
+        });
 
-        // Adjust if needed
+        // Get target total from config and calculate final size
+        const totalTargetQuestions = EXAM_QUESTION_COUNTS[type] || 15;
+        const actualTotalAvailable = totalAvailableMcqsInScope + totalAvailableProblemsInScope;
+        const finalTestSize = Math.min(totalTargetQuestions, actualTotalAvailable);
+
+        // Get MCQ ratio (either from subject or default)
+        const subjectMcqRatio = subject.mcqProblemRatio || DEFAULT_MCQ_PROBLEM_RATIO || 0.5;
+
+        // Calculate initial target counts based on ratio
+        let targetMcqCount = Math.min(totalAvailableMcqsInScope, Math.round(finalTestSize * subjectMcqRatio));
+        let targetProblemCount = Math.min(totalAvailableProblemsInScope, finalTestSize - targetMcqCount);
+
+        // Adjust if needed to reach finalTestSize
         if (targetMcqCount + targetProblemCount < finalTestSize) {
             const deficit = finalTestSize - (targetMcqCount + targetProblemCount);
             if (totalAvailableMcqsInScope > targetMcqCount) {
                 targetMcqCount = Math.min(totalAvailableMcqsInScope, targetMcqCount + deficit);
-            } else if (allAvailableProblemsInScope.length > targetProblemCount) {
-                targetProblemCount = Math.min(allAvailableProblemsInScope.length, targetProblemCount + deficit);
+            } else if (totalAvailableProblemsInScope > targetProblemCount) {
+                targetProblemCount = Math.min(totalAvailableProblemsInScope, targetProblemCount + deficit);
             }
-            targetMcqCount = Math.min(totalAvailableMcqsInScope, finalTestSize - targetProblemCount);
-            targetProblemCount = Math.min(allAvailableProblemsInScope.length, finalTestSize - targetMcqCount);
         }
-        console.log(`Course Exam Counts: Target=${finalTestSize}, MCQs=${targetMcqCount}, Problems=${targetProblemCount}`);
+
+        // Final adjustment to ensure we don't exceed available counts
+        targetMcqCount = Math.min(totalAvailableMcqsInScope, targetMcqCount);
+        targetProblemCount = Math.min(totalAvailableProblemsInScope, targetProblemCount);
+
+        // Log the final calculations
+        console.log('Exam Generation Stats:', {
+            type,
+            id,
+            chaptersToInclude,
+            totalAvailableMcqsInScope,
+            totalAvailableProblemsInScope,
+            actualTotalAvailable,
+            totalTargetQuestions,
+            finalTestSize,
+            mcqRatio: subjectMcqRatio,
+            targetMcqCount,
+            targetProblemCount
+        });
 
         let selectedMcqs = [];
         let mcqAnswers = {};
+        let selectedMcqMap = {};
+
         if (targetMcqCount > 0 && subjectMd) {
             const relevantChaptersForAllocation = {};
-            let totalAvailableMcqsInScope = 0;
             chaptersToInclude.forEach(chapNum => {
                 const c = subject.chapters[chapNum];
-                // Use 'available_questions' which is the list of question numbers
                 if (c && c.available_questions?.length > 0) {
-                     relevantChaptersForAllocation[chapNum] = c;
-                     totalAvailableMcqsInScope += c.available_questions.length;
+                    relevantChaptersForAllocation[chapNum] = c;
                 }
             });
 
-            if (totalAvailableMcqsInScope > 0) {
-                const finalMcqCount = Math.min(targetMcqCount, totalAvailableMcqsInScope);
-                 if (finalMcqCount > 0) { // Check if we actually need MCQs after min()
-                    const allocationCounts = allocateQuestions(relevantChaptersForAllocation, finalMcqCount);
-                    const totalAllocatedMcqs = Object.values(allocationCounts).reduce((a, b) => a + b, 0);
+            if (Object.keys(relevantChaptersForAllocation).length > 0) {
+                const allocationCounts = allocateQuestions(relevantChaptersForAllocation, targetMcqCount);
+                console.log('MCQ Allocation by Chapter:', allocationCounts);
 
-                    if (totalAllocatedMcqs > 0) {
-                        const selectedQuestionsMap = {};
-                        let actualTotalSelectedMcqs = 0;
-                        for (const chapNum in allocationCounts) {
-                            const n = allocationCounts[chapNum];
-                            if (n > 0) {
-                                const chap = subject.chapters[chapNum];
-                                // *** CORRECTED: Use imported function ***
-                                 const selected = selectNewQuestionsAndUpdate(chap, n);
-                                 if (selected.length > 0) {
-                                     selectedQuestionsMap[chapNum] = selected;
-                                     actualTotalSelectedMcqs += selected.length;
-                                }
-                            }
-                        }
-                        if (actualTotalSelectedMcqs > 0) {
-                            const { questions: extractedMcqs, answers } = extractQuestionsFromMarkdown(subjectMd, selectedQuestionsMap);
-                            selectedMcqs = extractedMcqs;
-                            mcqAnswers = answers;
-                            console.log(`Selected ${selectedMcqs.length} MCQs.`);
+                for (const chapNum in allocationCounts) {
+                    const n = allocationCounts[chapNum];
+                    if (n > 0) {
+                        const chap = subject.chapters[chapNum];
+                        const selected = selectNewQuestionsAndUpdate(chap, n);
+                        if (selected.length > 0) {
+                            selectedMcqMap[chapNum] = selected;
                         }
                     }
-                 } else { console.log("Skipping MCQ selection as finalMcqCount is 0.");}
+                }
+
+                if (Object.keys(selectedMcqMap).length > 0) {
+                    const { questions: extractedMcqs, answers } = extractQuestionsFromMarkdown(subjectMd, selectedMcqMap);
+                    selectedMcqs = extractedMcqs;
+                    mcqAnswers = answers;
+                    console.log(`Selected ${selectedMcqs.length} MCQs from ${Object.keys(selectedMcqMap).length} chapters.`);
+                }
             }
-        } else if (targetMcqCount > 0 && !subjectMd) {
-             console.warn("Targeted MCQs but Markdown content is missing.");
+        } else if (targetMcqCount > 0) {
+            console.warn("Targeted MCQs but Markdown content is missing.");
+        }
+
+        // Select problems based on target count
+        if (targetProblemCount > 0) {
+            chaptersToInclude.forEach(chapNum => {
+                const problemsPerChapter = Math.ceil(targetProblemCount / chaptersToInclude.length);
+                const chapterProblems = selectProblemsForExam(chapNum, problemsPerChapter, subject.id);
+                selectedProblems.push(...chapterProblems);
+            });
+            console.log(`Selected ${selectedProblems.length} problems from ${chaptersToInclude.length} chapters.`);
         }
 
         // --- Combine Problems and MCQs ---
-        // Adjust final list to be closer to targetTotalQuestions
-        const finalExamItems = combineProblemsWithQuestions(selectedProblems, selectedMcqs, totalTargetQuestions);
+        const finalExamItems = combineProblemsWithQuestions(selectedProblems, selectedMcqs, finalTestSize);
 
-        if (finalExamItems.length === 0) throw new Error("Failed to select any questions or problems.");
+        if (finalExamItems.length === 0) {
+            throw new Error("Failed to select any questions or problems.");
+        }
+
+        // Log final exam composition
+        console.log('Final Exam Composition:', {
+            totalItems: finalExamItems.length,
+            mcqs: selectedMcqs.length,
+            problems: selectedProblems.length
+        });
 
         // --- Launch Online Test ---
         const examId = `${courseId}-${type}-${id}-${Date.now()}`;

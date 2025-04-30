@@ -5,7 +5,7 @@ import { db, currentUser } from './state.js';
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml
 // Import markMessageAsRead and submitFeedback from firestore module
-import { markMessageAsRead, submitFeedback } from './firebase_firestore.js';
+import { markMessageAsRead, submitFeedback, deleteInboxMessage } from './firebase_firestore.js';
 import { ADMIN_UID } from './config.js'; // Import Admin UID
 
 // --- User Inbox UI ---
@@ -85,12 +85,12 @@ async function loadInboxMessages() {
                     </summary>
                     <div class="mt-3 pt-3 border-t dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
                         <p>${message.body ? message.body.replace(/\n/g, '<br>') : 'No content.'}</p>
-                        <!-- MODIFIED: Add Reply Button -->
-                        ${isAdminSender ? `
-                            <div class="mt-3 text-right">
-                                <button onclick="window.showReplyToAdminModal('${messageId}', '${escapeHtml(message.subject)}')"" class="btn-secondary-small text-xs">Reply to Admin</button>
-                            </div>
-                        ` : ''}
+                        <div class="mt-3 text-right space-x-2">
+                            ${isAdminSender ? `
+                                <button onclick="window.showReplyToAdminModal('${messageId}', '${escapeHtml(message.subject)}')" class="btn-secondary-small text-xs">Reply to Admin</button>
+                            ` : ''}
+                            <button onclick="window.confirmDeleteInboxMessage('${messageId}')" class="btn-danger-small text-xs">Delete</button>
+                        </div>
                     </div>
                 </details>
             `;
@@ -302,6 +302,69 @@ async function handleSendReplyToAdmin(event, originalMessageId, subject) {
     }
 }
 
+// --- NEW: Delete Message ---
+export function confirmDeleteInboxMessage(messageId) {
+    if (!currentUser) {
+        alert("Please log in to manage messages.");
+        return;
+    }
+    if (confirm("Are you sure you want to delete this message? This action cannot be undone.")) {
+        handleDeleteInboxMessage(messageId);
+    }
+}
+window.confirmDeleteInboxMessage = confirmDeleteInboxMessage;
+
+async function handleDeleteInboxMessage(messageId) {
+    if (!currentUser) return;
+
+    showLoading("Deleting message...");
+    try {
+        const success = await deleteInboxMessage(currentUser.uid, messageId);
+        hideLoading();
+
+        if (success) {
+            // Remove the message element from the DOM
+            const messageElement = document.querySelector(`details[data-message-id="${messageId}"]`);
+            if (messageElement) {
+                // Check if it was unread before removing
+                const wasUnread = messageElement.dataset.needsMarkRead === 'true';
+                messageElement.remove();
+
+                // Update unread count if needed
+                if (wasUnread) {
+                    const unreadBadge = document.getElementById('inbox-unread-count');
+                    if (unreadBadge) {
+                        let currentCount = parseInt(unreadBadge.textContent) || 0;
+                        if (unreadBadge.textContent === '9+') {
+                            // Can't know exact count, leave as is
+                            console.log("Unread count was 9+, leaving as is after deletion");
+                        } else if (currentCount > 0) {
+                            currentCount = Math.max(0, currentCount - 1);
+                            unreadBadge.textContent = currentCount;
+                            unreadBadge.classList.toggle('hidden', currentCount === 0);
+                        }
+                    }
+                }
+            }
+            
+            // Show success message
+            const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p>Message deleted successfully.</p></div>`;
+            const msgContainer = document.createElement('div');
+            msgContainer.innerHTML = successMsgHtml;
+            document.body.appendChild(msgContainer);
+            setTimeout(() => { msgContainer.remove(); }, 4000);
+        } else {
+            throw new Error("Failed to delete message");
+        }
+    } catch (error) {
+        hideLoading();
+        console.error("Error deleting message:", error);
+        alert(`Failed to delete message: ${error.message}`);
+    }
+}
+
+// Add new functions to window scope
+window.confirmDeleteInboxMessage = confirmDeleteInboxMessage;
 
 // Assign new functions to window scope (done in script.js)
 window.showContactAdminModal = showContactAdminModal;
