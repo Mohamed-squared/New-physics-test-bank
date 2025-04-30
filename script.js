@@ -58,7 +58,7 @@ import { displayCourseContentMenu } from './ui_course_content_menu.js';
 // MODIFIED: Import Notes UI wrappers
 import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, showCurrentNotesDocuments } from './ui_notes_documents.js'; // Use Wrappers + added showCurrentNotesDocuments
 // MODIFIED: Removed reportQuestionIssue from this import
-import { showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
+import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection } from './exam_storage.js';
 // NEW: Import the actual convertNoteToLatex from AI module
 import { convertNoteToLatex } from './ai_integration.js';
 
@@ -93,14 +93,18 @@ async function initializeApp() {
              if (progressDash && !progressDash.classList.contains('hidden')) {
                 window.renderCharts(); // Use window scope for standard progress
              }
-             // *** MODIFIED: Check course state correctly for re-rendering ***
+             // Re-render course charts if visible and data is available
              if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseCharts === 'function') {
                  console.log("Theme changed, attempting to re-render course charts if visible.");
-                 // Access state directly as it's imported
-                 if(userCourseProgressMap && activeCourseId && userCourseProgressMap.has(activeCourseId)) {
+                 // Access state directly from the imported module
+                 if (userCourseProgressMap && activeCourseId && userCourseProgressMap.has(activeCourseId)) {
                      window.renderCourseCharts(userCourseProgressMap.get(activeCourseId));
                  } else {
-                     console.warn("Could not re-render course charts: active course ID or progress data missing.");
+                     console.warn("Could not re-render course charts: active course ID or progress data missing.", {
+                         hasProgressMap: !!userCourseProgressMap,
+                         activeCourseId,
+                         hasActiveCourse: userCourseProgressMap?.has(activeCourseId)
+                     });
                  }
              }
 
@@ -283,6 +287,7 @@ window.downloadNoteAsTexWrapper = downloadNoteAsTexWrapper; // NEW: Assign TeX d
 
 // Exam Storage/Review Functions (NEW)
 window.showExamReviewUI = showExamReviewUI;
+window.showAIExplanationSection = showAIExplanationSection; // Add AI explanation function
 // MODIFIED: Assign showIssueReportingModal to the name expected by the onclick
 window.reportQuestionIssue = showIssueReportingModal;
 window.showIssueReportingModal = showIssueReportingModal; // Keep original name assignment too if needed elsewhere

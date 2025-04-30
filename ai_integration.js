@@ -33,8 +33,8 @@ try {
 let pdfjsLib = window.pdfjsLib;
 
 // Define models (Using latest stable versions)
-const TEXT_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable 1.5 pro
-const VISION_MODEL_NAME = "gemini-2.5-pro-exp-03-25"; // Using latest stable vision model
+const TEXT_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable 1.5 pro
+const VISION_MODEL_NAME = "gemini-1.5-pro"; // Using latest stable vision model
 
 
 // --- Helper: Fetch Text File (SRT Parser) ---
@@ -159,11 +159,20 @@ export async function callGeminiTextAPI(prompt, history = null) {
         throw new Error("Prompt exceeds token limit. Please reduce the context size.");
     }
 
-    // Prepare request contents
+    // Prepare request contents with proper data field
     const requestContents = history ? [
-        ...history.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] })),
-        { role: "user", parts: [{ text: prompt }] }
-    ] : [{ role: "user", parts: [{ text: prompt }] }];
+        ...history.map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.content || msg.parts?.[0]?.text || '' }]
+        })),
+        {
+            role: "user",
+            parts: [{ text: prompt || '' }]
+        }
+    ] : [{
+        role: "user",
+        parts: [{ text: prompt || '' }]
+    }];
 
     try {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -179,18 +188,21 @@ export async function callGeminiTextAPI(prompt, history = null) {
 
         // Optimized generation config
         const generationConfig = {
-            temperature: 0.6, // Slightly lower temp for more focused generation
+            temperature: 0.6,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 8192, // Increased max output tokens
-            stopSequences: ["\n\n\n"] // Prevent excessive newlines
+            maxOutputTokens: 8192,
+            stopSequences: ["\n\n\n"]
         };
 
-        const result = await model.generateContent({ 
-            contents: requestContents, 
-            safetySettings, 
-            generationConfig 
+        console.log('Sending request to Gemini API with contents:', JSON.stringify(requestContents, null, 2));
+
+        const result = await model.generateContent({
+            contents: requestContents,
+            safetySettings,
+            generationConfig
         });
+
         const response = result.response;
 
         // Enhanced error handling

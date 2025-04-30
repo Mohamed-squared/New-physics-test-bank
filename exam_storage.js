@@ -206,76 +206,215 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
     }
 }
 
+// Initialize history tracking for the review UI
+if (!window.currentExplanationHistories) {
+     window.currentExplanationHistories = {};
+}
+
 /**
  * Displays the detailed review UI for a specific exam from the `userExams` collection.
  * @param {string} userId - The ID of the user who took the exam.
  * @param {string} examId - The ID of the exam to review.
  */
 export async function showExamReviewUI(userId, examId) {
+    console.log(`[showExamReviewUI] Starting review for User ID: ${userId}, Exam ID: ${examId}`);
+    console.log(`[showExamReviewUI] Current timestamp: ${new Date().toISOString()}`);
+
     if (!userId || !examId) {
         console.error("Cannot show exam review: Missing userId or examId");
+        displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content'); // Display error in main area
         return;
     }
+    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content'); // Keep Exams Dash active
+    showLoading("Loading Exam Review...");
+    // Reset explanation history for this new review session
+    window.currentExplanationHistories = {};
 
-    console.log(`Attempting to show exam review for exam ${examId}`);
-    
     try {
         const examDetails = await getExamDetails(userId, examId);
+
         if (!examDetails) {
+            hideLoading();
             console.error(`No exam details found for exam ${examId}`);
+            displayContent(`<p class="text-red-500 p-4">Error: Could not find details for exam ID: ${examId}. It might have been deleted or the ID is incorrect.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
             return;
         }
 
-        console.log(`Successfully fetched exam details for ${examId}`);
-        
-        // Create and show the review UI
-        const reviewContainer = document.createElement('div');
-        reviewContainer.className = 'exam-review-container';
-        
-        // Add exam summary
-        const summaryDiv = document.createElement('div');
-        summaryDiv.className = 'exam-summary';
-        summaryDiv.innerHTML = `
-            <h2>Exam Review</h2>
-            <p>Score: ${examDetails.score}%</p>
-            <p>Time Taken: ${examDetails.timeTaken} minutes</p>
-        `;
-        reviewContainer.appendChild(summaryDiv);
+        console.log(`Successfully fetched exam details for ${examId}, rendering review UI.`);
 
-        // Add questions review
-        const questionsDiv = document.createElement('div');
-        questionsDiv.className = 'questions-review';
-        
-        examDetails.questions.forEach((question, index) => {
-            const questionDiv = document.createElement('div');
-            questionDiv.className = 'question-review';
-            questionDiv.innerHTML = `
-                <h3>Question ${index + 1}</h3>
-                <p>${question.text}</p>
-                <p>Your answer: ${question.userAnswer}</p>
-                <p>Correct answer: ${question.correctAnswer}</p>
-                <div class="ai-explanation"></div>
-            `;
-            
-            // Add AI explanation
-            const explanationDiv = questionDiv.querySelector('.ai-explanation');
-            generateAIExplanation(question, explanationDiv);
-            
-            questionsDiv.appendChild(questionDiv);
-        });
-        
-        reviewContainer.appendChild(questionsDiv);
-        
-        // Add to DOM
-        document.body.appendChild(reviewContainer);
-        
+        const { markingResults, courseContext, timestamp, type, subjectId, courseId, questions, userAnswers } = examDetails;
+        const score = markingResults?.totalScore ?? 0;
+        const maxScore = markingResults?.maxPossibleScore ?? 0;
+        const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
+        const date = new Date(timestamp).toLocaleString();
+        const durationMinutes = examDetails.durationMinutes;
+        const isCourse = !!courseId;
+        const passThreshold = type === 'skip_exam' ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
+        const isPassing = parseFloat(percentage) >= passThreshold;
+
+        // Determine context name (Course or Subject)
+        const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId)
+                           : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
+                           : 'Standard Test';
+        const typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+        let questionsHtml = '<p class="text-center text-muted italic">No question data found in this record.</p>';
+        if (questions && questions.length > 0 && markingResults?.questionResults) {
+            questionsHtml = '<div class="space-y-4">';
+            questions.forEach((q, index) => {
+                 // Ensure question has an ID, fallback if needed
+                 const questionId = q.id || `q-${index+1}`;
+                 // Find the corresponding marking result using questionId
+                 const result = markingResults.questionResults.find(r => r.questionId === questionId);
+                 const qScore = result?.score ?? 0;
+                 const qMaxScore = q.isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
+                 const isCorrect = !q.isProblem && (userAnswers?.[questionId] === q.correctAnswer); // Simple check for MCQ correctness
+                 const qFeedback = result?.feedback || "No specific feedback.";
+                 const keyPoints = result?.key_points || [];
+                 const improvements = result?.improvement_suggestions || [];
+                 const userAnswer = userAnswers?.[questionId] || "<i>Not Answered</i>";
+
+                 // Determine visual style based on score vs max score
+                 let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'; // Default
+                 if (qScore === qMaxScore && qMaxScore > 0) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30'; // Full marks
+                 else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'; // Partial marks
+                 else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30'; // Zero marks
+
+                 const imageHtml = q.image ? `<div class="my-3 flex justify-center"><img src="${q.image}" alt="Question Image" class="max-w-md h-auto border dark:border-gray-600 rounded" crossorigin="anonymous"></div>` : '';
+
+                 let optionsOrAnswerHtml = '';
+                 if (q.isProblem) {
+                     optionsOrAnswerHtml = `<div class="mt-2"><p class="text-xs font-semibold mb-1">Your Answer:</p><div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 whitespace-pre-wrap">${escapeHtml(userAnswer)}</div></div>`;
+                 } else {
+                     // MCQ Options
+                     optionsOrAnswerHtml = '<ol class="list-none pl-0 space-y-1 my-3">';
+                     optionsOrAnswerHtml += (q.options || []).map(opt => {
+                         const isSelected = userAnswer === opt.letter;
+                         const isCorrectAnswer = q.correctAnswer === opt.letter;
+                         let optionClass = 'text-gray-700 dark:text-gray-300';
+                         if (isCorrectAnswer) optionClass = 'font-semibold text-green-700 dark:text-green-300';
+                         if (isSelected && !isCorrectAnswer) optionClass = 'text-red-700 dark:text-red-400 line-through';
+
+                         return `<li class="flex items-baseline text-sm ${isSelected ? 'ring-1 ring-offset-1 dark:ring-offset-gray-800 ring-blue-400 rounded px-1' : ''}"><span class="font-mono w-5 text-right mr-1.5 shrink-0">${opt.letter}.</span><span class="${optionClass} option-text-container">${opt.text}</span></li>`;
+                     }).join('');
+                     optionsOrAnswerHtml += '</ol>';
+                     optionsOrAnswerHtml += `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Your Answer: ${userAnswer || '<i>None</i>'} | Correct: ${q.correctAnswer || 'N/A'}</p>`;
+                 }
+
+                 questionsHtml += `
+                    <div class="question-review-item border rounded-md p-4 ${statusClass}">
+                        <div class="flex justify-between items-start mb-2">
+                             <p class="font-medium text-gray-800 dark:text-gray-200">Question ${index + 1} ${q.chapter ? `(Ch ${q.chapter})` : ''}</p>
+                             <span class="font-semibold text-sm ${qScore === qMaxScore && qMaxScore > 0 ? 'text-green-600' : qScore > 0 ? 'text-yellow-600' : 'text-red-600'}">${qScore.toFixed(1)} / ${qMaxScore.toFixed(1)} pts</span>
+                        </div>
+                        <div class="prose prose-sm dark:prose-invert max-w-none question-text-container mb-2">${q.text || '[Question text missing]'}</div>
+                        ${imageHtml}
+                        ${optionsOrAnswerHtml}
+
+                        <!-- AI Marking Feedback -->
+                        <div class="mt-3 pt-3 border-t border-dashed dark:border-gray-600">
+                             <p class="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">AI Feedback:</p>
+                             <p class="text-xs text-gray-700 dark:text-gray-300 mb-2">${escapeHtml(qFeedback)}</p>
+                             ${keyPoints.length > 0 ? `<p class="text-xs font-medium mt-1">Key Points:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${keyPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : ''}
+                             ${improvements.length > 0 ? `<p class="text-xs font-medium mt-1">Suggestions:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${improvements.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+                        </div>
+
+                        <!-- AI Explanation Section (Hidden initially) -->
+                        <div id="ai-explanation-${index}" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
+                            <div class="ai-explanation-content-area bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700 space-y-3 max-h-80 overflow-y-auto">
+                                <!-- AI Explanation and follow-up input will load here -->
+                                <p class="text-sm italic text-muted">Loading explanation...</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-3 text-right space-x-2">
+                            <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                Explain (AI)
+                             </button>
+                            <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                Report Issue
+                            </button>
+                        </div>
+                    </div>
+                 `;
+            });
+            questionsHtml += '</div>'; // Close space-y-4
+        }
+
+        // Overall Feedback Section
+        let overallFeedbackHtml = '<p class="text-muted italic text-center my-4">No overall feedback available for this exam.</p>';
+        if (markingResults.overallFeedback) {
+            const fb = markingResults.overallFeedback;
+            overallFeedbackHtml = `
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg shadow-md border border-blue-200 dark:border-blue-700 overall-feedback-area">
+                    <h3 class="text-lg font-semibold mb-4 text-blue-800 dark:text-blue-300">Overall AI Feedback</h3>
+                    <div class="space-y-4 text-sm">
+                         <p class="text-gray-700 dark:text-gray-300">${escapeHtml(fb.overall_feedback || 'N/A')}</p>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div><h4 class="font-medium text-green-600 mb-2">Strengths</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
+                              <div><h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
+                         </div>
+                         ${fb.study_recommendations ? `
+                         <div class="mt-4"><h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.study_recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}</ul></div>` : '' }
+                    </div>
+                </div>`;
+        }
+
+        const reviewHtml = `
+            <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+                <!-- Summary Header -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+                    <div class="flex justify-between items-start mb-4">
+                         <div>
+                              <h2 class="text-2xl font-bold mb-1">Exam Review: ${escapeHtml(typeDisplay)}</h2>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Context: ${escapeHtml(contextName)} ${isCourse ? '(Course)' : '(Subject)'}</p>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Exam ID: ${escapeHtml(examId)}</p>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
+                         </div>
+                         <button onclick="window.showExamsDashboard()" class="btn-secondary-small flex-shrink-0">Back to Exams List</button>
+                    </div>
+                    <div class="text-center border-t dark:border-gray-600 pt-4">
+                         <p class="text-lg text-gray-600 dark:text-gray-400 mb-1">Overall Score</p>
+                         <p class="text-5xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'} mb-1">${percentage}%</p>
+                         <p class="text-lg text-gray-700 dark:text-gray-300 mb-2">${score.toFixed(1)} / ${maxScore.toFixed(1)} points</p>
+                         <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passThreshold}%)</p>
+                    </div>
+                </div>
+
+                <!-- Overall Feedback -->
+                ${overallFeedbackHtml}
+
+                <!-- Question Breakdown -->
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4">Question Breakdown</h3>
+                    <div id="review-questions-container" class="max-h-[70vh] overflow-y-auto pr-2">
+                        ${questionsHtml}
+                    </div>
+                </div>
+
+                <div class="text-center mt-6">
+                    <button onclick="window.showExamsDashboard()" class="btn-secondary">Back to Exams List</button>
+                </div>
+            </div>
+        `;
+
+        // Use displayContent to render in the main area
+        displayContent(reviewHtml, 'content');
+        // Render MathJax in the questions container
+        const questionsContainer = document.getElementById('review-questions-container');
+        if (questionsContainer) await renderMathIn(questionsContainer);
+        const overallFeedbackContainer = document.querySelector('.overall-feedback-area');
+        if (overallFeedbackContainer) await renderMathIn(overallFeedbackContainer);
+
+        hideLoading();
+
     } catch (error) {
+        hideLoading();
         console.error(`Error showing exam review for ${examId}:`, error);
-        // Show error message to user
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.textContent = 'An error occurred while loading the exam review. Please try again later.';
-        document.body.appendChild(errorDiv);
+        displayContent(`<p class="text-red-500 p-4">An error occurred while loading the exam review: ${error.message}. Please try again later.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
     }
 }
 
@@ -296,42 +435,78 @@ async function generateAIExplanation(question, container) {
 }
 
 // --- AI Explanation Display & Follow-up ---
-window.showAIExplanationSection = async (examId, questionIndex) => {
+export const showAIExplanationSection = async (examId, questionIndex) => {
+    console.log(`[showAIExplanationSection] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
+    
     const explanationContainer = document.getElementById(`ai-explanation-${questionIndex}`);
     const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
-    if (!explanationContainer || !explanationContentArea) return;
+    
+    if (!explanationContainer || !explanationContentArea) {
+        console.error('Required DOM elements not found');
+        return;
+    }
 
     const isHidden = explanationContainer.classList.contains('hidden');
     explanationContainer.classList.toggle('hidden');
 
+    // If hiding, just return
+    if (!isHidden) {
+        console.log('Hiding explanation section');
+        return;
+    }
+
     // If revealing and content is empty, fetch initial explanation
-    if (isHidden && !explanationContentArea.innerHTML.trim()) {
-        explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="ml-2 text-sm text-muted">Generating explanation...</p></div>`;
-
-        const examData = await getExamDetails(currentUser.uid, examId);
-        if (!examData || !examData.questions || !examData.questions[questionIndex]) {
-            explanationContentArea.innerHTML = '<p class="text-danger text-sm">Error: Could not load question data.</p>';
-            return;
-        }
-
-        const question = examData.questions[questionIndex];
-        const studentAnswer = examData.userAnswers[question.id];
-        // Use question.correctAnswer
-        const isProblem = question.isProblem || !question.options || question.options.length === 0;
-        const correctAnswer = isProblem ? null : question.correctAnswer;
-
+    if (!explanationContentArea.innerHTML.trim() || explanationContentArea.innerHTML.includes('Loading explanation...')) {
         try {
+            // Show loading state
+            explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2">
+                <div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div>
+                <p class="ml-2 text-sm text-muted">Generating explanation...</p>
+            </div>`;
+
+            console.log('Fetching exam details...');
+            const examData = await getExamDetails(currentUser.uid, examId);
+            
+            if (!examData) {
+                throw new Error('Failed to fetch exam data');
+            }
+            if (!examData.questions || !examData.questions[questionIndex]) {
+                throw new Error('Question data not found');
+            }
+
+            const question = examData.questions[questionIndex];
+            const studentAnswer = examData.userAnswers?.[question.id];
+            const isProblem = question.isProblem || !question.options || question.options.length === 0;
+
+            console.log('Generating explanation...');
             // Initial call, empty history - Pass question object which now contains correctAnswer
             const result = await generateExplanation(question, null, studentAnswer, []); // Pass null for deprecated correctAnswer param
+            
+            if (!result || !result.explanationHtml) {
+                throw new Error('Failed to generate explanation');
+            }
+
             window.currentExplanationHistories[questionIndex] = result.history; // Store initial history
             explanationContentArea.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Initial explanation
             await renderMathIn(explanationContentArea);
+            console.log('Explanation generated and rendered successfully');
+
         } catch (error) {
-            console.error("Error fetching initial explanation:", error);
-            explanationContentArea.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
+            console.error("Error in showAIExplanationSection:", error);
+            explanationContentArea.innerHTML = `<div class="p-3 text-red-500 dark:text-red-400">
+                <p class="font-medium">Error generating explanation:</p>
+                <p class="text-sm mt-1">${error.message || 'An unexpected error occurred'}</p>
+                <button onclick="window.showAIExplanationSection('${examId}', ${questionIndex})" 
+                        class="mt-2 text-sm px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-md hover:bg-red-200 dark:hover:bg-red-900/50">
+                    Try Again
+                </button>
+            </div>`;
         }
     }
 };
+
+// Assign to window for HTML onclick access
+window.showAIExplanationSection = showAIExplanationSection;
 
 window.askAIFollowUp = async (examId, questionIndex) => {
     const inputElement = document.getElementById(`follow-up-input-${questionIndex}`);

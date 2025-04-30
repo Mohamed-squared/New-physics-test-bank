@@ -8,6 +8,55 @@ import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added esca
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ } from './config.js'; // Import constants
 
 /**
+ * Formats AI response text into HTML with proper styling and formatting.
+ * @param {string} rawText - The raw text from the AI response
+ * @returns {string} - Formatted HTML string
+ */
+function formatResponseAsHtml(rawText) {
+    if (!rawText) return '<p class="text-muted italic">AI did not provide a response.</p>';
+
+    // Escape initial HTML, then apply formatting
+    let escapedText = escapeHtml(rawText);
+
+    // Handle code blocks (```) first
+    escapedText = escapedText.replace(/```(?:[a-zA-Z]+)?\n([\s\S]*?)\n```/g, (m, code) => 
+        `<pre><code class="block whitespace-pre-wrap">${escapeHtml(code.trim())}</code></pre>`);
+
+    // Handle inline code (`)
+    escapedText = escapedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Handle LaTeX math expressions
+    escapedText = escapedText.replace(/\$\$(.*?)\$\$/g, (m, math) => `\\[${math}\\]`);
+    escapedText = escapedText.replace(/\$(.*?)\$/g, (m, math) => `\\(${math}\\)`);
+
+    // Handle bold (**) and italics (*)
+    escapedText = escapedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    escapedText = escapedText.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+    // Handle ordered lists (number. )
+    escapedText = escapedText.replace(/^\s*(\d+)\.\s+(.*)/gm, (match, number, item) => 
+        `<li>${item.trim()}</li>`);
+    escapedText = escapedText.replace(/(<li>.*<\/li>\s*)+/g, match => 
+        `<ol class="list-decimal list-inside">${match.trim()}</ol>`);
+
+    // Handle unordered lists (* or -)
+    escapedText = escapedText.replace(/^\s*[\*\-]\s+(.*)/gm, (match, item) => 
+        `<li>${item.trim()}</li>`);
+    escapedText = escapedText.replace(/(<li>.*<\/li>\s*)+/g, match => 
+        `<ul class="list-disc list-inside">${match.trim()}</ul>`);
+
+    // Handle paragraphs and line breaks
+    const paragraphs = escapedText.split('\n\n');
+    escapedText = paragraphs.map(p => {
+        if (p.trim() === '') return '';
+        if (p.startsWith('<pre>') || p.startsWith('<ul>') || p.startsWith('<ol>')) return p;
+        return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+    }).join('\n');
+
+    return `<div class="prose prose-sm dark:prose-invert max-w-none">${escapedText}</div>`;
+}
+
+/**
  * Marks a single exam PROBLEM answer using AI.
  * @param {object} question - The question object (must be a problem).
  * @param {string|null} studentAnswer - The student's answer text. Null if unanswered.
@@ -41,12 +90,21 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `3. Be **generous** with partial marks. Award credit for correct formulas, partial steps, correct reasoning, or demonstrating understanding, even if the final answer is incorrect or incomplete.\n`;
         prompt += `4. Provide specific, constructive feedback explaining the score, highlighting both correct aspects and errors/misconceptions.\n`;
         prompt += `5. List key points (correct steps/concepts identified) and specific areas for improvement.\n\n`;
+        prompt += `**For Improvement Suggestions:**\n`;
+        prompt += `1. Carefully analyze the student's answer to understand their specific approach and thought process.\n`;
+        prompt += `2. Identify any misconceptions or error patterns in their reasoning, calculations, or problem-solving strategy.\n`;
+        prompt += `3. Provide personalized, actionable suggestions that directly address:\n`;
+        prompt += `   - The specific mistakes or gaps in their answer\n`;
+        prompt += `   - Their apparent understanding level and problem-solving approach\n`;
+        prompt += `   - Common pitfalls related to their particular error pattern\n`;
+        prompt += `4. Focus on concrete steps they can take to improve, based on their actual work, not generic topic review.\n`;
+        prompt += `5. If possible, suggest a specific practice strategy or problem-solving technique that would help prevent similar errors.\n\n`;
         prompt += `**Output Format:** Provide your response ONLY in this strict JSON format:\n`;
         prompt += `{\n`;
         prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
         prompt += `    "feedback": "[Detailed justification for the score, explaining correct parts and errors.]",\n`;
         prompt += `    "key_points": ["[List of crucial correct steps/concepts identified]", "[List of specific errors or misconceptions found]"],\n`;
-        prompt += `    "improvement_suggestions": ["[Actionable advice for improving on similar problems]"]\n`;
+        prompt += `    "improvement_suggestions": ["[Personalized, actionable advice based on their specific work and errors]"]\n`;
         prompt += `}\n`;
 
         // Request JSON output explicitly
@@ -292,8 +350,8 @@ Respond ONLY in this strict JSON format:
 
 /**
  * Generates an AI explanation for a specific question, considering the student's answer. Handles follow-ups.
- * @param {object | null} question - The question object (null for follow-ups based on history). Should have `correctAnswer` property for MCQs.
- * @param {string|null} correctAnswer - The correct answer (null for problems or follow-ups). **DEPRECATED** - Use question.correctAnswer instead.
+ * @param {object | null} question - The question object (null for follow-ups based on history).
+ * @param {string|null} correctAnswer - The correct answer (null for problems or follow-ups).
  * @param {string|null} studentAnswer - The student's answer OR the follow-up question text.
  * @param {Array} [history=[]] - Optional: Conversation history for follow-ups.
  * @returns {Promise<{explanationHtml: string, history: Array}>} - HTML formatted explanation and updated history.
@@ -332,30 +390,13 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
             }
             currentPromptText += `Use LaTeX ($$, $) for math if needed. Keep the explanation clear and educational.`;
         }
-         console.log("Generating initial explanation for:", question.id);
     }
 
     const currentHistory = [...history, { role: "user", parts: [{ text: currentPromptText }] }];
 
     try {
-        // *** ADDED ROBUST VALIDATION before API call ***
-        const validatedHistory = currentHistory.filter(turn =>
-            turn && turn.role && Array.isArray(turn.parts) && turn.parts.length > 0 &&
-            turn.parts.every(part => part && ( (typeof part.text === 'string' && part.text.trim() !== '') || part.inlineData))
-        );
-
-        if (validatedHistory.length === 0 ) {
-             throw new Error("Invalid history: History became empty after validation.");
-        }
-        if (validatedHistory[validatedHistory.length - 1].role !== 'user'){
-            throw new Error("Invalid history state for API call: Last valid turn is not from the user.");
-        }
-        if (JSON.stringify(validatedHistory) !== JSON.stringify(currentHistory)){
-            console.warn("History was filtered before API call:", {original: currentHistory, filtered: validatedHistory });
-        }
-
-        const explanationText = await callGeminiTextAPI(null, validatedHistory);
-        const updatedHistory = [...validatedHistory, { role: "model", parts: [{ text: explanationText }] }];
+        const explanationText = await callGeminiTextAPI(null, currentHistory);
+        const updatedHistory = [...currentHistory, { role: "model", parts: [{ text: explanationText }] }];
 
         return {
             explanationHtml: formatResponseAsHtml(explanationText),
@@ -364,9 +405,9 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
     } catch (error) {
         console.error("Error generating explanation:", error);
         return {
-             explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
-             history: currentHistory
-         };
+            explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
+            history: currentHistory
+        };
     }
 }
 
