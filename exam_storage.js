@@ -707,6 +707,7 @@ export async function deleteCompletedExamV2(examId) {
 
         await examDocRef.delete();
         console.log(`Successfully deleted exam ${examId}`);
+        window.showProgressDashboard(); // Refresh the progress dashboard
         hideLoading();
         return true;
     } catch (error) {

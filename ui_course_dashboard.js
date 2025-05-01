@@ -161,6 +161,14 @@ export async function showCourseDashboard(courseId) { // Made async
                     <p class="font-semibold">Study Material</p><p class="text-xs text-muted">(All Chapters)</p>
                  </button>
 
+                <!-- Next Lesson link (always visible) -->
+                <button onclick="window.showNextLesson('${courseId}')" class="content-card text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-4 duration-150 ease-in-out">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-primary-500 mb-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
+                    </svg>
+                    <p class="font-semibold">Next Lesson</p><p class="text-xs text-muted">(Go to your current chapter)</p>
+                </button>
+
                  <!-- Assignments & Exams (Hidden for Viewer) -->
                  ${!isViewer ? `
                  <button onclick="window.showCurrentAssignmentsExams('${courseId}')" class="content-card text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-4 duration-150 ease-in-out">

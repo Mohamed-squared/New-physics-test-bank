@@ -1144,26 +1144,141 @@ async function viewUserDetailsAdmin(userId) {
         const cleanCourseProgress = JSON.parse(JSON.stringify(courseProgress, (key, value) => {
             // Attempt to convert Firestore Timestamp-like objects
              if (value && typeof value === 'object' && value.hasOwnProperty('seconds') && value.hasOwnProperty('nanoseconds')) {
-                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; } // Return original if conversion fails
+                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; }
              }
              return value;
         }));
 
-
         hideLoading();
+
+        // Generate user profile HTML
+        const userProfileHtml = `
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="col-span-2 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <dt class="text-xs font-medium text-blue-700 dark:text-blue-300">User ID</dt>
+                    <dd class="text-sm mt-1 font-mono">${escapeHtml(userId)}</dd>
+                </div>
+                ${Object.entries(displayUserData).map(([key, value]) => {
+                    // Skip completedCourseBadges as we'll display them separately
+                    if (key === 'completedCourseBadges') return '';
+                    
+                    // Format the value based on its type
+                    let displayValue = '';
+                    if (value === null || value === undefined) {
+                        displayValue = '<span class="text-gray-400 dark:text-gray-500 italic">null</span>';
+                    } else if (typeof value === 'boolean') {
+                        displayValue = value ? '<span class="text-green-600 dark:text-green-400">true</span>' : '<span class="text-red-600 dark:text-red-400">false</span>';
+                    } else if (Array.isArray(value)) {
+                        displayValue = `<span class="text-purple-600 dark:text-purple-400">Array(${value.length})</span>`;
+                        if (value.length > 0) {
+                            displayValue += `<ul class="mt-1 ml-4 list-disc text-xs space-y-1">
+                                ${value.slice(0, 5).map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
+                                ${value.length > 5 ? `<li class="text-muted">... and ${value.length - 5} more items</li>` : ''}
+                            </ul>`;
+                        }
+                    } else if (typeof value === 'object') {
+                        displayValue = '<span class="text-purple-600 dark:text-purple-400">Object</span>';
+                    } else {
+                        displayValue = escapeHtml(String(value));
+                    }
+
+                    return `
+                        <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
+                            <dt class="text-xs font-medium text-gray-700 dark:text-gray-300">${escapeHtml(key)}</dt>
+                            <dd class="text-sm mt-1">${displayValue}</dd>
+                        </div>
+                    `;
+                }).join('')}
+            </dl>
+        `;
+
+        // Generate badges HTML if they exist
+        const badgesHtml = displayUserData.completedCourseBadges?.length ? `
+            <div class="mt-4">
+                <h4 class="text-sm font-semibold mb-2 text-primary-600 dark:text-primary-400">Completed Course Badges (${displayUserData.completedCourseBadges.length})</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${displayUserData.completedCourseBadges.map(badge => `
+                        <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-800 text-sm">
+                            <p class="font-medium text-green-700 dark:text-green-300">${escapeHtml(badge.courseName || 'Unnamed Course')}</p>
+                            <p class="text-xs mt-1 text-green-600 dark:text-green-400">
+                                <span class="font-medium">Grade:</span> ${escapeHtml(badge.grade || 'N/A')} |
+                                <span class="font-medium">Course ID:</span> ${escapeHtml(badge.courseId || 'N/A')}
+                            </p>
+                            <p class="text-xs text-green-600 dark:text-green-400">
+                                <span class="font-medium">Completed:</span> ${badge.completionDate?.toDate ? badge.completionDate.toDate().toLocaleDateString() : 'N/A'}
+                            </p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        // Generate course progress HTML
+        const courseProgressHtml = Object.entries(cleanCourseProgress).length ? `
+            <div class="grid grid-cols-1 gap-4">
+                ${Object.entries(cleanCourseProgress).map(([courseId, progress]) => {
+                    const courseDef = globalCourseDataMap.get(courseId);
+                    const courseName = courseDef?.name || courseId;
+                    const studiedChapters = progress.courseStudiedChapters?.length || 0;
+                    const totalChapters = courseDef?.totalChapters || '?';
+                    const statusClass = progress.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                      progress.status === 'failed' ? 'text-red-600 dark:text-red-400' :
+                                      'text-blue-600 dark:text-blue-400';
+
+                    return `
+                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-600 shadow-sm">
+                            <div class="flex justify-between items-start mb-2">
+                                <h5 class="font-medium text-sm">${escapeHtml(courseName)}</h5>
+                                <span class="text-xs font-medium ${statusClass}">${escapeHtml(progress.status || 'enrolled')}</span>
+                            </div>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                <div>
+                                    <span class="text-muted block">Enrollment</span>
+                                    <span class="font-medium">${escapeHtml(progress.enrollmentMode || 'standard')}</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted block">Grade</span>
+                                    <span class="font-medium">${escapeHtml(progress.grade || 'N/A')}</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted block">Progress</span>
+                                    <span class="font-medium">${studiedChapters} / ${totalChapters} chapters</span>
+                                </div>
+                                <div>
+                                    <span class="text-muted block">Last Active</span>
+                                    <span class="font-medium">${progress.lastActiveDate ? new Date(progress.lastActiveDate).toLocaleDateString() : 'N/A'}</span>
+                                </div>
+                            </div>
+                            ${progress.dailyProgress?.length ? `
+                                <div class="mt-2 pt-2 border-t dark:border-gray-600">
+                                    <span class="text-xs text-muted">Daily Progress Entries: ${progress.dailyProgress.length}</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        ` : '<p class="text-sm text-muted">No course progress data available.</p>';
 
         const modalHtml = `
             <div id="user-details-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[80] p-4 animate-fade-in" aria-labelledby="user-details-title" role="dialog" aria-modal="true">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-4xl transform transition-all flex flex-col max-h-[90vh]">
                     <div class="flex justify-between items-center mb-4 flex-shrink-0 pb-3 border-b dark:border-gray-600">
-                        <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">User Details: ${escapeHtml(userData.displayName || userData.username || userId)}</h3>
+                        <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+                            User Details: ${escapeHtml(userData.displayName || userData.username || userId)}
+                        </h3>
                         <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl">&times;</button>
                     </div>
-                    <div class="flex-grow overflow-y-auto mb-4 pr-2 text-xs">
-                        <h4 class="font-semibold mb-1 text-base">User Profile Data:</h4>
-                        <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded border dark:border-gray-700 overflow-x-auto"><code>${escapeHtml(JSON.stringify(displayUserData, null, 2))}</code></pre>
-                        <h4 class="font-semibold mb-1 mt-4 text-base">User Course Progress:</h4>
-                        <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded border dark:border-gray-700 overflow-x-auto"><code>${escapeHtml(JSON.stringify(cleanCourseProgress, null, 2))}</code></pre>
+                    <div class="flex-grow overflow-y-auto mb-4 space-y-6">
+                        <div>
+                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">User Profile Data</h4>
+                            ${userProfileHtml}
+                            ${badgesHtml}
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Course Progress</h4>
+                            ${courseProgressHtml}
+                        </div>
                     </div>
                     <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
                         <button onclick="document.getElementById('user-details-modal').remove()" class="btn-secondary">Close</button>

@@ -538,23 +538,22 @@ export async function deleteCompletedExam(index) {
          else { console.warn(`Exam ${examToDelete.examId} type unknown or data missing for re-adding questions.`); }
          questionsToReadd.forEach(({ chapter: chapNum, number: qNum }) => {
              if (!chapNum || isNaN(parseInt(chapNum)) || !qNum || isNaN(parseInt(qNum))) { console.warn(`Invalid chap/qNum during re-add: ${chapNum}/${qNum}.`); return; }
-             const globalChap = currentSubject.chapters[chapNum];
-             if (globalChap && globalChap.available_questions && Array.isArray(globalChap.available_questions)) { if (!globalChap.available_questions.includes(qNum)) { globalChap.available_questions.push(qNum); chaptersDataModified = true; } }
-             else { console.error(`Chapter ${chapNum} or available_questions missing for re-add Q ${qNum}.`); }
+             const chapIndex = currentSubject.chapters.findIndex(c => c.number === parseInt(chapNum));
+             if (chapIndex === -1) { console.warn(`Chapter ${chapNum} not found during re-add.`); return; }
+             const qIndex = currentSubject.chapters[chapIndex].questions.findIndex(q => q.number === parseInt(qNum));
+             if (qIndex === -1) { console.warn(`Question ${qNum} not found in chapter ${chapNum} during re-add.`); return; }
+             currentSubject.chapters[chapIndex].questions[qIndex].completed = false;
+             chaptersDataModified = true;
          });
-         if (chaptersDataModified) { Object.values(currentSubject.chapters).forEach(chap => { if (chap.available_questions) { chap.available_questions.sort((a, b) => a - b); } }); }
+         if (chaptersDataModified) { await saveUserData(currentUser.uid); window.showProgressDashboard(); } // Refresh progress dashboard after saving
          currentSubject.exam_history.splice(index, 1);
-         await saveUserData(currentUser.uid); console.log(`Exam history ${examId} deleted. Questions (${questionsToReadd.length}) re-added. Data saved.`);
-         hideLoading(); showExamsDashboard(); // Refresh view
-         const successMsgHtml = `<div class="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 rounded-md mb-4 animate-fade-in fixed top-16 right-4 z-50 shadow-lg"><p class="font-medium">Exam ${escapeHtml(examId)} history deleted.</p><p class="text-xs">Associated questions are available again.</p></div>`;
-         const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
-     } catch (error) {
-         console.error("Error deleting completed exam history:", error);
-         alert("Failed to delete exam history: " + error.message);
+         await saveUserData(currentUser.uid);
          hideLoading();
-         showExamsDashboard(); // Still refresh view on error
-         // Ensure sidebar link is active even on error return
-         setActiveSidebarLink('showExamsDashboard');
+         showCompletedExams();
+     } catch (error) {
+         hideLoading();
+         console.error("Error deleting completed exam:", error);
+         alert(`Error deleting exam history: ${error.message}`);
      }
 }
 

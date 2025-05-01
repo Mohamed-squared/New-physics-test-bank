@@ -1271,17 +1271,26 @@ details > div { /* Content inside details */
 /* --- Cropper.js Circular Preview --- */
 .cropper-view-box,
 .cropper-face {
-    border-radius: 50%;
-    outline: inherit; /* Optional: remove default outline */
-    box-shadow: inherit; /* Optional: remove default shadow */
+    border-radius: 50% !important; /* Ensure override */
+    outline: inherit;
+    box-shadow: inherit;
+    outline-color: rgba(59, 130, 246, 0.75) !important; /* Match focus color */
 }
-/* Hide the dashed border of the crop box itself if desired */
+/* Hide the dashed border of the crop box itself */
 .cropper-dashed {
-    border: 0;
+    border: 0 !important;
 }
-/* Hide resize handles if box is not resizable */
+/* Hide the lines within the crop box */
+.cropper-line {
+    background-color: transparent !important;
+}
+/* Hide unnecessary points if not resizing */
 .cropper-point {
-    display: none;  /* Uncomment if cropBoxResizable is false */
+   /* display: none; */ /* Keep handles visible for movement */
+   background-color: rgba(59, 130, 246, 0.75) !important; /* Style handles */
+   opacity: 0.75 !important;
+   height: 10px !important;
+   width: 10px !important;
 }
 
 /* Inbox Notification Dot */
@@ -1294,6 +1303,6 @@ details > div { /* Content inside details */
     border-radius: 50%;
     margin-left: 0.5rem; /* Space between text/badge and dot */
     /* Optional animation: */
-    /* animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); */
+    animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); 
 }
 /* @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } } */

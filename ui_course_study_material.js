@@ -1557,28 +1557,8 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                   <div class="mt-4 border-t pt-4 dark:border-gray-700">
                       <h4 class="text-md font-medium mb-2">Chapter Tools</h4>
                       <div class="flex flex-wrap gap-2">
-                           <!-- MODIFICATION: Added window. prefix -->
-                           <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI)">Formulas</button>
-                           <!-- MODIFICATION: Added window. prefix -->
-                           <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI)">Summary</button>
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
-                      </div>
-                      <!-- Formula Sheet Display Area -->
-                      <div id="formula-sheet-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
-                           <div class="flex justify-between items-center mb-1">
-                               <span class="text-sm font-semibold">Formula Sheet</span>
-                               <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button>
-                           </div>
-                           <div id="formula-sheet-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
-                      </div>
-                      <!-- Chapter Summary Display Area -->
-                      <div id="chapter-summary-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
-                           <div class="flex justify-between items-center mb-1">
-                               <span class="text-sm font-semibold">Chapter Summary</span>
-                               <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button>
-                           </div>
-                           <div id="chapter-summary-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
                       </div>
                   </div>
             </div>
