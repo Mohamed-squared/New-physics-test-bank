@@ -1281,7 +1281,7 @@ details > div { /* Content inside details */
 }
 /* Hide resize handles if box is not resizable */
 .cropper-point {
-   /* display: none; */ /* Uncomment if cropBoxResizable is false */
+    display: none;  /* Uncomment if cropBoxResizable is false */
 }
 
 /* Inbox Notification Dot */
