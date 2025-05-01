@@ -9,34 +9,48 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
     }
 
-    // --- Usernames: Publicly readable, owner creates ---
+    // --- Usernames: Publicly readable, Owner creates, Admin creates/deletes ---
     match /usernames/{username} {
-      allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if false; // Prevent modification
+        allow read: if true;
+        allow create: if request.auth != null &&
+                         (request.resource.data.userId == request.auth.uid || isAdmin()); // Owner or Admin creates
+        allow delete: if request.auth != null && isAdmin(); // Only Admin deletes
+        allow update: if false; // Prevent updates
     }
 
     // --- Users: Owner or Admin can manage profile and subcollections ---
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      allow create: if request.auth != null && request.auth.uid == userId; // Only the user can create their own doc
+      // Allow owner or admin to read/delete profile
+      allow read, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      // Define update permissions more granularly
+      allow update: if request.auth != null &&
+                       (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
+                        (isAdmin() && // Admin can update specific fields
+                         request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status']) // List fields admin is allowed to modify. Add 'email' or 'status' if needed.
+                        )
+                       );
+      // User can only create their own doc initially
+      allow create: if request.auth != null && request.auth.uid == userId;
 
-      // Inbox: Owner manages, Admin can send (create)
+      // --- Subcollection Rules ---
+
+      // Inbox: Owner manages read/update/delete, Admin can send (create)
       match /inbox/{messageId} {
         allow read, update, delete: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null && isAdmin();
       }
 
-      // User-specific Formula Sheets: Owner manages, Admin can read
+      // User-specific Formula Sheets: Owner manages read/write/delete, Admin can read
       match /userFormulaSheets/{sheetId} {
           allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-          allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
+          allow read: if request.auth != null && isAdmin(); // Allow admin read (override write/delete)
       }
 
-      // User-specific Chapter Summaries: Owner manages, Admin can read
+      // User-specific Chapter Summaries: Owner manages read/write/delete, Admin can read
       match /userChapterSummaries/{summaryId} {
           allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-          allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
+          allow read: if request.auth != null && isAdmin(); // Allow admin read (override write/delete)
       }
 
       // Note: userNotes map is covered by the parent /users/{userId} rule
@@ -47,34 +61,32 @@ service cloud.firestore {
        allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
     }
 
-    // --- User Exam Storage: Owner manages, Admin can read ---
+    // --- User Exam Storage: Owner manages read/write/create/delete, Admin can read ---
     match /userExams/{userId}/{exams=**} { // Match any document in subcollections
-       // Owner can do anything with their exams
        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
-       // Admin can read any user's exams
-       allow read: if request.auth != null && isAdmin();
-       // Note: Admins cannot currently write/delete other users' exams with this rule.
+       allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
+       // Admins cannot write/delete other users' exams with this rule.
     }
 
-    // --- Feedback: Auth users create, Admin manages ---
+    // --- Feedback: Auth users create, Admin manages read/update/delete ---
     match /feedback/{feedbackId} {
       allow create: if request.auth != null;
       allow read, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Exam Issues: Auth users create, Admin manages ---
+    // --- Exam Issues: Auth users create, Admin manages read/update/delete ---
     match /examIssues/{issueId} {
        allow create: if request.auth != null;
        allow read, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Course Definitions: Public read, Admin manages ---
+    // --- Course Definitions: Public read, Admin manages create/update/delete ---
     match /courses/{courseId} {
       allow read: if true;
       allow create, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Shared Notes: Public read, Auth create, Owner/Admin manage ---
+    // --- Shared Notes: Public read, Auth create, Owner/Admin manage update/delete ---
     match /sharedCourseNotes/{noteId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid; // Creator sets correct UID

@@ -5,7 +5,7 @@
 import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
-    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser 
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -915,6 +915,92 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
      } catch (error) { hideLoading(); console.error("Error removing badge:", error); alert(`Failed to remove badge: ${error.message}`); }
 }
 
+// --- NEW: Admin Update Username ---
+/**
+ * Admin function to update a user's username and manage the username registry.
+ * @param {string} userId - The ID of the user to update.
+ * @param {string|null} oldUsername - The user's current username (can be null/empty).
+ * @param {string} newUsername - The desired new username (will be lowercased).
+ * @returns {Promise<boolean>} - True on success, false or throws error on failure.
+ */
+export async function adminUpdateUsername(userId, oldUsername, newUsername) {
+    console.log(`Admin attempting to change username for user ${userId} from "${oldUsername}" to "${newUsername}"`);
+    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+        console.error("Permission denied: Admin privileges required for username update.");
+        throw new Error("Permission denied: Admin privileges required.");
+    }
+    if (!userId || !newUsername) {
+        console.error("Missing userId or newUsername for adminUpdateUsername.");
+        throw new Error("Internal Error: Missing required user or username data.");
+    }
+
+    // Validate new username format (same as client-side)
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+    if (!usernameRegex.test(newUsername)) {
+        console.error("Invalid new username format:", newUsername);
+        throw new Error("Invalid username format. Use 3-20 alphanumeric characters or underscores.");
+    }
+
+    const newUsernameLower = newUsername.toLowerCase();
+    const oldUsernameLower = oldUsername ? oldUsername.toLowerCase() : null;
+
+    if (oldUsernameLower === newUsernameLower) {
+        console.log("New username is the same as the old one (case-insensitive). No change needed.");
+        return true; // No actual change needed
+    }
+
+    const usersRef = db.collection('users');
+    const usernamesRef = db.collection('usernames');
+    const userDocRef = usersRef.doc(userId);
+    const newUsernameDocRef = usernamesRef.doc(newUsernameLower);
+    const oldUsernameDocRef = oldUsernameLower ? usernamesRef.doc(oldUsernameLower) : null;
+
+    try {
+        // Check if the new username is already taken
+        console.log(`Checking if username "${newUsernameLower}" is taken...`);
+        const newUsernameDoc = await newUsernameDocRef.get();
+        if (newUsernameDoc.exists) {
+            console.error(`Username "${newUsernameLower}" is already taken by user ${newUsernameDoc.data()?.userId}`);
+            throw new Error(`Username "${newUsername}" is already taken.`);
+        }
+
+        // Perform the update in a batch write
+        console.log("Preparing batch write for username update...");
+        const batch = db.batch();
+
+        // 1. Update the username field in the user's document
+        console.log(`Batch: Updating username field in users/${userId} to "${newUsernameLower}"`);
+        batch.update(userDocRef, { username: newUsernameLower });
+
+        // 2. Delete the old username document if it exists
+        if (oldUsernameDocRef) {
+            console.log(`Batch: Deleting old username document usernames/${oldUsernameLower}`);
+            batch.delete(oldUsernameDocRef);
+        } else {
+            console.log("No old username document to delete.");
+        }
+
+        // 3. Create the new username document
+        console.log(`Batch: Creating new username document usernames/${newUsernameLower} linked to ${userId}`);
+        batch.set(newUsernameDocRef, { userId: userId });
+
+        // Commit the batch
+        console.log("Committing batch write...");
+        await batch.commit();
+        console.log(`Successfully updated username for user ${userId} to "${newUsernameLower}"`);
+        return true;
+
+    } catch (error) {
+        console.error(`Error updating username for user ${userId} to "${newUsernameLower}":`, error);
+        // Rethrow specific errors or a generic one
+        if (error.message.includes("already taken")) {
+            throw error; // Keep the specific error message
+        }
+        throw new Error(`Failed to update username: ${error.message}`);
+    }
+}
+
+
 // --- User-Specific Shared Data (Formula Sheets, Summaries, Notes) ---
 
 // USER FORMULA SHEETS
@@ -1182,22 +1268,24 @@ export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
 
 // --- NEW: Delete All Feedback Messages ---
 export async function deleteAllFeedbackMessages() {
-    if (!db) {
-        throw new Error("Cannot delete feedback: DB not initialized");
+    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { // Added admin check
+        throw new Error("Permission denied: Admin privileges required.");
     }
-
+    console.log("Admin: Deleting all feedback messages...");
     try {
         const snapshot = await db.collection('feedback')
-                               .limit(500) // Reasonable limit for this app scale
+                               .limit(500) // Process in batches if needed for large collections
                                .get();
 
         if (snapshot.empty) {
+            console.log("No feedback messages to delete.");
             return 0; // No messages to delete
         }
 
-        const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
-        await Promise.all(deletePromises);
-        
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
         console.log(`Successfully deleted ${snapshot.size} feedback messages`);
         return snapshot.size;
     } catch (error) {
@@ -1208,22 +1296,24 @@ export async function deleteAllFeedbackMessages() {
 
 // --- NEW: Delete All Exam Issues ---
 export async function deleteAllExamIssues() {
-    if (!db) {
-        throw new Error("Cannot delete exam issues: DB not initialized");
+    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { // Added admin check
+        throw new Error("Permission denied: Admin privileges required.");
     }
-
+    console.log("Admin: Deleting all exam issues...");
     try {
         const snapshot = await db.collection('examIssues')
-                               .limit(500) // Reasonable limit for this app scale
+                               .limit(500) // Process in batches if needed
                                .get();
 
         if (snapshot.empty) {
+             console.log("No exam issues to delete.");
             return 0; // No issues to delete
         }
 
-        const deletePromises = snapshot.docs.map(doc => doc.ref.delete());
-        await Promise.all(deletePromises);
-        
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+
         console.log(`Successfully deleted ${snapshot.size} exam issues`);
         return snapshot.size;
     } catch (error) {
@@ -1234,9 +1324,20 @@ export async function deleteAllExamIssues() {
 
 // --- NEW: Delete Inbox Message ---
 export async function deleteInboxMessage(userId, messageId) {
-    if (!db || !userId || !messageId) {
-        console.error("Cannot delete inbox message: Missing DB, userId, or messageId");
+    // Allow admin or owner to delete inbox messages
+    if (!db || !userId || !messageId || !firebaseAuth || !firebaseAuth.currentUser) {
+        console.error("Cannot delete inbox message: Missing DB, userId, messageId, or auth info");
         return false;
+    }
+
+    const currentUid = firebaseAuth.currentUser.uid;
+    const isAdmin = currentUid === ADMIN_UID;
+    const isOwner = currentUid === userId;
+
+    if (!isAdmin && !isOwner) {
+         console.error(`Permission denied: User ${currentUid} cannot delete message ${messageId} for user ${userId}`);
+         alert("Permission denied.");
+         return false;
     }
 
     const messageRef = db.collection('users').doc(userId)
@@ -1244,18 +1345,20 @@ export async function deleteInboxMessage(userId, messageId) {
 
     try {
         await messageRef.delete();
-        console.log(`Successfully deleted inbox message ${messageId} for user ${userId}`);
+        console.log(`Successfully deleted inbox message ${messageId} for user ${userId} by ${currentUid}`);
         return true;
     } catch (error) {
-        console.error(`Error deleting inbox message ${messageId}:`, error);
+        console.error(`Error deleting inbox message ${messageId} for user ${userId}:`, error);
         return false;
     }
 }
 
 // --- NEW: Delete Course Activity Progress ---
 export async function deleteCourseActivityProgress(userId, courseId, activityType, activityId) {
-    if (!db) {
-        console.error("Cannot delete course activity progress: DB not initialized");
+    // Only admin can delete specific progress items
+    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+        console.error("Cannot delete course activity progress: Admin privileges required");
+        alert("Permission denied.");
         return false;
     }
     if (!userId || !courseId || !activityType || !activityId) {
@@ -1264,7 +1367,9 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
     }
 
     const progressRef = db.collection('userCourseProgress').doc(userId).collection('courses').doc(courseId);
-    
+
+    console.log(`Admin attempting to delete ${activityType} score "${activityId}" for course ${courseId}, user ${userId}`);
+
     try {
         await db.runTransaction(async (transaction) => {
             const progressDoc = await transaction.get(progressRef);
@@ -1273,66 +1378,113 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
             }
 
             const progressData = progressDoc.data();
+            const updates = {};
             let scoreMap = null;
-            let isFinalExam = false;
+            let mapKey = null;
+            let valueToDelete = null; // Used for specific types if needed
 
-            // Determine the correct score map based on activity type
+            // Determine the correct score map and key based on activity type
             switch (activityType) {
                 case 'assignment':
                     scoreMap = progressData.assignmentScores || {};
+                    mapKey = 'assignmentScores';
+                    valueToDelete = activityId;
                     break;
                 case 'weekly_exam':
                     scoreMap = progressData.weeklyExamScores || {};
+                    mapKey = 'weeklyExamScores';
+                    valueToDelete = activityId;
                     break;
                 case 'midcourse':
                     scoreMap = progressData.midcourseExamScores || {};
+                    mapKey = 'midcourseExamScores';
+                    valueToDelete = activityId;
                     break;
                 case 'final':
-                    scoreMap = progressData.finalExamScores || [];
-                    isFinalExam = true;
+                    // Final exams are stored in an array (or null)
+                    let finalScores = progressData.finalExamScores || [];
+                    // activityId might be 'final1', 'final2' etc. -> map to index 0, 1
+                    const finalIndex = parseInt(activityId.replace('final', '')) - 1;
+                    if (Array.isArray(finalScores) && finalIndex >= 0 && finalIndex < finalScores.length) {
+                        finalScores[finalIndex] = null; // Nullify the score at the specific index
+                        updates.finalExamScores = finalScores;
+                    } else {
+                        console.warn(`Invalid final exam index or score array for ${activityId}`);
+                        // Don't throw, just log and don't update if invalid
+                    }
+                    mapKey = null; // Handled separately above
                     break;
+                 case 'skip_exam': // Deleting skip exam attempts/scores
+                    mapKey = 'skipExamAttempts';
+                    valueToDelete = activityId; // activityId is the chapter number string
+                    const attemptsMap = progressData.skipExamAttempts || {};
+                    const scoresMap = progressData.lastSkipExamScore || {};
+                    if (attemptsMap.hasOwnProperty(valueToDelete)) delete attemptsMap[valueToDelete];
+                    if (scoresMap.hasOwnProperty(valueToDelete)) delete scoresMap[valueToDelete];
+                    updates.skipExamAttempts = attemptsMap;
+                    updates.lastSkipExamScore = scoresMap;
+                    mapKey = null; // Handled separately
+                    break;
+                case 'video': // Deleting watched video progress
+                     mapKey = 'watchedVideoUrls';
+                     valueToDelete = activityId; // activityId is the video URL
+                     const urlsMap = progressData.watchedVideoUrls || {};
+                     const durationsMap = progressData.watchedVideoDurations || {};
+                     if (urlsMap.hasOwnProperty(valueToDelete)) delete urlsMap[valueToDelete];
+                     if (durationsMap.hasOwnProperty(valueToDelete)) delete durationsMap[valueToDelete];
+                     updates.watchedVideoUrls = urlsMap;
+                     updates.watchedVideoDurations = durationsMap;
+                     mapKey = null; // Handled separately
+                     break;
+                case 'pdf': // Deleting PDF progress
+                     mapKey = 'pdfProgress';
+                     valueToDelete = activityId; // activityId is the PDF URL
+                     const pdfMap = progressData.pdfProgress || {};
+                     if (pdfMap.hasOwnProperty(valueToDelete)) delete pdfMap[valueToDelete];
+                     updates.pdfProgress = pdfMap;
+                     mapKey = null; // Handled separately
+                     break;
+                 case 'daily': // Deleting a specific daily progress entry
+                     mapKey = 'dailyProgress';
+                     valueToDelete = activityId; // activityId is the date string YYYY-MM-DD
+                     const dailyMap = progressData.dailyProgress || {};
+                     if (dailyMap.hasOwnProperty(valueToDelete)) delete dailyMap[valueToDelete];
+                     updates.dailyProgress = dailyMap;
+                     mapKey = null; // Handled separately
+                     break;
+
                 default:
-                    throw new Error(`Invalid activity type: ${activityType}`);
+                    throw new Error(`Invalid activity type for deletion: ${activityType}`);
             }
 
-            // Handle the deletion based on whether it's a final exam or other activity
-            if (isFinalExam) {
-                // For final exams, we need to find the correct index based on activityId (e.g., 'final1' -> index 0)
-                const finalIndex = parseInt(activityId.replace('final', '')) - 1;
-                if (finalIndex >= 0 && finalIndex < scoreMap.length) {
-                    scoreMap[finalIndex] = null; // Nullify the score at the specific index
+            // Handle map-based deletion
+            if (mapKey && valueToDelete !== null) {
+                 // Ensure the map exists before trying to delete
+                if (progressData[mapKey] && progressData[mapKey].hasOwnProperty(valueToDelete)) {
+                    delete progressData[mapKey][valueToDelete]; // Delete the specific key from the score map
+                    updates[mapKey] = progressData[mapKey]; // Assign the modified map to updates
+                } else {
+                    console.warn(`Activity ID "${valueToDelete}" not found in map "${mapKey}" for deletion.`);
                 }
+            }
+
+            // Only update if there are changes
+            if (Object.keys(updates).length > 0) {
+                 console.log(`Updating Firestore with changes:`, updates);
+                 transaction.update(progressRef, updates);
             } else {
-                // For other activities, delete the specific key from the score map
-                delete scoreMap[activityId];
+                console.log("No updates were necessary for the deletion request.");
             }
-
-            // Update the progress document with the modified data
-            const updates = {};
-            switch (activityType) {
-                case 'assignment':
-                    updates.assignmentScores = scoreMap;
-                    break;
-                case 'weekly_exam':
-                    updates.weeklyExamScores = scoreMap;
-                    break;
-                case 'midcourse':
-                    updates.midcourseExamScores = scoreMap;
-                    break;
-                case 'final':
-                    updates.finalExamScores = scoreMap;
-                    break;
-            }
-
-            transaction.update(progressRef, updates);
         });
 
-        console.log(`Successfully deleted ${activityType} ${activityId} for user ${userId}, course ${courseId}`);
+        console.log(`Successfully processed deletion request for ${activityType} ${activityId} for user ${userId}, course ${courseId}`);
         return true;
     } catch (error) {
         console.error(`Error deleting course activity progress:`, error);
+        alert(`Error deleting progress: ${error.message}`); // Show error to admin
         return false;
     }
 }
+
 
 // --- END OF FILE firebase_firestore.js ---

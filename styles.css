@@ -1272,9 +1272,9 @@ details > div { /* Content inside details */
 .cropper-view-box,
 .cropper-face {
     border-radius: 50% !important; /* Ensure override */
-    outline: inherit;
-    box-shadow: inherit;
-    outline-color: rgba(59, 130, 246, 0.75) !important; /* Match focus color */
+    /* Outline and shadow inherited or explicitly set if needed */
+    /* Example outline color match */
+     outline-color: rgba(59, 130, 246, 0.75) !important;
 }
 /* Hide the dashed border of the crop box itself */
 .cropper-dashed {
@@ -1284,13 +1284,12 @@ details > div { /* Content inside details */
 .cropper-line {
     background-color: transparent !important;
 }
-/* Hide unnecessary points if not resizing */
+/* Optional: Style the crop handles if desired */
 .cropper-point {
-   /* display: none; */ /* Keep handles visible for movement */
-   background-color: rgba(59, 130, 246, 0.75) !important; /* Style handles */
-   opacity: 0.75 !important;
-   height: 10px !important;
-   width: 10px !important;
+    height: 8px !important;
+    width: 8px !important;
+    opacity: 0.75 !important; /* Make slightly more visible */
+    background-color: rgba(59, 130, 246, 0.85) !important; /* Match outline color */
 }
 
 /* Inbox Notification Dot */
@@ -1303,6 +1302,6 @@ details > div { /* Content inside details */
     border-radius: 50%;
     margin-left: 0.5rem; /* Space between text/badge and dot */
     /* Optional animation: */
-    animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); 
+    animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
 }
 /* @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } } */

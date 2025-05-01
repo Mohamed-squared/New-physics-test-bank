@@ -1,11 +1,24 @@
+// --- START OF FILE ui_admin_dashboard.js ---
+
 // ui_admin_dashboard.js
 
 import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added currentUser
-import { ADMIN_UID, YOUTUBE_API_KEY } from './config.js'; // Import YouTube API Key
+import { ADMIN_UID, YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import YouTube API Key and DEFAULT_PROFILE_PIC_URL
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 // MODIFIED: Removed deleteFeedbackMessage from this import
-import { sendAdminReply, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, updateCourseDefinition, deleteUserFormulaSheet, deleteUserChapterSummary, deleteAllFeedbackMessages, deleteAllExamIssues } from './firebase_firestore.js'; // Import badge handlers & course definition update
+import {
+    sendAdminReply,
+    updateCourseStatusForUser,
+    handleAddBadgeForUser,
+    handleRemoveBadgeForUser,
+    updateCourseDefinition,
+    deleteUserFormulaSheet,
+    deleteUserChapterSummary,
+    deleteAllFeedbackMessages,
+    deleteAllExamIssues,
+    adminUpdateUsername // <-- Import new function
+} from './firebase_firestore.js'; // Import badge handlers & course definition update
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm } from './ui_courses.js';
 // Use the imported escapeHtml from utils.js
@@ -155,136 +168,161 @@ async function loadFeedbackForAdmin() {
     feedbackArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
 
     try {
+        // Load Feedback
         const feedbackSnapshot = await db.collection('feedback')
                                          .orderBy('timestamp', 'desc')
-                                         .limit(50)
+                                         .limit(30) // Limit initial load
                                          .get();
+        // Load Exam Issues
+        const issuesSnapshot = await db.collection('examIssues')
+                                       .orderBy('timestamp', 'desc')
+                                       .limit(20) // Limit initial load
+                                       .get();
 
-        if (feedbackSnapshot.empty) {
-            feedbackArea.innerHTML = '<p class="text-sm text-muted">No feedback messages found.</p>';
+        if (feedbackSnapshot.empty && issuesSnapshot.empty) {
+            feedbackArea.innerHTML = '<p class="text-sm text-muted">No feedback messages or exam issues found.</p>';
             return;
         }
 
-        let feedbackHtml = '<div class="space-y-3">';
-        feedbackSnapshot.forEach(doc => {
-            const feedback = doc.data();
-            const feedbackId = doc.id;
-            const date = feedback.timestamp ? new Date(feedback.timestamp.toDate()).toLocaleString() : 'N/A';
-            const statusClass = feedback.status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : feedback.status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
-            const statusText = feedback.status === 'new' ? 'New' : feedback.status === 'replied' ? 'Replied' : (feedback.status || 'Unknown');
-            const senderName = escapeHtml(feedback.username || 'Unknown User');
-            const isAdminSender = feedback.userId === ADMIN_UID;
+        let combinedHtml = '<div class="space-y-3">';
+        const renderItem = (doc, type) => {
+            const data = doc.data();
+            const id = doc.id;
+            const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
+            const collectionName = type === 'feedback' ? 'feedback' : 'examIssues';
+             const status = data.status || 'new'; // Default to new if missing
+            const statusClass = status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
+            const statusText = status === 'new' ? 'New' : status === 'replied' ? 'Replied' : (status || 'Unknown');
+            const senderName = escapeHtml(data.username || 'Unknown User');
+            const isAdminSender = data.userId === ADMIN_UID;
             const adminIconHtml = isAdminSender ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
-            const feedbackTextEscaped = escapeHtml(feedback.feedbackText || 'No text');
-            const replyTextEscaped = escapeHtml(feedback.replyText || '');
+            const textEscaped = escapeHtml(data.feedbackText || 'No text');
+            const replyTextEscaped = escapeHtml(data.replyText || '');
+             const itemTypeLabel = type === 'feedback' ? 'Feedback' : 'Exam Issue';
+             const itemTypeColor = type === 'feedback' ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-red-100 dark:bg-red-900/50';
 
-            feedbackHtml += `
+            return `
                 <div class="${statusClass} p-3 rounded-lg border shadow-sm text-sm">
                     <div class="flex justify-between items-center mb-1">
-                         <span class="text-xs font-mono text-gray-500 dark:text-gray-400 break-all">${feedbackId}</span>
-                         <span class="text-xs font-semibold px-2 py-0.5 rounded ${statusText === 'New' ? 'bg-yellow-500 text-white' : statusText === 'Replied' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}">${statusText}</span>
+                        <span class="font-bold text-xs px-2 py-0.5 rounded ${itemTypeColor}">${itemTypeLabel}</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded ${statusText === 'New' ? 'bg-yellow-500 text-white' : statusText === 'Replied' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}">${statusText}</span>
                     </div>
-                    <p><strong>From:</strong> ${senderName}${adminIconHtml} (ID: ${feedback.userId || 'N/A'})</p>
-                    <p><strong>Subject ID:</strong> ${escapeHtml(feedback.subjectId || 'N/A')}</p>
-                    <p><strong>Question ID:</strong> ${escapeHtml(feedback.questionId || 'N/A')}</p>
+                     <p class="text-xs font-mono text-gray-500 dark:text-gray-400 break-all mb-1">ID: ${id}</p>
+                    <p><strong>From:</strong> ${senderName}${adminIconHtml} (ID: ${data.userId || 'N/A'})</p>
+                    <p><strong>Subject ID:</strong> ${escapeHtml(data.subjectId || 'N/A')}</p>
+                    <p><strong>Question ID:</strong> ${escapeHtml(data.questionId || 'N/A')}</p>
+                    ${data.context ? `<p><strong>Context:</strong> ${escapeHtml(data.context)}</p>` : ''}
                     <p><strong>Date:</strong> ${date}</p>
-                    <p class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-500 mt-1 whitespace-pre-wrap text-xs">${feedbackTextEscaped}</p>
-                    ${feedback.replyText ? `<p class="mt-2 pt-2 border-t dark:border-gray-600 text-xs"><strong>Admin Reply:</strong> ${replyTextEscaped}</p>` : ''}
+                    <p class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-500 mt-1 whitespace-pre-wrap text-xs">${textEscaped}</p>
+                    ${data.replyText ? `<p class="mt-2 pt-2 border-t dark:border-gray-600 text-xs"><strong>Admin Reply:</strong> ${replyTextEscaped}</p>` : ''}
                     <div class="mt-2 text-right space-x-1">
-                        ${feedback.status !== 'replied' ? `<button onclick="window.promptAdminReply('${feedbackId}', '${feedback.userId}')" class="btn-secondary-small text-xs">Reply</button>` : ''}
-                        <!-- NEW: Delete Button -->
-                        <button onclick="window.confirmDeleteFeedback('${feedbackId}')" class="btn-danger-small text-xs" title="Delete this feedback message">Delete</button>
+                        ${status !== 'replied' ? `<button onclick="window.promptAdminReply('${collectionName}', '${id}', '${data.userId}')" class="btn-secondary-small text-xs">Reply</button>` : ''}
+                        <button onclick="window.confirmDeleteItem('${collectionName}', '${id}')" class="btn-danger-small text-xs" title="Delete this message">Delete</button>
                     </div>
                 </div>
             `;
-        });
-        feedbackHtml += '</div>';
-        feedbackArea.innerHTML = feedbackHtml;
+        };
+
+        feedbackSnapshot.forEach(doc => combinedHtml += renderItem(doc, 'feedback'));
+        issuesSnapshot.forEach(doc => combinedHtml += renderItem(doc, 'examIssue'));
+
+        combinedHtml += '</div>';
+        feedbackArea.innerHTML = combinedHtml;
 
     } catch (error) {
-        console.error("Error loading feedback for admin:", error);
-        feedbackArea.innerHTML = `<p class="text-red-500 text-sm">Error loading feedback: ${error.message}</p>`;
+        console.error("Error loading feedback/issues for admin:", error);
+        feedbackArea.innerHTML = `<p class="text-red-500 text-sm">Error loading feedback/issues: ${error.message}</p>`;
     }
  }
 window.loadFeedbackForAdmin = loadFeedbackForAdmin; // Assign for refresh button
 
-export function promptAdminReply(feedbackId, recipientUserId) {
+// --- MODIFIED: promptAdminReply takes collection name ---
+export function promptAdminReply(collectionName, itemId, recipientUserId) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Action requires admin privileges.");
         return;
     }
-    const replyText = prompt(`Enter reply for feedback ID ${feedbackId}:`);
+    const replyText = prompt(`Enter reply for item ID ${itemId} (in ${collectionName}):`);
     if (replyText && replyText.trim()) {
-        handleAdminReply(feedbackId, recipientUserId, replyText.trim());
+        handleAdminReply(collectionName, itemId, recipientUserId, replyText.trim());
     } else if (replyText !== null) {
         alert("Reply cannot be empty.");
     }
 }
 window.promptAdminReply = promptAdminReply; // Assign to window
 
-async function handleAdminReply(feedbackId, recipientUserId, replyText) {
+// --- MODIFIED: handleAdminReply takes collection name ---
+async function handleAdminReply(collectionName, itemId, recipientUserId, replyText) {
      if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Action requires admin privileges.");
         return;
     }
 
     showLoading("Sending reply...");
-    const success = await sendAdminReply(recipientUserId, `Reply regarding feedback ${feedbackId}`, replyText, currentUser);
+    // Subject line indicates the source collection
+    const subject = `Reply regarding ${collectionName === 'feedback' ? 'Feedback' : 'Exam Issue'} ${itemId}`;
+    const success = await sendAdminReply(recipientUserId, subject, replyText, currentUser);
     if (success) {
         try {
-            await db.collection('feedback').doc(feedbackId).update({
+            // Update status in the correct collection
+            await db.collection(collectionName).doc(itemId).update({
                 status: 'replied',
                 replyText: replyText
             });
-            console.log(`Feedback ${feedbackId} status updated to replied.`);
+            console.log(`${collectionName} item ${itemId} status updated to replied.`);
             alert("Reply sent successfully!");
             loadFeedbackForAdmin(); // Refresh the list
         } catch (updateError) {
-            console.error("Error updating feedback status:", updateError);
-            alert("Reply sent, but failed to update feedback status.");
+            console.error(`Error updating ${collectionName} status:`, updateError);
+            alert(`Reply sent, but failed to update ${collectionName} status.`);
         }
     }
     hideLoading();
 }
 
-// --- NEW: Delete Feedback ---
-export function confirmDeleteFeedback(feedbackId) {
+// --- NEW: Generic Delete Item Confirmation ---
+export function confirmDeleteItem(collectionName, itemId) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required."); return;
     }
-    if (confirm(`Are you sure you want to permanently delete feedback message ${feedbackId}? This cannot be undone.`)) {
-        handleDeleteFeedback(feedbackId);
+    if (confirm(`Are you sure you want to permanently delete this ${collectionName === 'feedback' ? 'feedback message' : 'exam issue'} (ID: ${itemId})? This cannot be undone.`)) {
+        handleDeleteItem(collectionName, itemId);
     }
 }
-window.confirmDeleteFeedback = confirmDeleteFeedback; // Assign to window
+window.confirmDeleteItem = confirmDeleteItem; // Assign to window
 
-// --- NEW: Locally defined function to delete feedback ---
-async function deleteFeedbackMessage(feedbackId) {
-    if (!db || !feedbackId) {
-        console.error("Cannot delete feedback: DB not available or feedbackId missing.");
+// --- NEW: Generic Delete Item Handler ---
+async function deleteDbItem(collectionName, itemId) {
+    if (!db || !itemId || !collectionName) {
+        console.error("Cannot delete item: DB not available or ID/collection missing.");
         return false;
     }
-    const feedbackRef = db.collection('feedback').doc(feedbackId);
+    // Validate collection name
+    if (!['feedback', 'examIssues'].includes(collectionName)) {
+         console.error("Invalid collection name for deletion:", collectionName);
+         return false;
+    }
+    const itemRef = db.collection(collectionName).doc(itemId);
     try {
-        await feedbackRef.delete();
-        console.log(`Feedback message ${feedbackId} deleted successfully.`);
+        await itemRef.delete();
+        console.log(`Item ${itemId} in ${collectionName} deleted successfully.`);
         return true;
     } catch (error) {
-        console.error(`Error deleting feedback message ${feedbackId}:`, error);
+        console.error(`Error deleting item ${itemId} from ${collectionName}:`, error);
         return false;
     }
 }
 
-async function handleDeleteFeedback(feedbackId) {
-     if (!currentUser || currentUser.uid !== ADMIN_UID || !feedbackId) return;
-     showLoading("Deleting feedback...");
-     const success = await deleteFeedbackMessage(feedbackId); // Call the local function
+async function handleDeleteItem(collectionName, itemId) {
+     if (!currentUser || currentUser.uid !== ADMIN_UID || !itemId || !collectionName) return;
+     showLoading(`Deleting item from ${collectionName}...`);
+     const success = await deleteDbItem(collectionName, itemId);
      hideLoading();
      if (success) {
-         alert("Feedback message deleted.");
+         alert("Item deleted.");
          loadFeedbackForAdmin(); // Refresh list
      } else {
-         alert("Failed to delete feedback message.");
+         alert("Failed to delete item.");
      }
 }
 
@@ -295,10 +333,20 @@ async function loadCoursesForAdmin() {
      if (!coursesArea) return;
      coursesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
      try {
-         const coursesSnapshot = await db.collection('courses').where('status', 'in', ['pending', 'reported']).orderBy('createdAt', 'desc').limit(50).get();
-         if (coursesSnapshot.empty) { coursesArea.innerHTML = '<p class="text-sm text-muted">No courses currently require admin attention.</p>'; return; }
+          // Fetch pending OR reported courses, order by creation date
+         const coursesSnapshot = await db.collection('courses')
+             .where('status', 'in', ['pending', 'reported'])
+             .orderBy('createdAt', 'desc') // Requires composite index (status ASC, createdAt DESC) or (status DESC, createdAt DESC)
+             .limit(50)
+             .get();
+
+         if (coursesSnapshot.empty) {
+             coursesArea.innerHTML = '<p class="text-sm text-muted">No courses currently require admin attention.</p>';
+             return;
+         }
+
          let coursesHtml = '<div class="space-y-3">';
-         snapshot.forEach(doc => {
+         coursesSnapshot.forEach(doc => { // Changed snapshot variable name
              const course = doc.data();
              const courseId = doc.id;
              const date = course.createdAt ? new Date(course.createdAt.toDate()).toLocaleString() : 'N/A';
@@ -338,7 +386,13 @@ async function loadCoursesForAdmin() {
          coursesArea.innerHTML = coursesHtml;
      } catch (error) {
          console.error("Error loading courses for admin:", error);
-         coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}. This might require creating a Firestore index (check console). </p>`;
+         if (error.code === 'failed-precondition') {
+              coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: Missing Firestore index. Please create a composite index on 'courses' collection: <strong>status ASC, createdAt DESC</strong> (or DESC/DESC). Check browser console for a direct link to create it.</p>`;
+              // Firestore usually logs a link to create the index in the console.
+              console.error("Firestore index required for admin course query. Look for a URL in the Firestore error message to create it.");
+         } else {
+             coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}.</p>`;
+         }
      }
  }
 window.loadCoursesForAdmin = loadCoursesForAdmin; // Assign for refresh button
@@ -361,14 +415,7 @@ export async function loadUserCoursesForAdmin() {
     let targetUserId = null;
 
     try {
-        if (searchTerm.includes('@')) {
-            const userQuery = await db.collection('users').where('email', '==', searchTerm.toLowerCase()).limit(1).get();
-            if (!userQuery.empty) targetUserId = userQuery.docs[0].id;
-        } else {
-            const userDoc = await db.collection('users').doc(searchTerm).get();
-            if (userDoc.exists) targetUserId = userDoc.id;
-        }
-
+        targetUserId = await findUserId(searchTerm); // Use shared findUserId function
         if (!targetUserId) throw new Error("User not found with the provided ID or Email.");
 
         const progressCollectionRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses');
@@ -436,8 +483,12 @@ export async function handleAdminMarkCourseComplete(userId, courseId) {
          // Reload if the input field still matches the user ID or email
          const searchInput = document.getElementById('admin-user-search-courses');
          const searchTerm = searchInput?.value.trim();
-         if (searchTerm === userId || searchTerm.toLowerCase() === (await db.collection('users').doc(userId).get()).data()?.email?.toLowerCase()) {
-             loadUserCoursesForAdmin();
+         if (searchTerm) {
+             const userDoc = await db.collection('users').doc(userId).get();
+             const userEmail = userDoc.data()?.email?.toLowerCase();
+             if (searchTerm === userId || (userEmail && searchTerm.toLowerCase() === userEmail)) {
+                 loadUserCoursesForAdmin();
+             }
          }
      }
 }
@@ -447,13 +498,33 @@ window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete; // Assign 
 async function findUserId(searchTerm) {
      let targetUserId = null;
      const lowerSearchTerm = searchTerm.toLowerCase();
-     if (searchTerm.includes('@')) {
+     if (!searchTerm) return null; // Avoid unnecessary queries
+
+     if (lowerSearchTerm.includes('@')) {
+         console.log(`Finding user by email: ${lowerSearchTerm}`);
          const userQuery = await db.collection('users').where('email', '==', lowerSearchTerm).limit(1).get();
-         if (!userQuery.empty) targetUserId = userQuery.docs[0].id;
+         if (!userQuery.empty) {
+             targetUserId = userQuery.docs[0].id;
+             console.log(`Found user ID by email: ${targetUserId}`);
+         }
      } else {
+         // Assume it's a UID
+         console.log(`Checking if ${searchTerm} is a valid user ID...`);
          const userDoc = await db.collection('users').doc(searchTerm).get();
-         if (userDoc.exists) targetUserId = userDoc.id;
+         if (userDoc.exists) {
+             targetUserId = userDoc.id;
+             console.log(`Confirmed user ID: ${targetUserId}`);
+         } else {
+             // Try searching by username as a fallback? Requires another query.
+             console.log(`User ID ${searchTerm} not found directly. Trying username lookup...`);
+             const usernameQuery = await db.collection('usernames').doc(lowerSearchTerm).get();
+             if (usernameQuery.exists) {
+                 targetUserId = usernameQuery.data().userId;
+                 console.log(`Found user ID by username ${lowerSearchTerm}: ${targetUserId}`);
+             }
+         }
      }
+     if (!targetUserId) console.log(`User not found for search term: ${searchTerm}`);
      return targetUserId;
 }
 export async function loadUserBadgesForAdmin() {
@@ -471,7 +542,7 @@ export async function loadUserBadgesForAdmin() {
 
     try {
         const targetUserId = await findUserId(searchTerm);
-        if (!targetUserId) throw new Error("User not found with the provided ID or Email.");
+        if (!targetUserId) throw new Error("User not found with the provided ID, Email, or Username.");
 
         const userDoc = await db.collection('users').doc(targetUserId).get();
         if (!userDoc.exists) throw new Error("User document does not exist.");
@@ -525,7 +596,8 @@ export function promptAddBadge(userId) {
      if (completionDateStr) {
          try {
              if (!/^\d{4}-\d{2}-\d{2}$/.test(completionDateStr)) throw new Error("Invalid date format.");
-             completionDate = new Date(completionDateStr);
+              // Use UTC to avoid timezone issues with prompt input
+             completionDate = new Date(completionDateStr + 'T00:00:00Z');
              if (isNaN(completionDate.getTime())) throw new Error("Invalid date value.");
          } catch(e) { alert("Invalid date format. Please use YYYY-MM-DD."); return; }
      }
@@ -551,7 +623,7 @@ function populateAdminCourseSelect() {
         if (course.youtubePlaylistUrls?.length > 0 || course.youtubePlaylistUrl) {
              const option = document.createElement('option');
              option.value = courseId;
-             option.textContent = course.name || courseId;
+             option.textContent = escapeHtml(course.name || courseId); // Escape name
              select.appendChild(option);
         }
     });
@@ -610,7 +682,7 @@ async function loadPlaylistForAdmin() {
     const playlistUrls = courseDef?.youtubePlaylistUrls?.length > 0 ? courseDef.youtubePlaylistUrls : (courseDef?.youtubePlaylistUrl ? [courseDef.youtubePlaylistUrl] : []);
 
     if (playlistUrls.length === 0) {
-         videosArea.innerHTML = `<p class="text-warning text-sm">No YouTube playlist URL defined for course "${courseDef?.name || courseId}".</p>`;
+         videosArea.innerHTML = `<p class="text-warning text-sm">No YouTube playlist URL defined for course "${escapeHtml(courseDef?.name || courseId)}".</p>`;
          actionArea.classList.add('hidden');
          return;
     }
@@ -640,20 +712,21 @@ async function loadPlaylistForAdmin() {
              }
 
              let nextPageToken = null;
-             let positionOffset = 0; // In case of multiple playlists, keep position relative
+             let positionOffset = allVideos.length; // Keep track of position across multiple playlists
              do {
                   const data = await fetchPlaylistItems(playlistId, YOUTUBE_API_KEY, nextPageToken);
                   if (data.items) {
-                      allVideos.push(...data.items.map(item => ({
-                           videoId: item.snippet?.resourceId?.videoId,
-                           title: item.snippet?.title,
-                           thumbnail: item.snippet?.thumbnails?.default?.url,
-                           position: (item.snippet?.position ?? 0) + positionOffset // Adjust position based on playlist order
+                      allVideos.push(...data.items
+                          .filter(item => item.snippet?.resourceId?.videoId) // Ensure video ID exists
+                          .map(item => ({
+                           videoId: item.snippet.resourceId.videoId,
+                           title: item.snippet.title,
+                           thumbnail: item.snippet.thumbnails?.default?.url,
+                           position: (item.snippet.position ?? 0) + positionOffset // Adjust position based on offset
                       })));
                   }
                   nextPageToken = data.nextPageToken;
              } while (nextPageToken);
-             positionOffset += allVideos.length; // Increase offset for next playlist
         }
         hideLoading();
 
@@ -666,8 +739,9 @@ async function loadPlaylistForAdmin() {
     if (fetchError) {
          videosArea.innerHTML = `<p class="text-danger text-sm">Error loading playlist: ${fetchError.message}. Check API Key, playlist ID, and quotas.</p>`;
     } else if (allVideos.length === 0) {
-         videosArea.innerHTML = '<p class="text-muted text-sm">No videos found in the specified playlist(s).</p>';
+         videosArea.innerHTML = '<p class="text-muted text-sm">No valid videos found in the specified playlist(s).</p>';
     } else {
+         // Sort by final calculated position
          allVideos.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
          renderPlaylistVideos(allVideos, videosArea);
          actionArea.classList.remove('hidden'); // Show actions after loading
@@ -684,10 +758,12 @@ function renderPlaylistVideos(videos, container) {
      <ul class="space-y-1 list-none p-0">`; // Use list-none and p-0
      videos.forEach(video => {
          if (!video.videoId || !video.title) return; // Skip invalid items
+         // Escape single quotes in title for the onclick attribute
+         const escapedTitle = escapeHtml(video.title.replace(/'/g, "\\'"));
          videosHtml += `
-              <li id="admin-video-${video.videoId}" class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer" onclick="window.toggleVideoSelection(this, '${video.videoId}', '${escapeHtml(video.title.replace(/'/g, "\\'"))}')">
+              <li id="admin-video-${video.videoId}" class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer" onclick="window.toggleVideoSelection(this, '${video.videoId}', '${escapedTitle}')">
                   <input type="checkbox" class="admin-video-select flex-shrink-0 pointer-events-none" value="${video.videoId}" data-title="${escapeHtml(video.title)}">
-                  <img src="${video.thumbnail || ''}" alt="Thumb" class="w-16 h-9 object-cover rounded flex-shrink-0" onerror="this.style.display='none'">
+                  <img src="${video.thumbnail || ''}" alt="Thumb" class="w-16 h-9 object-cover rounded flex-shrink-0 bg-gray-200 dark:bg-gray-700" onerror="this.style.display='none'">
                   <span class="text-xs flex-grow">${escapeHtml(video.title)}</span>
               </li>
          `;
@@ -703,7 +779,7 @@ function toggleSelectAllVideos(select) {
             cb.checked = select;
             // Trigger the selection logic manually for each toggled checkbox
             const videoId = cb.value;
-            const videoTitle = cb.dataset.title;
+            const videoTitle = cb.dataset.title; // Use data-title which is already escaped
             updateSelectionState(videoId, videoTitle, select);
             cb.closest('li')?.classList.toggle('ring-2', select);
             cb.closest('li')?.classList.toggle('ring-primary-500', select);
@@ -720,7 +796,9 @@ function toggleVideoSelection(listItem, videoId, videoTitle) {
      checkbox.checked = !checkbox.checked; // Toggle the checkbox state
 
      // Update selection state array
-     updateSelectionState(videoId, videoTitle, checkbox.checked);
+     // Use the data-title attribute for consistency, as it's already escaped properly for HTML
+     const actualTitle = checkbox.dataset.title;
+     updateSelectionState(videoId, actualTitle, checkbox.checked);
 
      // Update UI for this item
      listItem.classList.toggle('ring-2', checkbox.checked);
@@ -738,7 +816,7 @@ function updateSelectionState(videoId, videoTitle, isSelected) {
      } else if (!isSelected && index > -1) {
           selectedVideosForAssignment.splice(index, 1);
      }
-     console.log("Current selection:", selectedVideosForAssignment);
+     // console.log("Current selection:", selectedVideosForAssignment); // Optional: for debugging
 }
 
 function updateSelectedVideoCount() {
@@ -750,11 +828,19 @@ function updateSelectedVideoCount() {
     if (countArea) {
         countArea.textContent = `Selected Videos: ${count}`;
     }
+    const chapterNumInput = document.getElementById('admin-assign-chapter-num');
+    const chapterNumValid = chapterNumInput && parseInt(chapterNumInput.value) > 0;
+
     if (assignBtn) {
-        assignBtn.disabled = count === 0;
+        assignBtn.disabled = count === 0 || !chapterNumValid;
     }
      if (unassignBtn) {
-          unassignBtn.disabled = count === 0;
+          unassignBtn.disabled = count === 0 || !chapterNumValid;
+     }
+     // Add event listener to chapter input to re-evaluate button states
+     if (chapterNumInput && !chapterNumInput.dataset.listenerAttached) {
+         chapterNumInput.addEventListener('input', updateSelectedVideoCount);
+         chapterNumInput.dataset.listenerAttached = 'true';
      }
 }
 
@@ -766,9 +852,10 @@ async function handleAssignVideoToChapter() {
      const chapterNumInput = document.getElementById('admin-assign-chapter-num');
      const chapterNum = parseInt(chapterNumInput?.value);
      const courseDef = globalCourseDataMap.get(currentLoadedPlaylistCourseId);
+     const totalChapters = courseDef?.totalChapters;
 
-     if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (courseDef && chapterNum > courseDef.totalChapters)) {
-          alert(`Please enter a valid chapter number (1-${courseDef?.totalChapters || '?'}).`);
+     if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (totalChapters && chapterNum > totalChapters)) {
+          alert(`Please enter a valid chapter number (1-${totalChapters || '?'}).`);
           chapterNumInput?.focus();
           return;
      }
@@ -776,7 +863,11 @@ async function handleAssignVideoToChapter() {
      showLoading(`Assigning ${selectedVideosForAssignment.length} video(s) to Chapter ${chapterNum}...`);
 
      try {
-          const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
+          // Fetch latest course data directly to avoid stale state issues
+          const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
+          const currentCourseData = courseDoc.data() || {};
+          // const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
+
           const chapterResources = { ...(currentCourseData.chapterResources || {}) };
           chapterResources[chapterNum] = chapterResources[chapterNum] || {};
           // Ensure lectureUrls is an array of objects {url, title}
@@ -789,7 +880,7 @@ async function handleAssignVideoToChapter() {
                const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
                // Check if URL already exists in the array of objects
                if (!currentLectures.some(lec => lec.url === videoUrl)) {
-                    currentLectures.push({ url: videoUrl, title: video.title });
+                    currentLectures.push({ url: videoUrl, title: video.title }); // Use the title stored during selection
                     addedCount++;
                }
           });
@@ -806,7 +897,7 @@ async function handleAssignVideoToChapter() {
 
           if (success) {
                hideLoading();
-               alert(`${addedCount} video(s) successfully assigned to Chapter ${chapterNum} for course "${courseDef?.name || currentLoadedPlaylistCourseId}".`);
+               alert(`${addedCount} video(s) successfully assigned to Chapter ${chapterNum} for course "${escapeHtml(courseDef?.name || currentLoadedPlaylistCourseId)}".`);
                // Clear selection visually
                selectedVideosForAssignment = [];
                updateSelectedVideoCount();
@@ -831,9 +922,11 @@ async function handleUnassignVideoFromChapter() {
      const chapterNumInput = document.getElementById('admin-assign-chapter-num');
      const chapterNum = parseInt(chapterNumInput?.value);
      const courseDef = globalCourseDataMap.get(currentLoadedPlaylistCourseId);
+     const totalChapters = courseDef?.totalChapters;
 
-      if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (courseDef && chapterNum > courseDef.totalChapters)) {
-          alert(`Please enter a valid chapter number (1-${courseDef?.totalChapters || '?'}) from which to unassign videos.`);
+
+      if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (totalChapters && chapterNum > totalChapters)) {
+          alert(`Please enter a valid chapter number (1-${totalChapters || '?'}) from which to unassign videos.`);
           chapterNumInput?.focus();
           return;
       }
@@ -845,10 +938,14 @@ async function handleUnassignVideoFromChapter() {
      showLoading(`Unassigning ${selectedVideosForAssignment.length} video(s) from Chapter ${chapterNum}...`);
 
      try {
-          const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
+          // Fetch latest course data
+          const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
+          const currentCourseData = courseDoc.data() || {};
+          // const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
+
           const chapterResources = { ...(currentCourseData.chapterResources || {}) };
 
-          if (!chapterResources[chapterNum] || !chapterResources[chapterNum].lectureUrls) {
+          if (!chapterResources[chapterNum] || !chapterResources[chapterNum].lectureUrls || chapterResources[chapterNum].lectureUrls.length === 0) {
                hideLoading();
                alert("No videos are currently assigned to this chapter.");
                return;
@@ -875,8 +972,7 @@ async function handleUnassignVideoFromChapter() {
 
           // Update the chapter's lectureUrls
           chapterResources[chapterNum].lectureUrls = updatedLectures;
-          // If array is empty after removal, optionally remove the chapter entry? Or keep empty array? Keep empty for now.
-          // if (updatedLectures.length === 0) { delete chapterResources[chapterNum]; }
+          // If array is empty after removal, keep empty array.
 
           const updates = { chapterResources };
           const success = await updateCourseDefinition(currentLoadedPlaylistCourseId, updates);
@@ -925,6 +1021,7 @@ async function handleDeleteUserFormulaSheetAdmin() {
     const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
     const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
     const statusArea = document.getElementById('admin-delete-content-status');
+    statusArea.innerHTML = ''; // Clear previous status
 
     if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
         statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
@@ -939,12 +1036,13 @@ async function handleDeleteUserFormulaSheetAdmin() {
             statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
             return;
         }
+        hideLoading(); // Hide after finding user, before confirm
 
-        if (!confirm(`Are you sure you want to delete the formula sheet for:\nUser: ${userInput}\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
-            hideLoading();
+        if (!confirm(`Are you sure you want to delete the formula sheet for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
             return;
         }
 
+        showLoading("Deleting formula sheet..."); // Show again for delete operation
         const success = await deleteUserFormulaSheet(targetUserId, courseId, chapterNum);
         hideLoading();
 
@@ -970,6 +1068,8 @@ async function handleDeleteUserChapterSummaryAdmin() {
     const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
     const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
     const statusArea = document.getElementById('admin-delete-content-status');
+    statusArea.innerHTML = ''; // Clear previous status
+
 
     if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
         statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
@@ -984,12 +1084,13 @@ async function handleDeleteUserChapterSummaryAdmin() {
             statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
             return;
         }
+        hideLoading(); // Hide after finding user, before confirm
 
-        if (!confirm(`Are you sure you want to delete the chapter summary for:\nUser: ${userInput}\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
-            hideLoading();
+        if (!confirm(`Are you sure you want to delete the chapter summary for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
             return;
         }
 
+        showLoading("Deleting chapter summary..."); // Show again for delete operation
         const success = await deleteUserChapterSummary(targetUserId, courseId, chapterNum);
         hideLoading();
 
@@ -1025,7 +1126,7 @@ window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
 async function handleDeleteAllFeedback() {
     if (!currentUser || currentUser.uid !== ADMIN_UID) return;
 
-    showLoading("Deleting all feedback...");
+    showLoading("Deleting all feedback & issues...");
     try {
         // Delete both feedback and exam issues
         const [feedbackCount, issuesCount] = await Promise.all([
@@ -1038,8 +1139,8 @@ async function handleDeleteAllFeedback() {
         loadFeedbackForAdmin(); // Refresh the list
     } catch (error) {
         hideLoading();
-        console.error("Error deleting all feedback:", error);
-        alert(`Failed to delete all feedback: ${error.message}`);
+        console.error("Error deleting all feedback/issues:", error);
+        alert(`Failed to delete all feedback/issues: ${error.message}`);
     }
 }
 
@@ -1055,21 +1156,24 @@ async function listAllUsersAdmin() {
     showLoading("Loading users...");
 
     try {
-        let query = db.collection('users').orderBy('displayName'); // Basic ordering
-        // Basic filtering (can be enhanced)
-        if (searchTerm) {
-            // Note: Firestore doesn't support case-insensitive search directly or searching multiple fields easily without third-party tools (like Algolia) or complex data duplication.
-            // This is a simplified search attempt. For robust search, consider other solutions.
-            console.warn("Admin user search is basic and case-sensitive for non-email fields.");
-             if (searchTerm.includes('@')) {
-                  query = db.collection('users').where('email', '==', searchTerm); // Exact email match
-             } else {
-                  // Try matching display name (case-sensitive startsWith)
-                  query = db.collection('users').orderBy('displayName').startAt(searchTerm).endAt(searchTerm + '\uf8ff');
-             }
-        }
+        let query;
+        // Decide query based on search term
+         if (searchTerm.includes('@')) {
+            // Exact email match is efficient
+            query = db.collection('users').where('email', '==', searchTerm);
+         } else if (searchTerm) {
+            // Basic non-indexed search (less efficient, case-sensitive, only prefix match on displayName)
+            // For better search, use Algolia or similar, or duplicate searchable fields in lowercase.
+            console.warn("Admin user search by name is basic: case-sensitive, prefix match on displayName.");
+            query = db.collection('users').orderBy('displayName').startAt(searchTerm).endAt(searchTerm + '\uf8ff');
+            // Alternative: try searching by username (requires another indexed field or separate collection lookup)
+         } else {
+            // No search term, list recent users (or order by name)
+             query = db.collection('users').orderBy('displayName').limit(100); // Or orderBy('createdAt', 'desc')
+         }
 
-        const snapshot = await query.limit(100).get(); // Limit results
+
+        const snapshot = await query.limit(100).get(); // Limit results for performance
         hideLoading();
 
         if (snapshot.empty) {
@@ -1083,13 +1187,16 @@ async function listAllUsersAdmin() {
             const userId = doc.id;
             const displayName = escapeHtml(userData.displayName || userData.username || 'N/A');
             const email = escapeHtml(userData.email || 'N/A');
+             const username = escapeHtml(userData.username || '-'); // Display username
             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString() : 'N/A';
             const isAdminUser = userId === ADMIN_UID;
 
             usersHtml += `
-                <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm flex-wrap">
+                <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex items-center gap-3 text-sm flex-wrap">
+                    <img src="${userData.photoURL || DEFAULT_PROFILE_PIC_URL}" alt="${displayName}'s avatar" class="w-10 h-10 rounded-full object-cover border dark:border-gray-600 flex-shrink-0" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
                     <div class="flex-grow min-w-[200px]">
                         <span class="font-medium">${displayName}</span> ${isAdminUser ? '<span class="text-xs bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">Admin</span>' : ''}<br>
+                         <span class="text-xs text-muted">Username: ${username}</span><br>
                         <span class="text-xs text-muted">Email: ${email}</span><br>
                         <span class="text-xs text-muted">UID: ${userId}</span><br>
                         <span class="text-xs text-muted">Created: ${createdAt}</span>
@@ -1106,7 +1213,11 @@ async function listAllUsersAdmin() {
     } catch (error) {
         hideLoading();
         console.error("Error listing users for admin:", error);
-        userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: ${error.message}</p>`;
+         if (error.code === 'failed-precondition' && searchTerm && !searchTerm.includes('@')) {
+             userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: Searching by display name requires a Firestore index on 'displayName'.</p>`;
+         } else {
+             userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: ${error.message}</p>`;
+         }
     }
 }
 window.listAllUsersAdmin = listAllUsersAdmin;
@@ -1144,7 +1255,7 @@ async function viewUserDetailsAdmin(userId) {
         const cleanCourseProgress = JSON.parse(JSON.stringify(courseProgress, (key, value) => {
             // Attempt to convert Firestore Timestamp-like objects
              if (value && typeof value === 'object' && value.hasOwnProperty('seconds') && value.hasOwnProperty('nanoseconds')) {
-                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; }
+                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; } // Return original value if conversion fails
              }
              return value;
         }));
@@ -1159,9 +1270,9 @@ async function viewUserDetailsAdmin(userId) {
                     <dd class="text-sm mt-1 font-mono">${escapeHtml(userId)}</dd>
                 </div>
                 ${Object.entries(displayUserData).map(([key, value]) => {
-                    // Skip completedCourseBadges as we'll display them separately
-                    if (key === 'completedCourseBadges') return '';
-                    
+                    // Skip complex/large fields handled separately
+                    if (key === 'completedCourseBadges' || key === 'appData' || key === 'userNotes') return '';
+
                     // Format the value based on its type
                     let displayValue = '';
                     if (value === null || value === undefined) {
@@ -1171,21 +1282,30 @@ async function viewUserDetailsAdmin(userId) {
                     } else if (Array.isArray(value)) {
                         displayValue = `<span class="text-purple-600 dark:text-purple-400">Array(${value.length})</span>`;
                         if (value.length > 0) {
-                            displayValue += `<ul class="mt-1 ml-4 list-disc text-xs space-y-1">
-                                ${value.slice(0, 5).map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
-                                ${value.length > 5 ? `<li class="text-muted">... and ${value.length - 5} more items</li>` : ''}
+                            displayValue += `<ul class="mt-1 ml-4 list-disc text-xs space-y-1 max-h-20 overflow-y-auto">
+                                ${value.slice(0, 10).map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
+                                ${value.length > 10 ? `<li class="text-muted">... and ${value.length - 10} more items</li>` : ''}
                             </ul>`;
                         }
                     } else if (typeof value === 'object') {
-                        displayValue = '<span class="text-purple-600 dark:text-purple-400">Object</span>';
+                        // Special handling for timestamp strings? Already converted above.
+                         // Basic object display
+                         displayValue = '<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-1 rounded max-h-24 overflow-auto">' + escapeHtml(JSON.stringify(value, null, 2)) + '</pre>';
                     } else {
                         displayValue = escapeHtml(String(value));
                     }
 
+                     // --- Add Edit button for username ---
+                     let editButton = '';
+                     if (key === 'username') {
+                          editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
+                     }
+                     // --- End Edit button add ---
+
                     return `
                         <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
                             <dt class="text-xs font-medium text-gray-700 dark:text-gray-300">${escapeHtml(key)}</dt>
-                            <dd class="text-sm mt-1">${displayValue}</dd>
+                            <dd class="text-sm mt-1 flex items-center">${displayValue} ${editButton}</dd>
                         </div>
                     `;
                 }).join('')}
@@ -1197,18 +1317,29 @@ async function viewUserDetailsAdmin(userId) {
             <div class="mt-4">
                 <h4 class="text-sm font-semibold mb-2 text-primary-600 dark:text-primary-400">Completed Course Badges (${displayUserData.completedCourseBadges.length})</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${displayUserData.completedCourseBadges.map(badge => `
-                        <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-800 text-sm">
-                            <p class="font-medium text-green-700 dark:text-green-300">${escapeHtml(badge.courseName || 'Unnamed Course')}</p>
-                            <p class="text-xs mt-1 text-green-600 dark:text-green-400">
-                                <span class="font-medium">Grade:</span> ${escapeHtml(badge.grade || 'N/A')} |
-                                <span class="font-medium">Course ID:</span> ${escapeHtml(badge.courseId || 'N/A')}
-                            </p>
-                            <p class="text-xs text-green-600 dark:text-green-400">
-                                <span class="font-medium">Completed:</span> ${badge.completionDate?.toDate ? badge.completionDate.toDate().toLocaleDateString() : 'N/A'}
-                            </p>
-                        </div>
-                    `).join('')}
+                    ${displayUserData.completedCourseBadges.map(badge => {
+                         // Convert potential Firestore Timestamp in badge to displayable date
+                         let completionDateStr = 'N/A';
+                         if (badge.completionDate) {
+                              try {
+                                   // Check if it's already a Date object (less likely here) or needs toDate()
+                                   const dateObj = badge.completionDate.toDate ? badge.completionDate.toDate() : new Date(badge.completionDate);
+                                   if (!isNaN(dateObj)) completionDateStr = dateObj.toLocaleDateString();
+                              } catch(e){ console.warn("Error parsing badge completion date:", badge.completionDate, e); }
+                         }
+                         return `
+                            <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-800 text-sm">
+                                <p class="font-medium text-green-700 dark:text-green-300">${escapeHtml(badge.courseName || 'Unnamed Course')}</p>
+                                <p class="text-xs mt-1 text-green-600 dark:text-green-400">
+                                    <span class="font-medium">Grade:</span> ${escapeHtml(badge.grade || 'N/A')} |
+                                    <span class="font-medium">Course ID:</span> ${escapeHtml(badge.courseId || 'N/A')}
+                                </p>
+                                <p class="text-xs text-green-600 dark:text-green-400">
+                                    <span class="font-medium">Completed:</span> ${completionDateStr}
+                                </p>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
         ` : '';
@@ -1221,15 +1352,22 @@ async function viewUserDetailsAdmin(userId) {
                     const courseName = courseDef?.name || courseId;
                     const studiedChapters = progress.courseStudiedChapters?.length || 0;
                     const totalChapters = courseDef?.totalChapters || '?';
-                    const statusClass = progress.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                                      progress.status === 'failed' ? 'text-red-600 dark:text-red-400' :
+                     const status = progress.status || 'enrolled'; // Default status
+                    const statusClass = status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                      status === 'failed' ? 'text-red-600 dark:text-red-400' :
                                       'text-blue-600 dark:text-blue-400';
+                    // Safely get last activity date string
+                    let lastActivityStr = 'N/A';
+                    if (progress.lastActivityDate) {
+                         try { lastActivityStr = new Date(progress.lastActivityDate).toLocaleDateString(); } catch(e){}
+                    }
+
 
                     return `
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-600 shadow-sm">
                             <div class="flex justify-between items-start mb-2">
                                 <h5 class="font-medium text-sm">${escapeHtml(courseName)}</h5>
-                                <span class="text-xs font-medium ${statusClass}">${escapeHtml(progress.status || 'enrolled')}</span>
+                                <span class="text-xs font-medium ${statusClass}">${escapeHtml(status)}</span>
                             </div>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                                 <div>
@@ -1246,12 +1384,12 @@ async function viewUserDetailsAdmin(userId) {
                                 </div>
                                 <div>
                                     <span class="text-muted block">Last Active</span>
-                                    <span class="font-medium">${progress.lastActiveDate ? new Date(progress.lastActiveDate).toLocaleDateString() : 'N/A'}</span>
+                                    <span class="font-medium">${lastActivityStr}</span>
                                 </div>
                             </div>
-                            ${progress.dailyProgress?.length ? `
+                            ${progress.dailyProgress && Object.keys(progress.dailyProgress).length ? `
                                 <div class="mt-2 pt-2 border-t dark:border-gray-600">
-                                    <span class="text-xs text-muted">Daily Progress Entries: ${progress.dailyProgress.length}</span>
+                                    <span class="text-xs text-muted">Daily Progress Entries: ${Object.keys(progress.dailyProgress).length}</span>
                                 </div>
                             ` : ''}
                         </div>
@@ -1267,9 +1405,9 @@ async function viewUserDetailsAdmin(userId) {
                         <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
                             User Details: ${escapeHtml(userData.displayName || userData.username || userId)}
                         </h3>
-                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl">&times;</button>
+                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl" aria-label="Close user details modal">&times;</button>
                     </div>
-                    <div class="flex-grow overflow-y-auto mb-4 space-y-6">
+                    <div class="flex-grow overflow-y-auto mb-4 space-y-6 pr-2">
                         <div>
                             <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">User Profile Data</h4>
                             ${userProfileHtml}
@@ -1278,6 +1416,10 @@ async function viewUserDetailsAdmin(userId) {
                         <div>
                             <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Course Progress</h4>
                             ${courseProgressHtml}
+                        </div>
+                         <div>
+                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Raw User Data (Excerpt)</h4>
+                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete }, null, 2))}</code></pre>
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
@@ -1295,5 +1437,66 @@ async function viewUserDetailsAdmin(userId) {
     }
 }
 window.viewUserDetailsAdmin = viewUserDetailsAdmin;
+
+// --- NEW: Admin Change Username Functions ---
+function promptAdminChangeUsername(userId, currentUsername) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Admin privileges required.");
+        return;
+    }
+
+    const newUsername = prompt(`Enter new username for user ${userId} (current: "${currentUsername}").\nMust be 3-20 alphanumeric characters or underscores:`);
+
+    if (newUsername === null) return; // User cancelled
+
+    const trimmedUsername = newUsername.trim();
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
+
+    if (!usernameRegex.test(trimmedUsername)) {
+        alert("Invalid username format. Please use 3-20 alphanumeric characters or underscores.");
+        return;
+    }
+
+    if (trimmedUsername.toLowerCase() === currentUsername.toLowerCase()) {
+        alert("New username is the same as the current one.");
+        return;
+    }
+
+    handleAdminChangeUsername(userId, currentUsername, trimmedUsername);
+}
+window.promptAdminChangeUsername = promptAdminChangeUsername; // Assign to window scope
+
+async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
+    showLoading("Updating username...");
+    try {
+        const success = await adminUpdateUsername(userId, currentUsername, newUsername);
+        if (success) {
+            hideLoading();
+            alert(`Username successfully changed to "${newUsername}".`);
+            // Refresh the modal if it's open for this user
+            if (document.getElementById('user-details-modal')) {
+                 const modalTitle = document.getElementById('user-details-title');
+                 // Check if the modal is for the user we just updated
+                 if (modalTitle && modalTitle.textContent.includes(userId)) {
+                     viewUserDetailsAdmin(userId); // Refresh the details modal
+                 }
+            }
+             // Optionally, refresh the main user list if the updated user is visible
+             const userListArea = document.getElementById('admin-user-list-area');
+             if (userListArea && userListArea.innerHTML.includes(userId)) {
+                  listAllUsersAdmin(); // Refresh the list
+             }
+        } else {
+            // Should not happen if adminUpdateUsername throws errors
+            hideLoading();
+            alert("An unexpected issue occurred while updating the username.");
+        }
+    } catch (error) {
+        hideLoading();
+        console.error("Error handling admin username change:", error);
+        alert(`Failed to change username: ${error.message}`);
+    }
+}
+
 
 // --- END OF FILE ui_admin_dashboard.js ---

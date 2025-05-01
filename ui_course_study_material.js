@@ -1,3 +1,5 @@
+
+
 // --- START OF FILE ui_course_study_material.js ---
 
 // ui_course_study_material.js
@@ -1559,7 +1561,32 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                       <div class="flex flex-wrap gap-2">
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
+                           <!-- MODIFICATION START: Removed Formula Sheet and Chapter Summary buttons -->
+                           <!-- Removed: <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="Generate or view AI-powered formula sheet">Formula Sheet</button> -->
+                           <!-- Removed: <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="Generate or view AI-powered chapter summary">Chapter Summary</button> -->
+                           <!-- MODIFICATION END -->
                       </div>
+                  </div>
+                  <!-- Note: The hidden areas for Formula Sheet and Summary are still here, as requested -->
+                  <div id="formula-sheet-area" class="mt-4 border-t pt-4 dark:border-gray-700 hidden">
+                       <div class="flex justify-between items-center mb-2">
+                           <h4 class="text-md font-medium">Formula Sheet</h4>
+                           <div class="flex gap-2">
+                               <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Formula Sheet">Regenerate</button>
+                               <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-primary-small text-xs hidden" title="Download Formula Sheet as PDF">Download PDF</button>
+                           </div>
+                       </div>
+                       <div id="formula-sheet-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600">Loading...</div>
+                  </div>
+                  <div id="chapter-summary-area" class="mt-4 border-t pt-4 dark:border-gray-700 hidden">
+                       <div class="flex justify-between items-center mb-2">
+                            <h4 class="text-md font-medium">Chapter Summary</h4>
+                            <div class="flex gap-2">
+                                <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Chapter Summary">Regenerate</button>
+                                <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-primary-small text-xs hidden" title="Download Summary as PDF">Download PDF</button>
+                            </div>
+                       </div>
+                       <div id="chapter-summary-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600">Loading...</div>
                   </div>
             </div>
         </div>

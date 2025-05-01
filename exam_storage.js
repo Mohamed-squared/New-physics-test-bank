@@ -1,14 +1,15 @@
 // --- START OF FILE exam_storage.js ---
 
-import { db, currentUser, globalCourseDataMap, currentSubject } from './state.js'; // Added currentSubject
+import { db, currentUser, globalCourseDataMap, currentSubject, data } from './state.js'; // Added data
 import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
 // MODIFIED: Import AI marking and explanation generation
 import { markFullExam, generateExplanation } from './ai_exam_marking.js';
 import { renderMathIn } from './utils.js'; // Import MathJax renderer
 // MODIFIED: Import displayContent and setActiveSidebarLink
-import { displayContent, setActiveSidebarLink } from './ui_core.js';
-// MODIFIED: Import submitFeedback from firestore
-import { submitFeedback } from './firebase_firestore.js';
+import { displayContent, setActiveSidebarLink} from './ui_core.js';
+import { showProgressDashboard } from './ui_progress_dashboard.js';
+// MODIFIED: Import submitFeedback and saveUserData from firestore
+import { submitFeedback, saveUserData } from './firebase_firestore.js';
 // MODIFIED: Import config for MAX_MARKS
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 
@@ -437,10 +438,10 @@ async function generateAIExplanation(question, container) {
 // --- AI Explanation Display & Follow-up ---
 export const showAIExplanationSection = async (examId, questionIndex) => {
     console.log(`[showAIExplanationSection] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
-    
+
     const explanationContainer = document.getElementById(`ai-explanation-${questionIndex}`);
     const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
-    
+
     if (!explanationContainer || !explanationContentArea) {
         console.error('Required DOM elements not found');
         return;
@@ -471,7 +472,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
 
             console.log('Fetching exam details...');
             const examData = await getExamDetails(currentUser.uid, examId);
-            
+
             if (!examData) {
                 throw new Error('Failed to fetch exam data');
             }
@@ -486,14 +487,14 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
             console.log('Generating explanation...');
             // Initial call, empty history - Pass question object which now contains correctAnswer
             const result = await generateExplanation(question, null, studentAnswer, []); // Pass null for deprecated correctAnswer param
-            
+
             if (!result || !result.explanationHtml) {
                 throw new Error('Failed to generate explanation');
             }
 
             // Initialize the conversation history with the first explanation
             window.currentExplanationHistories[questionIndex] = result.history;
-            
+
             // Create the conversation container
             explanationContentArea.innerHTML = `
                 <div class="conversation-container space-y-4">
@@ -504,7 +505,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
                 </div>
                 <div class="mt-4 sticky bottom-0 bg-white dark:bg-gray-800 pt-4 border-t dark:border-gray-600">
                     <div class="flex gap-2">
-                        <input type="text" 
+                        <input type="text"
                             id="follow-up-input-${questionIndex}"
                             class="flex-1 px-3 py-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"
                             placeholder="Ask a follow-up question..."
@@ -525,7 +526,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
             explanationContentArea.innerHTML = `<div class="p-3 text-red-500 dark:text-red-400">
                 <p class="font-medium">Error generating explanation:</p>
                 <p class="text-sm mt-1">${error.message || 'An unexpected error occurred'}</p>
-                <button onclick="window.showAIExplanationSection('${examId}', ${questionIndex})" 
+                <button onclick="window.showAIExplanationSection('${examId}', ${questionIndex})"
                         class="mt-2 text-sm px-3 py-1 bg-red-100 dark:bg-red-900/30 rounded-md hover:bg-red-200 dark:hover:bg-red-900/50">
                     Try Again
                 </button>
@@ -540,12 +541,12 @@ window.showAIExplanationSection = showAIExplanationSection;
 // Handle follow-up questions
 export const askAIFollowUp = async (examId, questionIndex) => {
     console.log(`[askAIFollowUp] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
-    
+
     const explanationContainer = document.getElementById(`ai-explanation-${questionIndex}`);
     const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
     const conversationContainer = explanationContentArea?.querySelector('.conversation-container');
     const inputElement = document.getElementById(`follow-up-input-${questionIndex}`);
-    
+
     if (!explanationContainer || !explanationContentArea || !conversationContainer || !inputElement) {
         console.error('Required DOM elements not found for follow-up');
         return;
@@ -580,10 +581,10 @@ export const askAIFollowUp = async (examId, questionIndex) => {
 
         // Get the conversation history
         const history = window.currentExplanationHistories[questionIndex] || [];
-        
+
         // Generate follow-up response
         const result = await generateExplanation(null, null, followUpText, history);
-        
+
         // Remove loading indicator
         const loadingDiv = conversationContainer.querySelector('.ai-message-loading');
         if (loadingDiv) loadingDiv.remove();
@@ -601,7 +602,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
 
         // Clear input
         inputElement.value = '';
-        
+
         // Render any math in the new response
         await renderMathIn(conversationContainer.lastElementChild);
 
@@ -612,7 +613,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
         console.error("Error in askAIFollowUp:", error);
         // Remove loading indicator if it exists
         conversationContainer.querySelector('.ai-message-loading')?.remove();
-        
+
         // Add error message
         conversationContainer.insertAdjacentHTML('beforeend', `
             <div class="error-message bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
@@ -620,7 +621,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
                 <p class="text-sm mt-1">${error.message || 'An unexpected error occurred'}</p>
             </div>
         `);
-        
+
         // Scroll to error message
         conversationContainer.scrollTop = conversationContainer.scrollHeight;
     } finally {
@@ -693,23 +694,109 @@ export async function submitIssueReport(examId, questionIndex) {
 }
 window.submitIssueReport = submitIssueReport; // Assign to window
 
-// Add export keyword here
+/**
+ * Deletes a completed exam from Firestore and updates local appData stats if it was a TestGen exam.
+ * @param {string} examId - The ID of the exam to delete.
+ * @returns {Promise<boolean>} True if deletion (and update) was successful, false otherwise.
+ */
 export async function deleteCompletedExamV2(examId) {
-    if (!currentUser || !db) {
-        console.error("Cannot delete exam: User or DB not available.");
+    if (!currentUser || !db || !data) { // Ensure data state is available
+        console.error("Cannot delete exam: User, DB, or local data not available.");
+        alert("Error deleting exam: Critical data missing.");
         return false;
     }
 
     showLoading("Deleting exam...");
-    try {
-        const examDocRef = db.collection('userExams').doc(currentUser.uid)
-                           .collection('exams').doc(examId);
+    const examRef = db.collection('userExams').doc(currentUser.uid).collection('exams').doc(examId);
 
-        await examDocRef.delete();
-        console.log(`Successfully deleted exam ${examId}`);
-        window.showProgressDashboard(); // Refresh the progress dashboard
+    try {
+        // Get exam data before deleting
+        const examDoc = await examRef.get();
+        if (!examDoc.exists) {
+            throw new Error("Exam not found in Firestore");
+        }
+        const examData = examDoc.data();
+
+        let appDataModified = false;
+        let questionsRestoredCount = 0;
+        let statsUpdatedCount = 0;
+
+        // --- START: Update local data.subjects stats for TestGen exams ---
+        if (!examData.courseId && examData.subjectId && data?.subjects?.[examData.subjectId]?.chapters) {
+            const subjectToUpdate = data.subjects[examData.subjectId];
+            console.log(`[TestGen] Attempting to update stats for subject ${examData.subjectId} after deleting exam ${examId}`);
+
+            if (examData.questions && examData.markingResults?.questionResults) {
+                examData.questions.forEach(q => {
+                    // Process only MCQs for stats and available questions
+                    if (!q.isProblem && q.chapter && q.number && q.id) {
+                        const chap = subjectToUpdate.chapters[q.chapter]; // Chapters are objects keyed by number string
+                        if (chap) {
+                            // Decrement total_attempted if > 0
+                            if (typeof chap.total_attempted === 'number' && chap.total_attempted > 0) {
+                                chap.total_attempted--;
+                                appDataModified = true;
+                                statsUpdatedCount++;
+                            }
+
+                            // Find the marking result for this question
+                            const result = examData.markingResults.questionResults.find(r => r.questionId === q.id);
+                            // Decrement total_wrong if > 0 AND the question was marked wrong (score <= 0)
+                            if (result && result.score <= 0 && typeof chap.total_wrong === 'number' && chap.total_wrong > 0) {
+                                chap.total_wrong--;
+                                appDataModified = true;
+                                // No need to increment statsUpdatedCount again, already counted for attempted
+                            }
+
+                            // Add question number back to available_questions if not already present
+                            if (Array.isArray(chap.available_questions)) {
+                                const qNum = parseInt(q.number);
+                                if (!isNaN(qNum) && !chap.available_questions.includes(qNum)) {
+                                    chap.available_questions.push(qNum);
+                                    questionsRestoredCount++;
+                                    appDataModified = true; // Flag modification
+                                }
+                            }
+                        } else {
+                            console.warn(`[TestGen] Chapter ${q.chapter} not found in local data for subject ${examData.subjectId} while updating stats.`);
+                        }
+                    }
+                });
+
+                if (appDataModified) {
+                    console.log(`[TestGen] Stats updates: ${statsUpdatedCount} attempted reversed, ${questionsRestoredCount} MCQs restored to pool.`);
+                    // Sort available_questions arrays numerically for consistency
+                    Object.values(subjectToUpdate.chapters).forEach(chap => {
+                        if (Array.isArray(chap.available_questions)) {
+                            chap.available_questions.sort((a, b) => a - b);
+                        }
+                    });
+
+                    // Save the entire updated data object back to Firestore
+                    await saveUserData(currentUser.uid, data);
+                    console.log(`[TestGen] Saved updated app data (data.subjects) after exam deletion.`);
+                } else {
+                     console.log(`[TestGen] No appData stats needed updating for exam ${examId}.`);
+                }
+            } else {
+                console.warn(`[TestGen] Could not update stats for exam ${examId}: Missing questions or markingResults in exam data.`);
+            }
+        } else {
+             console.log(`Exam ${examId} is not a TestGen exam or subject data missing. No local stats updated.`);
+        }
+        // --- END: Update local data.subjects stats ---
+
+        // Delete the exam document from Firestore
+        await examRef.delete();
+        console.log(`Successfully deleted exam ${examId} from userExams collection.`);
+
         hideLoading();
+        alert(`Exam ${examId} deleted successfully.${appDataModified ? `\n(${questionsRestoredCount} MCQs restored, stats adjusted)` : ''}`);
+
+        // Refresh the progress dashboard to show updated stats
+        window.showProgressDashboard();
         return true;
+
     } catch (error) {
         hideLoading();
         console.error(`Error deleting exam ${examId}:`, error);
@@ -717,5 +804,8 @@ export async function deleteCompletedExamV2(examId) {
         return false;
     }
 }
+// Make sure the function is available globally if called via onclick
+window.deleteCompletedExamV2 = deleteCompletedExamV2;
+
 
 // --- END OF FILE exam_storage.js ---
