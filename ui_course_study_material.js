@@ -1140,11 +1140,16 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         return;
     }
 
+    // MODIFICATION: Moved DOM element getters inside the function
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
     const downloadBtn = document.getElementById('download-formula-pdf-btn');
+
     if (!formulaArea || !formulaContent || !downloadBtn) {
-        console.error("Missing UI elements for formula sheet display");
+        console.error("Missing UI elements for formula sheet display (formula-sheet-area, formula-sheet-content, download-formula-pdf-btn)");
+        // Optionally show an error message in a different way if these core elements are missing
+        // e.g., find the main content area and display error there.
+        // For now, logging is the primary action.
         return;
     }
 
@@ -1181,8 +1186,8 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         await renderMathIn(formulaContent);
 
         // Only save and enable download if generation was successful
-        if (!sheetHtml.includes('Error generating') && 
-            !sheetHtml.includes('No text content available') && 
+        if (!sheetHtml.includes('Error generating') &&
+            !sheetHtml.includes('No text content available') &&
             !sheetHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
             try {
@@ -1209,6 +1214,7 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         downloadBtn.classList.add('hidden');
     }
 }
+window.displayFormulaSheet = displayFormulaSheet; // Assign to window
 
 export async function downloadFormulaSheetPdf() {
     const formulaContentElement = document.getElementById('formula-sheet-content');
@@ -1232,6 +1238,7 @@ export async function downloadFormulaSheetPdf() {
         hideLoading();
     }
 }
+window.downloadFormulaSheetPdf = downloadFormulaSheetPdf; // Assign to window
 
 // MODIFIED: Use USER specific load/save
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
@@ -1244,11 +1251,13 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         return;
     }
 
+    // MODIFICATION: Moved DOM element getters inside the function
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
+
     if (!summaryArea || !summaryContent || !downloadBtn) {
-        console.error("Missing UI elements for chapter summary display");
+        console.error("Missing UI elements for chapter summary display (chapter-summary-area, chapter-summary-content, download-summary-pdf-btn)");
         return;
     }
 
@@ -1285,8 +1294,8 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         await renderMathIn(summaryContent);
 
         // Only save and enable download if generation was successful
-        if (!summaryHtml.includes('Error generating') && 
-            !summaryHtml.includes('No text content available') && 
+        if (!summaryHtml.includes('Error generating') &&
+            !summaryHtml.includes('No text content available') &&
             !summaryHtml.includes('bigger than the model')) {
             downloadBtn.classList.remove('hidden');
             try {
@@ -1313,6 +1322,7 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         downloadBtn.classList.add('hidden');
     }
 }
+window.displayChapterSummary = displayChapterSummary; // Assign to window
 
 
 export async function downloadChapterSummaryPdf() {
@@ -1337,6 +1347,7 @@ export async function downloadChapterSummaryPdf() {
         hideLoading();
     }
 }
+window.downloadChapterSummaryPdf = downloadChapterSummaryPdf; // Assign to window
 
 export function navigateChapterMaterial(courseId, chapterNum) {
      const courseDef = globalCourseDataMap.get(courseId); if (!courseDef || chapterNum < 1 || chapterNum > courseDef.totalChapters) { console.warn(`Navigation blocked: Invalid chapter ${chapterNum}`); return; } showCourseStudyMaterial(courseId, chapterNum);
@@ -1546,7 +1557,9 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                   <div class="mt-4 border-t pt-4 dark:border-gray-700">
                       <h4 class="text-md font-medium mb-2">Chapter Tools</h4>
                       <div class="flex flex-wrap gap-2">
+                           <!-- MODIFICATION: Added window. prefix -->
                            <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI)">Formulas</button>
+                           <!-- MODIFICATION: Added window. prefix -->
                            <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI)">Summary</button>
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>

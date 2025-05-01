@@ -145,6 +145,12 @@ export async function handleMarkRead(messageId, detailsElement) {
                  currentCount = Math.max(0, currentCount - 1);
                  unreadBadge.textContent = currentCount;
                  unreadBadge.classList.toggle('hidden', currentCount === 0);
+
+                 // Update the inbox link notification dot
+                 const inboxLink = document.getElementById('sidebar-inbox-link');
+                 if (inboxLink && currentCount === 0) {
+                     inboxLink.classList.remove('has-unread');
+                 }
              }
          }
     } else {

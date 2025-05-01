@@ -9,10 +9,12 @@ import { showLoading, hideLoading, escapeHtml, getFormattedDate, daysBetween } f
 import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
-// *** MODIFIED: Import exam history functions ***
-import { getExamHistory } from './exam_storage.js';
+// *** MODIFIED: Import exam history and deletion functions ***
+import { getExamHistory, getExamDetails, showExamReviewUI, deleteCompletedExamV2 } from './exam_storage.js';
 // *** MODIFIED: Import MAX_MARKS constants ***
 import { EXAM_QUESTION_COUNTS, EXAM_DURATIONS_MINUTES, FOP_COURSE_ID, SKIP_EXAM_PASSING_PERCENT, DEFAULT_MCQ_PROBLEM_RATIO, MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ } from './config.js';
+// *** NEW: Import deleteCourseActivityProgress ***
+import { deleteCourseActivityProgress } from './firebase_firestore.js';
 
 // Helper to fetch markdown content (needed for extracting MCQs)
 async function getSubjectMarkdown(subject) {
@@ -64,9 +66,12 @@ function renderCourseExamHistoryList(exams) {
                     <p class="text-sm text-gray-600 dark:text-gray-400">${date}</p>
                     <p class="text-sm ${parseFloat(percentage) >= 70 ? 'text-green-600' : 'text-red-600'}">${percentage}% (${score.toFixed(1)}/${maxScore.toFixed(1)} pts)</p>
                 </div>
-                <button onclick="window.showExamReviewUI('${currentUser.uid}', '${exam.id}')" class="btn-secondary-small">
-                    View Review
-                </button>
+                <div class="flex space-x-1">
+                    <button onclick="window.showExamReviewUI('${currentUser.uid}', '${exam.id}')" class="btn-secondary-small">
+                        View Review
+                    </button>
+                    <button onclick="window.confirmDeleteCompletedExamV2('${exam.id}')" class="btn-danger-small text-xs" title="Delete this exam history entry">Delete</button>
+                </div>
             </li>`;
     });
     html += '</ul>';
@@ -135,7 +140,12 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
                 // Can start assignment 'i' if chapter 'i' is in the studied set (or if it's day 1)
                 const canStart = studiedChaptersSet.has(i) || i === 1;
 
-                if (score !== undefined) { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+                if (score !== undefined) { 
+                    assignmentsHtml += `<li class="text-sm text-muted flex items-center justify-between">
+                        <span>Assignment ${i} (${dateStr}) - Completed (Score: ${score.toFixed(1)}%)</span>
+                        <button onclick="window.confirmDeleteCourseActivity('${courseId}', 'assignment', '${assignmentId}')" class="btn-danger-small text-xs">Delete</button>
+                    </li>`; 
+                }
                 else if (canStart) { assignmentsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'assignment', '${assignmentId}')">Start Assignment ${i}</button> (${dateStr})</li>`; }
                 else { assignmentsHtml += `<li class="text-sm text-muted">Assignment ${i} (${dateStr}) - (Study Chapter ${i} first)</li>`; }
             }
@@ -153,7 +163,12 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
             for (let i = 1; i <= totalPossibleWeeks; i++) {
                  const weeklyExamId = `week${i}`; const score = progress.weeklyExamScores?.[weeklyExamId];
                  const isDue = daysElapsed >= (i * 7) - 1 ; // Due at end of week i (day 7, 14, 21...)
-                 if (score !== undefined) { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+                 if (score !== undefined) { 
+                     weeklyExamsHtml += `<li class="text-sm text-muted flex items-center justify-between">
+                         <span>Weekly Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</span>
+                         <button onclick="window.confirmDeleteCourseActivity('${courseId}', 'weekly_exam', '${weeklyExamId}')" class="btn-danger-small text-xs">Delete</button>
+                     </li>`; 
+                 }
                  else if (isDue) { weeklyExamsHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'weekly_exam', '${weeklyExamId}')">Start Weekly Exam ${i}</button></li>`; }
                  else { weeklyExamsHtml += `<li class="text-sm text-muted">Weekly Exam ${i} (Available end of week ${i})</li>`; }
             }
@@ -166,7 +181,12 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
          (courseDef.midcourseChapters || []).forEach((chapThreshold, index) => {
              const midNum = index + 1; const midId = `mid${midNum}`; const score = progress.midcourseExamScores?.[midId];
              const isDue = totalChaptersStudied >= chapThreshold; // Due once chapter threshold reached (using combined studied set)
-             if (score !== undefined) { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+             if (score !== undefined) { 
+                 midcourseHtml += `<li class="text-sm text-muted flex items-center justify-between">
+                     <span>Midcourse Exam ${midNum} - Completed (Score: ${score.toFixed(1)}%)</span>
+                     <button onclick="window.confirmDeleteCourseActivity('${courseId}', 'midcourse', '${midId}')" class="btn-danger-small text-xs">Delete</button>
+                 </li>`; 
+             }
              else if (isDue) { midcourseHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'midcourse', '${midId}')">Start Midcourse Exam ${midNum}</button> (After Ch ${chapThreshold})</li>`; }
              else { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} (Available after Ch ${chapThreshold})</li>`; }
          });
@@ -180,7 +200,12 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
               for (let i = 1; i <= 3; i++) {
                   const finalId = `final${i}`; const score = progress.finalExamScores?.[i-1];
                   if (score === undefined || score === null) { finalHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'final', '${finalId}')">Start Final Exam ${i}</button></li>`; }
-                  else { finalHtml += `<li class="text-sm text-muted">Final Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</li>`; }
+                  else { 
+                      finalHtml += `<li class="text-sm text-muted flex items-center justify-between">
+                          <span>Final Exam ${i} - Completed (Score: ${score.toFixed(1)}%)</span>
+                          <button onclick="window.confirmDeleteCourseActivity('${courseId}', 'final', '${finalId}')" class="btn-danger-small text-xs">Delete</button>
+                      </li>`; 
+                  }
               }
          } else { finalHtml += `<li class="text-sm text-muted">Available after completing all chapters.</li>`; }
         finalHtml += `</ul>`;
@@ -480,5 +505,68 @@ export async function startAssignmentOrExam(courseId, type, id) {
         alert(`Could not start activity: ${error.message}`);
     }
 }
+
+// --- NEW: Delete Course Activity Functions ---
+export function confirmDeleteCourseActivity(courseId, activityType, activityId) {
+    if (!currentUser) {
+        alert("You must be logged in to delete activity results.");
+        return;
+    }
+
+    const activityName = activityType === 'assignment' ? 'Assignment' :
+                        activityType === 'weekly_exam' ? 'Weekly Exam' :
+                        activityType === 'midcourse' ? 'Midcourse Exam' :
+                        activityType === 'final' ? 'Final Exam' : 'Activity';
+
+    const activityNumber = activityId.replace(/[^0-9]/g, '');
+    const confirmMessage = `Are you sure you want to delete the results for ${activityName} ${activityNumber}? This action cannot be undone.`;
+
+    if (confirm(confirmMessage)) {
+        handleDeleteCourseActivity(courseId, activityType, activityId);
+    }
+}
+
+export async function handleDeleteCourseActivity(courseId, activityType, activityId) {
+    showLoading(`Deleting ${activityType} ${activityId}...`);
+
+    try {
+        const success = await deleteCourseActivityProgress(currentUser.uid, courseId, activityType, activityId);
+        
+        // MODIFIED: Also attempt to delete corresponding exam record(s)
+        console.log(`Also attempting to delete corresponding exam record for ${activityType} ${activityId}`);
+        // Find exam record(s) matching the activity (might be multiple attempts)
+        const examHistory = await getExamHistory(currentUser.uid, courseId, 'course');
+        const examsToDelete = examHistory.filter(exam => exam.type === activityType && exam.id.includes(activityId)); // Heuristic matching
+
+        if (examsToDelete.length > 0) {
+            console.log(`Found ${examsToDelete.length} exam record(s) to delete for activity ${activityId}.`);
+            for (const exam of examsToDelete) {
+                await deleteCompletedExamV2(exam.id); // Reuse the central deletion logic
+            }
+        } else {
+            console.log(`No matching exam records found in userExams to delete for activity ${activityId}.`);
+        }
+
+        hideLoading();
+
+        if (success) {
+            // Update alert message to reflect potential exam record deletion
+            alert(`Successfully deleted progress score${examsToDelete.length > 0 ? ` and ${examsToDelete.length} related exam record(s)` : ''} for ${activityType} ${activityId}.`);
+            showCourseAssignmentsExams(courseId);
+        } else {
+            alert(`Failed to delete ${activityType} ${activityId} results. Please try again.`);
+        }
+    } catch (error) {
+        hideLoading();
+        console.error(`Error deleting ${activityType} ${activityId}:`, error);
+        alert(`Error deleting results: ${error.message}`);
+    }
+}
+
+// Assign functions to window scope
+window.confirmDeleteCourseActivity = confirmDeleteCourseActivity;
+window.handleDeleteCourseActivity = handleDeleteCourseActivity;
+// Also assign confirmDeleteCompletedExamV2 for robustness
+window.confirmDeleteCompletedExamV2 = deleteCompletedExamV2;
 
 // --- END OF FILE ui_course_assignments_exams.js ---

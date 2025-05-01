@@ -1,5 +1,3 @@
-
-
 /* ==========================================================================
    Professional TestGen Pro Styles - styles.css
    ========================================================================== */
@@ -1269,3 +1267,33 @@ details > div { /* Content inside details */
     /* Reduce timer size */
     #timer { font-size: 1rem; padding: 0.2rem 0.5rem; }
 }
+
+/* --- Cropper.js Circular Preview --- */
+.cropper-view-box,
+.cropper-face {
+    border-radius: 50%;
+    outline: inherit; /* Optional: remove default outline */
+    box-shadow: inherit; /* Optional: remove default shadow */
+}
+/* Hide the dashed border of the crop box itself if desired */
+.cropper-dashed {
+    border: 0;
+}
+/* Hide resize handles if box is not resizable */
+.cropper-point {
+   /* display: none; */ /* Uncomment if cropBoxResizable is false */
+}
+
+/* Inbox Notification Dot */
+.sidebar-link.has-unread::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-danger-500);
+    border-radius: 50%;
+    margin-left: 0.5rem; /* Space between text/badge and dot */
+    /* Optional animation: */
+    /* animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); */
+}
+/* @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } } */

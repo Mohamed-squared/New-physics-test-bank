@@ -147,17 +147,14 @@ export function showUserProfileDashboard() {
                         throw new Error("Image is too large (max ~1MB). Please try a smaller image.");
                     }
 
-                    // Update Firestore and Auth profile
-                    await Promise.all([
-                        db.collection('users').doc(currentUser.uid).update({ photoURL: imageDataUrl }),
-                        auth.currentUser.updateProfile({ photoURL: imageDataUrl })
-                    ]);
+                    // Update Firestore only
+                    await db.collection('users').doc(currentUser.uid).update({ photoURL: imageDataUrl });
 
                     // Refresh header with latest data
                     await fetchAndUpdateUserInfo(auth.currentUser);
                     
-                    // Show success message
-                    const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Profile picture updated successfully!</p></div>`;
+                    // Show success message with clarification
+                    const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Profile picture preview and storage updated successfully!</p></div>`;
                     const msgContainer = document.createElement('div');
                     msgContainer.innerHTML = successMsgHtml;
                     document.body.appendChild(msgContainer);
@@ -171,10 +168,12 @@ export function showUserProfileDashboard() {
                         previewImg.src = originalSrc;
                     }
 
-                    // Show error message with specific handling for auth errors
+                    // Show error message with specific handling for size-related errors
                     let errorMessage = "Failed to update profile picture.";
-                    if (error.code === 'auth/invalid-profile-attribute') {
-                        errorMessage = "Image is too large or format is invalid (max ~1MB). Please try cropping a smaller area or use a different image.";
+                    if (error.message.includes("too large")) {
+                        errorMessage = error.message;
+                    } else if (error.code === 'auth/invalid-profile-attribute') {
+                        errorMessage = "Image format is invalid. Please try a different image.";
                     } else if (error.message) {
                         errorMessage = error.message;
                     }

@@ -50,7 +50,7 @@ function handleImageLoad() {
                 center: true,
                 highlight: false,
                 cropBoxMovable: true,
-                cropBoxResizable: true,
+                cropBoxResizable: false,
                 toggleDragModeOnDblclick: false,
                 ready() {
                     console.log("Cropper ready.");
@@ -223,8 +223,7 @@ async function handleCropConfirm() {
                 // Check data URL size
                 if (dataUrl.length > 1000000) { // ~1MB limit
                     hideModalAndLoading();
-                    alert("Cropped image is still too large (max ~1MB). Please try cropping a smaller area or use a smaller source image.");
-                    return;
+                    throw new Error("Cropped image is still too large (max ~1MB). Please try cropping a smaller area or use a smaller source image.");
                 }
 
                 try {
@@ -248,7 +247,7 @@ async function handleCropConfirm() {
     } catch (error) {
         console.error("Error during cropping or callback:", error);
         alert("Error processing image: " + error.message);
-        hideModalAndLoading();
+        hideLoading();
     }
 }
 

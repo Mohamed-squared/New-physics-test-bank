@@ -693,5 +693,28 @@ export async function submitIssueReport(examId, questionIndex) {
 }
 window.submitIssueReport = submitIssueReport; // Assign to window
 
+// Add export keyword here
+export async function deleteCompletedExamV2(examId) {
+    if (!currentUser || !db) {
+        console.error("Cannot delete exam: User or DB not available.");
+        return false;
+    }
+
+    showLoading("Deleting exam...");
+    try {
+        const examDocRef = db.collection('userExams').doc(currentUser.uid)
+                           .collection('exams').doc(examId);
+
+        await examDocRef.delete();
+        console.log(`Successfully deleted exam ${examId}`);
+        hideLoading();
+        return true;
+    } catch (error) {
+        hideLoading();
+        console.error(`Error deleting exam ${examId}:`, error);
+        alert(`Error deleting exam: ${error.message}`);
+        return false;
+    }
+}
 
 // --- END OF FILE exam_storage.js ---

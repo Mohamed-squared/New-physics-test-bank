@@ -8,6 +8,7 @@ import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js';
 import { saveUserData, submitFeedback } from './firebase_firestore.js';
 import { showManageSubjects } from './ui_subjects.js';
 import { ADMIN_UID } from './config.js';
+import { showProgressDashboard } from './ui_progress_dashboard.js'; // Import progress dashboard display
 // Import NEW exam storage functions
 import { getExamHistory, getExamDetails, showExamReviewUI } from './exam_storage.js';
 import { generateExplanation } from './ai_exam_marking.js';
@@ -36,11 +37,12 @@ export async function showExamsDashboard() {
     hideLoading();
 
     // NEW: Reset Button Section
-    const resetButtonHtml = currentSubject ? `
+    const resetButtonHtml = currentSubject?.name ? `
          <div class="mt-2 mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-300 dark:border-yellow-700 text-center">
-             <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-2">If MCQs seem missing after deleting old exams, you can reset the available pool for this subject.</p>
-             <button onclick="window.resetAvailableQuestionsForSubject()" class="btn-warning-small text-xs">
-                 Reset All Available Questions for ${escapeHtml(currentSubject.name)}
+             <h4 class="font-medium text-yellow-700 dark:text-yellow-200 mb-2">Reset TestGen Progress</h4>
+             <p class="text-sm text-yellow-800 dark:text-yellow-200 mb-3">⚠️ Resetting progress for "<strong>${escapeHtml(currentSubject.name)}</strong>" will clear all attempt/wrong counts, mastery history, and restore all available MCQs. This affects Test Generation weighting and cannot be undone.</p>
+             <button onclick="window.confirmResetTestGenProgress()" class="btn-warning">
+                 Reset All Progress for ${escapeHtml(currentSubject.name)}
              </button>
          </div>
          ` : '';
@@ -164,7 +166,7 @@ export function enterResultsForm(pendingIndex) {
      else { formHtml += `<p class="text-sm text-gray-600 dark:text-gray-400 mt-4">Total questions in this exam: ${totalQuestionsInForm}</p><input type="hidden" id="total-questions-in-form" value="${totalQuestionsInForm}">`; }
 
     // Pass the ORIGINAL index from the full list and the array of chapters with inputs
-    formHtml += `</div><div class="mt-6 flex space-x-3"><button onclick="window.submitPendingResults(${originalFullIndex}, ${JSON.stringify(chaptersWithInputsArray)})" ${chaptersWithInputsArray.length === 0 ? 'disabled' : ''} class="flex-1 btn-primary ${chaptersWithInputsArray.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Submit Results</button><button onclick="window.showExamsDashboard()" class="flex-1 btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>Cancel</button></div></div>`;
+    formHtml += `</div><div class="mt-6 flex space-x-3"><button onclick="window.submitPendingResults(${originalFullIndex}, ${JSON.stringify(chaptersWithInputsArray)})" ${chaptersWithInputsArray.length === 0 ? 'disabled' : ''} class="flex-1 btn-primary ${chaptersWithInputsArray.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>Submit Results</button><button onclick="window.showExamsDashboard()" class="flex-1 btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.28 7.22z" clip-rule="evenodd" /></svg>Cancel</button></div></div>`;
     displayContent(formHtml);
     setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
 }
@@ -669,6 +671,7 @@ async function deleteCompletedExamV2(examId) {
          const successMsgHtml = `<div class="toast-notification toast-warning animate-fade-in"><p>Exam ${escapeHtml(examId)} history deleted.</p>${appDataModified ? `<p class="text-xs">${questionsRestoredCount} MCQs restored to available pool.</p>` : ''}</div>`;
          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
          showExamsDashboard();
+         window.showProgressDashboard();
 
      } catch (error) {
          hideLoading();
@@ -729,5 +732,67 @@ async function resetAvailableQuestionsForSubject() {
      }
 }
 window.resetAvailableQuestionsForSubject = resetAvailableQuestionsForSubject;
+
+// Confirmation for resetting TestGen progress
+function confirmResetTestGenProgress() {
+    if (!currentSubject?.name) return;
+    if (confirm(`Are you absolutely sure you want to reset ALL Test Generation progress (attempts, scores, mastery, available questions) for subject "${escapeHtml(currentSubject.name)}"? This cannot be undone.`)) {
+        handleResetTestGenProgress();
+    }
+}
+window.confirmResetTestGenProgress = confirmResetTestGenProgress; // Assign to window
+
+// Handles the actual progress reset
+async function handleResetTestGenProgress() {
+    if (!currentUser || !currentSubject || !data || !data.subjects || !data.subjects[currentSubject.id] || !data.subjects[currentSubject.id].chapters) {
+        alert("Error: Cannot reset progress. Subject or chapter data is missing.");
+        return;
+    }
+
+    const subjectId = currentSubject.id;
+    const subjectName = currentSubject.name;
+    showLoading(`Resetting TestGen progress for ${subjectName}...`);
+
+    try {
+        const subjectToModify = data.subjects[subjectId];
+        let changesMade = false;
+
+        for (const chapNum in subjectToModify.chapters) {
+            const chap = subjectToModify.chapters[chapNum];
+            if (chap) {
+                // Reset progress stats
+                chap.total_attempted = 0;
+                chap.total_wrong = 0;
+                chap.mistake_history = [];
+                chap.consecutive_mastery = 0;
+                // Reset available questions based on total_questions
+                const totalQs = chap.total_questions || 0;
+                chap.available_questions = Array.from({ length: totalQs }, (_, j) => j + 1);
+                changesMade = true;
+            }
+        }
+
+        if (changesMade) {
+            await saveUserData(currentUser.uid, data); // Save the modified data object
+            hideLoading();
+            // Show success feedback
+            const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Test Generation progress reset for ${escapeHtml(subjectName)}.</p></div>`;
+            const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
+
+            // Refresh relevant views
+            showExamsDashboard(); // Refresh this view first
+            window.showProgressDashboard(); // Then refresh the progress view
+        } else {
+            hideLoading();
+            alert("No progress data found to reset for this subject.");
+        }
+
+    } catch (error) {
+        hideLoading();
+        console.error("Error resetting TestGen progress:", error);
+        alert("Failed to reset TestGen progress: " + error.message);
+    }
+}
+// Note: handleResetTestGenProgress doesn't need window assignment as it's called internally
 
 // --- END OF FILE ui_exams_dashboard.js ---

@@ -1,6 +1,6 @@
 // ui_admin_dashboard.js
 
-import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added updateGlobalCourseData
+import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added currentUser
 import { ADMIN_UID, YOUTUBE_API_KEY } from './config.js'; // Import YouTube API Key
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
@@ -80,6 +80,18 @@ export function showAdminDashboard() {
                     </div>
                      <div id="admin-user-badges-area" class="max-h-80 overflow-y-auto pr-2">
                         <p class="text-muted text-sm">Enter a User ID or Email and click 'Load'.</p>
+                    </div>
+                </div>
+
+                <!-- User Listing Card (Full Width) -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Management</h3>
+                    <div class="flex gap-4 mb-4">
+                        <input type="text" id="admin-user-list-search" placeholder="Search Users by Email or Name..." class="flex-grow text-sm">
+                        <button onclick="window.listAllUsersAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Search / List Users</button>
+                    </div>
+                    <div id="admin-user-list-area" class="max-h-96 overflow-y-auto pr-2">
+                        <p class="text-muted text-sm">Click 'Search / List Users' to load.</p>
                     </div>
                 </div>
 
@@ -1030,5 +1042,143 @@ async function handleDeleteAllFeedback() {
         alert(`Failed to delete all feedback: ${error.message}`);
     }
 }
+
+// Function to list users for admin
+async function listAllUsersAdmin() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    const userListArea = document.getElementById('admin-user-list-area');
+    const searchInput = document.getElementById('admin-user-list-search');
+    if (!userListArea || !searchInput) return;
+
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    userListArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
+    showLoading("Loading users...");
+
+    try {
+        let query = db.collection('users').orderBy('displayName'); // Basic ordering
+        // Basic filtering (can be enhanced)
+        if (searchTerm) {
+            // Note: Firestore doesn't support case-insensitive search directly or searching multiple fields easily without third-party tools (like Algolia) or complex data duplication.
+            // This is a simplified search attempt. For robust search, consider other solutions.
+            console.warn("Admin user search is basic and case-sensitive for non-email fields.");
+             if (searchTerm.includes('@')) {
+                  query = db.collection('users').where('email', '==', searchTerm); // Exact email match
+             } else {
+                  // Try matching display name (case-sensitive startsWith)
+                  query = db.collection('users').orderBy('displayName').startAt(searchTerm).endAt(searchTerm + '\uf8ff');
+             }
+        }
+
+        const snapshot = await query.limit(100).get(); // Limit results
+        hideLoading();
+
+        if (snapshot.empty) {
+            userListArea.innerHTML = `<p class="text-sm text-muted">No users found${searchTerm ? ' matching "' + escapeHtml(searchTerm) + '"' : ''}.</p>`;
+            return;
+        }
+
+        let usersHtml = '<ul class="space-y-2 list-none p-0">';
+        snapshot.forEach(doc => {
+            const userData = doc.data();
+            const userId = doc.id;
+            const displayName = escapeHtml(userData.displayName || userData.username || 'N/A');
+            const email = escapeHtml(userData.email || 'N/A');
+            const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString() : 'N/A';
+            const isAdminUser = userId === ADMIN_UID;
+
+            usersHtml += `
+                <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm flex-wrap">
+                    <div class="flex-grow min-w-[200px]">
+                        <span class="font-medium">${displayName}</span> ${isAdminUser ? '<span class="text-xs bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">Admin</span>' : ''}<br>
+                        <span class="text-xs text-muted">Email: ${email}</span><br>
+                        <span class="text-xs text-muted">UID: ${userId}</span><br>
+                        <span class="text-xs text-muted">Created: ${createdAt}</span>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <button onclick="window.viewUserDetailsAdmin('${userId}')" class="btn-secondary-small text-xs">View Details</button>
+                    </div>
+                </li>
+            `;
+        });
+        usersHtml += '</ul>';
+        userListArea.innerHTML = usersHtml;
+
+    } catch (error) {
+        hideLoading();
+        console.error("Error listing users for admin:", error);
+        userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: ${error.message}</p>`;
+    }
+}
+window.listAllUsersAdmin = listAllUsersAdmin;
+
+// Function to view detailed user data
+async function viewUserDetailsAdmin(userId) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID || !userId) return;
+
+    // Remove existing modal first
+    document.getElementById('user-details-modal')?.remove();
+
+    showLoading(`Loading details for user ${userId}...`);
+
+    try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        const progressSnapshot = await db.collection('userCourseProgress').doc(userId).collection('courses').get();
+
+        if (!userDoc.exists) {
+            hideLoading();
+            alert("User document not found.");
+            return;
+        }
+
+        const userData = userDoc.data();
+        const courseProgress = {};
+        progressSnapshot.forEach(doc => {
+            courseProgress[doc.id] = doc.data();
+        });
+
+        // Clean up data for display (e.g., convert timestamps)
+        const displayUserData = { ...userData };
+        if (displayUserData.createdAt?.toDate) displayUserData.createdAt = displayUserData.createdAt.toDate().toISOString();
+        if (displayUserData.lastAppDataUpdate?.toDate) displayUserData.lastAppDataUpdate = displayUserData.lastAppDataUpdate.toDate().toISOString();
+        // Recursively convert timestamps in course progress
+        const cleanCourseProgress = JSON.parse(JSON.stringify(courseProgress, (key, value) => {
+            // Attempt to convert Firestore Timestamp-like objects
+             if (value && typeof value === 'object' && value.hasOwnProperty('seconds') && value.hasOwnProperty('nanoseconds')) {
+                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; } // Return original if conversion fails
+             }
+             return value;
+        }));
+
+
+        hideLoading();
+
+        const modalHtml = `
+            <div id="user-details-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[80] p-4 animate-fade-in" aria-labelledby="user-details-title" role="dialog" aria-modal="true">
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-4xl transform transition-all flex flex-col max-h-[90vh]">
+                    <div class="flex justify-between items-center mb-4 flex-shrink-0 pb-3 border-b dark:border-gray-600">
+                        <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">User Details: ${escapeHtml(userData.displayName || userData.username || userId)}</h3>
+                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl">&times;</button>
+                    </div>
+                    <div class="flex-grow overflow-y-auto mb-4 pr-2 text-xs">
+                        <h4 class="font-semibold mb-1 text-base">User Profile Data:</h4>
+                        <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded border dark:border-gray-700 overflow-x-auto"><code>${escapeHtml(JSON.stringify(displayUserData, null, 2))}</code></pre>
+                        <h4 class="font-semibold mb-1 mt-4 text-base">User Course Progress:</h4>
+                        <pre class="bg-gray-100 dark:bg-gray-900 p-3 rounded border dark:border-gray-700 overflow-x-auto"><code>${escapeHtml(JSON.stringify(cleanCourseProgress, null, 2))}</code></pre>
+                    </div>
+                    <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
+                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-secondary">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    } catch (error) {
+        hideLoading();
+        console.error(`Error viewing details for user ${userId}:`, error);
+        alert(`Failed to load user details: ${error.message}`);
+    }
+}
+window.viewUserDetailsAdmin = viewUserDetailsAdmin;
 
 // --- END OF FILE ui_admin_dashboard.js ---

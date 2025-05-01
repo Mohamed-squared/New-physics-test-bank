@@ -42,7 +42,6 @@ export function hideLoginUI() {
 
 // Fetch and update user info, including admin icon
 export async function fetchAndUpdateUserInfo(user) {
-     // ... (function remains the same - unchanged) ...
      if (!user || !db) return;
     const userDisplay = document.getElementById('user-display');
     const userSection = document.getElementById('user-section');
@@ -102,10 +101,18 @@ export async function fetchAndUpdateUserInfo(user) {
             unreadBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
             unreadBadge.classList.toggle('hidden', unreadCount === 0);
         }
+        // Add the new code for the inbox link notification dot
+        const inboxLink = document.getElementById('sidebar-inbox-link');
+        if (inboxLink) {
+            inboxLink.classList.toggle('has-unread', unreadCount > 0);
+        }
     } catch(err) {
         console.error("Error fetching unread count:", err);
          const unreadBadge = document.getElementById('inbox-unread-count');
          if (unreadBadge) unreadBadge.classList.add('hidden');
+         // Also clear the notification dot on error
+         const inboxLink = document.getElementById('sidebar-inbox-link');
+         if (inboxLink) inboxLink.classList.remove('has-unread');
     }
 }
 

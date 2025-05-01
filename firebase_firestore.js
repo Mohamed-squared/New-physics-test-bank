@@ -5,7 +5,7 @@
 import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
-    activeCourseId, setActiveCourseId, updateUserCourseProgress
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser 
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -1248,6 +1248,89 @@ export async function deleteInboxMessage(userId, messageId) {
         return true;
     } catch (error) {
         console.error(`Error deleting inbox message ${messageId}:`, error);
+        return false;
+    }
+}
+
+// --- NEW: Delete Course Activity Progress ---
+export async function deleteCourseActivityProgress(userId, courseId, activityType, activityId) {
+    if (!db) {
+        console.error("Cannot delete course activity progress: DB not initialized");
+        return false;
+    }
+    if (!userId || !courseId || !activityType || !activityId) {
+        console.error("Cannot delete course activity progress: Missing required parameters");
+        return false;
+    }
+
+    const progressRef = db.collection('userCourseProgress').doc(userId).collection('courses').doc(courseId);
+    
+    try {
+        await db.runTransaction(async (transaction) => {
+            const progressDoc = await transaction.get(progressRef);
+            if (!progressDoc.exists) {
+                throw new Error(`Progress document for user ${userId}, course ${courseId} not found.`);
+            }
+
+            const progressData = progressDoc.data();
+            let scoreMap = null;
+            let isFinalExam = false;
+
+            // Determine the correct score map based on activity type
+            switch (activityType) {
+                case 'assignment':
+                    scoreMap = progressData.assignmentScores || {};
+                    break;
+                case 'weekly_exam':
+                    scoreMap = progressData.weeklyExamScores || {};
+                    break;
+                case 'midcourse':
+                    scoreMap = progressData.midcourseExamScores || {};
+                    break;
+                case 'final':
+                    scoreMap = progressData.finalExamScores || [];
+                    isFinalExam = true;
+                    break;
+                default:
+                    throw new Error(`Invalid activity type: ${activityType}`);
+            }
+
+            // Handle the deletion based on whether it's a final exam or other activity
+            if (isFinalExam) {
+                // For final exams, we need to find the correct index based on activityId (e.g., 'final1' -> index 0)
+                const finalIndex = parseInt(activityId.replace('final', '')) - 1;
+                if (finalIndex >= 0 && finalIndex < scoreMap.length) {
+                    scoreMap[finalIndex] = null; // Nullify the score at the specific index
+                }
+            } else {
+                // For other activities, delete the specific key from the score map
+                delete scoreMap[activityId];
+            }
+
+            // Update the progress document with the modified data
+            const updates = {};
+            switch (activityType) {
+                case 'assignment':
+                    updates.assignmentScores = scoreMap;
+                    break;
+                case 'weekly_exam':
+                    updates.weeklyExamScores = scoreMap;
+                    break;
+                case 'midcourse':
+                    updates.midcourseExamScores = scoreMap;
+                    break;
+                case 'final':
+                    updates.finalExamScores = scoreMap;
+                    break;
+            }
+
+            transaction.update(progressRef, updates);
+        });
+
+        console.log(`Successfully deleted ${activityType} ${activityId} for user ${userId}, course ${courseId}`);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting course activity progress:`, error);
         return false;
     }
 }
