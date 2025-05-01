@@ -1,9 +1,5 @@
 // --- START OF FILE ui_course_study_material.js ---
 
-
-
-// --- START OF FILE ui_course_study_material.js ---
-
 // ui_course_study_material.js
 
 import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress } from './state.js';
@@ -1157,8 +1153,8 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         return;
     }
 
-    formulaArea.classList.remove('hidden');
-    downloadBtn.classList.add('hidden');
+    formulaArea.classList.remove('hidden'); // Make the container visible
+    downloadBtn.classList.add('hidden'); // Hide download initially
     formulaContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Formula Sheet...</p></div>`;
 
     // --- Check USER cache ---
@@ -1265,8 +1261,8 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         return;
     }
 
-    summaryArea.classList.remove('hidden');
-    downloadBtn.classList.add('hidden');
+    summaryArea.classList.remove('hidden'); // Make the container visible
+    downloadBtn.classList.add('hidden'); // Hide download initially
     summaryContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Chapter Summary...</p></div>`;
 
     // --- Check USER cache ---
@@ -1563,13 +1559,13 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                       <div class="flex flex-wrap gap-2">
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
-                           <!-- MODIFICATION START: Removed Formula Sheet and Chapter Summary buttons -->
-                           <!-- Removed: <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="Generate or view AI-powered formula sheet">Formula Sheet</button> -->
-                           <!-- Removed: <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="Generate or view AI-powered chapter summary">Chapter Summary</button> -->
+                           <!-- MODIFICATION START: Added Formula Sheet and Chapter Summary buttons here -->
+                           <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI)">Formulas</button>
+                           <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI)">Summary</button>
                            <!-- MODIFICATION END -->
                       </div>
                   </div>
-                  <!-- Note: The hidden areas for Formula Sheet and Summary are still here, as requested -->
+                  <!-- Note: The hidden areas for Formula Sheet and Summary are KEPT here, as they are targeted by the display functions -->
                   <div id="formula-sheet-area" class="mt-4 border-t pt-4 dark:border-gray-700 hidden">
                        <div class="flex justify-between items-center mb-2">
                            <h4 class="text-md font-medium">Formula Sheet</h4>
@@ -1602,6 +1598,10 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
 }
 // Assign to window scope for onclick handlers
 window.showCourseStudyMaterial = showCourseStudyMaterial;
+window.handlePdfSnapshotForAI = handlePdfSnapshotForAI; // Ensure PDF snapshot button works
+window.handleExplainSelection = handleExplainSelection; // Ensure text selection works
+window.askQuestionAboutTranscription = askQuestionAboutTranscription; // Ensure Ask AI (Transcript) works
+// displayFormulaSheet and displayChapterSummary are assigned within their definitions now
 
 // MODIFIED: Define triggerSkipExamGeneration within this module
 export async function triggerSkipExamGeneration(courseId, chapterNum) {
@@ -1655,5 +1655,6 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
      }
 }
 window.triggerSkipExamGeneration = triggerSkipExamGeneration; // Assign to window scope
+window.showCurrentCourseDashboard = showCurrentCourseDashboard; // Ensure Back button works
 
-// --- END OF FILE ui_course_study_material.js ---
+// --- END OF MODIFIED FILE ui_course_study_material.js ---

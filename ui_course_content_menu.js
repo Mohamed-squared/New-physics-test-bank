@@ -248,9 +248,9 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
                           ${progressBarHtml} <!-- Progress bar (hidden if viewer) -->
                           <div class="flex flex-wrap gap-2 items-center mt-2">
                                <button onclick="window.showCourseStudyMaterial('${courseId}', ${chapterNum})" class="btn-primary-small text-xs">${isStudied ? 'Review Chapter' : 'View Chapter'}</button> <!-- Changed text for viewer -->
-                               <!-- Quick access buttons -->
-                               <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" ${!canAttemptSkip ? 'disabled' : ''} title="View Formula Sheet (AI)">Formulas</button>
-                               <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" ${!canAttemptSkip ? 'disabled' : ''} title="View Chapter Summary (AI)">Summary</button>
+                               <!-- Quick access buttons REMOVED FROM HERE -->
+                               <!-- Removed: <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" ...>Formulas</button> -->
+                               <!-- Removed: <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" ...>Summary</button> -->
                           </div>
                      </div>
                 </div>
@@ -262,4 +262,11 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
     displayContent(contentHtml, 'course-dashboard-area');
 }
 
-// --- END OF FILE ui_course_content_menu.js ---
+// Assign to window scope if needed elsewhere (showCurrentCourseDashboard is likely assigned in its own file)
+window.showCurrentCourseDashboard = showMyCoursesDashboard;
+window.triggerSkipExamGeneration = triggerSkipExamGeneration;
+window.showCourseStudyMaterial = showCourseStudyMaterial;
+// Note: displayFormulaSheet and displayChapterSummary are imported but primarily called from ui_course_study_material.js now
+
+
+// --- END OF MODIFIED FILE ui_course_content_menu.js ---

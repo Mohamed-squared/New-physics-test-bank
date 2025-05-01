@@ -37,7 +37,7 @@ function handleImageLoad() {
             return; // Element might have been removed
         }
         try {
-            cropper = new Cropper(imageToCropElement, {
+            const cropperOptions = {
                 aspectRatio: 1 / 1,
                 viewMode: 1,
                 dragMode: 'move',
@@ -46,11 +46,11 @@ function handleImageLoad() {
                 restore: false,
                 checkOrientation: false,
                 modal: true,
-                guides: true,
+                guides: true, // Keep guides, often helpful
                 center: true,
                 highlight: false,
                 cropBoxMovable: true,
-                cropBoxResizable: false,
+                cropBoxResizable: false, // Keep false for circle stability
                 toggleDragModeOnDblclick: false,
                 ready() {
                     console.log("Cropper ready.");
@@ -58,7 +58,9 @@ function handleImageLoad() {
                          imageToCropElement.style.opacity = '1'; // Show image
                     }
                 }
-            });
+            };
+            console.log("Initializing Cropper with options:", cropperOptions); // Log options
+            cropper = new Cropper(imageToCropElement, cropperOptions);
             console.log("Cropper initialized.");
         } catch (e) {
             console.error("Error initializing Cropper:", e);

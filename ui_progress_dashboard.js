@@ -1,3 +1,5 @@
+
+
 // --- START OF FILE ui_progress_dashboard.js ---
 
 import { currentSubject, charts, setCharts } from './state.js'; // Import charts state
@@ -87,6 +89,9 @@ export function closeDashboard() {
 
 // Separate function to handle chart rendering
 export function renderCharts() {
+     // MODIFICATION: Add logs at the start
+     console.log("[RenderCharts] Attempting to render charts. Current subject ID:", currentSubject?.id);
+     console.log("[RenderCharts] Data state being read:", JSON.stringify(currentSubject, null, 2));
      // Check again if subject and chapters exist before rendering
      if (!currentSubject || !currentSubject.chapters) {
          console.warn("Cannot render charts, subject or chapter data missing.");
@@ -99,7 +104,8 @@ export function renderCharts() {
                            .sort((a, b) => parseInt(a) - parseInt(b));
 
      if (chapterNumbers.length === 0) {
-         console.log("No chapters with questions to render charts for.");
+         // MODIFICATION: Improve log message
+         console.log("[RenderCharts] No chapters with questions found in current subject data to render charts for:", currentSubject?.name);
          // Optionally display a message in the dashboard content area
          const dashboardContentEl = document.getElementById('dashboard-content');
          if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">No data to display in charts.</p>';

@@ -1274,7 +1274,10 @@ details > div { /* Content inside details */
     border-radius: 50% !important; /* Ensure override */
     /* Outline and shadow inherited or explicitly set if needed */
     /* Example outline color match */
-     outline-color: rgba(59, 130, 246, 0.75) !important;
+    /*outline-color: rgba(59, 130, 246, 0.75) !important;*/ /* CropperJS sets its own outline */
+    overflow: hidden !important; /* Clip image corners */
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7) !important; /* Optional white separation */
+    outline: none !important; /* Remove any default square outline */
 }
 /* Hide the dashed border of the crop box itself */
 .cropper-dashed {
@@ -1288,8 +1291,8 @@ details > div { /* Content inside details */
 .cropper-point {
     height: 8px !important;
     width: 8px !important;
-    opacity: 0.75 !important; /* Make slightly more visible */
-    background-color: rgba(59, 130, 246, 0.85) !important; /* Match outline color */
+    opacity: 0.85 !important; /* Slightly increase visibility */
+    background-color: rgba(59, 130, 246, 0.95) !important; /* Match outline color, increased alpha */
 }
 
 /* Inbox Notification Dot */
@@ -1304,4 +1307,7 @@ details > div { /* Content inside details */
     /* Optional animation: */
     animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
 }
-/* @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } } */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}

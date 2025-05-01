@@ -1,3 +1,5 @@
+
+
 // --- START OF FILE exam_storage.js ---
 
 import { db, currentUser, globalCourseDataMap, currentSubject, data, setData } from './state.js'; // Added data and setData
@@ -817,7 +819,9 @@ export async function deleteCompletedExamV2(examId) {
                     // Save the entire updated data object back to Firestore
                     console.log(`[DeleteExam] Saving updated app data (data.subjects) to Firestore...`);
                     await saveUserData(currentUser.uid, data); // Pass the modified 'data' object
-                    console.log(`[DeleteExam] Saved updated app data successfully.`);
+                    // MODIFICATION: Added log after save attempt
+                    console.log("[DeleteExam] UserData save attempt complete. Data state should now be updated in Firestore.");
+                    console.log(`[DeleteExam] Saved updated app data successfully.`); // Kept original log too
                 } else {
                      console.log(`[DeleteExam] No TestGen appData stats needed updating for exam ${examId}.`);
                 }
@@ -839,7 +843,10 @@ export async function deleteCompletedExamV2(examId) {
 
         // Refresh the progress dashboard AFTER all modifications (local and Firestore) are done
         // This ensures the dashboard reads the final state
-        console.log("[DeleteExam] Refreshing progress dashboard...");
+        // MODIFICATION: Added logs before calling showProgressDashboard
+        console.log("[DeleteExam] Preparing to refresh progress dashboard. Current subject ID:", currentSubject?.id);
+        console.log("[DeleteExam] Current subject data state being passed implicitly:", JSON.stringify(data?.subjects?.[currentSubject?.id], null, 2));
+        console.log("[DeleteExam] Refreshing progress dashboard..."); // Kept original log
         if (typeof window.showProgressDashboard === 'function') {
              window.showProgressDashboard();
         } else {
