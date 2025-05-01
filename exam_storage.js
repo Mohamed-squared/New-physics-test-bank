@@ -1,6 +1,6 @@
 // --- START OF FILE exam_storage.js ---
 
-import { db, currentUser, globalCourseDataMap, currentSubject, data } from './state.js'; // Added data
+import { db, currentUser, globalCourseDataMap, currentSubject, data, setData } from './state.js'; // Added data and setData
 import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
 // MODIFIED: Import AI marking and explanation generation
 import { markFullExam, generateExplanation } from './ai_exam_marking.js';
@@ -10,9 +10,8 @@ import { displayContent, setActiveSidebarLink} from './ui_core.js';
 import { showProgressDashboard } from './ui_progress_dashboard.js';
 // MODIFIED: Import submitFeedback and saveUserData from firestore
 import { submitFeedback, saveUserData } from './firebase_firestore.js';
-// MODIFIED: Import config for MAX_MARKS
+// MODIFIED: Import config for MAX_MARKS etc.
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
-
 
 
 // --- Exam Storage and Retrieval Functions ---
@@ -40,9 +39,9 @@ export async function storeExamResult(courseId, examState, examType) {
 
     try {
         // Call the central marking function (which handles MCQ vs Problem internally)
-        console.log(`Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
+        console.log(`[StoreExam] Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
         const markingResults = await markFullExam(examState);
-        console.log(`Marking complete for Exam ID: ${examState.examId}`);
+        console.log(`[StoreExam] Marking complete for Exam ID: ${examState.examId}`);
 
         // Prepare the complete record for Firestore
         examRecord = { // Assign to outer scope variable
@@ -67,15 +66,15 @@ export async function storeExamResult(courseId, examState, examType) {
 
         // *** ADDED Specific Try/Catch for the Firestore write operation ***
         try {
-            console.log("Attempting to write exam record to Firestore path:", examDocRef.path);
+            console.log("[StoreExam] Attempting to write exam record to Firestore path:", examDocRef.path);
             // Ensure data is serializable right before saving
             const cleanExamRecord = JSON.parse(JSON.stringify(examRecord));
             await examDocRef.set(cleanExamRecord);
-            console.log(`Exam record ${examState.examId} saved successfully to userExams subcollection.`);
+            console.log(`[StoreExam] Exam record ${examState.examId} saved successfully to userExams subcollection.`);
         } catch (writeError) {
-            console.error(`Firestore write error for exam ${examState.examId}:`, writeError);
+            console.error(`[StoreExam] Firestore write error for exam ${examState.examId}:`, writeError);
             // Log the data that failed to save for easier debugging of serialization issues
-            try { console.error("Data that failed to save:", JSON.stringify(examRecord, null, 2)); } catch { console.error("Data that failed to save (could not stringify):", examRecord); }
+            try { console.error("[StoreExam] Data that failed to save:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Data that failed to save (could not stringify):", examRecord); }
             // Re-throw a more specific error to be caught by the outer catch block
             throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
         }
@@ -86,10 +85,10 @@ export async function storeExamResult(courseId, examState, examType) {
 
     } catch (error) { // Outer catch block handles marking errors or re-thrown write errors
         hideLoading();
-        console.error(`Error storing exam result ${examState.examId}:`, error);
+        console.error(`[StoreExam] Error storing exam result ${examState.examId}:`, error);
         // Log data if it was prepared before the error
         if (examRecord) {
-             try { console.error("Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("Exam record state just before error (could not stringify):", examRecord);}
+             try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", examRecord);}
         }
         // Provide specific user feedback
         if (error.message.includes("Failed to save exam data")) { // Check for our re-thrown error
@@ -111,7 +110,7 @@ export async function storeExamResult(courseId, examState, examType) {
  */
 export async function getExamDetails(userId, examId) {
     if (!db || !userId || !examId) {
-        console.error("Cannot get exam details: Missing DB, userId, or examId.");
+        console.error("[GetExamDetails] Cannot get exam details: Missing DB, userId, or examId.");
         return null;
     }
     try {
@@ -119,15 +118,15 @@ export async function getExamDetails(userId, examId) {
         const docSnap = await examDocRef.get();
         // Use .exists property for compat SDK
         if (docSnap.exists) {
-            console.log(`Exam details retrieved for ${examId}`);
+            console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
             return docSnap.data();
         } else {
             // This is where the error currently happens
-            console.warn(`Exam document not found at path: userExams/${userId}/exams/${examId}`);
+            console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
             return null;
         }
     } catch (error) {
-        console.error(`Error retrieving exam details for ${examId}:`, error);
+        console.error(`[GetExamDetails] Error retrieving exam details for ${examId}:`, error);
         return null;
     }
 }
@@ -141,7 +140,7 @@ export async function getExamDetails(userId, examId) {
  */
 export async function getExamHistory(userId, filterId = null, filterType = 'all') {
     if (!db || !userId) {
-        console.error("Cannot get exam history: Missing DB or userId.");
+        console.error("[GetExamHistory] Cannot get exam history: Missing DB or userId.");
         return [];
     }
     try {
@@ -149,13 +148,13 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
 
         if (filterType === 'course' && filterId) {
             query = query.where('courseId', '==', filterId);
-            console.log(`Filtering exam history by courseId: ${filterId}`);
+            console.log(`[GetExamHistory] Filtering exam history by courseId: ${filterId}`);
         } else if (filterType === 'subject' && filterId) {
             // Filter where courseId is explicitly null (TestGen) AND subjectId matches
             query = query.where('courseId', '==', null).where('subjectId', '==', filterId);
-            console.log(`Filtering exam history by subjectId: ${filterId} (and courseId == null)`);
+            console.log(`[GetExamHistory] Filtering exam history by subjectId: ${filterId} (and courseId == null)`);
         } else if (filterType === 'all') {
-            console.log(`Fetching all exam history for user ${userId}`);
+            console.log(`[GetExamHistory] Fetching all exam history for user ${userId}`);
             // No specific filter applied here
         }
 
@@ -167,8 +166,10 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
             const data = doc.data();
             const isCourseExam = !!data.courseId;
             // Use global state 'data' to access subject names
-            const subjectName = !isCourseExam && data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name || data.subjectId) : null;
-            const courseName = isCourseExam ? (globalCourseDataMap?.get(data.courseId)?.name || data.courseId) : null;
+            // Safely access nested properties using optional chaining
+            const subjectName = !isCourseExam && data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name ?? data.subjectId) : null;
+            const courseName = isCourseExam ? (globalCourseDataMap?.get(data.courseId)?.name ?? data.courseId) : null;
+
 
             // Estimate max score if missing or zero
             let maxScore = data.markingResults?.maxPossibleScore;
@@ -180,7 +181,7 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
             }
 
             history.push({
-                id: data.id,
+                id: data.id || doc.id, // Use doc.id as fallback
                 type: data.type || 'unknown',
                 timestamp: data.timestamp,
                 score: data.markingResults?.totalScore ?? 0,
@@ -191,10 +192,10 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
                 status: data.status || 'completed'
             });
         });
-        console.log(`Retrieved ${history.length} exam history entries for user ${userId} (Filter: ${filterType}, ID: ${filterId || 'None'})`);
+        console.log(`[GetExamHistory] Retrieved ${history.length} exam history entries for user ${userId} (Filter: ${filterType}, ID: ${filterId || 'None'})`);
         return history;
     } catch (error) {
-        console.error(`Error retrieving exam history for user ${userId}:`, error);
+        console.error(`[GetExamHistory] Error retrieving exam history for user ${userId}:`, error);
         if (error.code === 'failed-precondition' && error.message.includes('index')) {
             console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions. For the 'subject' filter, you likely need an index on userExams/{userId}/exams where 'courseId' == null and 'subjectId' == [SubjectID], ordered by 'timestamp' descending.");
             alert("Error fetching history: Database index required. Please check the developer console for details on the required index.");
@@ -222,7 +223,7 @@ export async function showExamReviewUI(userId, examId) {
     console.log(`[showExamReviewUI] Current timestamp: ${new Date().toISOString()}`);
 
     if (!userId || !examId) {
-        console.error("Cannot show exam review: Missing userId or examId");
+        console.error("[showExamReviewUI] Cannot show exam review: Missing userId or examId");
         displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content'); // Display error in main area
         return;
     }
@@ -236,12 +237,12 @@ export async function showExamReviewUI(userId, examId) {
 
         if (!examDetails) {
             hideLoading();
-            console.error(`No exam details found for exam ${examId}`);
+            console.error(`[showExamReviewUI] No exam details found for exam ${examId}`);
             displayContent(`<p class="text-red-500 p-4">Error: Could not find details for exam ID: ${examId}. It might have been deleted or the ID is incorrect.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
             return;
         }
 
-        console.log(`Successfully fetched exam details for ${examId}, rendering review UI.`);
+        console.log(`[showExamReviewUI] Successfully fetched exam details for ${examId}, rendering review UI.`);
 
         const { markingResults, courseContext, timestamp, type, subjectId, courseId, questions, userAnswers } = examDetails;
         const score = markingResults?.totalScore ?? 0;
@@ -254,8 +255,9 @@ export async function showExamReviewUI(userId, examId) {
         const isPassing = parseFloat(percentage) >= passThreshold;
 
         // Determine context name (Course or Subject)
-        const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId)
-                           : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
+        // Safely access nested properties
+        const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
+                           : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
                            : 'Standard Test';
         const typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
@@ -268,8 +270,8 @@ export async function showExamReviewUI(userId, examId) {
                  // Find the corresponding marking result using questionId
                  const result = markingResults.questionResults.find(r => r.questionId === questionId);
                  const qScore = result?.score ?? 0;
-                 const qMaxScore = q.isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
-                 const isCorrect = !q.isProblem && (userAnswers?.[questionId] === q.correctAnswer); // Simple check for MCQ correctness
+                 const isProblemType = q.isProblem || !q.options || q.options.length === 0;
+                 const qMaxScore = isProblemType ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
                  const qFeedback = result?.feedback || "No specific feedback.";
                  const keyPoints = result?.key_points || [];
                  const improvements = result?.improvement_suggestions || [];
@@ -277,14 +279,16 @@ export async function showExamReviewUI(userId, examId) {
 
                  // Determine visual style based on score vs max score
                  let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'; // Default
-                 if (qScore === qMaxScore && qMaxScore > 0) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30'; // Full marks
-                 else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'; // Partial marks
-                 else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30'; // Zero marks
+                 if (qMaxScore > 0) { // Only apply color if max score is positive
+                     if (qScore === qMaxScore) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30'; // Full marks
+                     else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'; // Partial marks
+                     else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30'; // Zero marks
+                 }
 
                  const imageHtml = q.image ? `<div class="my-3 flex justify-center"><img src="${q.image}" alt="Question Image" class="max-w-md h-auto border dark:border-gray-600 rounded" crossorigin="anonymous"></div>` : '';
 
                  let optionsOrAnswerHtml = '';
-                 if (q.isProblem) {
+                 if (isProblemType) {
                      optionsOrAnswerHtml = `<div class="mt-2"><p class="text-xs font-semibold mb-1">Your Answer:</p><div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 whitespace-pre-wrap">${escapeHtml(userAnswer)}</div></div>`;
                  } else {
                      // MCQ Options
@@ -306,7 +310,7 @@ export async function showExamReviewUI(userId, examId) {
                     <div class="question-review-item border rounded-md p-4 ${statusClass}">
                         <div class="flex justify-between items-start mb-2">
                              <p class="font-medium text-gray-800 dark:text-gray-200">Question ${index + 1} ${q.chapter ? `(Ch ${q.chapter})` : ''}</p>
-                             <span class="font-semibold text-sm ${qScore === qMaxScore && qMaxScore > 0 ? 'text-green-600' : qScore > 0 ? 'text-yellow-600' : 'text-red-600'}">${qScore.toFixed(1)} / ${qMaxScore.toFixed(1)} pts</span>
+                             <span class="font-semibold text-sm ${qMaxScore > 0 && qScore === qMaxScore ? 'text-green-600' : qScore > 0 ? 'text-yellow-600' : 'text-red-600'}">${qScore.toFixed(1)} / ${qMaxScore.toFixed(1)} pts</span>
                         </div>
                         <div class="prose prose-sm dark:prose-invert max-w-none question-text-container mb-2">${q.text || '[Question text missing]'}</div>
                         ${imageHtml}
@@ -414,7 +418,7 @@ export async function showExamReviewUI(userId, examId) {
 
     } catch (error) {
         hideLoading();
-        console.error(`Error showing exam review for ${examId}:`, error);
+        console.error(`[showExamReviewUI] Error showing exam review for ${examId}:`, error);
         displayContent(`<p class="text-red-500 p-4">An error occurred while loading the exam review: ${error.message}. Please try again later.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
     }
 }
@@ -427,7 +431,7 @@ async function generateAIExplanation(question, container) {
             <p>${explanation}</p>
         `;
     } catch (error) {
-        console.error('Error generating AI explanation:', error);
+        console.error('[generateAIExplanation] Error generating AI explanation:', error);
         container.innerHTML = `
             <h4>AI Explanation</h4>
             <p>Unable to generate explanation at this time.</p>
@@ -443,7 +447,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
     const explanationContentArea = explanationContainer?.querySelector('.ai-explanation-content-area');
 
     if (!explanationContainer || !explanationContentArea) {
-        console.error('Required DOM elements not found');
+        console.error('[showAIExplanationSection] Required DOM elements not found');
         return;
     }
 
@@ -452,7 +456,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
 
     // If hiding, just return
     if (!isHidden) {
-        console.log('Hiding explanation section');
+        console.log('[showAIExplanationSection] Hiding explanation section');
         return;
     }
 
@@ -470,7 +474,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
                 <p class="ml-2 text-sm text-muted">Generating explanation...</p>
             </div>`;
 
-            console.log('Fetching exam details...');
+            console.log('[showAIExplanationSection] Fetching exam details...');
             const examData = await getExamDetails(currentUser.uid, examId);
 
             if (!examData) {
@@ -482,9 +486,8 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
 
             const question = examData.questions[questionIndex];
             const studentAnswer = examData.userAnswers?.[question.id];
-            const isProblem = question.isProblem || !question.options || question.options.length === 0;
 
-            console.log('Generating explanation...');
+            console.log('[showAIExplanationSection] Generating explanation...');
             // Initial call, empty history - Pass question object which now contains correctAnswer
             const result = await generateExplanation(question, null, studentAnswer, []); // Pass null for deprecated correctAnswer param
 
@@ -519,10 +522,10 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
                 </div>`;
 
             await renderMathIn(explanationContentArea);
-            console.log('Explanation generated and rendered successfully');
+            console.log('[showAIExplanationSection] Explanation generated and rendered successfully');
 
         } catch (error) {
-            console.error("Error in showAIExplanationSection:", error);
+            console.error("[showAIExplanationSection] Error:", error);
             explanationContentArea.innerHTML = `<div class="p-3 text-red-500 dark:text-red-400">
                 <p class="font-medium">Error generating explanation:</p>
                 <p class="text-sm mt-1">${error.message || 'An unexpected error occurred'}</p>
@@ -548,13 +551,13 @@ export const askAIFollowUp = async (examId, questionIndex) => {
     const inputElement = document.getElementById(`follow-up-input-${questionIndex}`);
 
     if (!explanationContainer || !explanationContentArea || !conversationContainer || !inputElement) {
-        console.error('Required DOM elements not found for follow-up');
+        console.error('[askAIFollowUp] Required DOM elements not found for follow-up');
         return;
     }
 
     const followUpText = inputElement.value.trim();
     if (!followUpText) {
-        console.log('No follow-up text provided');
+        console.log('[askAIFollowUp] No follow-up text provided');
         return;
     }
 
@@ -577,7 +580,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
         `);
 
         // Scroll to the latest message
-        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
 
         // Get the conversation history
         const history = window.currentExplanationHistories[questionIndex] || [];
@@ -607,10 +610,10 @@ export const askAIFollowUp = async (examId, questionIndex) => {
         await renderMathIn(conversationContainer.lastElementChild);
 
         // Scroll to the new response
-        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
 
     } catch (error) {
-        console.error("Error in askAIFollowUp:", error);
+        console.error("[askAIFollowUp] Error:", error);
         // Remove loading indicator if it exists
         conversationContainer.querySelector('.ai-message-loading')?.remove();
 
@@ -623,7 +626,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
         `);
 
         // Scroll to error message
-        conversationContainer.scrollTop = conversationContainer.scrollHeight;
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
     } finally {
         // Re-enable input
         inputElement.disabled = false;
@@ -669,7 +672,10 @@ export async function submitIssueReport(examId, questionIndex) {
         const questionData = examData?.questions?.[questionIndex];
         const qId = questionData?.id || `Exam-${examId}-Q${questionIndex+1}`;
         const markingResultData = examData?.markingResults?.questionResults?.find(r => r.questionId === qId);
-        const subjectContext = examData?.courseId ? `Course: ${examData.courseId}` : (examData?.subjectId ? `Subject: ${examData.subjectId}` : 'N/A');
+        // Safely access subject/course names
+        const subjectContext = examData?.courseId ? `Course: ${globalCourseDataMap?.get(examData.courseId)?.name ?? examData.courseId}`
+                             : (examData?.subjectId ? `Subject: ${window.data?.subjects?.[examData.subjectId]?.name ?? examData.subjectId}` : 'N/A');
+
 
         const reportPayload = {
             subjectId: subjectContext, // Use combined context
@@ -688,7 +694,7 @@ export async function submitIssueReport(examId, questionIndex) {
         }
     } catch (error) {
         hideLoading();
-        console.error("Error submitting issue report:", error);
+        console.error("[submitIssueReport] Error:", error);
         alert(`Failed to submit report: ${error.message}`);
     }
 }
@@ -701,7 +707,7 @@ window.submitIssueReport = submitIssueReport; // Assign to window
  */
 export async function deleteCompletedExamV2(examId) {
     if (!currentUser || !db || !data) { // Ensure data state is available
-        console.error("Cannot delete exam: User, DB, or local data not available.");
+        console.error("[DeleteExam] Cannot delete exam: User, DB, or local data not available.");
         alert("Error deleting exam: Critical data missing.");
         return false;
     }
@@ -711,60 +717,93 @@ export async function deleteCompletedExamV2(examId) {
 
     try {
         // Get exam data before deleting
+        console.log(`[DeleteExam] Fetching exam data for ${examId}`);
         const examDoc = await examRef.get();
         if (!examDoc.exists) {
-            throw new Error("Exam not found in Firestore");
+            throw new Error(`Exam ${examId} not found in Firestore`);
         }
         const examData = examDoc.data();
+        console.log(`[DeleteExam] Fetched data for exam ${examId}, Type: ${examData.type}, CourseID: ${examData.courseId}, SubjectID: ${examData.subjectId}`);
 
         let appDataModified = false;
         let questionsRestoredCount = 0;
-        let statsUpdatedCount = 0;
+        let statsAttemptedUpdatedCount = 0;
+        let statsWrongUpdatedCount = 0;
 
         // --- START: Update local data.subjects stats for TestGen exams ---
+        // Check if it's a TestGen exam (no courseId), subjectId exists, and relevant local data exists
         if (!examData.courseId && examData.subjectId && data?.subjects?.[examData.subjectId]?.chapters) {
             const subjectToUpdate = data.subjects[examData.subjectId];
-            console.log(`[TestGen] Attempting to update stats for subject ${examData.subjectId} after deleting exam ${examId}`);
+            console.log(`[DeleteExam] Attempting to update stats for Subject '${subjectToUpdate.name}' (ID: ${examData.subjectId})`);
 
             if (examData.questions && examData.markingResults?.questionResults) {
-                examData.questions.forEach(q => {
+                console.log(`[DeleteExam] Processing ${examData.questions.length} questions from the deleted exam.`);
+                examData.questions.forEach((q, index) => {
                     // Process only MCQs for stats and available questions
                     if (!q.isProblem && q.chapter && q.number && q.id) {
-                        const chap = subjectToUpdate.chapters[q.chapter]; // Chapters are objects keyed by number string
-                        if (chap) {
-                            // Decrement total_attempted if > 0
+                        const chapNumStr = String(q.chapter); // Ensure chapter key is a string
+                        const chap = subjectToUpdate.chapters[chapNumStr];
+                        const qNum = parseInt(q.number);
+
+                        if (chap && !isNaN(qNum)) {
+                            const originalAttempted = chap.total_attempted;
+                            const originalWrong = chap.total_wrong;
+
+                            // Decrement total_attempted if it's a positive number
                             if (typeof chap.total_attempted === 'number' && chap.total_attempted > 0) {
                                 chap.total_attempted--;
+                                console.log(`[DeleteExam] Ch ${chapNumStr}: Decremented total_attempted (Before: ${originalAttempted}, After: ${chap.total_attempted})`);
                                 appDataModified = true;
-                                statsUpdatedCount++;
+                                statsAttemptedUpdatedCount++;
+                            } else if (chap.total_attempted === undefined || chap.total_attempted === null || isNaN(chap.total_attempted)) {
+                                // If invalid, set to 0 (though this shouldn't happen with prior validation)
+                                chap.total_attempted = 0;
+                                console.warn(`[DeleteExam] Ch ${chapNumStr}: Reset invalid total_attempted to 0.`);
+                                appDataModified = true;
                             }
 
                             // Find the marking result for this question
                             const result = examData.markingResults.questionResults.find(r => r.questionId === q.id);
-                            // Decrement total_wrong if > 0 AND the question was marked wrong (score <= 0)
+                            // Decrement total_wrong if it's a positive number AND the question was marked wrong (score <= 0)
                             if (result && result.score <= 0 && typeof chap.total_wrong === 'number' && chap.total_wrong > 0) {
                                 chap.total_wrong--;
+                                console.log(`[DeleteExam] Ch ${chapNumStr}: Decremented total_wrong (Before: ${originalWrong}, After: ${chap.total_wrong}) because question ${q.id} was wrong.`);
                                 appDataModified = true;
-                                // No need to increment statsUpdatedCount again, already counted for attempted
+                                statsWrongUpdatedCount++;
+                            } else if (chap.total_wrong === undefined || chap.total_wrong === null || isNaN(chap.total_wrong)) {
+                                // If invalid, set to 0
+                                chap.total_wrong = 0;
+                                console.warn(`[DeleteExam] Ch ${chapNumStr}: Reset invalid total_wrong to 0.`);
+                                appDataModified = true;
                             }
 
                             // Add question number back to available_questions if not already present
                             if (Array.isArray(chap.available_questions)) {
-                                const qNum = parseInt(q.number);
-                                if (!isNaN(qNum) && !chap.available_questions.includes(qNum)) {
+                                if (!chap.available_questions.includes(qNum)) {
                                     chap.available_questions.push(qNum);
+                                    console.log(`[DeleteExam] Ch ${chapNumStr}: Added question number ${qNum} back to available_questions.`);
                                     questionsRestoredCount++;
                                     appDataModified = true; // Flag modification
+                                } else {
+                                     console.log(`[DeleteExam] Ch ${chapNumStr}: Question number ${qNum} was already in available_questions.`);
                                 }
+                            } else {
+                                 // If available_questions is missing or not an array, initialize it (shouldn't happen ideally)
+                                 chap.available_questions = [qNum];
+                                 console.warn(`[DeleteExam] Ch ${chapNumStr}: Initialized available_questions for chapter. Added ${qNum}.`);
+                                 questionsRestoredCount++;
+                                 appDataModified = true;
                             }
                         } else {
-                            console.warn(`[TestGen] Chapter ${q.chapter} not found in local data for subject ${examData.subjectId} while updating stats.`);
+                            console.warn(`[DeleteExam] Skipping stats update for Q${index + 1} (ID: ${q.id}): Chapter ${q.chapter} not found in local data or invalid Q number ${q.number}.`);
                         }
+                    } else {
+                         console.log(`[DeleteExam] Skipping stats update for Q${index+1} (ID: ${q.id}): Not an MCQ with chapter/number/id.`);
                     }
                 });
 
                 if (appDataModified) {
-                    console.log(`[TestGen] Stats updates: ${statsUpdatedCount} attempted reversed, ${questionsRestoredCount} MCQs restored to pool.`);
+                    console.log(`[DeleteExam] Summary of changes: Attempted reversed: ${statsAttemptedUpdatedCount}, Wrong reversed: ${statsWrongUpdatedCount}, MCQs restored: ${questionsRestoredCount}.`);
                     // Sort available_questions arrays numerically for consistency
                     Object.values(subjectToUpdate.chapters).forEach(chap => {
                         if (Array.isArray(chap.available_questions)) {
@@ -772,34 +811,45 @@ export async function deleteCompletedExamV2(examId) {
                         }
                     });
 
+                    // Update the global state immediately
+                    setData({...data}); // Trigger potential reactivity if framework supports it
+
                     // Save the entire updated data object back to Firestore
-                    await saveUserData(currentUser.uid, data);
-                    console.log(`[TestGen] Saved updated app data (data.subjects) after exam deletion.`);
+                    console.log(`[DeleteExam] Saving updated app data (data.subjects) to Firestore...`);
+                    await saveUserData(currentUser.uid, data); // Pass the modified 'data' object
+                    console.log(`[DeleteExam] Saved updated app data successfully.`);
                 } else {
-                     console.log(`[TestGen] No appData stats needed updating for exam ${examId}.`);
+                     console.log(`[DeleteExam] No TestGen appData stats needed updating for exam ${examId}.`);
                 }
             } else {
-                console.warn(`[TestGen] Could not update stats for exam ${examId}: Missing questions or markingResults in exam data.`);
+                console.warn(`[DeleteExam] Could not update TestGen stats for exam ${examId}: Missing questions or markingResults in exam data.`);
             }
         } else {
-             console.log(`Exam ${examId} is not a TestGen exam or subject data missing. No local stats updated.`);
+             console.log(`[DeleteExam] Exam ${examId} is not a TestGen exam or relevant subject data missing. No local stats updated.`);
         }
         // --- END: Update local data.subjects stats ---
 
-        // Delete the exam document from Firestore
+        // Delete the exam document from Firestore AFTER attempting stats update
+        console.log(`[DeleteExam] Deleting exam document ${examId} from Firestore...`);
         await examRef.delete();
-        console.log(`Successfully deleted exam ${examId} from userExams collection.`);
+        console.log(`[DeleteExam] Successfully deleted exam ${examId} from userExams collection.`);
 
         hideLoading();
         alert(`Exam ${examId} deleted successfully.${appDataModified ? `\n(${questionsRestoredCount} MCQs restored, stats adjusted)` : ''}`);
 
-        // Refresh the progress dashboard to show updated stats
-        window.showProgressDashboard();
+        // Refresh the progress dashboard AFTER all modifications (local and Firestore) are done
+        // This ensures the dashboard reads the final state
+        console.log("[DeleteExam] Refreshing progress dashboard...");
+        if (typeof window.showProgressDashboard === 'function') {
+             window.showProgressDashboard();
+        } else {
+             console.warn("[DeleteExam] window.showProgressDashboard is not defined, cannot refresh dashboard.");
+        }
         return true;
 
     } catch (error) {
         hideLoading();
-        console.error(`Error deleting exam ${examId}:`, error);
+        console.error(`[DeleteExam] Error deleting exam ${examId}:`, error);
         alert(`Error deleting exam: ${error.message}`);
         return false;
     }

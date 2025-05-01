@@ -3,6 +3,7 @@
 // ui_admin_dashboard.js
 
 import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added currentUser
+// MODIFIED: Added DEFAULT_PROFILE_PIC_URL import
 import { ADMIN_UID, YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import YouTube API Key and DEFAULT_PROFILE_PIC_URL
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
@@ -1193,7 +1194,7 @@ async function listAllUsersAdmin() {
 
             usersHtml += `
                 <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex items-center gap-3 text-sm flex-wrap">
-                    <img src="${userData.photoURL || DEFAULT_PROFILE_PIC_URL}" alt="${displayName}'s avatar" class="w-10 h-10 rounded-full object-cover border dark:border-gray-600 flex-shrink-0" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
+                    <img src="${escapeHtml(userData.photoURL || DEFAULT_PROFILE_PIC_URL)}" alt="${displayName}'s avatar" class="w-10 h-10 rounded-full object-cover border dark:border-gray-600 flex-shrink-0" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
                     <div class="flex-grow min-w-[200px]">
                         <span class="font-medium">${displayName}</span> ${isAdminUser ? '<span class="text-xs bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">Admin</span>' : ''}<br>
                          <span class="text-xs text-muted">Username: ${username}</span><br>
@@ -1262,6 +1263,7 @@ async function viewUserDetailsAdmin(userId) {
 
         hideLoading();
 
+        // --- START MODIFICATION ---
         // Generate user profile HTML
         const userProfileHtml = `
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1269,9 +1271,18 @@ async function viewUserDetailsAdmin(userId) {
                     <dt class="text-xs font-medium text-blue-700 dark:text-blue-300">User ID</dt>
                     <dd class="text-sm mt-1 font-mono">${escapeHtml(userId)}</dd>
                 </div>
+                <div class="col-span-2 flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
+                    <dt class="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 flex-shrink-0">Avatar</dt>
+                    <dd class="text-sm mt-1">
+                        <img src="${escapeHtml(displayUserData.photoURL || DEFAULT_PROFILE_PIC_URL)}"
+                             alt="${escapeHtml(displayUserData.displayName || 'User')}'s avatar"
+                             class="w-10 h-10 rounded-full object-cover border dark:border-gray-500"
+                             onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_PIC_URL}';">
+                    </dd>
+                </div>
                 ${Object.entries(displayUserData).map(([key, value]) => {
-                    // Skip complex/large fields handled separately
-                    if (key === 'completedCourseBadges' || key === 'appData' || key === 'userNotes') return '';
+                    // Skip complex/large fields handled separately AND photoURL (handled above)
+                    if (['completedCourseBadges', 'appData', 'userNotes', 'photoURL'].includes(key)) return '';
 
                     // Format the value based on its type
                     let displayValue = '';
@@ -1288,19 +1299,17 @@ async function viewUserDetailsAdmin(userId) {
                             </ul>`;
                         }
                     } else if (typeof value === 'object') {
-                        // Special handling for timestamp strings? Already converted above.
                          // Basic object display
                          displayValue = '<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-1 rounded max-h-24 overflow-auto">' + escapeHtml(JSON.stringify(value, null, 2)) + '</pre>';
                     } else {
                         displayValue = escapeHtml(String(value));
                     }
 
-                     // --- Add Edit button for username ---
+                     // Add Edit button for username
                      let editButton = '';
                      if (key === 'username') {
                           editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
                      }
-                     // --- End Edit button add ---
 
                     return `
                         <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
@@ -1311,6 +1320,7 @@ async function viewUserDetailsAdmin(userId) {
                 }).join('')}
             </dl>
         `;
+        // --- END MODIFICATION ---
 
         // Generate badges HTML if they exist
         const badgesHtml = displayUserData.completedCourseBadges?.length ? `
@@ -1405,7 +1415,7 @@ async function viewUserDetailsAdmin(userId) {
                         <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
                             User Details: ${escapeHtml(userData.displayName || userData.username || userId)}
                         </h3>
-                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl" aria-label="Close user details modal">&times;</button>
+                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl" aria-label="Close user details modal">×</button>
                     </div>
                     <div class="flex-grow overflow-y-auto mb-4 space-y-6 pr-2">
                         <div>

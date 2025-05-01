@@ -1,3 +1,5 @@
+// --- START OF FILE ui_course_study_material.js ---
+
 
 
 // --- START OF FILE ui_course_study_material.js ---
