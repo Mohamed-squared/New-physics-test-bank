@@ -223,7 +223,8 @@ async function handleCropConfirm() {
                 // Check data URL size
                 if (dataUrl.length > 1000000) { // ~1MB limit
                     hideModalAndLoading();
-                    throw new Error("Cropped image is too large (max ~1MB). Please crop a smaller area or use a smaller source image.");
+                    alert("Cropped image is still too large (max ~1MB). Please try cropping a smaller area or use a smaller source image.");
+                    return;
                 }
 
                 try {

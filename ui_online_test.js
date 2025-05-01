@@ -225,48 +225,99 @@ export async function submitOnlineTest() {
     }
 
     showLoading("Submitting and marking exam...");
-    currentOnlineTestState.status = 'submitting'; // Mark as submitting to prevent double submission
+    currentOnlineTestState.status = 'submitting';
     if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
     currentOnlineTestState.timerInterval = null;
-    document.getElementById('online-test-area')?.classList.add('hidden'); // Hide test area UI
-    await new Promise(resolve => setTimeout(resolve, 100)); // Short delay for UI
+    document.getElementById('online-test-area')?.classList.add('hidden');
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Determine context
     const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
     const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
     const courseId = currentOnlineTestState.courseContext?.courseId;
-    // Default to 'testgen' if no specific course context type
     const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen';
     const activityId = currentOnlineTestState.courseContext?.activityId;
     const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
 
     try {
         console.log(`Submitting exam ${currentOnlineTestState.examId} of type ${activityType}`);
-        // Store and mark the exam using the centralized function
         const examRecord = await storeExamResult(
-            courseId, // Pass courseId (null for TestGen)
-            currentOnlineTestState, // Pass the full state
-            activityType // Pass the determined type
+            courseId,
+            currentOnlineTestState,
+            activityType
         );
 
         if (!examRecord || !examRecord.markingResults) {
-             // Error already handled inside storeExamResult
              hideLoading();
-               if (isCourseActivity && courseId) {
-                   window.showCurrentAssignmentsExams?.(courseId); // Use optional chaining
-               } else {
-                   showTestGenerationDashboard();
-               }
-              setCurrentOnlineTestState(null); // Clear state on failure
+             if (isCourseActivity && courseId) {
+                 window.showCurrentAssignmentsExams?.(courseId);
+             } else {
+                 showTestGenerationDashboard();
+             }
+             setCurrentOnlineTestState(null);
              return;
         }
 
+        // Handle course activity progress updates
+        if (isCourseActivity && courseId) {
+            const progress = userCourseProgressMap.get(courseId);
+            if (progress) {
+                const percentageScore = examRecord.markingResults.maxPossibleScore > 0 
+                    ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100 
+                    : 0;
+
+                // Update appropriate score map based on activity type
+                switch (activityType) {
+                    case 'assignment':
+                        progress.assignmentScores = progress.assignmentScores || {};
+                        progress.assignmentScores[activityId] = percentageScore;
+                        console.log(`Updated assignment score for ${activityId}: ${percentageScore.toFixed(1)}%`);
+
+                        // Update daily progress for assignments
+                        const todayStr = getFormattedDate();
+                        progress.dailyProgress = progress.dailyProgress || {};
+                        progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || {
+                            chaptersStudied: [],
+                            skipExamsPassed: [],
+                            assignmentCompleted: false,
+                            assignmentScore: null
+                        };
+                        progress.dailyProgress[todayStr].assignmentCompleted = true;
+                        progress.dailyProgress[todayStr].assignmentScore = percentageScore;
+                        console.log(`Updated daily progress for ${todayStr} with assignment score`);
+                        break;
+
+                    case 'weekly_exam':
+                        progress.weeklyExamScores = progress.weeklyExamScores || {};
+                        progress.weeklyExamScores[activityId] = percentageScore;
+                        console.log(`Updated weekly exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
+                        break;
+
+                    case 'final_exam':
+                        progress.finalExamScore = percentageScore;
+                        console.log(`Updated final exam score: ${percentageScore.toFixed(1)}%`);
+                        break;
+
+                    case 'skip_exam':
+                        // Skip exam scores are handled in the existing code below
+                        break;
+
+                    default:
+                        console.log(`Unhandled course activity type: ${activityType}`);
+                }
+
+                // Update local state and save to Firestore
+                updateUserCourseProgress(courseId, progress);
+                await saveUserCourseProgress(currentUser.uid, courseId, progress);
+                console.log(`Course progress updated and saved for ${courseId}`);
+            }
+        }
+
         // Successfully stored and marked
-        currentOnlineTestState.status = 'completed'; // Mark state as completed
-        hideLoading(); // Hide loading *after* marking and storage attempt SUCCEEDS
+        currentOnlineTestState.status = 'completed';
+        hideLoading();
 
         // Display results UI using the stored/marked record
-        displayOnlineTestResults(examRecord); // Pass the full record
+        displayOnlineTestResults(examRecord);
 
         // --- Post-submission logic ---
 
@@ -349,12 +400,11 @@ export async function submitOnlineTest() {
 
     } catch (error) {
         hideLoading();
-        setCurrentOnlineTestState(null); // Clear state even on error
+        setCurrentOnlineTestState(null);
         console.error("Error finishing test:", error);
         alert("Error submitting test results. Please try again later. " + error.message);
-        // Navigate back appropriately
         if (isCourseActivity && courseId) {
-            window.showCurrentAssignmentsExams?.(courseId); // Use optional chaining
+            window.showCurrentAssignmentsExams?.(courseId);
         } else {
              showTestGenerationDashboard();
         }
@@ -442,7 +492,7 @@ export async function displayOnlineTestResults(examRecord) {
 
             <div class="flex justify-center gap-4 flex-wrap">
                 <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary" data-exam-id="${examId}">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
                     View Detailed Review
                 </button>
                 <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">

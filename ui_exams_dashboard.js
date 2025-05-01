@@ -35,9 +35,6 @@ export async function showExamsDashboard() {
     const completedExams = await getExamHistory(currentUser.uid, subjectId, 'subject');
     hideLoading();
 
-    const pendingHtml = showEnterResults(); // Still shows pending PDF exams from appData
-    const completedListHtml = renderCompletedExamsList(completedExams);
-
     // NEW: Reset Button Section
     const resetButtonHtml = currentSubject ? `
          <div class="mt-2 mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-300 dark:border-yellow-700 text-center">
@@ -47,6 +44,9 @@ export async function showExamsDashboard() {
              </button>
          </div>
          ` : '';
+
+    const pendingHtml = showEnterResults(); // Still shows pending PDF exams from appData
+    const completedListHtml = renderCompletedExamsList(completedExams);
 
     const html = `
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4">
@@ -666,11 +666,9 @@ async function deleteCompletedExamV2(examId) {
          console.log(`Exam history ${examId} deleted from userExams collection.`);
 
          hideLoading();
-         showExamsDashboard();
-         window.showProgressDashboard(); // Refresh progress dashboard after deletion
-
          const successMsgHtml = `<div class="toast-notification toast-warning animate-fade-in"><p>Exam ${escapeHtml(examId)} history deleted.</p>${appDataModified ? `<p class="text-xs">${questionsRestoredCount} MCQs restored to available pool.</p>` : ''}</div>`;
          const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
+         showExamsDashboard();
 
      } catch (error) {
          hideLoading();
@@ -719,7 +717,6 @@ async function resetAvailableQuestionsForSubject() {
              const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Available questions reset for ${escapeHtml(subjectName)}.</p></div>`;
              const msgContainer = document.createElement('div'); msgContainer.innerHTML = successMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 4000);
              showExamsDashboard();
-             window.showProgressDashboard(); // Refresh progress dashboard after reset
          } else {
              hideLoading();
              alert("No changes needed. Available questions already seem complete.");

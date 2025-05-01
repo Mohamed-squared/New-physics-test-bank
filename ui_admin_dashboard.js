@@ -904,7 +904,7 @@ window.showEditCourseForm = showEditCourseForm; // From ui_courses.js
 // Add the new handler functions at the end of the file before the window assignments
 
 async function handleDeleteUserFormulaSheetAdmin() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser?.uid || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required.");
         return;
     }
@@ -949,7 +949,7 @@ async function handleDeleteUserFormulaSheetAdmin() {
 }
 
 async function handleDeleteUserChapterSummaryAdmin() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser?.uid || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required.");
         return;
     }

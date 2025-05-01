@@ -1131,21 +1131,26 @@ window.askPdfFollowUp = async () => {
 
 // MODIFIED: Use USER specific load/save
 export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate = false) {
+    if (!currentUser) {
+        console.error("Cannot display formula sheet: User not logged in");
+        return;
+    }
+    if (!courseId || !chapterNum) {
+        console.error("Missing courseId or chapterNum for formula sheet");
+        return;
+    }
+
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
     const downloadBtn = document.getElementById('download-formula-pdf-btn');
-    if (!formulaArea || !formulaContent || !downloadBtn || !currentUser) {
-        console.error("Missing UI elements or user context for formula sheet display");
+    if (!formulaArea || !formulaContent || !downloadBtn) {
+        console.error("Missing UI elements for formula sheet display");
         return;
     }
+
     formulaArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
     formulaContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Formula Sheet...</p></div>`;
-    if (!courseId || !chapterNum) {
-        console.error("Missing courseId or chapterNum for formula sheet");
-        formulaContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>';
-        return;
-    }
 
     // --- Check USER cache ---
     let cachedSheet = null;
@@ -1230,21 +1235,26 @@ export async function downloadFormulaSheetPdf() {
 
 // MODIFIED: Use USER specific load/save
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
+    if (!currentUser) {
+        console.error("Cannot display chapter summary: User not logged in");
+        return;
+    }
+    if (!courseId || !chapterNum) {
+        console.error("Missing courseId or chapterNum for chapter summary");
+        return;
+    }
+
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
-    if (!summaryArea || !summaryContent || !downloadBtn || !currentUser) {
-        console.error("Missing UI elements or user context for chapter summary display");
+    if (!summaryArea || !summaryContent || !downloadBtn) {
+        console.error("Missing UI elements for chapter summary display");
         return;
     }
+
     summaryArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden');
     summaryContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Chapter Summary...</p></div>`;
-    if (!courseId || !chapterNum) {
-        console.error("Missing courseId or chapterNum for chapter summary");
-        summaryContent.innerHTML = '<p class="text-warning">Error: Context missing.</p>';
-        return;
-    }
 
     // --- Check USER cache ---
     let cachedSummary = null;
@@ -1541,15 +1551,22 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
                       </div>
-                       <!-- Formula/Summary Display Area -->
-                       <div id="formula-sheet-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
-                            <div class="flex justify-between items-center mb-1"><span class="text-sm font-semibold">Formula Sheet</span><button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button></div>
-                            <div id="formula-sheet-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
-                       </div>
-                       <div id="chapter-summary-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
-                            <div class="flex justify-between items-center mb-1"><span class="text-sm font-semibold">Chapter Summary</span><button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button></div>
-                            <div id="chapter-summary-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
-                       </div>
+                      <!-- Formula Sheet Display Area -->
+                      <div id="formula-sheet-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
+                           <div class="flex justify-between items-center mb-1">
+                               <span class="text-sm font-semibold">Formula Sheet</span>
+                               <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button>
+                           </div>
+                           <div id="formula-sheet-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
+                      </div>
+                      <!-- Chapter Summary Display Area -->
+                      <div id="chapter-summary-area" class="mt-3 hidden border-t dark:border-gray-700 pt-3">
+                           <div class="flex justify-between items-center mb-1">
+                               <span class="text-sm font-semibold">Chapter Summary</span>
+                               <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-secondary-small text-xs hidden">Download PDF</button>
+                           </div>
+                           <div id="chapter-summary-content" class="text-sm p-3 bg-gray-100 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-60 overflow-y-auto"></div>
+                      </div>
                   </div>
             </div>
         </div>

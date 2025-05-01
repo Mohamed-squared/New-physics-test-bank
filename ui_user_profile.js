@@ -171,10 +171,10 @@ export function showUserProfileDashboard() {
                         previewImg.src = originalSrc;
                     }
 
-                    // Show error message
+                    // Show error message with specific handling for auth errors
                     let errorMessage = "Failed to update profile picture.";
                     if (error.code === 'auth/invalid-profile-attribute') {
-                        errorMessage = "Invalid image format or size. Please try a different image.";
+                        errorMessage = "Image is too large or format is invalid (max ~1MB). Please try cropping a smaller area or use a different image.";
                     } else if (error.message) {
                         errorMessage = error.message;
                     }
