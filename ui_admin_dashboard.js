@@ -1666,6 +1666,11 @@ async function loadChatAutoDeleteSetting() {
     statusArea.innerHTML = `<span class="text-muted text-xs">Loading setting...</span>`;
 
     try {
+        if (!db) {
+            console.error("Firestore db instance is not available.");
+            statusArea.innerHTML = `<p class="text-red-500 text-xs">Error: Database connection not available.</p>`;
+            return;
+        }
         const settingsRef = db.collection('settings').doc('chat');
         const docSnap = await settingsRef.get();
 
@@ -1715,6 +1720,12 @@ export async function saveChatAutoDeleteSetting() {
     showLoading("Saving setting...");
 
     try {
+        if (!db) {
+            hideLoading();
+            console.error("Firestore db instance is not available for saving.");
+            statusArea.innerHTML = `<p class="text-red-500 text-xs">Error: Database connection not available.</p>`;
+            return;
+        }
         const settingsRef = db.collection('settings').doc('chat');
         await settingsRef.set({ autoDeleteDays: selectedValue }, { merge: true });
         hideLoading();

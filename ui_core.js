@@ -1,3 +1,4 @@
+/* === ui_core.js === */
 // --- START OF FILE ui_core.js ---
 
 import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap, setCurrentUser } from './state.js'; // Added setCurrentUser, course state imports
@@ -44,7 +45,18 @@ export function hideLoginUI() {
 
 // Fetch and update user info, including admin icon
 export async function fetchAndUpdateUserInfo(user) {
-    if (!user || !db) return;
+    // --- START MODIFICATION: Initial logging and validation ---
+    console.log(`[fetchAndUpdateUserInfo] Received user object:`, user ? { uid: user.uid, email: user.email, displayName: user.displayName } : 'null');
+    if (!user || !user.uid) {
+        console.error("[fetchAndUpdateUserInfo] Error: Received invalid user object or missing UID. Aborting fetch.", user);
+        return; // Stop execution if user or uid is invalid
+    }
+    // --- END MODIFICATION ---
+
+    if (!db) {
+        console.error("[fetchAndUpdateUserInfo] Error: Firestore database instance (db) is not initialized. Aborting fetch.");
+        return;
+    }
     const userDisplay = document.getElementById('user-display');
     const userSection = document.getElementById('user-section');
 
@@ -55,7 +67,8 @@ export async function fetchAndUpdateUserInfo(user) {
 
     try {
         console.log(`Fetching Firestore profile for user UID: ${user.uid}`);
-        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userDocRef = db.collection('users').doc(user.uid);
+        const userDoc = await userDocRef.get();
         if (userDoc.exists) {
             userDataFromFirestore = userDoc.data();
             console.log("Firestore profile found, using Firestore data.");
@@ -77,7 +90,7 @@ export async function fetchAndUpdateUserInfo(user) {
 
     // --- Create the updated user info object for central state ---
     const updatedUserInfo = {
-        uid: user.uid,
+        uid: user.uid, // Ensure UID from original user object is included
         email: user.email,
         displayName: finalDisplayName,
         photoURL: finalPhotoURL,
@@ -88,9 +101,22 @@ export async function fetchAndUpdateUserInfo(user) {
         // Add any other critical user properties you store in Firestore users/{uid}
     };
 
-    // --- Update the central currentUser state ---
+    // --- START MODIFICATION: Check before final state update ---
+    if (!updatedUserInfo || !updatedUserInfo.uid) {
+        console.error("[fetchAndUpdateUserInfo] CRITICAL ERROR: updatedUserInfo object is missing UID before calling setCurrentUser!", updatedUserInfo);
+        // Optionally, try to recover UID from the original user object if possible
+        if (user && user.uid && updatedUserInfo) {
+            console.warn("[fetchAndUpdateUserInfo] Attempting to recover missing UID.");
+            updatedUserInfo.uid = user.uid;
+        } else {
+            // If UID cannot be recovered, maybe don't call setCurrentUser or handle error appropriately
+             console.error("[fetchAndUpdateUserInfo] Cannot recover UID. Skipping call to setCurrentUser to prevent state corruption.");
+             return; // Or throw an error? For now, just skip the update.
+        }
+    }
     console.log("Updating central currentUser state with:", updatedUserInfo);
-    setCurrentUser(updatedUserInfo); // <--- Update the state HERE
+    setCurrentUser(updatedUserInfo); // Now call with validated/corrected object
+    // --- END MODIFICATION ---
 
     // --- Update the UI Display ---
     if (userDisplay) {
@@ -117,8 +143,17 @@ export async function fetchAndUpdateUserInfo(user) {
         userSection?.classList.remove('hidden');
     }
 
-    // Inbox check (Unchanged)
+    // Inbox check
     try {
+        // *** BEGIN INBOX PERMISSION DEBUGGING ***
+        if (!user || !user.uid) {
+            console.error("[Inbox Check] Error: User object or UID is invalid right before inbox query.", user);
+            // Skip the inbox query if user info is bad
+            throw new Error("User information invalid for inbox query."); // Throw to enter the catch block
+        }
+        console.log(`[Inbox Check] Querying inbox for validated user UID: ${user.uid}`);
+        // *** END INBOX PERMISSION DEBUGGING ***
+
         const inboxSnapshot = await db.collection('users').doc(user.uid).collection('inbox').where('isRead', '==', false).limit(10).get();
         const unreadCount = inboxSnapshot.size;
         const unreadBadge = document.getElementById('inbox-unread-count');
@@ -131,13 +166,20 @@ export async function fetchAndUpdateUserInfo(user) {
         if (inboxLink) {
             inboxLink.classList.toggle('has-unread', unreadCount > 0);
         }
+        // --- START MODIFICATION: Update menu button notification after inbox check ---
+        updateMenuButtonNotification();
+        // --- END MODIFICATION ---
     } catch(err) {
-        console.error("Error fetching unread count:", err);
+        // Modify existing catch block
+        console.error(`Error fetching unread count for user UID '${user?.uid}':`, err);
         const unreadBadge = document.getElementById('inbox-unread-count');
         if (unreadBadge) unreadBadge.classList.add('hidden');
         // Also clear the notification dot on error
         const inboxLink = document.getElementById('sidebar-inbox-link');
         if (inboxLink) inboxLink.classList.remove('has-unread');
+        // --- START MODIFICATION: Update menu button notification even on error ---
+        updateMenuButtonNotification(); // Ensure notification is cleared if fetch fails
+        // --- END MODIFICATION ---
     }
 }
 
@@ -148,6 +190,8 @@ export function clearUserInfoUI() {
     document.getElementById('subject-info')?.replaceChildren();
      const unreadBadge = document.getElementById('inbox-unread-count');
      if (unreadBadge) unreadBadge.classList.add('hidden');
+     // Also clear menu button notification on logout/clear
+     updateMenuButtonNotification();
 }
 
 export function updateSubjectInfo() {
@@ -327,5 +371,41 @@ function showSignupFormOnly() {
     }
 }
 window.showSignupFormOnly = showSignupFormOnly; // Assign to window
+
+// --- START MODIFICATION: Menu Button Notification Logic ---
+
+/**
+ * Updates the notification indicator on the mobile menu button based on
+ * unread inbox messages ONLY.
+ */
+export function updateMenuButtonNotification() {
+    const menuButton = document.getElementById('mobile-menu-button');
+    const inboxBadge = document.getElementById('inbox-unread-count');
+    // Removed chat link query
+
+    if (!menuButton) {
+        // console.warn("[updateMenuButtonNotification] Mobile menu button not found.");
+        return; // Exit if the menu button doesn't exist
+    }
+
+    let hasUnreadInbox = false;
+    if (inboxBadge && !inboxBadge.classList.contains('hidden')) {
+        const count = parseInt(inboxBadge.textContent || '0', 10);
+        hasUnreadInbox = count > 0;
+    }
+
+    // Removed chat check logic
+
+    const shouldShowNotification = hasUnreadInbox; // Condition now only depends on inbox status
+
+    // console.log(`[updateMenuButtonNotification] Inbox: ${hasUnreadInbox}, Should Show: ${shouldShowNotification}`); // Updated debug logging
+    menuButton.classList.toggle('has-notification', shouldShowNotification);
+}
+// --- END MODIFICATION ---
+
+
+// --- START MODIFICATION: Assign new function to window ---
+window.updateMenuButtonNotification = updateMenuButtonNotification;
+// --- END MODIFICATION ---
 
 // --- END OF FILE ui_core.js ---

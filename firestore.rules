@@ -127,13 +127,13 @@ service cloud.firestore {
       allow read, create: if request.auth != null && request.auth.uid != null;
       // Only the message owner OR an admin can delete
       allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || isAdmin());
-      // *** MODIFIED: Allow Admin to update ONLY the isPinned field ***
+      // Allow Admin to update ONLY the isPinned field
       allow update: if request.auth != null && isAdmin() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned']);
     }
 
     // --- Settings Collection ---
-    // *** NEW: Rule for chat settings ***
+    // Rule for chat settings
     match /settings/chat {
       // Only Admin can read or write the chat settings document
       allow read, write: if request.auth != null && isAdmin();

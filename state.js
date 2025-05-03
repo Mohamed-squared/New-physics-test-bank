@@ -14,7 +14,7 @@ export let currentUser = null; // Holds the Firebase Auth user object AND potent
     displayName: string | null, // From Firebase Auth profile
     photoURL: string | null,    // From Firebase Auth profile
     // --- Custom data typically fetched from Firestore 'users/{uid}' ---
-    username: string | null,   // Unique username for mentions etc.
+    username: string | null,   // Unique username for mentions etc. (e.g., 'john_doe')
     isAdmin: boolean,          // Example custom field
     // ... other profile fields ...
 }
@@ -51,21 +51,27 @@ export function setData(newData) {
  */
 export function setCurrentUser(newUser) {
     if (newUser) {
-        // Basic structure validation (optional but recommended)
+        // --- MODIFIED: Added validation ---
+        // Basic structure validation: Ensure UID is present.
         if (!newUser.uid) {
-            console.error("setCurrentUser error: New user object is missing 'uid'.", newUser);
+            console.error("setCurrentUser validation failed: Attempted to set user with missing UID. Aborting state update.", newUser);
             return; // Prevent setting invalid user state
         }
+        // --- End Modification ---
+
          // Merge the new user data. Ensure username is handled.
          // Prioritize Firestore username if the incoming object provides it separately,
          // otherwise, assume it's already part of the newUser object.
-         // Example: If login logic fetches Firestore data and merges it before calling setCurrentUser.
         currentUser = {
             ...newUser, // Spread all properties from the provided object
-            username: newUser.username || null, // Ensure username exists, default to null
-            displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User', // Sensible default for display name
+            // Ensure username exists, prioritize newUser.username, default to null
+            username: newUser.username || null,
+            // Ensure displayName exists, prioritize newUser.displayName, fallback to email part, then 'User'
+            displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User',
+            // Ensure photoURL exists, prioritize newUser.photoURL, default to null (or a default pic URL later)
+            photoURL: newUser.photoURL || null,
         };
-        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username });
+        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL });
     } else {
         currentUser = null;
         console.log("[State] Current user cleared (logged out).");
@@ -125,8 +131,8 @@ export function clearUserSession() {
      // Clear course dashboard area as well
      document.getElementById('course-dashboard-area')?.replaceChildren();
      document.getElementById('course-dashboard-area')?.classList.add('hidden');
-     // Clear any mention notification on logout
-     clearMentionNotification();
+     // MODIFIED: Removed call to clearMentionNotification() as it's no longer in this file
+     // clearMentionNotification(); // Removed
 }
 
 /** Structure Update Notes for currentUser (added username) */
@@ -138,33 +144,15 @@ currentUser object:
     emailVerified: boolean,
     displayName: string | null, // From Firebase Auth profile
     photoURL: string | null,    // From Firebase Auth profile
-    username: string | null,    // Custom unique username from Firestore, used for mentions
+    username: string | null,    // Custom unique username from Firestore, used for mentions (e.g., 'john_doe')
     // Potentially other custom fields like isAdmin, registrationDate, etc.
 }
 */
 
-// --- Utility for mention notification ---
-const GLOBAL_CHAT_LINK_ID = 'nav-global-chat'; // Ensure your chat link has this ID
-
-export function notifyNewMention() {
-    const chatLink = document.getElementById(GLOBAL_CHAT_LINK_ID);
-    if (chatLink) {
-        console.log("[State] Adding mention notification class.");
-        chatLink.classList.add('has-unread-mention');
-        // Optional: Play a subtle sound
-        // playNotificationSound();
-    } else {
-        console.warn(`[State] Could not find chat link with ID '${GLOBAL_CHAT_LINK_ID}' to add mention class.`);
-    }
-}
-
-export function clearMentionNotification() {
-    const chatLink = document.getElementById(GLOBAL_CHAT_LINK_ID);
-    if (chatLink) {
-        console.log("[State] Removing mention notification class.");
-        chatLink.classList.remove('has-unread-mention');
-    }
-}
+// MODIFIED: Removed the mention notification functions and constant
+// const GLOBAL_CHAT_LINK_ID = 'nav-global-chat'; // REMOVED
+// export function notifyNewMention() { ... } // REMOVED
+// export function clearMentionNotification() { ... } // REMOVED
 
 
 // --- Structure Update Notes for userCourseProgress items ---

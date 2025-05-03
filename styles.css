@@ -192,7 +192,14 @@ main#main-content {
 }
 main#main-content .container {
     max-width: 80rem; /* Limit content width */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
 }
+@media (min-width: 640px) { main#main-content .container { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media (min-width: 1024px) { main#main-content .container { padding-left: 2rem; padding-right: 2rem; } }
+
 
 /* ==========================================================================
    Typography
@@ -268,6 +275,8 @@ pre {
     border: 1px solid var(--border-color);
     box-shadow: var(--shadow-inner);
     font-family: var(--font-mono);
+    font-size: 0.9em; /* Slightly smaller pre text */
+    line-height: 1.5;
 }
 pre code {
     background-color: transparent;
@@ -276,6 +285,8 @@ pre code {
     font-size: 1em;
     border: none;
     box-shadow: none;
+    white-space: pre-wrap; /* Ensure code inside pre wraps */
+    word-wrap: break-word;
 }
 
 .dark code {
@@ -311,6 +322,8 @@ hr {
 .italic { font-style: italic; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .whitespace-pre-wrap { white-space: pre-wrap; } /* Useful for feedback/transcriptions */
+.break-words { overflow-wrap: break-word; word-wrap: break-word; } /* Ensure long words break */
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 
 /* Color utilities */
 .text-success { color: var(--color-success-600); }
@@ -324,6 +337,22 @@ hr {
 .text-muted { color: var(--color-gray-500); }
 .dark .text-muted { color: var(--color-gray-400); }
 
+/* Background utilities (example) */
+.bg-blue-100 { background-color: var(--color-primary-100); }
+.dark .bg-blue-900-60 { background-color: rgba(12, 74, 110, 0.6); } /* #0c4a6e */
+.bg-gray-100 { background-color: var(--color-gray-100); }
+.dark .bg-gray-700 { background-color: var(--color-gray-700); }
+.bg-gray-200 { background-color: var(--color-gray-200); }
+.dark .bg-gray-900 { background-color: var(--color-gray-900); }
+
+/* Border utilities */
+.border-l-4 { border-left-width: 4px; }
+.border-yellow-400 { border-color: var(--color-warning-400); }
+.dark .border-yellow-500 { border-color: var(--color-warning-500); }
+.border-l-2 { border-left-width: 2px; }
+.border-blue-300 { border-color: var(--color-primary-300); }
+.dark .border-blue-700 { border-color: var(--color-primary-700); }
+
 /* ==========================================================================
    Sidebar Navigation & Header
    ========================================================================== */
@@ -335,6 +364,13 @@ hr {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0; /* Prevent shrinking */
+}
+#sidebar .sidebar-header a { /* Make logo/link clickable */
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
 }
 #sidebar .sidebar-header h2 {
     font-family: var(--font-display);
@@ -349,6 +385,17 @@ hr {
 .dark #sidebar .sidebar-header h2 {
     color: var(--color-primary-400);
 }
+/* Sidebar Header Logos */
+#sidebar .sidebar-header .logo-light-mode { display: block; }
+#sidebar .sidebar-header .logo-dark-mode { display: none; }
+.dark #sidebar .sidebar-header .logo-light-mode { display: none; }
+.dark #sidebar .sidebar-header .logo-dark-mode { display: block; }
+#sidebar .sidebar-header .logo-light-mode,
+#sidebar .sidebar-header .logo-dark-mode {
+    height: 1.75rem; /* Adjusted logo size */
+    width: auto;
+}
+
 
 /* Sidebar nav container */
 #sidebar nav {
@@ -358,7 +405,19 @@ hr {
     overflow-y: auto;
     display: flex; /* Changed from block */
     flex-direction: column; /* Ensure column layout */
+    /* Apply custom scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
 }
+#sidebar nav::-webkit-scrollbar { width: 6px; }
+#sidebar nav::-webkit-scrollbar-track { background: transparent; }
+#sidebar nav::-webkit-scrollbar-thumb { background-color: var(--color-gray-300); border-radius: 3px; border: 1px solid transparent; background-clip: padding-box; }
+#sidebar nav::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-400); }
+
+.dark #sidebar nav { scrollbar-color: var(--color-gray-600) transparent; }
+.dark #sidebar nav::-webkit-scrollbar-thumb { background-color: var(--color-gray-600); }
+.dark #sidebar nav::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-500); }
+
 
 /* Sidebar links */
 .sidebar-link {
@@ -375,8 +434,9 @@ hr {
     cursor: pointer;
     width: 100%;
     box-sizing: border-box;
+    position: relative; /* For potential absolute positioned elements like badges */
 }
-.sidebar-link svg {
+.sidebar-link svg:not(.dropdown-arrow) { /* Don't style dropdown arrow */
     margin-right: 0.85rem;
     flex-shrink: 0;
     width: 1.125rem; /* 18px */
@@ -389,7 +449,7 @@ hr {
     background-color: var(--color-gray-100);
     color: var(--color-gray-900);
 }
-.sidebar-link:hover svg {
+.sidebar-link:hover svg:not(.dropdown-arrow) {
     color: var(--color-primary-500);
 }
 
@@ -397,14 +457,14 @@ hr {
 .dark .sidebar-link {
     color: var(--color-gray-300);
 }
-.dark .sidebar-link svg {
+.dark .sidebar-link svg:not(.dropdown-arrow) {
     color: var(--color-gray-500);
 }
 .dark .sidebar-link:hover {
     background-color: var(--color-gray-700);
     color: var(--color-white);
 }
-.dark .sidebar-link:hover svg {
+.dark .sidebar-link:hover svg:not(.dropdown-arrow) {
     color: var(--color-primary-400);
 }
 
@@ -414,14 +474,14 @@ hr {
     color: var(--color-primary-600);
     font-weight: 600;
 }
-.sidebar-link.active-link svg {
+.sidebar-link.active-link svg:not(.dropdown-arrow) {
    color: var(--color-primary-600);
 }
 .dark .sidebar-link.active-link {
     background-color: var(--color-primary-900);
     color: var(--color-primary-300);
 }
-.dark .sidebar-link.active-link svg {
+.dark .sidebar-link.active-link svg:not(.dropdown-arrow) {
    color: var(--color-primary-300);
 }
 
@@ -430,6 +490,7 @@ hr {
     padding: 0.75rem;
     border-top: 1px solid var(--border-color);
     margin-top: auto; /* Push to bottom */
+    flex-shrink: 0; /* Prevent shrinking */
 }
 .dark #sidebar .sidebar-footer {
     border-top-color: var(--border-color-dark);
@@ -447,6 +508,7 @@ hr {
     background-color: transparent;
     border: 1px solid transparent;
     transition: var(--transition-fast);
+    cursor: pointer; /* Ensure cursor changes */
 }
 #theme-toggle:hover {
     background-color: var(--color-gray-100);
@@ -482,6 +544,7 @@ html.dark #theme-icon-dark { display: block; }
     line-height: 1;
     min-width: 1.2rem;
     text-align: center;
+    margin-left: auto; /* Push to the right */
 }
 
 /* --- NEW/MODIFIED: Sidebar Dropdown Styles --- */
@@ -492,10 +555,17 @@ html.dark #theme-icon-dark { display: block; }
     text-align: left;
     width: 100%;
     cursor: pointer;
+    display: flex; /* Use flex to align items */
+    justify-content: space-between; /* Space between text/icon and arrow */
 }
 .sidebar-dropdown-toggle .dropdown-arrow {
     transition: transform 0.2s ease-in-out;
+    margin-left: auto; /* Push arrow to the right */
+    color: var(--color-gray-400);
+    width: 1rem; height: 1rem; /* Explicit size */
 }
+.dark .sidebar-dropdown-toggle .dropdown-arrow { color: var(--color-gray-500); }
+
 .sidebar-dropdown-toggle.open .dropdown-arrow {
     transform: rotate(90deg);
 }
@@ -503,12 +573,13 @@ html.dark #theme-icon-dark { display: block; }
     /* Initial state: hidden, no height */
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
     opacity: 0;
     /* Indent dropdown items */
     padding-left: 0.5rem;
     margin-left: 0.85rem; /* Align indentation roughly under parent icon */
     border-left: 1px dashed var(--color-gray-300);
+    margin-top: 0;
 }
 .dark .sidebar-dropdown-content {
     border-left-color: var(--color-gray-600);
@@ -516,7 +587,8 @@ html.dark #theme-icon-dark { display: block; }
 .sidebar-dropdown-content.open {
     max-height: 500px; /* Adjust as needed, large enough for content */
     opacity: 1;
-    transition: max-height 0.4s ease-in, opacity 0.3s ease-in;
+    margin-top: 0.25rem; /* Add slight space when open */
+    transition: max-height 0.4s ease-in, opacity 0.3s ease-in, margin-top 0.3s ease-in;
 }
 /* Style for active parent toggle (when child is active) */
 .sidebar-dropdown-toggle.active-parent {
@@ -572,6 +644,7 @@ html.dark #theme-icon-dark { display: block; }
     box-shadow: var(--shadow-sm);
     white-space: nowrap;
     user-select: none;
+    text-decoration: none; /* Ensure buttons acting as links look like buttons */
 }
 
 /* Focus visible state */
@@ -582,6 +655,7 @@ html.dark #theme-icon-dark { display: block; }
 .btn-success-small:focus-visible, .btn-warning-small:focus-visible {
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
+    border-radius: var(--border-radius-md); /* Ensure outline matches radius */
 }
 .dark .btn:focus-visible,
 /* ... other dark mode focus styles ... */
@@ -600,7 +674,7 @@ html.dark #theme-icon-dark { display: block; }
 
 
 /* Disabled state */
-button:disabled, .btn:disabled,
+button:disabled, .btn:disabled, a.btn:disabled,
 /* ... other disabled styles ... */
 .btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled, .btn-success:disabled, .btn-warning:disabled,
 .btn-primary-small:disabled, .btn-secondary-small:disabled, .btn-danger-small:disabled, .btn-success-small:disabled, .btn-warning-small:disabled {
@@ -612,7 +686,7 @@ button:disabled, .btn:disabled,
 /* Primary Button */
 .btn-primary { background-color: var(--color-primary-600); color: var(--color-white); }
 .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-700); box-shadow: var(--shadow); }
-.dark .btn-primary { background-color: var(--color-primary-500); }
+.dark .btn-primary { background-color: var(--color-primary-500); color: var(--color-white); } /* Fix: Use white text for dark primary */
 .dark .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-400); }
 
 /* Secondary Button */
@@ -656,7 +730,7 @@ button:disabled, .btn:disabled,
 .dark .btn-warning-small:hover:not(:disabled) { background-color: var(--color-warning-300); }
 .btn-primary-small { background-color: var(--color-primary-600); color: var(--color-white); }
 .btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-700); }
-.dark .btn-primary-small { background-color: var(--color-primary-500); }
+.dark .btn-primary-small { background-color: var(--color-primary-500); color: var(--color-white); } /* Fix: Use white text */
 .dark .btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-400); }
 .btn-secondary-small { background-color: var(--color-white); color: var(--color-gray-700); border-color: var(--color-gray-300); }
 .btn-secondary-small:hover:not(:disabled) { background-color: var(--color-gray-50); }
@@ -667,13 +741,21 @@ button:disabled, .btn:disabled,
 .dark .btn-danger-small { background-color: var(--color-danger-500); }
 .dark .btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-400); }
 
+/* Icon Only Buttons (Example) */
+.btn-icon {
+    padding: 0.5rem; /* Adjust padding for icon-only */
+    line-height: 1;
+    /* Apply specific color variant if needed */
+}
+.btn-icon svg { margin-right: 0 !important; width: 1.25rem; height: 1.25rem; } /* Ensure no margin */
+
+
 /* Button Icons */
 .btn svg, /* ... other button icon selectors ... */
 .btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg, .btn-warning svg,
 .btn-primary-small svg, .btn-secondary-small svg, .btn-danger-small svg, .btn-success-small svg, .btn-warning-small svg {
     width: 1.125em; /* Size relative to text */
     height: 1.125em;
-    /* margin-right: 0.5em; */ /* Remove default margin, handle with spacing classes if needed */
     flex-shrink: 0;
 }
 /* Corrected CSS for Button Icons */
@@ -707,6 +789,7 @@ label {
     color: var(--color-gray-300);
 }
 
+.form-control, /* Add a common class */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -725,7 +808,7 @@ textarea {
     background-color: var(--color-white);
     background-clip: padding-box;
     border: 1px solid var(--color-gray-300);
-    appearance: none;
+    appearance: none; /* Remove default system appearance */
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow-inner);
     transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -743,12 +826,14 @@ select {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23cbd5e1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
 }
 
+.form-control:focus,
 input:focus, select:focus, textarea:focus {
     border-color: var(--color-primary-500);
     outline: 0;
-    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(14, 165, 233, 0.25);
+    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(14, 165, 233, 0.25); /* primary-500 with opacity */
 }
 
+.dark .form-control,
 .dark input[type="text"],
 /* ... other dark input types ... */
 .dark input[type="email"], .dark input[type="password"], .dark input[type="number"], .dark input[type="url"], .dark input[type="search"],
@@ -759,26 +844,31 @@ input:focus, select:focus, textarea:focus {
     border-color: var(--color-gray-600);
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
 }
+.dark .form-control:focus,
 .dark input:focus, .dark select:focus, .dark textarea:focus {
     border-color: var(--color-primary-400);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(56, 189, 248, 0.3);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(56, 189, 248, 0.3); /* primary-400 with opacity */
 }
 
 /* Invalid input styles */
 input:invalid, select:invalid, textarea:invalid,
-input.border-red-500, textarea.border-red-500, select.border-red-500 /* Explicit error class */
+.form-control.is-invalid, /* Use a class for explicit errors */
+input.border-red-500, textarea.border-red-500, select.border-red-500 /* Tailwind compatibility */
 {
     border-color: var(--color-danger-500) !important;
 }
 input:invalid:focus, select:invalid:focus, textarea:invalid:focus,
+.form-control.is-invalid:focus,
 input.border-red-500:focus, textarea.border-red-500:focus, select.border-red-500:focus
 {
-    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(244, 63, 94, 0.25) !important; /* danger-500 with opacity */
 }
 .dark input:invalid:focus, .dark select:invalid:focus, .dark textarea:invalid:focus,
+.dark .form-control.is-invalid:focus,
 .dark input.border-red-500:focus, .dark textarea.border-red-500:focus, .dark select.border-red-500:focus
 {
-     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(248, 113, 113, 0.3) !important;
+     /* FIX: Use danger-500 alpha for stronger focus ring in dark mode */
+     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(244, 63, 94, 0.3) !important; /* danger-500 with opacity */
 }
 
 input[type="checkbox"], input[type="radio"] {
@@ -795,7 +885,7 @@ input[type="radio"] { border-radius: 50%; }
 
 input[type="checkbox"]:focus, input[type="radio"]:focus {
      outline: none;
-     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25); /* primary-500 with opacity */
 }
 input[type="checkbox"]:checked, input[type="radio"]:checked {
     border-color: var(--color-primary-500);
@@ -819,7 +909,7 @@ input[type="radio"]:checked::before {
     border-color: var(--color-gray-500); background-color: var(--color-gray-600);
 }
 .dark input[type="checkbox"]:focus, .dark input[type="radio"]:focus {
-     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3); /* primary-400 with opacity */
 }
 .dark input[type="checkbox"]:checked, .dark input[type="radio"]:checked {
     border-color: var(--color-primary-400); background-color: var(--color-primary-400);
@@ -836,6 +926,15 @@ input[type="radio"]:checked::before {
 .dark .form-help-text {
     color: var(--color-gray-400);
 }
+.form-error-text { /* Style for error messages */
+    font-size: 0.75rem;
+    color: var(--color-danger-600);
+    margin-top: 0.25rem;
+}
+.dark .form-error-text {
+     color: var(--color-danger-400);
+}
+
 
 /* ==========================================================================
    Main Application Card & Content Area
@@ -903,6 +1002,7 @@ input[type="radio"]:checked::before {
     border-radius: var(--border-radius-lg);
     margin-bottom: 1.5rem;
     background-color: var(--color-gray-50);
+    padding: 1.5rem; /* Add padding to the dashboard container */
 }
 .dark #dashboard {
     border-color: var(--border-color-dark);
@@ -914,6 +1014,9 @@ input[type="radio"]:checked::before {
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
     min-height: 18rem; /* Ensure consistent height */
+    padding: 1rem; /* Add padding inside cards */
+    display: flex;
+    flex-direction: column;
 }
 .dark #dashboard-content .grid > div {
     background-color: var(--color-gray-700);
@@ -925,8 +1028,14 @@ input[type="radio"]:checked::before {
     font-weight: 600;
     margin-bottom: 1rem;
     color: var(--color-gray-700);
+    flex-shrink: 0; /* Prevent header shrinking */
 }
 .dark #dashboard-content h3, .dark #dashboard-content h4 { color: var(--color-gray-300); }
+#dashboard-content .chart-container { /* Ensure chart fills space */
+    flex-grow: 1;
+    position: relative; /* Needed for Chart.js responsiveness */
+    min-height: 150px; /* Prevent collapsing */
+}
 
 /* Course Dashboard Area (#course-dashboard-area) */
 #course-dashboard-area {
@@ -938,16 +1047,18 @@ input[type="radio"]:checked::before {
 #online-test-area .fixed { /* Header/Footer */
     background-color: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px); /* Safari */
     border-color: var(--border-color);
     box-shadow: var(--shadow-md);
+    z-index: 10; /* Ensure above content */
 }
 .dark #online-test-area .fixed {
-    background-color: rgba(15, 23, 42, 0.9);
+    background-color: rgba(15, 23, 42, 0.9); /* gray-950 */
     border-color: var(--border-color-dark);
 }
 #online-test-area #question-container {
-    padding-top: 5.5rem;
-    padding-bottom: 6.5rem;
+    padding-top: 5.5rem; /* Space for fixed header */
+    padding-bottom: 6.5rem; /* Space for fixed footer */
 }
 #timer {
     font-family: var(--font-mono);
@@ -956,12 +1067,14 @@ input[type="radio"]:checked::before {
     padding: 0.25rem 0.75rem;
     border-radius: var(--border-radius);
     font-weight: 600;
+    font-size: 1.1rem; /* Slightly larger */
 }
 .dark #timer {
     background-color: var(--color-gray-700);
     color: var(--color-gray-100);
 }
-#timer.text-red-500, #timer.text-danger-500 { color: var(--color-danger-500) !important; } /* Ensure override */
+#timer.text-red-500, #timer.text-danger { color: var(--color-danger-500) !important; } /* Ensure override */
+.dark #timer.text-red-500, .dark #timer.text-danger { color: var(--color-danger-400) !important; }
 
 
 /* Online Test Question Styling */
@@ -987,14 +1100,19 @@ input[type="radio"]:checked::before {
     cursor: pointer;
     transition: var(--transition-fast);
     background-color: var(--color-gray-50);
+    margin-bottom: 0.5rem; /* Space between options */
 }
 #online-test-area .option-label:hover {
     background-color: var(--color-gray-100);
     border-color: var(--color-gray-300);
 }
-#online-test-area input[type="radio"]:checked + .option-label, /* Direct sibling */
-#online-test-area input[type="radio"]:checked ~ label.option-label /* General sibling */
-{
+/* Styling when the hidden radio is checked */
+#online-test-area input[type="radio"] {
+    position: absolute; /* Hide the actual radio */
+    opacity: 0;
+    pointer-events: none;
+}
+#online-test-area input[type="radio"]:checked + .option-label {
     border-color: var(--color-primary-500);
     background-color: var(--color-primary-50);
     box-shadow: 0 0 0 1px var(--color-primary-500);
@@ -1007,16 +1125,41 @@ input[type="radio"]:checked::before {
     background-color: var(--color-gray-600);
     border-color: var(--color-gray-500);
 }
-.dark #online-test-area input[type="radio"]:checked + .option-label,
-.dark #online-test-area input[type="radio"]:checked ~ label.option-label {
+.dark #online-test-area input[type="radio"]:checked + .option-label {
     border-color: var(--color-primary-400);
     background-color: var(--color-primary-900);
     box-shadow: 0 0 0 1px var(--color-primary-400);
 }
-#online-test-area input[type="radio"] {
-    margin-top: 0.2em; /* Align radio better with text */
+/* Custom radio appearance */
+#online-test-area .option-label::before {
+    content: "";
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid var(--color-gray-400);
+    border-radius: 50%;
     margin-right: 0.75rem;
+    flex-shrink: 0;
+    background-color: var(--color-white);
+    transition: var(--transition-fast);
+    margin-top: 0.15em; /* Align better */
 }
+.dark #online-test-area .option-label::before {
+    border-color: var(--color-gray-500);
+    background-color: var(--color-gray-600);
+}
+/* Checked state for custom radio */
+#online-test-area input[type="radio"]:checked + .option-label::before {
+    border-color: var(--color-primary-500);
+    background-color: var(--color-white); /* Keep background white */
+    box-shadow: inset 0 0 0 4px var(--color-primary-500); /* Inner circle */
+}
+.dark #online-test-area input[type="radio"]:checked + .option-label::before {
+    border-color: var(--color-primary-400);
+    background-color: var(--color-gray-600); /* Dark background */
+    box-shadow: inset 0 0 0 4px var(--color-primary-400); /* Inner circle */
+}
+
 #online-test-area .option-text-container p:last-child { margin-bottom: 0; }
 #online-test-area .option-text-container ul, #online-test-area .option-text-container ol { margin-top: 0.5em; margin-bottom: 0.5em; padding-left: 1.2em; }
 /* Fix for MathJax alignment within options */
@@ -1027,7 +1170,7 @@ input[type="radio"]:checked::before {
 .prose p { margin: 0.75em 0; }
 .prose ul, .prose ol { margin: 0.75em 0; padding-left: 1.6em; }
 .prose li { margin: 0.25em 0; }
-.prose code { font-size: 0.85em; }
+.prose code:not(pre code) { font-size: 0.85em; } /* Target only inline code */
 .prose pre { font-size: 0.85em; }
 /* Ensure dark mode prose colors */
 .dark .prose {
@@ -1042,12 +1185,13 @@ input[type="radio"]:checked::before {
   --tw-prose-quotes: var(--color-gray-100);
   --tw-prose-quote-borders: var(--color-gray-700);
   --tw-prose-captions: var(--color-gray-400);
-  --tw-prose-code: var(--color-gray-100);
-  --tw-prose-pre-code: var(--color-gray-300);
-  --tw-prose-pre-bg: var(--color-gray-800);
+  --tw-prose-code: var(--color-gray-100); /* Inline code text */
+  --tw-prose-pre-code: var(--color-gray-300); /* Code block text */
+  --tw-prose-pre-bg: var(--color-gray-800); /* Code block background */
   --tw-prose-th-borders: var(--color-gray-600);
   --tw-prose-td-borders: var(--color-gray-700);
 }
+.dark .prose code:not(pre code) { background-color: var(--color-gray-700); border-color: var(--border-color-dark); } /* Dark inline code bg */
 
 
 /* ==========================================================================
@@ -1077,11 +1221,18 @@ input[type="radio"]:checked::before {
     inset: 0;
     background-color: rgba(248, 250, 252, 0.7); /* gray-50 */
     backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px); /* Safari */
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 100;
     transition: opacity 0.3s ease-in-out;
+    opacity: 0; /* Hidden by default */
+    pointer-events: none; /* Not interactive by default */
+}
+#loading-overlay.visible { /* Class to show overlay */
+    opacity: 1;
+    pointer-events: auto;
 }
 #loading-overlay > div { /* Inner container */
     background-color: var(--color-white);
@@ -1123,85 +1274,122 @@ input[type="radio"]:checked::before {
     display: flex;
     align-items: center;
     max-width: 350px;
-    animation: fadeIn 0.3s ease-out forwards;
+    animation: toastIn 0.4s ease-out forwards;
+    background-clip: padding-box;
 }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+}
+.toast-notification.fade-out {
+    animation: toastOut 0.4s ease-in forwards;
+}
+
 .toast-notification p { margin-bottom: 0; font-size: 0.9rem; }
-.toast-notification .toast-icon { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; }
+.toast-notification .toast-icon { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex-shrink: 0; }
 /* Success Toast */
-.toast-success { background-color: var(--color-success-100); color: var(--color-success-700); border-color: var(--color-success-200); }
-.dark .toast-success { background-color: var(--color-success-800); color: var(--color-success-100); border-color: var(--color-success-700); }
+.toast-success { background-color: var(--color-success-100); color: var(--color-success-800); border-color: var(--color-success-300); }
+.dark .toast-success { background-color: var(--color-success-900); color: var(--color-success-100); border-color: var(--color-success-700); }
 /* Error Toast */
-.toast-error { background-color: var(--color-danger-100); color: var(--color-danger-700); border-color: var(--color-danger-200); }
-.dark .toast-error { background-color: var(--color-danger-800); color: var(--color-danger-100); border-color: var(--color-danger-700); }
+.toast-error { background-color: var(--color-danger-100); color: var(--color-danger-800); border-color: var(--color-danger-300); }
+.dark .toast-error { background-color: var(--color-danger-900); color: var(--color-danger-100); border-color: var(--color-danger-700); }
 /* Warning Toast */
-.toast-warning { background-color: var(--color-warning-100); color: var(--color-warning-700); border-color: var(--color-warning-200); }
-.dark .toast-warning { background-color: var(--color-warning-800); color: var(--color-warning-100); border-color: var(--color-warning-700); }
+.toast-warning { background-color: var(--color-warning-100); color: var(--color-warning-800); border-color: var(--color-warning-300); }
+.dark .toast-warning { background-color: var(--color-warning-900); color: var(--color-warning-100); border-color: var(--color-warning-700); }
 /* Info Toast */
-.toast-info { background-color: var(--color-info-100); color: var(--color-info-700); border-color: var(--color-info-200); }
-.dark .toast-info { background-color: var(--color-info-800); color: var(--color-info-100); border-color: var(--color-info-700); }
+.toast-info { background-color: var(--color-info-100); color: var(--color-info-800); border-color: var(--color-info-300); }
+.dark .toast-info { background-color: var(--color-info-900); color: var(--color-info-100); border-color: var(--color-info-700); }
 
 
 /* Chart Container */
 canvas { max-width: 100%; height: auto !important; display: block; }
 
-/* Custom Scrollbar (Subtle) */
-/* Generic scrollbar for common elements */
+/* Custom Scrollbar (Subtle) - CONSOLIDATED SELECTORS */
 body::-webkit-scrollbar,
-main::-webkit-scrollbar,
+main#main-content::-webkit-scrollbar,
 aside nav::-webkit-scrollbar,
 .overflow-y-auto::-webkit-scrollbar,
-#global-chat-content::-webkit-scrollbar { /* Added chat content */
+#global-chat-content::-webkit-scrollbar,
+#mention-suggestion-popup::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 /* Track style */
 body::-webkit-scrollbar-track,
-main::-webkit-scrollbar-track,
+main#main-content::-webkit-scrollbar-track,
 aside nav::-webkit-scrollbar-track,
 .overflow-y-auto::-webkit-scrollbar-track,
-#global-chat-content::-webkit-scrollbar-track { /* Added chat content */
+#global-chat-content::-webkit-scrollbar-track,
+#mention-suggestion-popup::-webkit-scrollbar-track {
     background: transparent;
 }
 
 /* Thumb style */
 body::-webkit-scrollbar-thumb,
-main::-webkit-scrollbar-thumb,
+main#main-content::-webkit-scrollbar-thumb,
 aside nav::-webkit-scrollbar-thumb,
 .overflow-y-auto::-webkit-scrollbar-thumb,
-#global-chat-content::-webkit-scrollbar-thumb { /* Added chat content */
+#global-chat-content::-webkit-scrollbar-thumb,
+#mention-suggestion-popup::-webkit-scrollbar-thumb {
     background: var(--color-gray-300);
     border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
+    border: 2px solid transparent; /* Creates inset look */
 }
 
 /* Thumb hover style */
 body::-webkit-scrollbar-thumb:hover,
-main::-webkit-scrollbar-thumb:hover,
+main#main-content::-webkit-scrollbar-thumb:hover,
 aside nav::-webkit-scrollbar-thumb:hover,
 .overflow-y-auto::-webkit-scrollbar-thumb:hover,
-#global-chat-content::-webkit-scrollbar-thumb:hover { /* Added chat content */
+#global-chat-content::-webkit-scrollbar-thumb:hover,
+#mention-suggestion-popup::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-400);
 }
 
 /* Dark mode thumb style */
 .dark body::-webkit-scrollbar-thumb,
-.dark main::-webkit-scrollbar-thumb,
+.dark main#main-content::-webkit-scrollbar-thumb,
 .dark aside nav::-webkit-scrollbar-thumb,
 .dark .overflow-y-auto::-webkit-scrollbar-thumb,
-.dark #global-chat-content::-webkit-scrollbar-thumb { /* Added chat content */
+.dark #global-chat-content::-webkit-scrollbar-thumb,
+.dark #mention-suggestion-popup::-webkit-scrollbar-thumb {
     background: var(--color-gray-600);
 }
 
 /* Dark mode thumb hover style */
 .dark body::-webkit-scrollbar-thumb:hover,
-.dark main::-webkit-scrollbar-thumb:hover,
+.dark main#main-content::-webkit-scrollbar-thumb:hover,
 .dark aside nav::-webkit-scrollbar-thumb:hover,
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover,
-.dark #global-chat-content::-webkit-scrollbar-thumb:hover { /* Added chat content */
+.dark #global-chat-content::-webkit-scrollbar-thumb:hover,
+.dark #mention-suggestion-popup::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-500);
 }
+
+/* Firefox scrollbar - CONSOLIDATED */
+body,
+main#main-content,
+aside nav,
+.overflow-y-auto,
+#global-chat-content,
+#mention-suggestion-popup {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
+}
+.dark body,
+.dark main#main-content,
+.dark aside nav,
+.dark .overflow-y-auto,
+.dark #global-chat-content,
+.dark #mention-suggestion-popup {
+    scrollbar-color: var(--color-gray-600) transparent;
+}
+
 
 /* Fade transition */
 .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -1226,13 +1414,35 @@ aside nav::-webkit-scrollbar-thumb:hover,
 :focus-visible { /* Default focus style */
     outline: 2px solid var(--color-primary-500);
     outline-offset: 2px;
+    border-radius: var(--border-radius-sm); /* Optional: add radius to outline */
 }
 .dark :focus-visible {
     outline-color: var(--color-primary-400);
 }
 
-[aria-hidden="true"] { display: none !important; }
+/* More specific focus-visible for inputs/buttons to avoid double outlines */
+.form-control:focus-visible, .btn:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+    /* Use the specific focus styles defined earlier (box-shadow for inputs, outline for buttons) */
+    outline: none; /* Prevent default focus-visible ring if custom style is applied */
+}
+.btn:focus-visible, button:focus-visible, .sidebar-link:focus-visible, a.link:focus-visible {
+     outline: 2px solid var(--color-primary-500);
+     outline-offset: 2px;
+     border-radius: var(--border-radius-md);
+}
+.dark .btn:focus-visible, .dark button:focus-visible, .dark .sidebar-link:focus-visible, .dark a.link:focus-visible {
+    outline-color: var(--color-primary-400);
+}
+/* ... other specific button focus colors */
+.btn-danger:focus-visible, .dark .btn-danger:focus-visible { outline-color: var(--color-danger-500); }
+.dark .btn-danger:focus-visible { outline-color: var(--color-danger-400); }
+
+/* --- */
+
+[aria-hidden="true"]:not([role="presentation"]) { display: none !important; } /* Allow presentation role */
 .hidden { display: none !important; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
 
 /* MathJax / KaTeX Specific Safety Styles */
 .katex-display, mjx-container[display="true"] {
@@ -1240,10 +1450,12 @@ aside nav::-webkit-scrollbar-thumb:hover,
     overflow-y: hidden;
     padding: 0.5em 0;
     display: block;
-    text-align: left !important;
+    text-align: left !important; /* Override centering */
+    max-width: 100%; /* Ensure it fits */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
 }
-.katex-display > .katex { white-space: nowrap; }
-mjx-container > svg { vertical-align: baseline; }
+.katex-display > .katex { white-space: nowrap; } /* Prevent unwanted wrapping */
+mjx-container > svg { vertical-align: baseline; max-width: 100%; } /* Ensure SVGs scale */
 
 /* Image Styling */
 img { max-width: 100%; height: auto; vertical-align: middle; }
@@ -1254,6 +1466,7 @@ img { max-width: 100%; height: auto; vertical-align: middle; }
     padding: 4px;
     border-radius: var(--border-radius-md);
     background-color: var(--color-white);
+    max-width: calc(100% - 10px); /* Prevent overflow with padding */
 }
 .dark .question-text-container img, .dark .option-text-container img {
     border-color: var(--border-color-dark);
@@ -1272,10 +1485,12 @@ details > summary {
     align-items: center;
     justify-content: space-between;
 }
+details > summary::-webkit-details-marker { display: none; } /* Hide marker in Webkit */
 details > summary::before { /* Custom marker */
     content: '►'; display: inline-block; margin-right: 0.5em;
     font-size: 0.7em; transition: transform var(--transition-fast);
     color: var(--color-gray-400);
+    flex-shrink: 0;
 }
 details[open] > summary::before { transform: rotate(90deg); }
 .dark details > summary { color: var(--color-gray-300); }
@@ -1299,6 +1514,8 @@ details > div { /* Content inside details */
         position: fixed; left: 0; top: 0; bottom: 0;
         z-index: 50; transform: translateX(-100%);
         border-right: none; box-shadow: var(--shadow-xl);
+        width: 80%; /* Make sidebar wider on mobile */
+        max-width: 20rem; /* Limit max width */
     }
     aside#sidebar.is-open { transform: translateX(0); }
     .mobile-overlay {
@@ -1309,15 +1526,22 @@ details > div { /* Content inside details */
      .mobile-overlay.is-visible { opacity: 1; pointer-events: auto; }
     /* Adjust content padding on mobile */
     .content-card { padding: 1rem 1.25rem; }
+    main#main-content .container { padding-left: 0.75rem; padding-right: 0.75rem; }
     /* Adjust button padding slightly on mobile */
-    .btn { padding: 0.55rem 1rem; }
-    .btn-small { padding: 0.35rem 0.7rem; }
+    .btn { padding: 0.55rem 1rem; font-size: 0.8rem; }
+    .btn-small, .btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small { padding: 0.35rem 0.7rem; font-size: 0.7rem; }
     /* Adjust heading sizes */
     h1 { font-size: 1.75rem; }
     h2 { font-size: 1.375rem; }
     h3 { font-size: 1.125rem; }
     /* Reduce timer size */
     #timer { font-size: 1rem; padding: 0.2rem 0.5rem; }
+    /* Online test options smaller */
+    #online-test-area .option-label { padding: 0.6rem 0.8rem; font-size: 0.9rem; }
+    #online-test-area .option-label::before { width: 0.9rem; height: 0.9rem; margin-right: 0.6rem; }
+    /* Chat modal full screen on mobile */
+    #global-chat-modal { padding: 0; }
+    #global-chat-modal > div { max-width: 100%; height: 100%; border-radius: 0; }
 }
 
 /* --- Cropper.js Circular Styling --- */
@@ -1336,15 +1560,16 @@ details > div { /* Content inside details */
      /* Use box-shadow to create the overlay *outside* the circle */
      /* Increase the spread radius (last value) significantly */
     box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
-    /* overflow: hidden is handled by cropper defaults, but ensure it if needed */
+    /* Ensure image within is clipped */
      overflow: hidden;
 }
 
 /* Optional: Style the draggable crop box overlay (usually semi-transparent) */
 .cropper-crop-box {
      /* Keep default cropper styles, potentially adjust outline if needed */
-     /* outline: 1px solid #39f; */
+     outline: 1px solid #39f;
      border-radius: 50%; /* Match the view-box */
+     overflow: hidden; /* Make sure inner elements respect the circle */
 }
 
 /* Hide the default rectangular face/drag elements if they appear */
@@ -1366,6 +1591,7 @@ details > div { /* Content inside details */
     height: 6px;
     width: 6px;
     border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5); /* Add shadow for visibility */
 }
 /* Hide corner handles for a cleaner circle look */
 .cropper-point.point-ne,
@@ -1374,6 +1600,7 @@ details > div { /* Content inside details */
 .cropper-point.point-sw {
     /* display: none; */ /* Uncomment this to hide corner handles */
      opacity: 0.25; /* Or just make them less visible */
+     pointer-events: none; /* Make them non-interactive */
 }
 
 
@@ -1390,11 +1617,11 @@ details > div { /* Content inside details */
     animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
 }
 @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
 }
 
-/* --- NEW: Chat Mention Styles --- */
+/* --- Chat Mention Styles --- */
 .mention {
     background-color: var(--color-primary-100);
     color: var(--color-primary-700);
@@ -1402,6 +1629,7 @@ details > div { /* Content inside details */
     padding: 0.1em 0.3em;
     border-radius: var(--border-radius-sm);
     cursor: default; /* Indicate it's not a link */
+    display: inline-block; /* Prevent breaking mid-mention */
 }
 .dark .mention {
     background-color: var(--color-primary-800);
@@ -1426,23 +1654,185 @@ details > div { /* Content inside details */
     /* box-shadow: 0 0 0 1px var(--color-success-300); */
 }
 .dark .mention-me {
-    background-color: var(--color-success-700);
+    background-color: var(--color-success-800); /* Darker success bg */
     color: var(--color-success-100);
-     /* box-shadow: 0 0 0 1px var(--color-success-500); */
+     /* box-shadow: 0 0 0 1px var(--color-success-600); */ /* Adjusted shadow */
 }
 
-/* --- NEW: Sidebar Mention Notification Style --- */
-.sidebar-link.has-unread-mention {
-    font-weight: 600; /* Make text bolder */
-    color: var(--color-warning-600); /* Use a warning color */
+/* --- REMOVED: Sidebar Mention Notification Style --- */
+/* Removed rules previously here for .sidebar-link.has-unread-mention */
+
+/* --- Mention Suggestion Popup Styles --- */
+#mention-suggestion-popup {
+    position: absolute;
+    z-index: 80; /* Above chat content, below modal */
+    background-color: var(--color-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 150px; /* Limit height */
+    overflow-y: auto; /* Allow scrolling */
+    min-width: 180px; /* Minimum width */
+    /* bottom: 100%; Position above input - JS will handle exact placement */
+    /* margin-bottom: 0.5rem; Space between input and popup */
 }
-.dark .sidebar-link.has-unread-mention {
-    color: var(--color-warning-400);
+.dark #mention-suggestion-popup {
+    background-color: var(--color-gray-700);
+    border-color: var(--border-color-dark);
 }
-/* Optional: Style the icon too */
-.sidebar-link.has-unread-mention svg {
-    color: var(--color-warning-500);
+
+#mention-suggestion-popup ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
-.dark .sidebar-link.has-unread-mention svg {
-    color: var(--color-warning-400);
+
+#mention-suggestion-popup li {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem; /* text-sm */
+    display: flex;
+    align-items: center;
+    transition: background-color 0.1s ease-in-out; /* Smooth hover */
+}
+
+#mention-suggestion-popup li:hover,
+#mention-suggestion-popup li.active {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+.dark #mention-suggestion-popup li:hover,
+.dark #mention-suggestion-popup li.active {
+    background-color: var(--color-primary-700);
+    color: var(--color-primary-100);
+}
+
+#mention-suggestion-popup li img {
+    width: 1.25rem; /* w-5 */
+    height: 1.25rem; /* h-5 */
+    border-radius: var(--border-radius-full);
+    margin-right: 0.5rem; /* mr-2 */
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+#mention-suggestion-popup li .font-medium {
+    /* Default user display name styling */
+    flex-grow: 1; /* Allow name to take space */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#mention-suggestion-popup li .text-xs {
+    /* Username styling */
+    color: var(--color-gray-500);
+    flex-shrink: 0; /* Prevent username shrinking */
+}
+.dark #mention-suggestion-popup li .text-xs {
+    color: var(--color-gray-400);
+}
+
+/* --- Pinned Message Highlight --- */
+.pinned-message-highlight {
+    background-color: rgba(251, 191, 36, 0.05); /* Very subtle yellow bg */
+}
+.dark .pinned-message-highlight {
+    background-color: rgba(245, 158, 11, 0.1); /* Subtle dark yellow */
+}
+
+/* --- Chat Reply Context --- */
+.reply-context {
+    white-space: nowrap; /* Prevent wrapping for the main line */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.reply-context strong { font-weight: 600; }
+.reply-context span.line-clamp-1 { /* Ensure preview clamps */
+    display: inline; /* Let it flow with text */
+}
+
+/* --- Chat Message Bubble --- */
+.message-bubble { /* Rounded bubble */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal; /* Allow wrapping within bubble */
+}
+.message-content-holder {
+     word-wrap: break-word;
+     overflow-wrap: break-word;
+     white-space: normal; /* Redundant but safe */
+}
+.message-content-holder pre { /* Ensure preformatted text wraps */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+
+/* --- Chat Action Buttons Hover --- */
+/* Styles are set inline via Tailwind group-hover:opacity-50 etc */
+
+/* --- Chat Input Textarea --- */
+#global-chat-input {
+    line-height: 1.4; /* Ensure consistent line height */
+    padding-top: 0.6rem; /* Match padding */
+    padding-bottom: 0.6rem;
+}
+
+/* --- Chat Header Logos --- */
+#global-chat-modal .logo-light-mode { display: block; }
+#global-chat-modal .logo-dark-mode { display: none; }
+.dark #global-chat-modal .logo-light-mode { display: none; }
+.dark #global-chat-modal .logo-dark-mode { display: block; }
+#global-chat-modal .logo-light-mode,
+#global-chat-modal .logo-dark-mode {
+    width: 1.25rem; height: 1.25rem; /* w-5 h-5 */
+}
+
+/* --- Notification Ping Styles --- */
+.notification-ping {
+    /* MODIFIED: Hide by default */
+    display: none;
+    width: 10px; /* Ping size */
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--color-danger-500); /* Red color */
+    position: absolute; /* Position relative to parent */
+    border: 1px solid var(--color-white); /* Optional white border */
+    animation: ping-pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1); /* Keep animation */
+}
+.dark .notification-ping {
+    border-color: var(--color-gray-800); /* Adjust border for dark mode */
+}
+
+/* Sidebar Chat Link (Base) */
+.sidebar-link {
+    position: relative; /* Needed for absolute positioning of the ping */
+}
+/* REMOVED: Chat-specific ping positioning and visibility rules */
+/* .sidebar-link .chat-ping { ... } */
+/* .sidebar-link.has-unread-mention .chat-ping { ... } */
+
+
+/* Mobile Menu Button Ping */
+#mobile-menu-button {
+    position: relative; /* Needed for ping positioning */
+}
+#mobile-menu-button .menu-ping {
+    top: 0px; /* Adjust position */
+    right: 0px;
+    width: 12px; /* Slightly larger */
+    height: 12px;
+     /* Hidden by default via base .notification-ping rule or .hidden utility */
+}
+/* Show menu ping when button has the class */
+#mobile-menu-button.has-notification .menu-ping {
+    /* MODIFIED: Ensure display is set */
+    display: inline-block !important; /* Use !important to override default 'display: none' */
+}
+
+/* Optional Pulse Animation for pings (kept in base rule) */
+@keyframes ping-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
 }

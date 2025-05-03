@@ -1,4 +1,3 @@
-/* === ui_chat.js === */
 // --- START OF FILE ui_chat.js ---
 
 import { db, currentUser } from './state.js'; // Import currentUser from central state
@@ -29,20 +28,26 @@ function applyMarkdown(escapedText) {
     // Code Blocks (```...```) - Must run first
     text = text.replace(/```([\s\S]*?)```/g, (match, codeContent) => {
         // Escape the *content* of the code block again to be safe inside <code>
+        // Trim leading/trailing newlines common in markdown code blocks before wrapping
         return `<pre class="bg-gray-200 dark:bg-gray-900 p-2 rounded text-sm my-1 overflow-x-auto whitespace-pre-wrap"><code class="font-mono">${escapeHtml(codeContent.trim())}</code></pre>`;
     });
     // Inline Code (`...`)
     text = text.replace(/`([^`]+?)`/g, '<code class="bg-gray-200 dark:bg-gray-900 px-1 rounded text-sm font-mono">$1</code>');
     // Bold (**...**)
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Italic (*...*) - More robust version
+    // Italic (*...*) - Avoid matching **
     text = text.replace(/(?<!\*)\*(?!\*)(\S(?:.*?\S)?)\*(?!\*)/g, '<em>$1</em>');
-    // Underline (_..._) - Basic version, might conflict if underscores are common
-    text = text.replace(/(?:^|\s)_(.*?)_(?:\s|$)/g, ' <u>$1</u> '); // Needs refinement maybe
+    // Underline (_..._) - Basic version, might conflict if underscores are common. Requires space/start/end boundary.
+    text = text.replace(/(?:^|\s)_(.*?)_(?=\s|$)/g, (match, content) => {
+        // Re-insert the leading space if it was captured
+        const prefix = match.startsWith(' ') ? ' ' : '';
+        return `${prefix}<u>${content}</u>`;
+    });
     // Strikethrough (~...~)
     text = text.replace(/~(\S(?:.*?\S)?)~/g, '<s>$1</s>');
+
     // Newlines (\n -> <br>) - Applied last
-    // Avoid adding <br> inside <pre> - simple check
+    // Avoid adding <br> inside <pre> - simple check using split/map/join
     const parts = text.split(/(<pre[\s\S]*?<\/pre>)/);
     text = parts.map((part, index) => {
         if (index % 2 === 1) return part; // It's a <pre> block, return as is
@@ -63,23 +68,37 @@ function applyMarkdown(escapedText) {
 function highlightMentions(htmlString, currentUserForHighlight) {
     if (!htmlString) return '';
 
+    // Extract potential comparison values safely, convert to lowercase once
     const currentUsername = currentUserForHighlight?.username?.toLowerCase();
     const currentDisplayName = currentUserForHighlight?.displayName?.toLowerCase(); // Check both
 
-    // Enhanced Regex to find mentions not inside attributes or tags
+    // Enhanced Regex to find mentions not inside attributes or tags.
+    // Looks for @ followed by 'everyone' or word characters (\w+)
+    // Negative lookahead assertion (?![^<]*?>|[^<>]*?<\/(?!span)>):
+    //   [^<]*?>        : Ensures the mention is not followed by characters ending in '>' (i.e., inside a start tag)
+    //   [^<>]*?<\/span>: Specifically prevents re-matching within already created mention spans.
+    //                  (Adjust 'span' if you use other tags for highlights)
+    //   [^<>]*?<\/     : (Alternative) More general, prevents matching before any closing tag
     const mentionHighlightRegex = /(@(?:everyone|\w+))(?![^<]*?>|[^<>]*?<\/(?!span)>)/gi;
 
     return htmlString.replace(mentionHighlightRegex, (match) => {
         const mentionLower = match.toLowerCase();
         if (mentionLower === '@everyone') {
+            // Style @everyone mentions
             return `<span class="mention mention-everyone">@everyone</span>`;
         } else {
-            const username = match.substring(1); // Get username part
+            // Extract the username part (without '@')
+            const username = match.substring(1);
             const usernameLower = username.toLowerCase();
-            if (currentUsername && usernameLower === currentUsername ||
-                currentDisplayName && usernameLower === currentDisplayName) {
+
+            // Check if the mentioned username matches the current user's username or display name
+            if (currentUserForHighlight && // Only check if currentUser is available
+                ((currentUsername && usernameLower === currentUsername) ||
+                 (currentDisplayName && usernameLower === currentDisplayName))) {
+                // Style mentions of the current user ('@me')
                 return `<span class="mention mention-me">@${username}</span>`;
             } else {
+                // Style standard mentions of other users
                 return `<span class="mention">@${username}</span>`;
             }
         }
@@ -111,7 +130,7 @@ function renderChatMessage(messageData, messageId) {
 
     const isPinned = messageData.isPinned === true; // Check if message is pinned
 
-    // Add visual distinction for pinned messages container
+    // *** MODIFIED: Add visual distinction for pinned messages container ***
     const pinnedContainerClass = isPinned ? 'pinned-message-highlight border-l-4 border-yellow-400 dark:border-yellow-500 pl-1' : '';
 
     const messageBg = isOwner ? 'bg-blue-100 dark:bg-blue-900/60' : 'bg-gray-100 dark:bg-gray-700';
@@ -130,21 +149,26 @@ function renderChatMessage(messageData, messageId) {
 
     // Create preview text for reply button (use raw text before formatting)
     const rawMessageTextForPreview = messageData.text || '';
-    const previewText = escapeHtml(rawMessageTextForPreview.substring(0, 50).replace(/\n/g, ' '));
+    // Escaping happens within the onclick attribute now
+    const previewTextForJs = rawMessageTextForPreview.substring(0, 50).replace(/\n/g, ' ').replace(/'/g, "\\'").replace(/"/g, '"');
+
 
     // --- Action Buttons ---
+    // *** MODIFICATION START: Timestamp moved out of this section ***
     let actionButtonsHtml = '<div class="flex items-center space-x-1.5 ml-2 flex-shrink-0">';
     // Reply Button
     actionButtonsHtml += `
         <button
-            onclick="window.startReply('${escapeHtml(messageId)}', '${senderName}', '${previewText}')"
+            onclick="window.startReply('${escapeHtml(messageId)}', '${senderName}', '${previewTextForJs}')"
             class="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-500 text-xs opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity duration-150 focus:outline-none rounded-full p-0.5"
             title="Reply to Message">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M7.707 3.293a1 1 0 010 1.414L5.414 7H11a7 7 0 017 7v2a1 1 0 11-2 0v-2a5 5 0 00-5-5H5.414l2.293 2.293a1 1 0 11-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
         </button>
     `;
-    // Pin Button (Admin only)
+
+    // *** MODIFIED: Added Pin Button (Admin only) ***
     if (isAdmin) {
+        // Conditionally set class and title based on pinned status
         const pinButtonClass = isPinned ? 'text-yellow-500 dark:text-yellow-400 pinned' : 'text-gray-400 hover:text-yellow-500 dark:text-gray-500 dark:hover:text-yellow-400';
         const pinButtonTitle = isPinned ? "Unpin Message" : "Pin Message";
         actionButtonsHtml += `
@@ -152,10 +176,12 @@ function renderChatMessage(messageData, messageId) {
                 onclick="window.togglePinMessage('${escapeHtml(messageId)}')"
                 class="${pinButtonClass} text-xs opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity duration-150 focus:outline-none rounded-full p-0.5"
                 title="${pinButtonTitle}">
+                 <!-- Pin Icon SVG -->
                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" transform="rotate(-45 10 10)"/><path d="M7 2a1 1 0 00-1 1v1a1 1 0 001 1h1a1 1 0 001-1V3a1 1 0 00-1-1H7zM7 15a1 1 0 011-1h1a1 1 0 110 2H8a1 1 0 01-1-1z" /></svg>
             </button>
         `;
     }
+
     // Delete Button (Owner or Admin)
     if (isOwner || isAdmin) {
         actionButtonsHtml += `
@@ -173,6 +199,7 @@ function renderChatMessage(messageData, messageId) {
     // --- Reply Context Snippet ---
     let replyContextHtml = '';
     if (messageData.replyTo && messageData.replyPreview) {
+        // Data comes from Firestore, needs escaping before rendering
         replyContextHtml = `
             <div class="reply-context border-l-2 border-blue-300 dark:border-blue-700 pl-2 mb-1 text-xs text-gray-500 dark:text-gray-400 italic">
               Replying to <strong>${escapeHtml(messageData.replyingToSenderName || 'Original Message')}</strong>:
@@ -182,21 +209,26 @@ function renderChatMessage(messageData, messageId) {
     }
     // --- End Reply Context ---
 
+    // *** MODIFIED: Added pinnedContainerClass to the main div ***
     return `
         <div class="chat-message-container group flex items-start gap-2.5 mb-2 justify-start ${pinnedContainerClass} py-1" data-message-id="${messageId}">
             <img src="${photoURL}"
                  alt="${senderName}'s avatar"
-                 class="w-10 h-10 rounded-full flex-shrink-0 order-1 mt-1" 
+                 class="w-10 h-10 rounded-full flex-shrink-0 order-1 mt-1"
                  onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_PIC_URL}';">
 
             <div class="flex-grow min-w-0 order-2">
-                <div class="flex justify-between items-baseline mb-0.5"> <!-- Reduced margin -->
-                    <span class="font-semibold text-sm text-gray-800 dark:text-gray-200 mr-2">${senderName}</span>
-                    <div class="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <span class="timestamp">${formattedTime}</span>
-                        ${actionButtonsHtml}
+
+                <div class="flex justify-between items-center mb-0.5">
+
+                    <div class="flex items-baseline space-x-2 min-w-0">
+                        <span class="font-semibold text-sm text-gray-800 dark:text-gray-200 truncate" title="${senderName}">${senderName}</span>
+                        <span class="timestamp text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">${formattedTime}</span>
                     </div>
+
+                    ${actionButtonsHtml}
                 </div>
+
 
                 <div class="message-bubble ${messageBg} p-2 rounded-lg max-w-[90%] md:max-w-[80%]">
                     ${replyContextHtml}
@@ -208,6 +240,7 @@ function renderChatMessage(messageData, messageId) {
         </div>
     `;
 }
+
 
 /**
  * Fetches and renders the initial batch of chat messages. (Less critical with onSnapshot).
@@ -257,28 +290,35 @@ async function loadChatMessages(chatContentElement) {
 /**
  * Sets the UI state to indicate replying to a specific message.
  * @param {string} messageId - The ID of the message being replied to.
- * @param {string} senderName - The name of the original message sender.
- * @param {string} previewText - A short preview of the original message text.
+ * @param {string} senderName - The name of the original message sender (already HTML escaped from render).
+ * @param {string} previewText - A short preview of the original message text (already JS escaped from render).
  */
 export function startReply(messageId, senderName, previewText) {
+    // senderName and previewText are already appropriately escaped by renderChatMessage for JS/HTML
     console.log(`[startReply] Replying to message ${messageId} from ${senderName}`);
     replyingToMessageId = messageId;
-    replyingToSenderName = senderName; // Already escaped in renderChatMessage
-    replyingToPreview = previewText; // Already escaped in renderChatMessage
+    replyingToSenderName = senderName; // Store the potentially HTML-escaped name
+    replyingToPreview = previewText;   // Store the potentially JS/HTML-escaped preview
 
     const chatInputElement = document.getElementById('global-chat-input');
     const replyIndicator = document.getElementById('chat-reply-indicator');
     const replyIndicatorText = document.getElementById('reply-indicator-text');
 
     if (chatInputElement) {
-        chatInputElement.placeholder = `Replying to ${senderName}...`;
+        // Sender name might contain HTML entities (like "), use innerHTML for placeholder
+        // Or, better, decode entities for the placeholder for cleaner text
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = senderName;
+        const decodedSenderName = tempDiv.textContent || tempDiv.innerText || senderName;
+        chatInputElement.placeholder = `Replying to ${decodedSenderName}...`;
         chatInputElement.focus();
     }
     if (replyIndicator && replyIndicatorText) {
-        replyIndicatorText.innerHTML = `Replying to <strong>${senderName}</strong>`; // senderName is already escaped
+        // senderName is already escaped, safe for innerHTML
+        replyIndicatorText.innerHTML = `Replying to <strong>${senderName}</strong>`;
         replyIndicator.classList.remove('hidden');
     }
-    attachCancelReplyListener();
+    attachCancelReplyListener(); // Ensure listener is attached if not already
 }
 
 /**
@@ -344,16 +384,30 @@ export async function sendChatMessage(textInputId) {
 
     console.log(`[sendChatMessage] Attempting to send message as user: ${currentUser.uid}`);
 
-    // --- NEW: Extract Mentions ---
-    const mentionRegex = /@(\w+)/g;
-    const mentionedUsernames = (messageText.match(mentionRegex) || [])
-        .map(m => m.substring(1)) // Get the username part
-        .filter(u => u.toLowerCase() !== 'everyone'); // Exclude 'everyone' username if matched by \w+
-    const mentionsEveryone = /@everyone/i.test(messageText); // Case-insensitive check for @everyone
-    const mentionsList = [...new Set(mentionedUsernames)]; // Unique usernames
+    // --- Extract Mentions ---
+    const mentionRegex = /@(\w+|everyone)/gi; // Match @username or @everyone
+    const matches = messageText.match(mentionRegex) || [];
+    let mentionedUsernames = [];
+    let mentionsEveryone = false;
+
+    matches.forEach(match => {
+        const mention = match.substring(1); // Remove '@'
+        if (mention.toLowerCase() === 'everyone') {
+            mentionsEveryone = true;
+        } else if (mention.length > 0) { // Ensure it's not just "@"
+            mentionedUsernames.push(mention);
+        }
+    });
+
+    // Create unique list of mentioned usernames (case-sensitive as typed)
+    const uniqueUsernames = [...new Set(mentionedUsernames)];
+
+    // Final mentions array for Firestore
+    const mentionsList = [...uniqueUsernames];
     if (mentionsEveryone) {
-        mentionsList.push('everyone'); // Add 'everyone' explicitly if found
+        mentionsList.push('everyone'); // Add 'everyone' literal string
     }
+
     console.log("[sendChatMessage] Mentions found:", mentionsList);
     // --- End Mention Extraction ---
 
@@ -364,28 +418,40 @@ export async function sendChatMessage(textInputId) {
         senderPhotoURL: currentUser.photoURL || DEFAULT_PROFILE_PIC_URL,
         text: messageText,
         timestamp: firebase.firestore.FieldValue.serverTimestamp(), // Use compat serverTimestamp
-        mentions: mentionsList, // Store the extracted mentions
-        isPinned: false // Initialize isPinned to false
+        mentions: mentionsList,
+        isPinned: false // *** MODIFIED: Ensure isPinned is set to false for new messages ***
     };
 
-    // Add reply data if applicable
+    // --- Add reply data if applicable ---
     if (replyingToMessageId) {
+        // Decode HTML entities from the stored senderName before saving
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = replyingToSenderName || ''; // Use stored name (potentially HTML escaped)
+        const decodedSenderNameForDb = tempDiv.textContent || tempDiv.innerText || 'Original Message';
+
+        // Decode JS/HTML escapes from the stored preview before saving
+        tempDiv.innerHTML = replyingToPreview || ''; // Use stored preview (potentially JS/HTML escaped)
+        const decodedPreviewForDb = tempDiv.textContent || tempDiv.innerText || '...';
+
+
         messageData.replyTo = replyingToMessageId;
-        messageData.replyingToSenderName = replyingToSenderName;
-        messageData.replyPreview = replyingToPreview;
+        messageData.replyingToSenderName = decodedSenderNameForDb; // Save decoded name
+        messageData.replyPreview = decodedPreviewForDb; // Save decoded preview
         console.log(`[sendChatMessage] Sending as reply to ${replyingToMessageId}`);
     }
+    // --- End Reply Data Modification ---
 
     try {
-        console.log(`[sendChatMessage] Saving message with data:`, { // Log data being saved
+        console.log(`[sendChatMessage] Saving message with data:`, {
             senderId: messageData.senderId,
             senderName: messageData.senderName,
             textLength: messageData.text.length,
             mentions: messageData.mentions,
             replyTo: messageData.replyTo || null,
-            isPinned: messageData.isPinned // Log initial pin state
+            replyingToSenderName: messageData.replyingToSenderName || null,
+            replyPreview: messageData.replyPreview || null,
+            isPinned: messageData.isPinned // Log isPinned status
         });
-        // Use compat add method
         await db.collection(CHAT_COLLECTION).add(messageData);
         console.log("[sendChatMessage] Chat message sent successfully.");
         inputElement.value = ''; // Clear input on success
@@ -464,21 +530,28 @@ export async function deleteChatMessage(messageId) {
 }
 
 /**
- * Toggles the pinned status of a chat message (Admin only).
+ * *** NEW: Toggles the pinned status of a chat message (Admin only). ***
  * @param {string} messageId - The Firestore document ID of the message.
  */
 export async function togglePinMessage(messageId) {
+    // Check if the current user is the admin
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        console.warn("[togglePinMessage] Permission denied: Only admins can pin messages.");
+        console.warn("[togglePinMessage] Permission denied: Only admins can pin/unpin messages.");
+        // Optionally alert the user, though the button shouldn't be visible anyway
+        // alert("You do not have permission to perform this action.");
         return;
     }
+
+    // Check if Firestore is available
     if (!db) {
         console.error("[togglePinMessage] Chat Error: Firestore DB not available.");
         alert("Error: Cannot connect to database.");
         return;
     }
+
+    // Check if messageId is provided
     if (!messageId) {
-        console.error("[togglePinMessage] Chat Error: Message ID missing.");
+        console.error("[togglePinMessage] Chat Error: Message ID missing for toggle pin operation.");
         return;
     }
 
@@ -488,77 +561,69 @@ export async function togglePinMessage(messageId) {
     showLoading("Updating pin status...");
     try {
         const docSnap = await messageRef.get(); // Use compat syntax
+
         if (!docSnap.exists) {
             console.warn("[togglePinMessage] Chat Warning: Message to pin/unpin not found:", messageId);
             alert("Message not found.");
-            hideLoading();
+            // No UI element to update here, just exit
             return;
         }
 
         const messageData = docSnap.data();
+        // Determine the current status (default to false if field doesn't exist)
         const currentPinnedStatus = messageData.isPinned === true;
-        const newPinnedStatus = !currentPinnedStatus;
+        const newPinnedStatus = !currentPinnedStatus; // Toggle the status
 
         console.log(`[togglePinMessage] Toggling pin status from ${currentPinnedStatus} to ${newPinnedStatus} for message ${messageId}`);
+
+        // Update only the 'isPinned' field in Firestore
+        // Ensure the rule allows this update for admins.
         await messageRef.update({ isPinned: newPinnedStatus }); // Use compat syntax
 
-        hideLoading();
         console.log(`[togglePinMessage] Successfully ${newPinnedStatus ? 'pinned' : 'unpinned'} message ${messageId}.`);
 
+        // Note: The UI update (changing button style, adding/removing highlight)
+        // will be handled automatically by the onSnapshot listener re-rendering the message.
+        // If snapshot listener wasn't used, we'd manually update the DOM here.
+
     } catch (error) {
-        hideLoading();
         console.error(`[togglePinMessage] Error updating pin status for message ${messageId}:`, error);
         alert(`Failed to update pin status: ${error.message}`);
+    } finally {
+        hideLoading();
     }
 }
 
 
 /**
- * Placeholder function to show pinned messages.
+ * *** NEW: Placeholder function to show pinned messages. ***
  * (Actual implementation would involve querying Firestore).
  */
 export function showPinnedMessages() {
     console.log("Show Pinned Messages clicked");
     alert("Feature to view pinned messages is not implemented yet.");
-    // Future implementation:
-    // 1. Query Firestore: db.collection(CHAT_COLLECTION).where('isPinned', '==', true).orderBy('timestamp', 'desc').get()
-    // 2. Render the results in a separate modal or view within the chat.
+    // Future implementation ideas:
+    // 1. Query Firestore:
+    //    const pinnedQuery = db.collection(CHAT_COLLECTION)
+    //                      .where('isPinned', '==', true)
+    //                      .orderBy('timestamp', 'desc')
+    //                      .limit(20); // Limit results for performance
+    //    const snapshot = await pinnedQuery.get();
+    // 2. Render the results in a separate modal, a side panel, or filter the main chat view.
+    // 3. Handle pagination or loading more if needed.
+    // 4. Provide a way to jump to the original message context.
 }
 
-// --- NEW: Notification Functions (Defined within ui_chat.js) ---
-function notifyNewMention() {
-    console.log("[notifyNewMention] Mention detected, attempting to update sidebar link.");
-    // Use a more specific selector targeting the link within the standard nav
-    const sidebarChatLink = document.querySelector('#sidebar-standard-nav a[onclick*="showGlobalChat"]');
-
-    if (sidebarChatLink && !sidebarChatLink.classList.contains('has-unread-mention')) {
-        sidebarChatLink.classList.add('has-unread-mention');
-        console.log("[notifyNewMention] Added mention notification class to sidebar link.");
-        // Optional: Play a subtle sound
-        // const audio = new Audio('./path/to/notification.mp3'); audio.play().catch(e => console.warn("Audio notification failed:", e));
-    } else if (sidebarChatLink) {
-        console.log("[notifyNewMention] Mention notification class already present or link not found.");
-    } else {
-        console.warn("[notifyNewMention] Could not find sidebar chat link element (#sidebar-standard-nav a[onclick*=\"showGlobalChat\"]) to add notification class.");
-    }
-}
-
-function clearMentionNotification() {
-    console.log("[clearMentionNotification] Attempting to clear sidebar link notification.");
-    const sidebarChatLink = document.querySelector('#sidebar-standard-nav a[onclick*="showGlobalChat"]');
-    if (sidebarChatLink) {
-        sidebarChatLink.classList.remove('has-unread-mention');
-        console.log("[clearMentionNotification] Removed mention notification class from sidebar link.");
-    } else {
-        console.warn("[clearMentionNotification] Could not find sidebar chat link element to clear notification class.");
-    }
-}
+// --- REMOVED Notification Functions ---
+// notifyNewMention function removed.
+// clearMentionNotification function removed.
 // --- End Notification Functions ---
 
 
 /**
  * Subscribes to real-time updates for chat messages using onSnapshot.
  * Checks for mentions in new messages and triggers notifications.
+ * Handles UI updates for added, modified (e.g., pin status change), and removed messages.
  * @param {HTMLElement} chatContentElement - The DOM element to render messages into.
  * @returns {function} - The unsubscribe function for the listener.
  */
@@ -578,54 +643,57 @@ function subscribeToChatMessages(chatContentElement) {
         console.log(`[subscribeToChatMessages] Chat snapshot received: ${snapshot.docChanges().length} changes. Total docs in snapshot: ${snapshot.size}.`);
         let hasMessages = false;
         let wasScrolledToBottom = chatContentElement.scrollHeight - chatContentElement.clientHeight <= chatContentElement.scrollTop + 50; // Check scroll position before update
+        let shouldScroll = false; // Flag to decide if scrolling is needed
 
-        // --- Process changes and check for mentions ---
+        // Process changes and check for mentions
         snapshot.docChanges().forEach(change => {
+            const messageData = change.doc.data();
+            const messageId = change.doc.id;
+
             if (change.type === "added") {
-                const messageData = change.doc.data();
-                const mentions = messageData.mentions || []; // Ensure mentions array exists
-                // Ensure currentUser and its properties are available before accessing
-                const currentUsernameLower = currentUser?.username?.toLowerCase();
-                const currentDisplayNameLower = currentUser?.displayName?.toLowerCase();
-
-                // Check for @everyone mention
-                const mentionsEveryone = mentions.some(m => m?.toLowerCase() === 'everyone');
-
-                // Check for specific mention of the current user (username or display name)
-                const mentionsMe = mentions.some(mentionUsername => {
-                    if (!mentionUsername || mentionUsername.toLowerCase() === 'everyone') return false; // Skip 'everyone' here
-                    const mentionLower = mentionUsername.toLowerCase();
-                    // Only check if currentUser properties are defined
-                    return (currentUsernameLower && mentionLower === currentUsernameLower) ||
-                           (currentDisplayNameLower && mentionLower === currentDisplayNameLower);
-                });
-
-                if (mentionsEveryone || mentionsMe) {
-                     // Check if the message sender is NOT the current user to avoid self-notifications
-                    if (currentUser && messageData.senderId !== currentUser.uid) {
-                         console.log(`[subscribeToChatMessages] Mention detected for user ${currentUser.uid} in message ${change.doc.id}. Mentions:`, mentions);
-                         notifyNewMention(); // Call the local notification function
-                    } else {
-                         console.log(`[subscribeToChatMessages] Self-mention detected in message ${change.doc.id}, notification skipped.`);
+                 shouldScroll = true; // Scroll on new messages
+                // Mention check logic (remains the same, but notification call removed)
+                if (currentUser && messageData.senderId !== currentUser.uid) {
+                    const mentions = messageData.mentions || [];
+                    const currentUsernameLower = currentUser.username?.toLowerCase();
+                    const currentDisplayNameLower = currentUser.displayName?.toLowerCase();
+                    const mentionsEveryone = mentions.some(m => m?.toLowerCase() === 'everyone');
+                    let mentionsMe = false;
+                    if (currentUsernameLower || currentDisplayNameLower) {
+                         mentionsMe = mentions.some(mentionUsername => {
+                            if (!mentionUsername || mentionUsername.toLowerCase() === 'everyone') return false;
+                            const mentionLower = mentionUsername.toLowerCase();
+                            return (currentUsernameLower && mentionLower === currentUsernameLower) ||
+                                   (currentDisplayNameLower && mentionLower === currentDisplayNameLower);
+                        });
                     }
+                    if (mentionsEveryone || mentionsMe) {
+                         console.log(`[subscribeToChatMessages] Mention detected for user ${currentUser.uid} in message ${messageId}. (Notification function removed)`);
+                         // REMOVED: notifyNewMention();
+                    }
+                } else if (!currentUser) {
+                     console.warn(`[subscribeToChatMessages] Received new message ${messageId} but currentUser is null, cannot check mentions.`);
                 }
             } else if (change.type === 'modified') {
-                 console.log(`[subscribeToChatMessages] Message modified: ${change.doc.id}`);
+                 console.log(`[subscribeToChatMessages] Message modified: ${messageId}`);
+                 // Modification could be pin status, text edit (if allowed), etc.
+                 // The full re-render below will handle updating the appearance.
             } else if (change.type === 'removed') {
                  console.log(`[subscribeToChatMessages] Message removed: ${change.doc.id}`);
-                 const elementToRemove = document.querySelector(`.chat-message-container[data-message-id="${change.doc.id}"]`);
-                 if (elementToRemove) {
-                     console.log("[subscribeToChatMessages] Removing deleted message element from UI via snapshot.");
-                     elementToRemove.remove();
-                 }
+                 // Removal handled by the full render below.
+                 // Optional: Direct DOM removal for slightly faster visual feedback
+                 // const elementToRemove = document.querySelector(`.chat-message-container[data-message-id="${change.doc.id}"]`);
+                 // if (elementToRemove) elementToRemove.remove();
             }
         });
-        // --- End mention check ---
+        // --- End mention check and change processing ---
 
         // --- Render full message list ---
+        // Get all docs from the *current* snapshot (which includes adds/mods/removes)
         const messages = snapshot.docs
             .map(doc => ({ id: doc.id, data: doc.data() }))
-            .sort((a, b) => (a.data.timestamp?.toMillis() || 0) - (b.data.timestamp?.toMillis() || 0)); // ASC for rendering order
+            // Sort by timestamp ascending for correct display order
+            .sort((a, b) => (a.data.timestamp?.toMillis() || 0) - (b.data.timestamp?.toMillis() || 0));
 
         if (messages.length > 0) {
              hasMessages = true;
@@ -635,20 +703,16 @@ function subscribeToChatMessages(chatContentElement) {
              });
              chatContentElement.innerHTML = messagesHtml;
 
-             requestAnimationFrame(() => { // Use rAF for smoother scroll updates
-                  if (wasScrolledToBottom) {
+             // Scroll to bottom if user was near the bottom OR if a new message was added
+             requestAnimationFrame(() => {
+                  if (wasScrolledToBottom || shouldScroll) {
                       chatContentElement.scrollTop = chatContentElement.scrollHeight;
                   }
              });
-        }
-
-        if (!hasMessages && !chatContentElement.innerHTML.includes('text-center text-muted')) { // Avoid replacing if "No messages" is already shown
-            console.log("[subscribeToChatMessages] Snapshot empty, displaying 'no messages'.");
-            chatContentElement.innerHTML = '<p class="text-center text-muted p-4">No messages yet. Start the conversation!</p>';
-        } else if (!hasMessages && snapshot.docChanges().some(c => c.type === 'removed')) {
-             if (chatContentElement.children.length === 0) {
-                   chatContentElement.innerHTML = '<p class="text-center text-muted p-4">No messages yet. Start the conversation!</p>';
-             }
+        } else {
+             // If the snapshot is now empty after removals
+             chatContentElement.innerHTML = '<p class="text-center text-muted p-4">No messages yet. Start the conversation!</p>';
+             hasMessages = false; // Explicitly set
         }
         // --- End rendering ---
 
@@ -675,7 +739,7 @@ function subscribeToChatMessages(chatContentElement) {
 
 /**
  * Creates and displays the global chat modal.
- * Clears mention notifications upon opening.
+ * Clears reply state upon opening.
  */
 export function showGlobalChat() {
     console.log(`[showGlobalChat] Function called. Timestamp: ${new Date().toISOString()}`);
@@ -693,8 +757,8 @@ export function showGlobalChat() {
         return;
     }
 
-    // --- Clear any existing mention notification ---
-    clearMentionNotification(); // Call the locally defined function
+    // --- Clear any existing mention notification (REMOVED) ---
+    // REMOVED: clearMentionNotification();
 
     // --- Cancel any existing reply state ---
     cancelReply();
@@ -705,7 +769,7 @@ export function showGlobalChat() {
         console.log("[showGlobalChat] Closing existing chat modal before opening new one.");
         const closeBtn = existingModal.querySelector('#close-chat-btn');
         if (closeBtn) {
-            closeBtn.click(); // Triggers closeChat
+             closeBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
         } else {
             existingModal.remove();
             if (unsubscribeChat) {
@@ -714,9 +778,9 @@ export function showGlobalChat() {
                  unsubscribeChat = null;
             }
         }
-         // Add a small delay to ensure the old modal is fully removed before adding the new one
-        setTimeout(() => createAndShowChatModal(), 50);
-        return; // Exit now, createAndShowChatModal will handle the rest
+        // Wait a short moment for the close animation/cleanup before recreating
+        setTimeout(() => createAndShowChatModal(), 100);
+        return;
     }
 
     // --- If no existing modal, create and show immediately ---
@@ -731,6 +795,7 @@ export function showGlobalChat() {
 function createAndShowChatModal() {
      console.log(`[createAndShowChatModal] Proceeding to show global chat modal for user: ${currentUser?.uid}`);
 
+     // *** MODIFIED: Added "View Pinned" button in the header ***
      const modalHtml = `
         <div id="global-chat-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-opacity-75 flex items-center justify-center z-50 p-0 animate-fade-in">
             <div class="bg-white dark:bg-gray-800 shadow-xl w-full h-full flex flex-col">
@@ -739,12 +804,13 @@ function createAndShowChatModal() {
                     <div class="flex items-center gap-2">
                          <h3 class="text-lg font-semibold text-primary-600 dark:text-primary-400 flex items-center gap-2">
                             <!-- Logos will be handled by CSS -->
-                            <svg class="logo-light-mode w-5 h-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" clip-rule="evenodd" /></svg>
-                            <svg class="logo-dark-mode w-5 h-5 mr-2 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" clip-rule="evenodd" /></svg>
+                            <svg class="logo-light-mode w-5 h-5 mr-1 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+                            <svg class="logo-dark-mode w-5 h-5 mr-1 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
                             Global Chat
                          </h3>
-                         <button id="view-pinned-btn" onclick="window.showPinnedMessages()" class="ml-4 text-sm btn-secondary px-2 py-1 flex items-center" title="View Pinned Messages">
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
+                         <!-- *** ADDED Pinned Button *** -->
+                         <button id="view-pinned-btn" class="ml-4 text-sm btn-secondary px-2 py-1 flex items-center" title="View Pinned Messages">
+                             <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" transform="rotate(-45 10 10)"/><path d="M7 2a1 1 0 00-1 1v1a1 1 0 001 1h1a1 1 0 001-1V3a1 1 0 00-1-1H7zM7 15a1 1 0 011-1h1a1 1 0 110 2H8a1 1 0 01-1-1z" /></svg>
                              Pinned
                          </button>
                     </div>
@@ -769,9 +835,9 @@ function createAndShowChatModal() {
 
                 <!-- Input Area -->
                 <div class="p-3 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-                    <form id="chat-send-form" class="flex items-start space-x-2"> <!-- Changed to items-start -->
-                        <textarea id="global-chat-input" placeholder="Type message (@mention, Enter to send, Shift+Enter for newline)" class="flex-grow" rows="1" style="resize: none; overflow-y: hidden; min-height: 40px;" maxlength="1000"></textarea> <!-- Added min-height, overflow-y hidden -->
-                        <button type="submit" id="send-chat-btn" class="btn-primary flex-shrink-0 px-3 py-2 self-center" title="Send Message"> <!-- Start self-center -->
+                    <form id="chat-send-form" class="flex items-start space-x-2">
+                        <textarea id="global-chat-input" placeholder="Type message (@mention, Enter to send, Shift+Enter for newline)" class="flex-grow form-control py-2 px-3 text-sm" rows="1" style="resize: none; overflow-y: hidden; min-height: 40px;" maxlength="1000"></textarea>
+                        <button type="submit" id="send-chat-btn" class="btn-primary flex-shrink-0 px-3 py-2 self-center" title="Send Message">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
                             <span class="sr-only">Send</span>
                         </button>
@@ -788,144 +854,146 @@ function createAndShowChatModal() {
     const sendForm = document.getElementById('chat-send-form');
     const closeButton = document.getElementById('close-chat-btn');
     const chatModalElement = document.getElementById('global-chat-modal');
-    const viewPinnedButton = document.getElementById('view-pinned-btn'); // Get the new button
+    // *** MODIFIED: Get reference to the new button ***
+    const viewPinnedButton = document.getElementById('view-pinned-btn');
 
     // Auto-resize textarea
     const adjustTextareaHeight = () => {
         if (!chatInputElement) return;
         chatInputElement.style.height = 'auto';
-        const maxHeight = 120; // Approx 5 lines
-        const newHeight = Math.min(chatInputElement.scrollHeight, maxHeight);
+        const maxHeight = 120;
+        const scrollHeight = chatInputElement.scrollHeight;
+        const newHeight = Math.min(scrollHeight, maxHeight);
         chatInputElement.style.height = `${newHeight}px`;
-        // Control overflow based on whether max height is reached
         chatInputElement.style.overflowY = newHeight >= maxHeight ? 'auto' : 'hidden';
-
         const sendButton = document.getElementById('send-chat-btn');
          if (sendButton) {
-            sendButton.classList.toggle('self-end', newHeight > 40); // Align bottom if multiple lines
-            sendButton.classList.toggle('self-center', newHeight <= 40); // Align center if single line
+            sendButton.classList.toggle('self-end', newHeight > 45);
+            sendButton.classList.toggle('self-center', newHeight <= 45);
          }
     };
     chatInputElement.addEventListener('input', adjustTextareaHeight);
-    adjustTextareaHeight(); // Initial call
+    requestAnimationFrame(adjustTextareaHeight);
 
-    // Function to close the chat and clean up
+    let handleEscKeyListener = null;
+
     const closeChat = () => {
         console.log("[closeChat] Function called.");
-        cancelReply(); // Also cancel reply state on close
+        cancelReply();
         if (unsubscribeChat) {
             console.log("[closeChat] Unsubscribing from chat messages.");
             unsubscribeChat();
             unsubscribeChat = null;
         } else {
-            console.log("[closeChat] No active chat subscription found.");
+            console.log("[closeChat] No active chat subscription found to unsubscribe.");
         }
         if (chatModalElement) {
             console.log("[closeChat] Removing chat modal element.");
-            // Optional: Add fade-out animation before removing
+            chatModalElement.classList.remove('animate-fade-in');
             chatModalElement.style.transition = 'opacity 0.2s ease-out';
             chatModalElement.style.opacity = '0';
             setTimeout(() => {
                  chatModalElement.remove();
-                 // Also remove Esc key listener after modal is gone
-                 console.log("[closeChat] Removing Esc key listener post-removal.");
-                 document.removeEventListener('keydown', handleEscKey);
-            }, 200); // Match duration of animation
+                 console.log("[closeChat] Modal element removed.");
+                 if (handleEscKeyListener) {
+                     console.log("[closeChat] Removing Esc key listener post-removal.");
+                     document.removeEventListener('keydown', handleEscKeyListener);
+                     handleEscKeyListener = null;
+                 }
+            }, 200);
         } else {
              console.log("[closeChat] Chat modal element already removed or not found.");
-             // Still attempt to remove listener if modal wasn't found but listener might exist
-             console.log("[closeChat] Removing Esc key listener (fallback).");
-             document.removeEventListener('keydown', handleEscKey);
+             if (handleEscKeyListener) {
+                 console.log("[closeChat] Removing Esc key listener (fallback).");
+                 document.removeEventListener('keydown', handleEscKeyListener);
+                 handleEscKeyListener = null;
+             }
         }
     };
 
+    // Subscribe to messages
     console.log("[createAndShowChatModal] Calling subscribeToChatMessages...");
-    unsubscribeChat = subscribeToChatMessages(chatContentElement); // This now handles mention notifications
+    unsubscribeChat = subscribeToChatMessages(chatContentElement);
 
+    // Setup event listeners
     sendForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        sendChatMessage('global-chat-input'); // This now handles mention extraction
-        setTimeout(adjustTextareaHeight, 0); // Reset height after sending
+        sendChatMessage('global-chat-input');
+        setTimeout(adjustTextareaHeight, 0);
     });
 
     chatInputElement.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendForm.requestSubmit(); // Use form submission standard method
-        }
-        // Allow textarea height to adjust immediately after Shift+Enter
-        if (e.key === 'Enter' && e.shiftKey) {
+            sendForm.requestSubmit();
+            setTimeout(adjustTextareaHeight, 0);
+        } else if (e.key === 'Enter' && e.shiftKey) {
              setTimeout(adjustTextareaHeight, 0);
         }
+        setTimeout(adjustTextareaHeight, 0);
     });
 
-    closeButton.addEventListener('click', closeChat);
+    if (closeButton) {
+        closeButton.addEventListener('click', closeChat);
+    } else {
+        console.error("[createAndShowChatModal] Critical Error: Close button not found!");
+    }
 
-    // Add listener for the "View Pinned" button
+    // *** MODIFIED: Add event listener for the "View Pinned" button ***
     if (viewPinnedButton) {
+        // Remove inline handler if accidentally added
+        viewPinnedButton.onclick = null;
         viewPinnedButton.addEventListener('click', () => {
-            window.showPinnedMessages(); // Call the globally exposed function
+            showPinnedMessages(); // Call the placeholder function
         });
          console.log("[createAndShowChatModal] Added listener to 'View Pinned' button.");
     } else {
          console.warn("[createAndShowChatModal] Could not find 'View Pinned' button to attach listener.");
     }
 
-
-    const handleEscKey = (event) => {
-        // Check if the event target is inside the chat modal or is the modal itself
-        const isEventInsideModal = chatModalElement?.contains(event.target);
-
-        if (event.key === 'Escape' && isEventInsideModal) {
+    handleEscKeyListener = (event) => {
+        // Check if modal exists and if the event target is inside the modal
+        if (event.key === 'Escape' && chatModalElement && chatModalElement.contains(event.target)) {
             console.log("[handleEscKey] Escape key pressed inside modal, closing chat.");
             closeChat();
-        } else if (event.key === 'Escape') {
-            // Optional: Log if escape was pressed but not inside the modal (useful for debugging focus issues)
-            // console.log("[handleEscKey] Escape key pressed, but event target is outside the chat modal.");
         }
     };
-    console.log("[createAndShowChatModal] Adding Esc key listener.");
-    // Ensure listener is attached only once if createAndShowChatModal could be called multiple times rapidly
-    document.removeEventListener('keydown', handleEscKey); // Remove previous listener just in case
-    document.addEventListener('keydown', handleEscKey);
+    document.removeEventListener('keydown', handleEscKeyListener); // Ensure no duplicates
+    document.addEventListener('keydown', handleEscKeyListener);
+    console.log("[createAndShowChatModal] Added Esc key listener.");
 
-
-    // Ensure the cancel reply listener is attached now that the button exists
     attachCancelReplyListener();
 
-    // Focus input after a short delay
     setTimeout(() => {
         chatInputElement?.focus();
-         console.log("[createAndShowChatModal] Focused chat input.");
+        console.log("[createAndShowChatModal] Focused chat input.");
     }, 150);
 
-    // Add logo visibility styles if not already present
     const styleId = 'chat-logo-styles';
     if (!document.getElementById(styleId)) {
         const logoStyle = document.createElement('style');
         logoStyle.id = styleId;
-        // Styles moved to styles.css via prompt
         document.head.appendChild(logoStyle);
-        console.log("[createAndShowChatModal] Added chat logo and pin visibility styles container (styles in styles.css).");
+        console.log("[createAndShowChatModal] Added chat logo style container (styles in styles.css).");
     }
 
-    // Make necessary functions globally accessible for inline handlers
+    // *** MODIFIED: Expose new functions globally ***
     window.deleteChatMessage = deleteChatMessage;
     window.startReply = startReply;
     window.cancelReply = cancelReply;
-    window.togglePinMessage = togglePinMessage; // Expose the new function
-    window.showPinnedMessages = showPinnedMessages; // Expose the new function
+    window.togglePinMessage = togglePinMessage; // Added
+    window.showPinnedMessages = showPinnedMessages; // Added
 
     console.log("[createAndShowChatModal] Chat modal setup complete.");
 }
 
 
-// Make necessary functions globally accessible (Done in script.js usually, but ensure these are covered)
+// Make top-level functions globally accessible if needed by other parts of the app
 window.showGlobalChat = showGlobalChat;
 window.deleteChatMessage = deleteChatMessage;
 window.startReply = startReply;
 window.cancelReply = cancelReply;
-window.togglePinMessage = togglePinMessage;
-window.showPinnedMessages = showPinnedMessages;
+window.togglePinMessage = togglePinMessage; // Ensure it's exposed
+window.showPinnedMessages = showPinnedMessages; // Ensure it's exposed
 
 // --- END OF FILE ui_chat.js ---
