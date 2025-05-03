@@ -1,3 +1,4 @@
+firestore
 rules_version = '2';
 
 service cloud.firestore {
@@ -27,7 +28,7 @@ service cloud.firestore {
                        (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
                         (isAdmin() && // Admin can update specific fields
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status']) // List fields admin is allowed to modify. Add 'email' or 'status' if needed.
+                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId']) // List fields admin is allowed to modify. Added lastSelectedSubjectId
                         )
                        );
       // User can only create their own doc initially
@@ -80,10 +81,26 @@ service cloud.firestore {
        allow read, update, delete: if request.auth != null && isAdmin();
     }
 
-    // --- Course Definitions: Public read, Admin manages create/update/delete ---
+    // --- Course Definitions: ---
     match /courses/{courseId} {
+      // Allow public read for all courses
       allow read: if true;
-      allow create, update, delete: if request.auth != null && isAdmin();
+
+      // Allow authenticated users to CREATE courses, but only with specific fields
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasOnly([
+                         'name', 'description', 'majorTag', 'subjectTag', 'youtubePlaylistUrls', // User fields
+                         'creatorUid', 'creatorName', 'createdAt', 'status', // System/Required fields
+                         'reportedBy', 'reportReason' // Fields needed for reporting init
+                       ]) &&
+                       request.resource.data.creatorUid == request.auth.uid && // Creator must be current user
+                       request.resource.data.status == 'pending'; // Must start as pending
+
+      // Allow Admins to UPDATE any field (including status, technical details)
+      allow update: if request.auth != null && isAdmin();
+
+      // Allow Admins to DELETE courses
+      allow delete: if request.auth != null && isAdmin();
     }
 
     // --- Shared Notes: Public read, Auth create, Owner/Admin manage update/delete ---
@@ -93,11 +110,21 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
-    // --- Admin Tasks: Only Admin can manage --- <--- ADDED RULE BLOCK
+    // --- Admin Tasks: Only Admin can manage ---
     match /adminTasks/{taskId} {
       // Admin can perform all actions (read, write, create, delete)
       allow read, write, create, delete: if request.auth != null && isAdmin();
       // No other users should have access
+    }
+
+    // --- Global Chat Messages ---
+    match /globalChatMessages/{messageId} {
+      // Logged-in users can read and create messages
+      allow read, create: if request.auth != null;
+      // Only the message owner OR an admin can delete
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || isAdmin());
+      // Prevent updates
+      allow update: if false;
     }
 
     // --- Deprecated Global Caches: Read allowed, Write blocked (except Admin) ---

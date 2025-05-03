@@ -1,3 +1,5 @@
+// --- START OF FILE script.js ---
+
 // script.js
 // --- Core State & Config Imports ---
 import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
@@ -36,6 +38,9 @@ import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSear
 import { showInbox, handleMarkRead } from './ui_inbox.js';
 // NEW: Import Profile Picture Cropping UI
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
+// *** NEW: Chat UI Imports ***
+import { showGlobalChat, sendChatMessage, deleteChatMessage } from './ui_chat.js';
+
 
 // --- Course UI Imports ---
 // Renamed showCurrentStudyMaterial to showNextLesson in dashboard import
@@ -334,10 +339,16 @@ window.addSubject = addSubject;
 window.confirmDeleteSubject = confirmDeleteSubject;
 window.deleteSubject = deleteSubject;
 
-// User Profile / Auth
+// User Profile / Auth / Inbox / Chat  *** MODIFIED SECTION TITLE ***
 window.updateUserProfile = updateUserProfile;
 window.signOutUserWrapper = signOutUser;
-window.handleProfilePictureSelect = handleProfilePictureSelect; // NEW Cropping
+window.handleProfilePictureSelect = handleProfilePictureSelect; // Profile Pic Cropping
+window.showInbox = showInbox; // Inbox UI
+window.handleMarkRead = handleMarkRead; // Inbox action
+// *** NEW: Assign Chat functions ***
+window.showGlobalChat = showGlobalChat;
+window.sendChatMessage = sendChatMessage;
+window.deleteChatMessage = deleteChatMessage;
 
 // Import/Export (Standard Test Gen Data)
 window.importData = importData;
@@ -348,10 +359,8 @@ window.showImportExportDashboard = showImportExportDashboard;
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
-// Admin / Inbox / Feedback
+// Admin / Inbox / Feedback / Tasks *** MODIFIED SECTION TITLE ***
 window.showAdminDashboard = showAdminDashboard;
-window.showInbox = showInbox;
-window.handleMarkRead = handleMarkRead;
 window.promptAdminReply = promptAdminReply;
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 // Badge Management (Admin)
@@ -361,6 +370,8 @@ window.promptAddBadge = promptAddBadge;
 window.handleAddBadgeForUser = handleAddBadgeForUser; // Defined in firebase_firestore.js
 window.confirmRemoveBadge = confirmRemoveBadge;
 window.handleRemoveBadgeForUser = handleRemoveBadgeForUser; // Defined in firebase_firestore.js
+// Note: Admin Task functions are typically called from within ui_admin_dashboard.js,
+//       so direct window assignment might not be needed unless called from HTML.
 
 // Utility Functions (If called directly from HTML, though unlikely)
 // window.showLoading = showLoading;

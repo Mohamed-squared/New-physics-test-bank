@@ -1,4 +1,3 @@
-
 // --- START OF FILE ui_admin_dashboard.js ---
 
 // ui_admin_dashboard.js
@@ -25,7 +24,7 @@ import {
     deleteAdminTask       // <-- Import new function
 } from './firebase_firestore.js'; // Import badge handlers & course definition update
 // Import course functions needed by admin buttons
-import { handleCourseApproval, showCourseDetails, showEditCourseForm } from './ui_courses.js';
+import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowseCourses, showAddCourseForm } from './ui_courses.js'; // Added showBrowseCourses, showAddCourseForm
 // Use the imported escapeHtml from utils.js
 // Removed redundant escapeHtml import
 
@@ -58,7 +57,7 @@ export function showAdminDashboard() {
                         <p class="text-muted text-sm">Loading feedback...</p>
                     </div>
                     <div class="flex gap-2 mt-3">
-                        <button onclick="loadFeedbackForAdmin()" class="btn-secondary-small text-xs">Refresh Feedback</button>
+                        <button onclick="window.loadFeedbackForAdmin()" class="btn-secondary-small text-xs">Refresh Feedback</button>
                         <button onclick="window.confirmDeleteAllFeedback()" class="btn-danger-small text-xs">Delete ALL Feedback</button>
                     </div>
                 </div>
@@ -71,7 +70,7 @@ export function showAdminDashboard() {
                         <p class="text-muted text-sm">Loading courses requiring attention...</p>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="loadCoursesForAdmin()" class="btn-secondary-small text-xs">Refresh List</button>
+                        <button onclick="window.loadCoursesForAdmin()" class="btn-secondary-small text-xs">Refresh List</button>
                         <button onclick="window.showAddCourseForm()" class="btn-primary-small text-xs">Add New Course</button>
                         <button onclick="window.showBrowseCourses()" class="btn-secondary-small text-xs">Browse All Courses</button>
                     </div>
@@ -1127,9 +1126,9 @@ window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 window.promptAddBadge = promptAddBadge;
 window.confirmRemoveBadge = confirmRemoveBadge;
 window.promptAdminReply = promptAdminReply; // Make sure this is assigned if used by onclick
-window.handleCourseApproval = handleCourseApproval; // From ui_courses.js
-window.showCourseDetails = showCourseDetails; // From ui_courses.js
-window.showEditCourseForm = showEditCourseForm; // From ui_courses.js
+// window.handleCourseApproval = handleCourseApproval; // From ui_courses.js
+// window.showCourseDetails = showCourseDetails; // From ui_courses.js
+// window.showEditCourseForm = showEditCourseForm; // From ui_courses.js
 
 // Add the new handler functions at the end of the file before the window assignments
 
@@ -1656,6 +1655,8 @@ window.promptAdminChangeUsername = promptAdminChangeUsername;
 window.handleCourseApproval = handleCourseApproval;
 window.showCourseDetails = showCourseDetails;
 window.showEditCourseForm = showEditCourseForm;
+window.showBrowseCourses = showBrowseCourses; // Added
+window.showAddCourseForm = showAddCourseForm;   // Added
 // Assign new task handlers to window scope
 // window.loadAdminTasks = loadAdminTasks; // Optional: Not usually called directly from HTML
 window.handleAddAdminTask = handleAddAdminTask;
