@@ -1,5 +1,7 @@
+
+
 // firebase_auth.js
-import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js';
+import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js'; // Added auth import
 import { showLoading, hideLoading } from './utils.js';
 import { initializeUserData, loadUserData, loadGlobalCourseDefinitions } from './firebase_firestore.js';
 import { showLoginUI, hideLoginUI, fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink, displayContent } from './ui_core.js';
@@ -179,6 +181,42 @@ export function signOutUser() {
         hideLoading(); // Ensure loading is hidden on error
     });
 }
+
+// --- Password Reset ---
+/**
+ * Sends a password reset email to the specified address.
+ * @param {string} email The user's email address.
+ */
+export async function sendPasswordReset(email) {
+    if (!auth) {
+        console.error("Firebase Auth not initialized. Cannot send password reset.");
+        alert("Error: Could not initiate password reset. Please try again later.");
+        return;
+    }
+    if (!email || !email.includes('@')) {
+        alert("Please enter a valid email address.");
+        return;
+    }
+
+    showLoading("Sending password reset email...");
+    try {
+        await auth.sendPasswordResetEmail(email);
+        hideLoading();
+        alert(`Password reset email sent to ${email}. Please check your inbox (and spam folder). Follow the instructions in the email to reset your password.`);
+        console.log("Password reset email sent successfully to:", email);
+    } catch (error) {
+        hideLoading();
+        console.error("Error sending password reset email:", error);
+        let message = "Failed to send password reset email. " + error.message;
+        if (error.code === 'auth/user-not-found') {
+            message = "Failed to send password reset email: No account found with that email address.";
+        } else if (error.code === 'auth/invalid-email') {
+            message = "Failed to send password reset email: The email address provided is not valid.";
+        }
+        alert(message);
+    }
+}
+
 
 // --- Auth Listener Setup ---
 export function setupAuthListener() {

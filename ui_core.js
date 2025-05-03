@@ -1,14 +1,16 @@
+
+
 import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap } from './state.js'; // Added course state imports
 import { ADMIN_UID } from './config.js';
 import { renderMathIn } from './utils.js';
 import { updateAdminPanelVisibility } from './script.js';
 import { DEFAULT_PROFILE_PIC_URL } from '../config.js';
+import { sendPasswordReset } from './firebase_auth.js'; // Import password reset function
 
 // --- Basic UI Toggles & Updates ---
 
 export function showLoginUI() {
-    // ... (function remains the same - unchanged) ...
-     console.log("Running showLoginUI...");
+    console.log("Running showLoginUI...");
     document.getElementById('login-section')?.classList.remove('hidden');
     document.getElementById('content')?.classList.add('hidden');
     document.getElementById('dashboard')?.classList.add('hidden'); // Hide progress dashboard
@@ -21,10 +23,10 @@ export function showLoginUI() {
     document.getElementById('sidebar-standard-nav')?.style.setProperty('display', 'none', 'important');
     document.getElementById('sidebar-course-nav')?.style.setProperty('display', 'none', 'important');
     updateAdminPanelVisibility();
+    showLoginFormOnly(); // Ensure login form is shown by default
 }
 
 export function hideLoginUI() {
-    // ... (function remains the same - unchanged) ...
     console.log("Running hideLoginUI...");
     document.getElementById('login-section')?.classList.add('hidden');
     // Don't automatically show content, let specific functions decide
@@ -117,7 +119,6 @@ export async function fetchAndUpdateUserInfo(user) {
 }
 
 export function clearUserInfoUI() {
-    // ... (function remains the same - unchanged) ...
     document.getElementById('user-display')?.replaceChildren();
     document.getElementById('user-section')?.classList.add('hidden');
     document.getElementById('subject-info')?.replaceChildren();
@@ -126,7 +127,6 @@ export function clearUserInfoUI() {
 }
 
 export function updateSubjectInfo() {
-    // ... (function remains the same - unchanged) ...
      const infoEl = document.getElementById('subject-info');
     if (!infoEl) return;
 
@@ -237,3 +237,69 @@ export function setActiveSidebarLink(functionName, navSectionId = 'sidebar-stand
         }
     }
 }
+
+// --- Password Reset ---
+
+/**
+ * Prompts the user for their email and initiates the password reset process.
+ */
+function promptForgotPassword() {
+    const email = prompt("Please enter the email address associated with your account to send a password reset link:");
+    if (email) {
+        sendPasswordReset(email.trim());
+    } else if (email === '') {
+        alert("Please enter an email address.");
+    } else {
+        // User cancelled the prompt
+        console.log("Password reset prompt cancelled.");
+    }
+}
+window.promptForgotPassword = promptForgotPassword; // Assign to window
+
+// --- Login/Signup Form Toggling ---
+
+function showLoginFormOnly() {
+    const loginContainer = document.getElementById('login-form-container');
+    const signupContainer = document.getElementById('signup-form-container');
+    const loginBtn = document.getElementById('show-login-view-btn');
+    const signupBtn = document.getElementById('show-signup-view-btn');
+
+    if (loginContainer && signupContainer && loginBtn && signupBtn) {
+        loginContainer.classList.remove('hidden');
+        signupContainer.classList.add('hidden');
+
+        loginBtn.disabled = true;
+        loginBtn.classList.add('font-semibold'); // Make active button bolder
+        loginBtn.classList.remove('text-gray-500', 'dark:text-gray-400'); // Ensure it looks active
+
+        signupBtn.disabled = false;
+        signupBtn.classList.remove('font-semibold');
+        signupBtn.classList.add('text-gray-500', 'dark:text-gray-400'); // Make inactive button less prominent
+    } else {
+        console.error("Could not find all login/signup toggle elements.");
+    }
+}
+window.showLoginFormOnly = showLoginFormOnly; // Assign to window
+
+function showSignupFormOnly() {
+    const loginContainer = document.getElementById('login-form-container');
+    const signupContainer = document.getElementById('signup-form-container');
+    const loginBtn = document.getElementById('show-login-view-btn');
+    const signupBtn = document.getElementById('show-signup-view-btn');
+
+    if (loginContainer && signupContainer && loginBtn && signupBtn) {
+        loginContainer.classList.add('hidden');
+        signupContainer.classList.remove('hidden');
+
+        loginBtn.disabled = false;
+        loginBtn.classList.remove('font-semibold');
+        loginBtn.classList.add('text-gray-500', 'dark:text-gray-400'); // Make inactive button less prominent
+
+        signupBtn.disabled = true;
+        signupBtn.classList.add('font-semibold'); // Make active button bolder
+        signupBtn.classList.remove('text-gray-500', 'dark:text-gray-400'); // Ensure it looks active
+    } else {
+        console.error("Could not find all login/signup toggle elements.");
+    }
+}
+window.showSignupFormOnly = showSignupFormOnly; // Assign to window

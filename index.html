@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -136,6 +138,24 @@
         /* Chat Modal Styles (Basic) */
         /* Add more specific chat styles if needed */
         .chat-message { word-wrap: break-word; }
+
+        /* Login/Signup Button States */
+        #login-section .btn-secondary-small:disabled {
+            background-color: var(--color-primary-100);
+            color: var(--color-primary-700);
+            cursor: not-allowed;
+            font-weight: 600; /* Make active button bolder */
+        }
+        .dark #login-section .btn-secondary-small:disabled {
+            background-color: var(--color-primary-800);
+            color: var(--color-primary-200);
+        }
+        #login-section .btn-secondary-small:not(:disabled) {
+            color: var(--color-gray-500); /* Less prominent when not active */
+        }
+         .dark #login-section .btn-secondary-small:not(:disabled) {
+            color: var(--color-gray-400);
+        }
 
     </style>
 
@@ -307,7 +327,68 @@
                      </div>
 
                      <!-- LOGIN/SIGNUP SECTION -->
-                      <div id="login-section" class="hidden content-card max-w-md mx-auto"> <h2 class="text-xl font-semibold text-center mb-6">Login or Sign Up</h2> <form id="login-form" class="mb-6 space-y-4"> <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Login</h3> <div><label for="login-identifier">Email or Username</label><input type="text" id="login-identifier" required placeholder="your@email.com or username" autocomplete="username"></div> <div><label for="login-password">Password</label><input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password"></div> <button type="submit" class="w-full btn-primary">Login</button> </form> <hr class="my-6"/> <form id="signup-form" class="mb-6 space-y-4"> <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Sign Up</h3> <div><label for="signup-username">Username</label><input type="text" id="signup-username" required pattern="^[a-zA-Z0-9_]{3,20}$" title="3-20 chars, letters, numbers, _" placeholder="choose_a_username" autocomplete="username"><p class="form-help-text">3-20 chars, letters, numbers, _ only.</p></div> <div><label for="signup-email">Email</label><input type="email" id="signup-email" required placeholder="your@email.com" autocomplete="email"></div> <div><label for="signup-password">Password</label><input type="password" id="signup-password" required minlength="6" placeholder="min. 6 characters" autocomplete="new-password"><p class="form-help-text">Must be at least 6 characters.</p></div> <button type="submit" class="w-full btn-primary">Sign Up</button> </form> <hr class="my-6"/> <div class="text-center"> <p class="text-sm text-muted mb-3">Or sign in with:</p> <button id="google-signin-button" class="btn-secondary inline-flex items-center"> <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path></svg> Sign In with Google </button> </div> </div>
+                     <div id="login-section" class="hidden content-card max-w-md mx-auto">
+                         <h2 class="text-xl font-semibold text-center mb-4">Welcome to Lyceum</h2>
+
+                         <!-- Toggle Buttons -->
+                         <div class="flex justify-center gap-4 mb-6">
+                             <button id="show-login-view-btn" onclick="window.showLoginFormOnly()" class="btn-secondary-small px-4 py-1 text-sm font-semibold" disabled>Login</button>
+                             <button id="show-signup-view-btn" onclick="window.showSignupFormOnly()" class="btn-secondary-small px-4 py-1 text-sm">Sign Up</button>
+                         </div>
+
+                         <!-- Login Form Container -->
+                         <div id="login-form-container">
+                             <form id="login-form" class="mb-6 space-y-4">
+                                 <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Login</h3>
+                                 <div>
+                                     <label for="login-identifier">Email or Username</label>
+                                     <input type="text" id="login-identifier" required placeholder="your@email.com or username" autocomplete="username">
+                                 </div>
+                                 <div>
+                                     <label for="login-password">Password</label>
+                                     <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
+                                     <!-- Forgot Password Link -->
+                                     <div class="text-right mt-1">
+                                         <a href="#" onclick="window.promptForgotPassword(); return false;" class="text-sm text-primary-600 hover:underline dark:text-primary-400">Forgot Password?</a>
+                                     </div>
+                                 </div>
+                                 <button type="submit" class="w-full btn-primary">Login</button>
+                             </form>
+                         </div>
+
+                         <!-- Signup Form Container -->
+                         <div id="signup-form-container" class="hidden">
+                             <form id="signup-form" class="mb-6 space-y-4">
+                                 <h3 class="text-lg font-medium text-center text-gray-800 dark:text-gray-200">Sign Up</h3>
+                                 <div>
+                                     <label for="signup-username">Username</label>
+                                     <input type="text" id="signup-username" required pattern="^[a-zA-Z0-9_]{3,20}$" title="3-20 chars, letters, numbers, _" placeholder="choose_a_username" autocomplete="username">
+                                     <p class="form-help-text">3-20 chars, letters, numbers, _ only.</p>
+                                 </div>
+                                 <div>
+                                     <label for="signup-email">Email</label>
+                                     <input type="email" id="signup-email" required placeholder="your@email.com" autocomplete="email">
+                                 </div>
+                                 <div>
+                                     <label for="signup-password">Password</label>
+                                     <input type="password" id="signup-password" required minlength="6" placeholder="min. 6 characters" autocomplete="new-password">
+                                     <p class="form-help-text">Must be at least 6 characters.</p>
+                                 </div>
+                                 <button type="submit" class="w-full btn-primary">Sign Up</button>
+                             </form>
+                         </div>
+
+                         <!-- Separator and Google Sign-in -->
+                         <hr class="my-6 border-gray-300 dark:border-gray-600"/>
+                         <div class="text-center">
+                             <p class="text-sm text-muted mb-3">Or sign in with:</p>
+                             <button id="google-signin-button" class="btn-secondary inline-flex items-center">
+                                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.283 10.356h-8.327v3.451h4.792c-.446 2.193-2.313 3.453-4.792 3.453a5.27 5.27 0 0 1-5.279-5.28 5.27 5.27 0 0 1 5.279-5.279c1.259 0 2.397.447 3.29 1.178l2.6-2.599c-1.584-1.381-3.615-2.233-5.89-2.233a8.908 8.908 0 0 0-8.934 8.934 8.907 8.907 0 0 0 8.934 8.934c4.467 0 8.529-3.249 8.529-8.934 0-.528-.081-1.097-.202-1.625z"></path></svg>
+                                 Sign In with Google
+                             </button>
+                         </div>
+                     </div>
+
 
                     <!-- Standard Dynamic Content Area -->
                     <div id="content" class="hidden"> <div class="text-center p-8 content-card"> <h2 class="text-xl font-semibold mb-3">Loading Lyceum...</h2> <p class="text-muted">Authenticating and loading your study data.</p> <div class="inline-block mt-4 loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500"></div> </div> </div>
