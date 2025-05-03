@@ -1,9 +1,11 @@
+
+
 // --- START OF FILE ui_user_profile.js ---
 
 // ui_user_profile.js
 
 import { currentUser, db, auth, userCourseProgressMap, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
-import { displayContent, fetchAndUpdateUserInfo, showLoginUI, clearContent, setActiveSidebarLink } from './ui_core.js';
+import { displayContent, fetchAndUpdateUserInfo, showLoginUI, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added fetchAndUpdateUserInfo
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added escapeHtml
 import { signOutUser } from './firebase_auth.js';
 import { DEFAULT_PROFILE_PIC_URL } from './config.js';
@@ -150,9 +152,9 @@ export function showUserProfileDashboard() {
                     // Update Firestore only
                     await db.collection('users').doc(currentUser.uid).update({ photoURL: imageDataUrl });
 
-                    // Refresh header with latest data
+                    // Refresh header with latest data <<< MODIFICATION >>>
                     await fetchAndUpdateUserInfo(auth.currentUser);
-                    
+
                     // Show success message with clarification
                     const successMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p class="font-medium">Profile picture preview and storage updated successfully!</p></div>`;
                     const msgContainer = document.createElement('div');
@@ -162,7 +164,7 @@ export function showUserProfileDashboard() {
 
                 } catch (error) {
                     console.error("Error updating profile picture:", error);
-                    
+
                     // Revert preview image if update failed
                     if (previewImg && originalSrc) {
                         previewImg.src = originalSrc;
@@ -177,7 +179,7 @@ export function showUserProfileDashboard() {
                     } else if (error.message) {
                         errorMessage = error.message;
                     }
-                    
+
                     const errorMsgHtml = `<div class="toast-notification toast-error animate-fade-in"><p class="font-medium">${errorMessage}</p></div>`;
                     const msgContainer = document.createElement('div');
                     msgContainer.innerHTML = errorMsgHtml;
@@ -282,8 +284,10 @@ export async function updateUserProfile(event) {
         await Promise.all([authUpdatePromise, firestoreUpdatePromise]);
         console.log("Auth and Firestore display names updated.");
 
+        // Refresh header with latest data <<< MODIFICATION >>>
+        await fetchAndUpdateUserInfo(auth.currentUser);
+
         hideLoading();
-        await fetchAndUpdateUserInfo(auth.currentUser); // Refresh header with latest data
         // Update display name in the form header locally
         const nameHeader = document.getElementById('profile-display-name-header');
         if (nameHeader) nameHeader.textContent = newDisplayName;
@@ -304,4 +308,7 @@ export async function updateUserProfile(event) {
          setTimeout(() => { msgContainer.remove(); }, 6000);
     }
 }
+window.updateUserProfile = updateUserProfile; // Assign to window for form submit
+window.signOutUserWrapper = signOutUser; // Assign sign out to window
+
 // --- END OF FILE ui_user_profile.js ---

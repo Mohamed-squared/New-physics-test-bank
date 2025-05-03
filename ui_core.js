@@ -1,10 +1,10 @@
+// --- START OF FILE ui_core.js ---
 
-
-import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap } from './state.js'; // Added course state imports
-import { ADMIN_UID } from './config.js';
+import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap, setCurrentUser } from './state.js'; // Added setCurrentUser, course state imports
+import { ADMIN_UID, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import ADMIN_UID and DEFAULT_PROFILE_PIC_URL from config
 import { renderMathIn } from './utils.js';
 import { updateAdminPanelVisibility } from './script.js';
-import { DEFAULT_PROFILE_PIC_URL } from '../config.js';
+// Removed DEFAULT_PROFILE_PIC_URL import from '../config.js' as it's now imported from './config.js'
 import { sendPasswordReset } from './firebase_auth.js'; // Import password reset function
 
 // --- Basic UI Toggles & Updates ---
@@ -44,54 +44,77 @@ export function hideLoginUI() {
 
 // Fetch and update user info, including admin icon
 export async function fetchAndUpdateUserInfo(user) {
-     if (!user || !db) return;
+    if (!user || !db) return;
     const userDisplay = document.getElementById('user-display');
     const userSection = document.getElementById('user-section');
 
-    let displayName = 'User';
-    let photoURL = DEFAULT_PROFILE_PIC_URL; // Use default from config
+    let finalDisplayName = 'User';
+    let finalPhotoURL = DEFAULT_PROFILE_PIC_URL; // Use default from config
     let isCurrentUserAdmin = user.uid === ADMIN_UID; // Check if the logged-in user is admin
+    let userDataFromFirestore = null; // To store fetched Firestore data
 
     try {
+        console.log(`Fetching Firestore profile for user UID: ${user.uid}`);
         const userDoc = await db.collection('users').doc(user.uid).get();
         if (userDoc.exists) {
-            const userData = userDoc.data();
-            displayName = userData.displayName || user.displayName || user.email?.split('@')[0] || 'User';
-            // Use Firestore photoURL, fallback to Auth photoURL, then config default
-            photoURL = userData.photoURL || user.photoURL || DEFAULT_PROFILE_PIC_URL;
+            userDataFromFirestore = userDoc.data();
+            console.log("Firestore profile found, using Firestore data.");
+            // Prioritize Firestore data
+            finalDisplayName = userDataFromFirestore.displayName || user.displayName || user.email?.split('@')[0] || 'User';
+            finalPhotoURL = userDataFromFirestore.photoURL || user.photoURL || DEFAULT_PROFILE_PIC_URL;
         } else {
-             console.warn("No Firestore profile document found for user, using Auth data.");
-             displayName = user.displayName || user.email?.split('@')[0] || 'User';
-             photoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
+            console.warn("No Firestore profile document found for user, using Auth data as fallback.");
+            // Fallback to Auth data if Firestore doc doesn't exist
+            finalDisplayName = user.displayName || user.email?.split('@')[0] || 'User';
+            finalPhotoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
         }
     } catch (error) {
-        console.error("Error fetching user profile for UI:", error);
-        displayName = user.displayName || user.email?.split('@')[0] || 'User';
-        photoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
+        console.error("Error fetching user profile from Firestore, using Auth data as fallback:", error);
+        // Fallback to Auth data on Firestore error
+        finalDisplayName = user.displayName || user.email?.split('@')[0] || 'User';
+        finalPhotoURL = user.photoURL || DEFAULT_PROFILE_PIC_URL;
     }
 
+    // --- Create the updated user info object for central state ---
+    const updatedUserInfo = {
+        uid: user.uid,
+        email: user.email,
+        displayName: finalDisplayName,
+        photoURL: finalPhotoURL,
+        isAdmin: isCurrentUserAdmin,
+        // Include other relevant fields from Firestore if they exist
+        username: userDataFromFirestore?.username || null, // Example: add username
+        onboardingComplete: userDataFromFirestore?.onboardingComplete ?? false, // Example: add onboarding status
+        // Add any other critical user properties you store in Firestore users/{uid}
+    };
+
+    // --- Update the central currentUser state ---
+    console.log("Updating central currentUser state with:", updatedUserInfo);
+    setCurrentUser(updatedUserInfo); // <--- Update the state HERE
+
+    // --- Update the UI Display ---
     if (userDisplay) {
-         const img = document.createElement('img');
-         img.src = photoURL;
-         img.alt = "Profile";
-         img.className = "w-8 h-8 rounded-full mr-2 object-cover border-2 border-white dark:border-gray-700 shadow-sm";
-         img.onerror = () => { img.src = DEFAULT_PROFILE_PIC_URL; console.error('Error loading profile image:', photoURL); };
+        const img = document.createElement('img');
+        img.src = finalPhotoURL; // Use the determined finalPhotoURL
+        img.alt = "Profile";
+        img.className = "w-8 h-8 rounded-full mr-2 object-cover border-2 border-white dark:border-gray-700 shadow-sm";
+        img.onerror = () => { img.src = DEFAULT_PROFILE_PIC_URL; console.error('Error loading profile image:', finalPhotoURL); };
 
-         const nameSpan = document.createElement('span');
-         nameSpan.className = "text-sm font-medium text-gray-700 dark:text-gray-200 truncate hidden sm:inline";
-         nameSpan.title = displayName;
-         nameSpan.textContent = displayName;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = "text-sm font-medium text-gray-700 dark:text-gray-200 truncate hidden sm:inline";
+        nameSpan.title = finalDisplayName; // Use the determined finalDisplayName
+        nameSpan.textContent = finalDisplayName;
 
-         // Add Admin Icon
-         let adminIconHtml = '';
-         if (isCurrentUserAdmin) {
-              adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
-         }
-         nameSpan.innerHTML = nameSpan.textContent + adminIconHtml;
+        // Add Admin Icon
+        let adminIconHtml = '';
+        if (isCurrentUserAdmin) { // Use the calculated isCurrentUserAdmin
+            adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
+        }
+        nameSpan.innerHTML = nameSpan.textContent + adminIconHtml;
 
 
-         userDisplay.replaceChildren(img, nameSpan);
-         userSection?.classList.remove('hidden');
+        userDisplay.replaceChildren(img, nameSpan);
+        userSection?.classList.remove('hidden');
     }
 
     // Inbox check (Unchanged)
@@ -110,13 +133,14 @@ export async function fetchAndUpdateUserInfo(user) {
         }
     } catch(err) {
         console.error("Error fetching unread count:", err);
-         const unreadBadge = document.getElementById('inbox-unread-count');
-         if (unreadBadge) unreadBadge.classList.add('hidden');
-         // Also clear the notification dot on error
-         const inboxLink = document.getElementById('sidebar-inbox-link');
-         if (inboxLink) inboxLink.classList.remove('has-unread');
+        const unreadBadge = document.getElementById('inbox-unread-count');
+        if (unreadBadge) unreadBadge.classList.add('hidden');
+        // Also clear the notification dot on error
+        const inboxLink = document.getElementById('sidebar-inbox-link');
+        if (inboxLink) inboxLink.classList.remove('has-unread');
     }
 }
+
 
 export function clearUserInfoUI() {
     document.getElementById('user-display')?.replaceChildren();
@@ -130,7 +154,7 @@ export function updateSubjectInfo() {
      const infoEl = document.getElementById('subject-info');
     if (!infoEl) return;
 
-    const stateCurrentUser = currentUser;
+    const stateCurrentUser = currentUser; // Use the central state variable
 
     if (currentSubject) {
         const chapterCount = (currentSubject.chapters && typeof currentSubject.chapters === 'object')
@@ -141,7 +165,7 @@ export function updateSubjectInfo() {
              <p class="font-semibold text-base text-gray-700 dark:text-gray-200">${currentSubject.name || 'Unnamed Subject'}</p>
              <p class="text-xs text-gray-500 dark:text-gray-400">${chapterCount} Chapters with Questions</p>
          </div>`;
-    } else if (stateCurrentUser) {
+    } else if (stateCurrentUser) { // Check if user is logged in (using central state)
          infoEl.innerHTML = `<p class="text-sm text-warning font-medium text-center md:text-left">No Subject Selected</p>`;
     } else {
         infoEl.replaceChildren();
@@ -303,3 +327,5 @@ function showSignupFormOnly() {
     }
 }
 window.showSignupFormOnly = showSignupFormOnly; // Assign to window
+
+// --- END OF FILE ui_core.js ---
