@@ -1268,32 +1268,62 @@ details > div { /* Content inside details */
     #timer { font-size: 1rem; padding: 0.2rem 0.5rem; }
 }
 
-/* --- Cropper.js Circular Preview --- */
-.cropper-view-box,
-.cropper-face {
-    border-radius: 50% !important; /* Ensure override */
-    /* Outline and shadow inherited or explicitly set if needed */
-    /* Example outline color match */
-    /*outline-color: rgba(59, 130, 246, 0.75) !important;*/ /* CropperJS sets its own outline */
-    overflow: hidden !important; /* Clip image corners */
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.7) !important; /* Optional white separation */
-    outline: none !important; /* Remove any default square outline */
+/* --- Cropper.js Circular Styling --- */
+
+/* Ensure the container Cropper generates fills the wrapper */
+#cropper-wrapper .cropper-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
 }
-/* Hide the dashed border of the crop box itself */
-.cropper-dashed {
-    border: 0 !important;
+
+/* Style the preview box (view-box) to be circular */
+.cropper-view-box {
+    border-radius: 50%;
+    outline: none;
+     /* Use box-shadow to create the overlay *outside* the circle */
+     /* Increase the spread radius (last value) significantly */
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    /* overflow: hidden is handled by cropper defaults, but ensure it if needed */
+     overflow: hidden;
 }
-/* Hide the lines within the crop box */
+
+/* Optional: Style the draggable crop box overlay (usually semi-transparent) */
+.cropper-crop-box {
+     /* Keep default cropper styles, potentially adjust outline if needed */
+     /* outline: 1px solid #39f; */
+     border-radius: 50%; /* Match the view-box */
+}
+
+/* Hide the default rectangular face/drag elements if they appear */
+.cropper-face,
+.cropper-dashed,
+.cropper-center {
+    display: none !important;
+}
+
+/* Ensure drag lines are also hidden */
 .cropper-line {
-    background-color: transparent !important;
+     background-color: transparent !important;
 }
-/* Optional: Style the crop handles if desired */
+
+/* Optional: Style the handles if desired (might need adjustments) */
 .cropper-point {
-    height: 8px !important;
-    width: 8px !important;
-    opacity: 0.85 !important; /* Slightly increase visibility */
-    background-color: rgba(59, 130, 246, 0.95) !important; /* Match outline color, increased alpha */
+    background-color: #FFF; /* White handles might look better */
+    opacity: 0.75;
+    height: 6px;
+    width: 6px;
+    border-radius: 50%;
 }
+/* Hide corner handles for a cleaner circle look */
+.cropper-point.point-ne,
+.cropper-point.point-nw,
+.cropper-point.point-se,
+.cropper-point.point-sw {
+    /* display: none; */ /* Uncomment this to hide corner handles */
+     opacity: 0.25; /* Or just make them less visible */
+}
+
 
 /* Inbox Notification Dot */
 .sidebar-link.has-unread::after {

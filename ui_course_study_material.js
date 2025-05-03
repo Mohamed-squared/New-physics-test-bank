@@ -20,6 +20,8 @@ import { showCurrentCourseDashboard } from './ui_course_dashboard.js';
 import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
 // MODIFIED: Import notes functions - Added setLastViewedChapterForNotes
 import { showNotesDocumentsPanel, setLastViewedChapterForNotes } from './ui_notes_documents.js';
+// MODIFIED: Import generateStructuredFilename from filename_utils.js
+import { generateStructuredFilename } from './filename_utils.js';
 
 
 // --- Module State ---
@@ -64,14 +66,19 @@ let currentTranscriptionExplanationHistory = [];
 
 // --- Helper Functions ---
 
-// Function to get the expected SRT filename from a video title (preserves spaces)
+// MODIFIED: Function to get the expected SRT filename using generateStructuredFilename
 // *** EXPORTED TO FIX ERROR ***
 export function getSrtFilenameFromTitle(title) {
      if (!title) return null;
-     // Keep spaces, replace other problematic characters for filenames
-     const cleanedTitle = title.replace(/[<>:"\/\\|?*]+/g, '_').trim();
-     // Ensure it ends with .srt, handle cases where title might already have .srt
-     return cleanedTitle.endsWith('.srt') ? cleanedTitle : `${cleanedTitle}.srt`;
+     // Call the dedicated function to generate the base filename
+     const baseFilename = generateStructuredFilename(title);
+     // Check if the structured generation was successful
+     if (!baseFilename) {
+          console.warn(`Could not generate structured filename for title: "${title}". SRT path generation aborted.`);
+          return null; // Return null if base generation failed
+     }
+     // Append .srt to the valid base filename
+     return `${baseFilename}.srt`;
 }
 
 // Function to fetch and parse SRT file with timestamps
@@ -1471,8 +1478,11 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
      const totalVideos = chapterLectureVideos.length;
      currentVideoIndex = initialVideoIndex;
      currentTranscriptionData = []; // Reset transcription
+
+     // MODIFIED: Use the refactored getSrtFilenameFromTitle
      const srtFilename = currentVideo ? getSrtFilenameFromTitle(currentVideo.title) : null;
      const srtPath = srtFilename ? `${COURSE_TRANSCRIPTION_BASE_PATH}${srtFilename}` : null;
+
      const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
      const progress = userCourseProgressMap.get(courseId);
      const isViewer = progress?.enrollmentMode === 'viewer';
@@ -1481,6 +1491,11 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
      if (srtPath) {
         // *** MODIFIED: Use fetchAndParseSrt instead of fetchSrtText ***
         currentTranscriptionData = await fetchAndParseSrt(srtPath);
+        if(currentTranscriptionData.length === 0) {
+            console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path and file content.`);
+        }
+     } else if (currentVideo) {
+         console.warn(`Could not determine SRT path for video: ${currentVideo.title}. Filename generation might have failed.`);
      }
      await fetchVideoDurationsIfNeeded(videoIdsForChapter);
      // --- End Fetching ---
@@ -1505,14 +1520,18 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                  <div class="flex items-center justify-center h-full"><p class="text-gray-400">Loading video...</p></div>
              </div>
         </div>` : '<p class="text-muted text-center">No primary video available for this chapter part.</p>';
-     const transcriptionHtml = srtPath ? `
+
+     // Modified Transcription HTML to provide better feedback if SRT path exists but data is empty
+     const transcriptionHtml = currentVideo ? `
         <div class="mt-4 border-t pt-3 dark:border-gray-700">
              <h4 class="text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Transcription</h4>
              <div id="transcription-content" class="text-xs leading-relaxed max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-600 scroll-smooth">
                  <!-- Transcription lines will be rendered here by JS -->
+                 ${!srtPath ? '<p class="text-sm text-muted italic p-1">No transcription file determined for this video.</p>' : ''}
              </div>
-              <button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>
+             ${srtPath ? `<button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>` : ''}
          </div>` : '';
+
      const pdfHtml = pdfPath ? `
         <div class="mb-4 border-t pt-4 dark:border-gray-700">
             <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
@@ -1591,7 +1610,8 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
         ${aiExplanationHtml}
      `;
      if (videoId) createYTPlayer(videoContainerId, videoId);
-     if (srtPath) renderTranscriptionLines(); // Render initial transcription state
+     // Only call renderTranscriptionLines if we expect data or need to show the 'no transcription' message based on srtPath attempt
+     if (currentVideo) renderTranscriptionLines(); // Render initial transcription state (will show msg if no data/path)
      if (pdfPath) await initPdfViewer(pdfPath); // Initialize PDF viewer
      highlightTranscriptionLine(); // Initial highlight attempt
      checkAndMarkChapterStudied(courseId, chapterNum); // Check status on load

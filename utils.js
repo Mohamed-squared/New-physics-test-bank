@@ -155,9 +155,9 @@ export async function renderMathIn(element) {
 export function escapeHtml(unsafe) {
     if (unsafe === null || unsafe === undefined) return '';
     return String(unsafe)
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
+         .replace(/&/g, "&")
+         .replace(/</g, "<")
+         .replace(/>/g, ">")
          .replace(/"/g, "&quot;")
          .replace(/'/g, "&#039;");
 }

@@ -93,6 +93,13 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
     }
 
+    // --- Admin Tasks: Only Admin can manage --- <--- ADDED RULE BLOCK
+    match /adminTasks/{taskId} {
+      // Admin can perform all actions (read, write, create, delete)
+      allow read, write, create, delete: if request.auth != null && isAdmin();
+      // No other users should have access
+    }
+
     // --- Deprecated Global Caches: Read allowed, Write blocked (except Admin) ---
     match /globalFormulaSheets/{sheetId} {
         allow read: if true;

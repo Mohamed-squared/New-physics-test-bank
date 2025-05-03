@@ -32,34 +32,43 @@ function handleImageLoad() {
 
     // Delay slightly
     setTimeout(() => {
-        if (!imageToCropElement || !imageToCropElement.parentNode) {
-            console.warn("Image element detached before Cropper initialization.");
-            return; // Element might have been removed
+        if (!imageToCropElement || !imageToCropElement.parentNode || imageToCropElement.naturalWidth === 0) {
+            console.warn("Image element detached or has no dimensions before Cropper initialization.");
+            // Optionally show an error message if the image failed to load properly visually
+            if (!imageLoadSuccess) { // Only show error if onload never succeeded for this attempt
+                alert("Failed to load image dimensions. Please try another image.");
+                hideCropModal();
+            }
+            return; // Element might have been removed or failed to render
         }
         try {
             const cropperOptions = {
                 aspectRatio: 1 / 1,
-                viewMode: 1,
-                dragMode: 'move',
-                autoCropArea: 0.85,
-                responsive: true,
-                restore: false,
-                checkOrientation: false,
-                modal: true,
-                guides: true, // Keep guides, often helpful
-                center: true,
-                highlight: false,
-                cropBoxMovable: true,
-                cropBoxResizable: false, // Keep false for circle stability
+                viewMode: 1,        // Restrict crop box to canvas
+                dragMode: 'move',     // Allow moving the image behind the crop box
+                autoCropArea: 0.85,   // Initial crop area size (percentage)
+                responsive: true,     // Resize cropper with window
+                restore: false,       // Don't restore previous crop on init
+                checkOrientation: false, // Usually handled by browser
+                modal: true,          // Dark overlay background
+                guides: true,         // Show dashed lines in crop box
+                center: true,         // Center the crop box
+                highlight: false,       // Don't highlight the crop box area
+                cropBoxMovable: true,  // Allow moving the crop box
+                cropBoxResizable: false, // **Crucial for circle stability** - Prevent resizing
                 toggleDragModeOnDblclick: false,
                 ready() {
                     console.log("Cropper ready.");
                     if (imageToCropElement) {
                          imageToCropElement.style.opacity = '1'; // Show image
+                         // Add a class to the container for CSS targeting AFTER cropper is ready
+                         imageToCropElement.parentElement.querySelector('.cropper-container')?.classList.add('cropper-ready-container');
+
                     }
                 }
             };
-            console.log("Initializing Cropper with options:", cropperOptions); // Log options
+            console.log("Initializing Cropper with options:", cropperOptions);
+            // *** Ensure Cropper targets the IMG element ***
             cropper = new Cropper(imageToCropElement, cropperOptions);
             console.log("Cropper initialized.");
         } catch (e) {
@@ -67,7 +76,7 @@ function handleImageLoad() {
             alert("Could not initialize image cropper. The image might be invalid or unsupported.");
             // Don't hide modal automatically here
         }
-    }, 50);
+    }, 50); // Keep a small delay
 }
 
 function handleImageError() {
@@ -110,7 +119,8 @@ function createModal() {
         <div id="crop-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-[60] hidden p-4" aria-labelledby="crop-modal-title" role="dialog" aria-modal="true">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-md transform transition-all overflow-hidden">
                 <h3 id="crop-modal-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Crop Profile Picture</h3>
-                <div class="max-h-[60vh] mb-4 overflow-hidden bg-gray-200 dark:bg-gray-700 flex justify-center items-center min-h-[200px]">
+                <!-- *** MODIFIED: Simplified wrapper div *** -->
+                <div id="cropper-wrapper" class="max-h-[60vh] mb-4 min-h-[200px] bg-gray-200 dark:bg-gray-700">
                     <img id="image-to-crop" src="" alt="Image to crop" style="display: block; max-width: 100%; opacity: 0;">
                 </div>
                 <div class="flex justify-end space-x-3">
@@ -149,7 +159,7 @@ export function showCropModal(imageSrc, callback) {
     }
 
     console.log("Showing crop modal for:", imageSrc.substring(0, 50) + "...");
-    imageToCropElement.style.opacity = '0';
+    imageToCropElement.style.opacity = '0'; // Keep image hidden initially
 
     // Remove previous listeners before adding new ones
     imageToCropElement.removeEventListener('load', handleImageLoad);

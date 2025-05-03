@@ -1,13 +1,13 @@
+
 // --- START OF FILE ui_admin_dashboard.js ---
 
 // ui_admin_dashboard.js
 
 import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added currentUser
-// MODIFIED: Added DEFAULT_PROFILE_PIC_URL import
 import { ADMIN_UID, YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import YouTube API Key and DEFAULT_PROFILE_PIC_URL
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
-// MODIFIED: Removed deleteFeedbackMessage from this import
+// MODIFIED: Added imports for Admin Tasks
 import {
     sendAdminReply,
     updateCourseStatusForUser,
@@ -18,7 +18,11 @@ import {
     deleteUserChapterSummary,
     deleteAllFeedbackMessages,
     deleteAllExamIssues,
-    adminUpdateUsername // <-- Import new function
+    adminUpdateUsername,
+    fetchAdminTasks,      // <-- Import new function
+    addAdminTask,         // <-- Import new function
+    updateAdminTaskStatus,// <-- Import new function
+    deleteAdminTask       // <-- Import new function
 } from './firebase_firestore.js'; // Import badge handlers & course definition update
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm } from './ui_courses.js';
@@ -109,6 +113,18 @@ export function showAdminDashboard() {
                     </div>
                 </div>
 
+                 <!-- NEW: Admin Tasks Card -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Errors / Features To Fix (Admin Tasks)</h3>
+                    <div class="flex gap-4 mb-4">
+                        <input type="text" id="admin-new-task-input" placeholder="Enter new task description..." class="flex-grow text-sm">
+                        <button onclick="window.handleAddAdminTask()" class="btn-primary-small text-xs flex-shrink-0">Add Task</button>
+                    </div>
+                    <div id="admin-tasks-area" class="max-h-96 overflow-y-auto pr-2">
+                        <p class="text-muted text-sm">Loading tasks...</p>
+                    </div>
+                </div>
+
                 <!-- Playlist Assignment Card -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Playlist & Chapter Assignment</h3>
@@ -160,6 +176,7 @@ export function showAdminDashboard() {
     loadFeedbackForAdmin();
     loadCoursesForAdmin();
     populateAdminCourseSelect(); // Populate course dropdown
+    loadAdminTasks(); // <<< Load Admin Tasks
 }
 
 // --- Feedback ---
@@ -485,11 +502,13 @@ export async function handleAdminMarkCourseComplete(userId, courseId) {
          const searchInput = document.getElementById('admin-user-search-courses');
          const searchTerm = searchInput?.value.trim();
          if (searchTerm) {
-             const userDoc = await db.collection('users').doc(userId).get();
-             const userEmail = userDoc.data()?.email?.toLowerCase();
-             if (searchTerm === userId || (userEmail && searchTerm.toLowerCase() === userEmail)) {
-                 loadUserCoursesForAdmin();
-             }
+             try {
+                const userDoc = await db.collection('users').doc(userId).get();
+                const userEmail = userDoc.data()?.email?.toLowerCase();
+                if (searchTerm === userId || (userEmail && searchTerm.toLowerCase() === userEmail)) {
+                    loadUserCoursesForAdmin();
+                }
+            } catch (e) { console.error("Error fetching user doc for course reload:", e); }
          }
      }
 }
@@ -613,6 +632,108 @@ export function confirmRemoveBadge(userId, courseId) {
      }
 }
 window.confirmRemoveBadge = confirmRemoveBadge; // Assign to window
+
+// --- Admin Tasks Management ---
+async function loadAdminTasks() {
+    const tasksArea = document.getElementById('admin-tasks-area');
+    if (!tasksArea) return;
+    tasksArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
+
+    try {
+        const tasks = await fetchAdminTasks(); // Use imported function
+
+        if (tasks.length === 0) {
+            tasksArea.innerHTML = '<p class="text-sm text-muted">No admin tasks found.</p>';
+            return;
+        }
+
+        let tasksHtml = '<ul class="space-y-2 list-none p-0">';
+        tasks.forEach(task => {
+            const taskId = task.id;
+            const taskText = escapeHtml(task.text);
+            const isDone = task.status === 'done';
+            const dateStr = task.createdAt ? task.createdAt.toLocaleDateString() : 'N/A';
+            const statusClass = isDone ? 'bg-green-100 dark:bg-green-900/50 line-through text-muted' : 'bg-yellow-50 dark:bg-yellow-900/50';
+            const buttonIcon = isDone ?
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>' : // Checked circle
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Empty circle outline
+
+            tasksHtml += `
+                <li class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 ${statusClass}">
+                    <button
+                        onclick="window.handleToggleAdminTask('${taskId}', ${isDone})"
+                        class="btn-icon flex-shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="${isDone ? 'Mark as Pending' : 'Mark as Done'}">
+                        ${buttonIcon}
+                    </button>
+                    <span class="text-sm flex-grow ${isDone ? 'opacity-70' : ''}">${taskText}</span>
+                    <span class="text-xs text-muted flex-shrink-0 pr-2">${dateStr}</span>
+                    <button
+                        onclick="window.handleDeleteAdminTask('${taskId}')"
+                        class="btn-danger-small text-xs flex-shrink-0 ${!isDone ? 'opacity-50 cursor-not-allowed' : ''}"
+                        title="Delete Task (only if done)"
+                        ${!isDone ? 'disabled' : ''}>
+                        Delete
+                    </button>
+                </li>
+            `;
+        });
+        tasksHtml += '</ul>';
+        tasksArea.innerHTML = tasksHtml;
+
+    } catch (error) {
+        console.error("Error loading admin tasks:", error);
+        tasksArea.innerHTML = `<p class="text-red-500 text-sm">Error loading tasks: ${error.message}</p>`;
+    }
+}
+
+async function handleAddAdminTask() {
+    const input = document.getElementById('admin-new-task-input');
+    if (!input) return;
+    const taskText = input.value.trim();
+    if (!taskText) {
+        alert("Please enter task text.");
+        input.focus();
+        return;
+    }
+
+    showLoading("Adding task...");
+    const newTaskId = await addAdminTask(taskText); // Use imported function
+    hideLoading();
+
+    if (newTaskId) {
+        input.value = ''; // Clear input
+        loadAdminTasks(); // Refresh list
+    }
+    // Error alert is handled within addAdminTask in firebase_firestore.js
+}
+
+async function handleToggleAdminTask(taskId, isCurrentlyDone) {
+    const newStatus = isCurrentlyDone ? 'pending' : 'done';
+    showLoading(`Updating task status to ${newStatus}...`);
+    const success = await updateAdminTaskStatus(taskId, newStatus); // Use imported function
+    hideLoading();
+    if (success) {
+        loadAdminTasks(); // Refresh list
+    }
+    // Error alert is handled within updateAdminTaskStatus in firebase_firestore.js
+}
+
+async function handleDeleteAdminTask(taskId) {
+    // Optional confirmation
+    if (!confirm(`Are you sure you want to delete this completed task (ID: ${taskId})?`)) {
+        return;
+    }
+
+    showLoading("Deleting task...");
+    const success = await deleteAdminTask(taskId); // Use imported function
+    hideLoading();
+    if (success) {
+        loadAdminTasks(); // Refresh list
+    }
+    // Error alert (e.g., trying to delete pending) is handled within deleteAdminTask in firebase_firestore.js
+}
+
 
 // --- Playlist Management ---
 function populateAdminCourseSelect() {
@@ -1508,5 +1629,37 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
     }
 }
 
+
+// Assign ALL handlers to window scope
+window.showAdminDashboard = showAdminDashboard;
+window.loadFeedbackForAdmin = loadFeedbackForAdmin;
+window.promptAdminReply = promptAdminReply;
+window.confirmDeleteItem = confirmDeleteItem;
+window.loadCoursesForAdmin = loadCoursesForAdmin;
+window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
+window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
+window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
+window.promptAddBadge = promptAddBadge;
+window.confirmRemoveBadge = confirmRemoveBadge;
+window.loadPlaylistForAdmin = loadPlaylistForAdmin;
+window.toggleSelectAllVideos = toggleSelectAllVideos;
+window.toggleVideoSelection = toggleVideoSelection;
+window.handleAssignVideoToChapter = handleAssignVideoToChapter;
+window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
+window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin;
+window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin;
+window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
+window.listAllUsersAdmin = listAllUsersAdmin;
+window.viewUserDetailsAdmin = viewUserDetailsAdmin;
+window.promptAdminChangeUsername = promptAdminChangeUsername;
+// Assign external functions used in onclick attributes
+window.handleCourseApproval = handleCourseApproval;
+window.showCourseDetails = showCourseDetails;
+window.showEditCourseForm = showEditCourseForm;
+// Assign new task handlers to window scope
+// window.loadAdminTasks = loadAdminTasks; // Optional: Not usually called directly from HTML
+window.handleAddAdminTask = handleAddAdminTask;
+window.handleToggleAdminTask = handleToggleAdminTask;
+window.handleDeleteAdminTask = handleDeleteAdminTask;
 
 // --- END OF FILE ui_admin_dashboard.js ---

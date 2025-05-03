@@ -16,6 +16,12 @@ import { showOnboardingUI } from './ui_onboarding.js';
 // *** MODIFIED: Import calculateTotalMark, getLetterGrade ***
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
 
+// --- Constants ---
+const userFormulaSheetSubCollection = "userFormulaSheets";
+const userSummarySubCollection = "userChapterSummaries";
+const sharedNotesCollection = "sharedCourseNotes";
+const adminTasksCollection = "adminTasks"; // NEW: Collection name for admin tasks
+
 // --- Utilities ---
 /**
  * Fetches the markdown content for a given subject.
@@ -1004,9 +1010,6 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
 // --- User-Specific Shared Data (Formula Sheets, Summaries, Notes) ---
 
 // USER FORMULA SHEETS
-// Stored in users/{userId}/userFormulaSheets/{courseId}_ch{chapterNum}
-const userFormulaSheetSubCollection = "userFormulaSheets";
-
 export async function saveUserFormulaSheet(userId, courseId, chapterNum, htmlContent) {
     if (!db || !userId) {
         console.error("Cannot save formula sheet: DB or userId missing");
@@ -1058,9 +1061,6 @@ export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
 }
 
 // USER CHAPTER SUMMARIES
-// Stored in users/{userId}/userChapterSummaries/{courseId}_ch{chapterNum}
-const userSummarySubCollection = "userChapterSummaries";
-
 export async function saveUserChapterSummary(userId, courseId, chapterNum, htmlContent) {
     if (!db || !userId) {
         console.error("Cannot save chapter summary: DB or userId missing");
@@ -1158,8 +1158,6 @@ export async function loadUserNotes(userId, courseId, chapterNum) {
 }
 
 // SHARED NOTES (Stored in a separate global collection)
-const sharedNotesCollection = "sharedCourseNotes";
-
 export async function saveSharedNote(courseId, chapterNum, noteData, user) {
      if (!db || !user) return false;
      // Consider a more robust ID generation if needed
@@ -1482,6 +1480,151 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
     } catch (error) {
         console.error(`Error deleting course activity progress:`, error);
         alert(`Error deleting progress: ${error.message}`); // Show error to admin
+        return false;
+    }
+}
+
+// --- NEW: Admin Tasks Management ---
+
+/**
+ * Fetches all tasks from the adminTasks collection, ordered by creation date.
+ * @returns {Promise<Array<object>>} - An array of task objects { id, text, status, createdAt }.
+ */
+export async function fetchAdminTasks() {
+    if (!db) {
+        console.error("Firestore DB not initialized");
+        return [];
+    }
+    console.log("Fetching admin tasks...");
+    try {
+        const snapshot = await db.collection(adminTasksCollection)
+                           .orderBy('createdAt', 'desc') // Show newest first
+                           .get();
+        const tasks = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            tasks.push({
+                id: doc.id,
+                text: data.text,
+                status: data.status,
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null // Convert timestamp
+            });
+        });
+        console.log(`Successfully fetched ${tasks.length} admin tasks.`);
+        return tasks;
+    } catch (error) {
+        console.error("Error fetching admin tasks:", error);
+        return []; // Return empty array on error
+    }
+}
+
+/**
+ * Adds a new task to the adminTasks collection. Requires admin privileges.
+ * @param {string} taskText - The text content of the task.
+ * @returns {Promise<string|null>} - The ID of the newly created task, or null on failure.
+ */
+export async function addAdminTask(taskText) {
+    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Admin privileges required to add task.");
+        alert("Permission denied: Admin privileges required.");
+        return null;
+    }
+    if (!taskText || typeof taskText !== 'string' || taskText.trim().length === 0) {
+        console.error("Cannot add task: Task text is empty or invalid.");
+        alert("Task text cannot be empty.");
+        return null;
+    }
+
+    console.log("Admin adding new task:", taskText);
+    try {
+        const docRef = await db.collection(adminTasksCollection).add({
+            text: taskText.trim(),
+            status: 'pending', // Default status
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`Successfully added admin task with ID: ${docRef.id}`);
+        return docRef.id;
+    } catch (error) {
+        console.error("Error adding admin task:", error);
+        alert(`Failed to add task: ${error.message}`);
+        return null;
+    }
+}
+
+/**
+ * Updates the status of an existing admin task. Requires admin privileges.
+ * @param {string} taskId - The ID of the task document to update.
+ * @param {'pending' | 'done'} newStatus - The new status for the task.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
+export async function updateAdminTaskStatus(taskId, newStatus) {
+    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Admin privileges required to update task status.");
+        alert("Permission denied: Admin privileges required.");
+        return false;
+    }
+    if (!taskId || !newStatus || (newStatus !== 'pending' && newStatus !== 'done')) {
+        console.error("Invalid arguments for updateAdminTaskStatus. TaskId:", taskId, "NewStatus:", newStatus);
+        alert("Internal Error: Invalid data for task status update.");
+        return false;
+    }
+
+    console.log(`Admin updating task ${taskId} status to: ${newStatus}`);
+    const taskRef = db.collection(adminTasksCollection).doc(taskId);
+    try {
+        await taskRef.update({ status: newStatus });
+        console.log(`Successfully updated status for admin task ${taskId}.`);
+        return true;
+    } catch (error) {
+        console.error(`Error updating status for admin task ${taskId}:`, error);
+        alert(`Failed to update task status: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * Deletes an admin task document, *only if* its status is 'done'. Requires admin privileges.
+ * @param {string} taskId - The ID of the task document to delete.
+ * @returns {Promise<boolean>} - True on success, false on failure or if status is not 'done'.
+ */
+export async function deleteAdminTask(taskId) {
+    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Admin privileges required to delete task.");
+        alert("Permission denied: Admin privileges required.");
+        return false;
+    }
+    if (!taskId) {
+        console.error("Cannot delete task: Task ID is missing.");
+        alert("Internal Error: Task ID missing for deletion.");
+        return false;
+    }
+
+    console.log(`Admin attempting to delete task ${taskId}`);
+    const taskRef = db.collection(adminTasksCollection).doc(taskId);
+    try {
+        // Fetch the document first to check its status
+        const docSnap = await taskRef.get();
+
+        if (!docSnap.exists) {
+            console.warn(`Task ${taskId} not found for deletion.`);
+            alert("Task not found.");
+            return false;
+        }
+
+        const taskData = docSnap.data();
+        if (taskData.status !== 'done') {
+            console.warn(`Cannot delete task ${taskId} because its status is '${taskData.status}'. Only 'done' tasks can be deleted.`);
+            alert("Cannot delete task: Task must be marked as 'done' first.");
+            return false;
+        }
+
+        // Status is 'done', proceed with deletion
+        await taskRef.delete();
+        console.log(`Successfully deleted admin task ${taskId} (status was 'done').`);
+        return true;
+    } catch (error) {
+        console.error(`Error deleting admin task ${taskId}:`, error);
+        alert(`Failed to delete task: ${error.message}`);
         return false;
     }
 }
