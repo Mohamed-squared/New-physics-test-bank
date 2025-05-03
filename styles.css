@@ -1,3 +1,4 @@
+/* === styles.css === */
 /* ==========================================================================
    Professional TestGen Pro Styles - styles.css
    ========================================================================== */
@@ -1144,12 +1145,63 @@ input[type="radio"]:checked::before {
 canvas { max-width: 100%; height: auto !important; display: block; }
 
 /* Custom Scrollbar (Subtle) */
-body::-webkit-scrollbar, main::-webkit-scrollbar, aside nav::-webkit-scrollbar, .overflow-y-auto::-webkit-scrollbar { width: 8px; height: 8px; }
-body::-webkit-scrollbar-track, main::-webkit-scrollbar-track, aside nav::-webkit-scrollbar-track, .overflow-y-auto::-webkit-scrollbar-track { background: transparent; }
-body::-webkit-scrollbar-thumb, main::-webkit-scrollbar-thumb, aside nav::-webkit-scrollbar-thumb, .overflow-y-auto::-webkit-scrollbar-thumb { background: var(--color-gray-300); border-radius: 4px; border: 2px solid transparent; background-clip: padding-box; }
-body::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover, aside nav::-webkit-scrollbar-thumb:hover, .overflow-y-auto::-webkit-scrollbar-thumb:hover { background: var(--color-gray-400); }
-.dark body::-webkit-scrollbar-thumb, .dark main::-webkit-scrollbar-thumb, .dark aside nav::-webkit-scrollbar-thumb, .dark .overflow-y-auto::-webkit-scrollbar-thumb { background: var(--color-gray-600); }
-.dark body::-webkit-scrollbar-thumb:hover, .dark main::-webkit-scrollbar-thumb:hover, .dark aside nav::-webkit-scrollbar-thumb:hover, .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover { background: var(--color-gray-500); }
+/* Generic scrollbar for common elements */
+body::-webkit-scrollbar,
+main::-webkit-scrollbar,
+aside nav::-webkit-scrollbar,
+.overflow-y-auto::-webkit-scrollbar,
+#global-chat-content::-webkit-scrollbar { /* Added chat content */
+    width: 8px;
+    height: 8px;
+}
+
+/* Track style */
+body::-webkit-scrollbar-track,
+main::-webkit-scrollbar-track,
+aside nav::-webkit-scrollbar-track,
+.overflow-y-auto::-webkit-scrollbar-track,
+#global-chat-content::-webkit-scrollbar-track { /* Added chat content */
+    background: transparent;
+}
+
+/* Thumb style */
+body::-webkit-scrollbar-thumb,
+main::-webkit-scrollbar-thumb,
+aside nav::-webkit-scrollbar-thumb,
+.overflow-y-auto::-webkit-scrollbar-thumb,
+#global-chat-content::-webkit-scrollbar-thumb { /* Added chat content */
+    background: var(--color-gray-300);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+/* Thumb hover style */
+body::-webkit-scrollbar-thumb:hover,
+main::-webkit-scrollbar-thumb:hover,
+aside nav::-webkit-scrollbar-thumb:hover,
+.overflow-y-auto::-webkit-scrollbar-thumb:hover,
+#global-chat-content::-webkit-scrollbar-thumb:hover { /* Added chat content */
+    background: var(--color-gray-400);
+}
+
+/* Dark mode thumb style */
+.dark body::-webkit-scrollbar-thumb,
+.dark main::-webkit-scrollbar-thumb,
+.dark aside nav::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb,
+.dark #global-chat-content::-webkit-scrollbar-thumb { /* Added chat content */
+    background: var(--color-gray-600);
+}
+
+/* Dark mode thumb hover style */
+.dark body::-webkit-scrollbar-thumb:hover,
+.dark main::-webkit-scrollbar-thumb:hover,
+.dark aside nav::-webkit-scrollbar-thumb:hover,
+.dark .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.dark #global-chat-content::-webkit-scrollbar-thumb:hover { /* Added chat content */
+    background: var(--color-gray-500);
+}
 
 /* Fade transition */
 .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -1325,7 +1377,7 @@ details > div { /* Content inside details */
 }
 
 
-/* Inbox Notification Dot */
+/* Inbox Notification Dot (Original - for reference or other uses) */
 .sidebar-link.has-unread::after {
     content: '';
     display: inline-block;
@@ -1340,4 +1392,57 @@ details > div { /* Content inside details */
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
+}
+
+/* --- NEW: Chat Mention Styles --- */
+.mention {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+    font-weight: 500;
+    padding: 0.1em 0.3em;
+    border-radius: var(--border-radius-sm);
+    cursor: default; /* Indicate it's not a link */
+}
+.dark .mention {
+    background-color: var(--color-primary-800);
+    color: var(--color-primary-200);
+}
+
+.mention-everyone {
+    background-color: var(--color-warning-100);
+    color: var(--color-warning-700);
+    font-weight: 600;
+}
+.dark .mention-everyone {
+    background-color: var(--color-warning-700);
+    color: var(--color-warning-100);
+}
+
+.mention-me {
+    background-color: var(--color-success-100);
+    color: var(--color-success-700);
+    font-weight: 600;
+    /* Optional: Add a subtle border or glow */
+    /* box-shadow: 0 0 0 1px var(--color-success-300); */
+}
+.dark .mention-me {
+    background-color: var(--color-success-700);
+    color: var(--color-success-100);
+     /* box-shadow: 0 0 0 1px var(--color-success-500); */
+}
+
+/* --- NEW: Sidebar Mention Notification Style --- */
+.sidebar-link.has-unread-mention {
+    font-weight: 600; /* Make text bolder */
+    color: var(--color-warning-600); /* Use a warning color */
+}
+.dark .sidebar-link.has-unread-mention {
+    color: var(--color-warning-400);
+}
+/* Optional: Style the icon too */
+.sidebar-link.has-unread-mention svg {
+    color: var(--color-warning-500);
+}
+.dark .sidebar-link.has-unread-mention svg {
+    color: var(--color-warning-400);
 }

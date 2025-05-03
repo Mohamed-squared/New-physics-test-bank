@@ -90,10 +90,15 @@ service cloud.firestore {
                        request.resource.data.keys().hasOnly([
                          'name', 'description', 'majorTag', 'subjectTag', 'youtubePlaylistUrls', // User fields
                          'creatorUid', 'creatorName', 'createdAt', 'status', // System/Required fields
-                         'reportedBy', 'reportReason' // Fields needed for reporting init
+                         'reportedBy', 'reportReason', 'totalChapters', 'chapters', // Added chapters/totalChapters on create for Admin
+                         'relatedSubjectId', 'pdfPathPattern', 'transcriptionPathPattern', 'chapterResources' // Admin only fields
                        ]) &&
                        request.resource.data.creatorUid == request.auth.uid && // Creator must be current user
-                       request.resource.data.status == 'pending'; // Must start as pending
+                       ( // Status logic depends on user role
+                         (request.resource.data.status == 'pending' && !isAdmin()) || // Non-admin submits as pending
+                         (request.resource.data.status == 'approved' && isAdmin()) // Admin submits as approved
+                       );
+
 
       // Allow Admins to UPDATE any field (including status, technical details)
       allow update: if request.auth != null && isAdmin();
@@ -118,12 +123,20 @@ service cloud.firestore {
 
     // --- Global Chat Messages ---
     match /globalChatMessages/{messageId} {
-      // *** MODIFIED RULE *** Logged-in users can read and create messages
-      allow read, create: if request.auth != null && request.auth.uid != null; // Added explicit uid check
+      // Logged-in users can read and create messages
+      allow read, create: if request.auth != null && request.auth.uid != null;
       // Only the message owner OR an admin can delete
       allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || isAdmin());
-      // Prevent updates
-      allow update: if false;
+      // *** MODIFIED: Allow Admin to update ONLY the isPinned field ***
+      allow update: if request.auth != null && isAdmin() &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned']);
+    }
+
+    // --- Settings Collection ---
+    // *** NEW: Rule for chat settings ***
+    match /settings/chat {
+      // Only Admin can read or write the chat settings document
+      allow read, write: if request.auth != null && isAdmin();
     }
 
     // --- Deprecated Global Caches: Read allowed, Write blocked (except Admin) ---

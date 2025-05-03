@@ -1,10 +1,24 @@
+/* === state.js === */
 // --- START OF FILE state.js ---
 
 // --- Core Data & State ---
 export let auth = null;
 export let db = null;
 export let data = null; // Holds the user's specific app data { subjects: { ... } }
-export let currentUser = null; // Holds the Firebase Auth user object
+export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
+/* Example structure for currentUser after successful login and profile fetch:
+{
+    uid: string,
+    email: string | null,
+    emailVerified: boolean,
+    displayName: string | null, // From Firebase Auth profile
+    photoURL: string | null,    // From Firebase Auth profile
+    // --- Custom data typically fetched from Firestore 'users/{uid}' ---
+    username: string | null,   // Unique username for mentions etc.
+    isAdmin: boolean,          // Example custom field
+    // ... other profile fields ...
+}
+*/
 export let currentSubject = null; // Holds the currently selected subject object from 'data'
 export let charts = {}; // For the progress dashboard
 export let currentOnlineTestState = null; // Holds state during an online test
@@ -29,8 +43,33 @@ export function setDb(newDb) {
 export function setData(newData) {
     data = newData;
 }
+/**
+ * Sets the current user state.
+ * Expects an object containing combined Firebase Auth data and custom profile data (like username).
+ * @param {object | null} newUser - The user object or null if logged out.
+ * Should include fields like uid, email, displayName, photoURL, username, etc.
+ */
 export function setCurrentUser(newUser) {
-    currentUser = newUser;
+    if (newUser) {
+        // Basic structure validation (optional but recommended)
+        if (!newUser.uid) {
+            console.error("setCurrentUser error: New user object is missing 'uid'.", newUser);
+            return; // Prevent setting invalid user state
+        }
+         // Merge the new user data. Ensure username is handled.
+         // Prioritize Firestore username if the incoming object provides it separately,
+         // otherwise, assume it's already part of the newUser object.
+         // Example: If login logic fetches Firestore data and merges it before calling setCurrentUser.
+        currentUser = {
+            ...newUser, // Spread all properties from the provided object
+            username: newUser.username || null, // Ensure username exists, default to null
+            displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User', // Sensible default for display name
+        };
+        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username });
+    } else {
+        currentUser = null;
+        console.log("[State] Current user cleared (logged out).");
+    }
 }
 export function setCurrentSubject(newSubject) {
     currentSubject = newSubject;
@@ -65,6 +104,8 @@ export function updateGlobalCourseData(courseId, courseData) {
 
 // --- State Reset ---
 export function clearUserSession() {
+    // Note: We call setCurrentUser(null) externally during logout process usually.
+    // This function resets app-specific data tied to a user session.
     setCurrentSubject(null);
     setData(null);
     setCurrentOnlineTestState(null);
@@ -84,7 +125,47 @@ export function clearUserSession() {
      // Clear course dashboard area as well
      document.getElementById('course-dashboard-area')?.replaceChildren();
      document.getElementById('course-dashboard-area')?.classList.add('hidden');
+     // Clear any mention notification on logout
+     clearMentionNotification();
 }
+
+/** Structure Update Notes for currentUser (added username) */
+/*
+currentUser object:
+{
+    uid: string,
+    email: string | null,
+    emailVerified: boolean,
+    displayName: string | null, // From Firebase Auth profile
+    photoURL: string | null,    // From Firebase Auth profile
+    username: string | null,    // Custom unique username from Firestore, used for mentions
+    // Potentially other custom fields like isAdmin, registrationDate, etc.
+}
+*/
+
+// --- Utility for mention notification ---
+const GLOBAL_CHAT_LINK_ID = 'nav-global-chat'; // Ensure your chat link has this ID
+
+export function notifyNewMention() {
+    const chatLink = document.getElementById(GLOBAL_CHAT_LINK_ID);
+    if (chatLink) {
+        console.log("[State] Adding mention notification class.");
+        chatLink.classList.add('has-unread-mention');
+        // Optional: Play a subtle sound
+        // playNotificationSound();
+    } else {
+        console.warn(`[State] Could not find chat link with ID '${GLOBAL_CHAT_LINK_ID}' to add mention class.`);
+    }
+}
+
+export function clearMentionNotification() {
+    const chatLink = document.getElementById(GLOBAL_CHAT_LINK_ID);
+    if (chatLink) {
+        console.log("[State] Removing mention notification class.");
+        chatLink.classList.remove('has-unread-mention');
+    }
+}
+
 
 // --- Structure Update Notes for userCourseProgress items ---
 /* userCourseProgress/{userId}/courses/{courseId} document structure:

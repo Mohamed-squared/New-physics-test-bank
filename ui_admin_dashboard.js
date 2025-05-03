@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable no-alert */
 // --- START OF FILE ui_admin_dashboard.js ---
 
 // ui_admin_dashboard.js
@@ -169,6 +171,27 @@ export function showAdminDashboard() {
                     <div id="admin-delete-content-status" class="mt-3 text-sm"></div>
                 </div>
 
+                <!-- NEW: Chat Auto-Deletion Card -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Chat Auto-Deletion</h3>
+                    <p class="text-sm text-muted mb-3">
+                        Configure automatic deletion of old messages in the global chat.
+                        <strong>Note:</strong> This setting only stores the configuration. Actual deletion requires a backend Cloud Function (e.g., triggered daily) to read this setting and perform the deletions.
+                    </p>
+                    <div class="flex flex-wrap items-center gap-4">
+                        <label for="chat-auto-delete-select" class="text-sm font-medium">Delete messages older than:</label>
+                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm">
+                            <option value="0">Disabled</option>
+                            <option value="7">7 days</option>
+                            <option value="30">30 days</option>
+                            <option value="90">90 days</option>
+                        </select>
+                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0">Save Setting</button>
+                    </div>
+                    <div id="chat-auto-delete-status" class="mt-3 text-sm"></div>
+                </div>
+
+
             </div>
         </div>
     `);
@@ -176,6 +199,7 @@ export function showAdminDashboard() {
     loadCoursesForAdmin();
     populateAdminCourseSelect(); // Populate course dropdown
     loadAdminTasks(); // <<< Load Admin Tasks
+    loadChatAutoDeleteSetting(); // <<< Load Chat Auto-Deletion Setting
 }
 
 // --- Feedback ---
@@ -1629,7 +1653,88 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
 }
 
 
-// Assign ALL handlers to window scope
+// --- NEW: Chat Auto-Deletion Functions ---
+
+/**
+ * Loads the chat auto-deletion setting from Firestore and updates the UI.
+ */
+async function loadChatAutoDeleteSetting() {
+    const selectElement = document.getElementById('chat-auto-delete-select');
+    const statusArea = document.getElementById('chat-auto-delete-status');
+    if (!selectElement || !statusArea) return;
+
+    statusArea.innerHTML = `<span class="text-muted text-xs">Loading setting...</span>`;
+
+    try {
+        const settingsRef = db.collection('settings').doc('chat');
+        const docSnap = await settingsRef.get();
+
+        let currentDays = 0; // Default to 0 (Disabled)
+        if (docSnap.exists) {
+            currentDays = docSnap.data()?.autoDeleteDays ?? 0;
+        }
+
+        // Ensure the value exists in the select options, otherwise default to 0
+        const validOptions = Array.from(selectElement.options).map(opt => parseInt(opt.value));
+        if (validOptions.includes(currentDays)) {
+            selectElement.value = currentDays.toString();
+        } else {
+            console.warn(`Stored autoDeleteDays value (${currentDays}) not found in options. Defaulting to Disabled.`);
+            selectElement.value = "0";
+        }
+        statusArea.innerHTML = ''; // Clear loading message
+        console.log("[Admin] Loaded chat auto-delete setting:", selectElement.value);
+
+    } catch (error) {
+        console.error("Error loading chat auto-delete setting:", error);
+        statusArea.innerHTML = `<p class="text-red-500 text-xs">Error loading setting: ${error.message}</p>`;
+        selectElement.value = "0"; // Default to disabled on error
+    }
+}
+
+/**
+ * Saves the selected chat auto-deletion interval to Firestore.
+ */
+export async function saveChatAutoDeleteSetting() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Admin privileges required.");
+        return;
+    }
+
+    const selectElement = document.getElementById('chat-auto-delete-select');
+    const statusArea = document.getElementById('chat-auto-delete-status');
+    if (!selectElement || !statusArea) return;
+
+    const selectedValue = parseInt(selectElement.value);
+    if (isNaN(selectedValue) || ![0, 7, 30, 90].includes(selectedValue)) {
+        alert("Invalid selection. Please choose a valid option.");
+        return;
+    }
+
+    statusArea.innerHTML = ''; // Clear previous status
+    showLoading("Saving setting...");
+
+    try {
+        const settingsRef = db.collection('settings').doc('chat');
+        await settingsRef.set({ autoDeleteDays: selectedValue }, { merge: true });
+        hideLoading();
+        statusArea.innerHTML = `<p class="text-green-500 text-xs">Setting saved successfully!</p>`;
+        console.log("[Admin] Saved chat auto-delete setting:", selectedValue);
+        // Optionally show success message for a few seconds then clear
+        setTimeout(() => { if(statusArea) statusArea.innerHTML = ''; }, 3000);
+
+    } catch (error) {
+        hideLoading();
+        console.error("Error saving chat auto-delete setting:", error);
+        statusArea.innerHTML = `<p class="text-red-500 text-xs">Error saving setting: ${error.message}</p>`;
+        alert(`Failed to save setting: ${error.message}`);
+    }
+}
+// Assign new chat function to window scope
+window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
+
+
+// --- Assign ALL handlers to window scope ---
 window.showAdminDashboard = showAdminDashboard;
 window.loadFeedbackForAdmin = loadFeedbackForAdmin;
 window.promptAdminReply = promptAdminReply;
@@ -1662,5 +1767,7 @@ window.showAddCourseForm = showAddCourseForm;   // Added
 window.handleAddAdminTask = handleAddAdminTask;
 window.handleToggleAdminTask = handleToggleAdminTask;
 window.handleDeleteAdminTask = handleDeleteAdminTask;
+// Assign new chat auto-delete function to window scope
+window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting; // Explicitly assigned again
 
 // --- END OF FILE ui_admin_dashboard.js ---
