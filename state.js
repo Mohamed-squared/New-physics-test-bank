@@ -33,6 +33,10 @@ export let globalCourseDataMap = new Map();
 // Currently active course ID being viewed/worked on
 export let activeCourseId = null;
 
+// --- Video Duration Cache ---
+// Cache for video durations - Map of { videoId: durationInSeconds }
+export let videoDurationMap = {};
+
 // --- State Modifiers ---
 export function setAuth(newAuth) {
     auth = newAuth;
@@ -120,6 +124,8 @@ export function clearUserSession() {
     setUserCourseProgressMap(new Map());
     setActiveCourseId(null);
     // Do NOT clear globalCourseDataMap here, it's global definition data
+    // Clear video duration cache
+    videoDurationMap = {};
 
     document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');

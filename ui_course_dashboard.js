@@ -130,15 +130,33 @@ export async function showCourseDashboard(courseId) { // Made async
 
     // Unenroll button logic
     const unenrollButtonHtml = `
-         <button onclick="window.confirmUnenroll('${courseId}', '${escapeHtml(courseDef.name)}')" class="btn-danger-small text-xs absolute top-4 right-4">
+         <button onclick="window.confirmUnenroll('${courseId}', '${escapeHtml(courseDef.name)}')" class="btn-danger-small text-xs absolute top-4 right-4 z-10"> <!-- Added z-index -->
               Unenroll
          </button>
     `;
 
+    // --- NEW: Cover Image HTML ---
+    const defaultCoverUrl = './assets/images/course_covers/default_cover.jpg';
+    const coverImageUrl = courseDef.coverUrl || defaultCoverUrl;
+    const coverImageHtml = `
+        <div class="relative rounded-lg overflow-hidden mb-6 shadow"> <!-- Ensure relative positioning for unenroll button -->
+            <div style="background-image: url('${escapeHtml(coverImageUrl)}'); height: 150px; background-size: cover; background-position: center;"
+                 class="bg-gray-300 dark:bg-gray-700">
+                 <!-- Optional overlay if needed -->
+                 <!-- <div class="absolute inset-0 bg-black opacity-20"></div> -->
+            </div>
+            ${unenrollButtonHtml} <!-- Place unenroll button inside the relative container -->
+        </div>
+    `;
+    // --- End NEW ---
+
     const html = `
-        <div id="course-dashboard-area" class="animate-fade-in space-y-6 relative"> <!-- Added relative positioning -->
-            ${unenrollButtonHtml} <!-- Add unenroll button -->
-            <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(courseDef.name)} - Dashboard ${isViewer ? '<span class="text-sm font-normal text-purple-600 dark:text-purple-400">(Viewer Mode)</span>' : ''}</h2>
+        <div id="course-dashboard-area" class="animate-fade-in space-y-6"> <!-- Removed relative -->
+            <!-- NEW: Insert Cover Image -->
+            ${coverImageHtml}
+            <!-- End NEW -->
+
+            <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200 -mt-2 mb-4">${escapeHtml(courseDef.name)} - Dashboard ${isViewer ? '<span class="text-sm font-normal text-purple-600 dark:text-purple-400">(Viewer Mode)</span>' : ''}</h2> <!-- Adjust margins -->
 
             <!-- Today's Focus (Hidden for Viewer) -->
             ${!isViewer ? `
@@ -185,7 +203,7 @@ export async function showCourseDashboard(courseId) { // Made async
 
                  <!-- Detailed Progress (Hidden for Viewer) -->
                  ${!isViewer ? `
-                 <button onclick="window.showCurrentCourseProgress('${courseId}')" class="content-card text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-4 duration-150 ease-in-out ${isViewer ? 'md:col-start-2' : 'md:col-start-3'}">
+                 <button onclick="window.showCurrentCourseProgress('${courseId}')" class="content-card text-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors p-4 duration-150 ease-in-out ${isViewer ? 'md:col-start-2' : ''}"> <!-- Removed md:col-start-3 -->
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto text-primary-500 mb-2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" /></svg>
                      <p class="font-semibold">Detailed Progress</p><p class="text-xs text-muted">(Stats, Charts, Grades)</p>
                  </button>

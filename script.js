@@ -52,8 +52,7 @@ import {
      navigateChapterMaterial, loadYouTubeAPI, handleVideoWatched, // handleVideoWatched ADDED
      initPdfViewer, cleanupPdfViewer, handlePdfSnapshotForAI,
      triggerSkipExamGeneration, askQuestionAboutTranscription,
-     handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf,
-     calculateChapterCombinedProgress, getYouTubeVideoId, // ADDED these exports
+     handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf, getYouTubeVideoId, // ADDED these exports
      displayChapterSummary, downloadChapterSummaryPdf // ADDED summary functions
 } from './ui_course_study_material.js';
 import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_assignments_exams.js';
@@ -66,6 +65,7 @@ import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteCh
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection } from './exam_storage.js';
 // NEW: Import the actual convertNoteToLatex from AI module
 import { convertNoteToLatex } from './ai_integration.js';
+import { calculateChapterCombinedProgress } from './course_logic.js';
 
 
 // --- Initialization ---

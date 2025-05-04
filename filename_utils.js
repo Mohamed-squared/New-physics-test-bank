@@ -86,5 +86,23 @@ export function generateStructuredFilename(title) {
     return fileName;
 }
 
+/**
+ * Gets the expected SRT filename for a given video title.
+ * Uses generateStructuredFilename to create a base filename and appends .srt.
+ * @param {string} title - The video title.
+ * @returns {string|null} - The SRT filename or null if generation fails.
+ */
+export function getSrtFilenameFromTitle(title) {
+     if (!title) return null;
+     // Call the dedicated function to generate the base filename
+     const baseFilename = generateStructuredFilename(title);
+     // Check if the structured generation was successful
+     if (!baseFilename) {
+          console.warn(`Could not generate structured filename for title: "${title}". SRT path generation aborted.`);
+          return null; // Return null if base generation failed
+     }
+     // Append .srt to the valid base filename
+     return `${baseFilename}.srt`;
+}
 
 // --- END OF FILE filename_utils.js ---

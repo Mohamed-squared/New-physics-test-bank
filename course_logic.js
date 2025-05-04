@@ -1,12 +1,94 @@
 // --- START OF FILE course_logic.js ---
 
-import { GRADING_WEIGHTS, PASSING_GRADE_PERCENT, PACE_MULTIPLIER, SKIP_EXAM_PASSING_PERCENT } from './config.js';
-import { daysBetween, getFormattedDate } from './utils.js';
-// *** MODIFIED: Import combined progress calculation function ***
-// Note: This creates a slight circular dependency possibility if course_logic is imported by ui_course_study_material.
-// A better long-term solution might be a dedicated 'progress_calculator.js' module. For now, we'll manage it.
-import { calculateChapterCombinedProgress, videoDurationMap } from './ui_course_study_material.js'; // Added videoDurationMap
-import { globalCourseDataMap } from './state.js'; // Needed for total chapters info
+import { GRADING_WEIGHTS, PASSING_GRADE_PERCENT, PACE_MULTIPLIER, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS } from './config.js';
+import { daysBetween, getFormattedDate, getYouTubeVideoId } from './utils.js';
+import { globalCourseDataMap, videoDurationMap } from './state.js'; // Import videoDurationMap
+// *** MODIFIED: Removed import of calculateChapterCombinedProgress from ui_course_study_material.js to break circular dependency risk and because the function is now defined here. ***
+
+// --- Combined Progress Calculation ---
+/**
+ * Calculates the combined progress percentage for a chapter based on video and PDF activity.
+ * @param {object} progress - The user's full progress data for the course.
+ * @param {number} chapterNum - The chapter number.
+ * @param {object} chapterVideoDurationMap - Map of { videoId: durationInSeconds } for this chapter.
+ * @param {object | null} pdfInfo - Object like { currentPage: number, totalPages: number } or null if no PDF.
+ * @returns {{ percent: number, watchedStr: string, totalStr: string }}
+ */
+export function calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo) {
+    // Return 0 if viewer mode
+    if (progress?.enrollmentMode === 'viewer') {
+         return { percent: 0, watchedStr: "N/A", totalStr: "N/A" };
+     }
+
+    const watchedVideoDurations = progress.watchedVideoDurations?.[chapterNum] || {};
+    // Use pdfProgress data directly from the user's state
+    const chapterPdfProgress = progress.pdfProgress?.[chapterNum];
+
+    let totalVideoSeconds = 0;
+    let watchedVideoSeconds = 0;
+    let hasVideo = false;
+    if (chapterVideoDurationMap && Object.keys(chapterVideoDurationMap).length > 0) {
+        hasVideo = true;
+        Object.entries(chapterVideoDurationMap).forEach(([videoId, duration]) => {
+            if (typeof duration === 'number' && duration > 0) {
+                totalVideoSeconds += duration;
+                // Clamp watched time PER VIDEO before summing
+                watchedVideoSeconds += Math.min(watchedVideoDurations[videoId] || 0, duration);
+            }
+        });
+        // No need to clamp the sum again if clamped individually
+    }
+
+    let totalPdfEquivalentSeconds = 0;
+    let completedPdfEquivalentSeconds = 0;
+    let hasPdf = false;
+    if (chapterPdfProgress && chapterPdfProgress.totalPages > 0) {
+        hasPdf = true;
+        totalPdfEquivalentSeconds = chapterPdfProgress.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
+        const currentPage = chapterPdfProgress.currentPage || 0;
+        completedPdfEquivalentSeconds = Math.min(currentPage, chapterPdfProgress.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS; // Clamp current page
+    } else if (pdfInfo && pdfInfo.totalPages > 0) {
+         // Fallback to passed pdfInfo if available (e.g., right after PDF load)
+         hasPdf = true;
+         totalPdfEquivalentSeconds = pdfInfo.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
+         const currentPage = pdfInfo.currentPage || 0;
+         completedPdfEquivalentSeconds = Math.min(currentPage, pdfInfo.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS;
+    }
+
+    // Format time helper
+    const formatTime = (seconds) => {
+        if (seconds < 60) return `${Math.round(seconds)}s`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
+        return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+    };
+
+    let combinedTotalSeconds = 0;
+    let combinedCompletedSeconds = 0;
+    let progressPercent = 0;
+
+    if (hasVideo && hasPdf) {
+        combinedTotalSeconds = totalVideoSeconds + totalPdfEquivalentSeconds;
+        combinedCompletedSeconds = watchedVideoSeconds + completedPdfEquivalentSeconds;
+        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
+    } else if (hasVideo) {
+        combinedTotalSeconds = totalVideoSeconds;
+        combinedCompletedSeconds = watchedVideoSeconds;
+        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
+    } else if (hasPdf) {
+        combinedTotalSeconds = totalPdfEquivalentSeconds;
+        combinedCompletedSeconds = completedPdfEquivalentSeconds;
+        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
+    } else {
+        // No video or PDF content associated
+        return { percent: 0, watchedStr: "0s", totalStr: "0s" };
+    }
+
+    return {
+        percent: progressPercent,
+        watchedStr: formatTime(combinedCompletedSeconds),
+        totalStr: formatTime(combinedTotalSeconds)
+    };
+}
 
 // --- Grading & Grade Representation ---
 
@@ -49,11 +131,11 @@ export function calculateTotalMark(progressData) {
          // Calculate combined progress for each chapter
          const chapterResources = courseDef.chapterResources?.[i] || {};
          const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
-         const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null); // getYouTubeVideoId needs to be defined/imported if used here
+         const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
          const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
          const pdfInfo = progressData.pdfProgress?.[i] || null;
 
-         // Use the imported combined progress function
+         // Use the locally defined combined progress function
          const { percent: chapterPercent } = calculateChapterCombinedProgress(progressData, i, chapterVideoDurationMap, pdfInfo);
          totalChapterProgressSum += chapterPercent;
     }

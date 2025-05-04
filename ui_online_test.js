@@ -18,11 +18,20 @@ import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingMo
 export function launchOnlineTestUI() {
     clearContent(); // Clear main content area first
     const testArea = document.getElementById('online-test-area');
-    if (!currentOnlineTestState || !testArea) {
-         console.error("launchOnlineTestUI Error: Online test state or element missing.");
-         displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>");
-         return;
+    // --- MODIFICATION: Check state and element ---
+    if (!currentOnlineTestState) {
+        console.error("launchOnlineTestUI Error: Online test state missing.");
+        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>");
+        return;
     }
+    if (!testArea) {
+        console.error("launchOnlineTestUI Error: Test area element (#online-test-area) not found.");
+        // If the main container is missing, there's a fundamental issue.
+        // No point trying to display content within it. Maybe alert?
+        alert("Critical Error: Test UI container is missing from the page.");
+        return;
+    }
+    // --- END MODIFICATION ---
 
     testArea.classList.remove('hidden'); // Show the test area
 
@@ -96,8 +105,21 @@ export function launchOnlineTestUI() {
 }
 
 export function startTimer() {
-    const timerElement = document.getElementById('timer'); if (!timerElement || !currentOnlineTestState) return;
+    const timerElement = document.getElementById('timer');
+    // --- MODIFICATION: Check state and element ---
+    if (!timerElement) {
+        console.warn("startTimer: Timer element (#timer) not found. Cannot start timer display.");
+        return;
+    }
+    if (!currentOnlineTestState) {
+        console.warn("startTimer: currentOnlineTestState is null. Cannot start timer logic.");
+        timerElement.textContent = "Error"; // Indicate error
+        return;
+    }
+    // --- END MODIFICATION ---
+
     if (currentOnlineTestState.timerInterval) { clearInterval(currentOnlineTestState.timerInterval); }
+
     function updateTimerDisplay() {
         if (!currentOnlineTestState || !currentOnlineTestState.endTime || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed') {
              if(currentOnlineTestState?.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
@@ -129,16 +151,35 @@ export function startTimer() {
 
 export async function displayCurrentQuestion() {
     console.log("displayCurrentQuestion START");
-    if (!currentOnlineTestState) { console.error("HALTED: currentOnlineTestState is null."); return; }
+    // --- MODIFICATION: Check state ---
+    if (!currentOnlineTestState) {
+        console.error("displayCurrentQuestion HALTED: currentOnlineTestState is null.");
+        const c = document.getElementById('question-container');
+        if (c) c.innerHTML = '<p class="text-red-500 p-4">Error: Test state lost. Cannot display question.</p>';
+        return;
+    }
+    // --- END MODIFICATION ---
+
     const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
-    if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) {
-         console.error(`HALTED: Invalid index ${index}/${questions?.length}`);
-         const c = document.getElementById('question-container');
-         if(c) c.innerHTML = '<p class="text-red-500">Error: Invalid question index.</p>';
+    const container = document.getElementById('question-container');
+    // --- MODIFICATION: Check element ---
+    if (!container) {
+         console.error("displayCurrentQuestion HALTED: Question container (#question-container) not found.");
          return;
      }
-    const question = questions[index]; const container = document.getElementById('question-container'); const totalQuestions = questions.length;
-    if (!question || !container) { console.error("HALTED: Missing question object or container."); return; }
+    // --- END MODIFICATION ---
+
+    if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) {
+         console.error(`displayCurrentQuestion HALTED: Invalid index ${index}/${questions?.length}`);
+         container.innerHTML = '<p class="text-red-500 p-4">Error: Invalid question index.</p>';
+         return;
+     }
+    const question = questions[index]; const totalQuestions = questions.length;
+    if (!question) {
+        console.error("displayCurrentQuestion HALTED: Missing question object at index", index);
+        container.innerHTML = `<p class="text-red-500 p-4">Error: Could not load question data for question ${index + 1}.</p>`;
+        return;
+    }
 
     // Ensure question has an ID
     const questionId = question.id || `q-${index+1}`;
@@ -176,13 +217,25 @@ export async function displayCurrentQuestion() {
 
     container.innerHTML = htmlContent; console.log("innerHTML set.");
     try { await renderMathIn(container); console.log("MathJax rendered."); } catch (mathError) { console.error("MathJax render error:", mathError); }
+
+    // --- MODIFICATION: Update Navigation Buttons safely ---
     try {
-        document.getElementById('question-counter').textContent = `Question ${index + 1} / ${totalQuestions}`;
-        document.getElementById('prev-btn').disabled = (index === 0);
-        document.getElementById('next-btn').classList.toggle('hidden', index === totalQuestions - 1);
-        document.getElementById('submit-btn').classList.toggle('hidden', index !== totalQuestions - 1);
+        const counterEl = document.getElementById('question-counter');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+
+        if (counterEl) counterEl.textContent = `Question ${index + 1} / ${totalQuestions}`; else console.warn("Element #question-counter not found");
+        if (prevBtn) prevBtn.disabled = (index === 0); else console.warn("Element #prev-btn not found");
+        if (nextBtn) nextBtn.classList.toggle('hidden', index === totalQuestions - 1); else console.warn("Element #next-btn not found");
+        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("Element #submit-btn not found");
+
         console.log("Navigation updated.");
-    } catch (e) { console.error("Error updating navigation:", e); }
+    } catch (e) {
+        console.error("Error updating navigation elements:", e);
+    }
+    // --- END MODIFICATION ---
+
     console.log("displayCurrentQuestion END");
 }
 
@@ -228,7 +281,15 @@ export async function submitOnlineTest() {
     currentOnlineTestState.status = 'submitting';
     if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
     currentOnlineTestState.timerInterval = null;
-    document.getElementById('online-test-area')?.classList.add('hidden');
+
+    // --- MODIFICATION: Check test area before hiding ---
+    const testArea = document.getElementById('online-test-area');
+    if (testArea) {
+        testArea.classList.add('hidden');
+    } else {
+        console.warn("submitOnlineTest: Test area element (#online-test-area) not found during submission.");
+    }
+    // --- END MODIFICATION ---
     await new Promise(resolve => setTimeout(resolve, 100));
 
     const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
@@ -261,8 +322,8 @@ export async function submitOnlineTest() {
         if (isCourseActivity && courseId) {
             const progress = userCourseProgressMap.get(courseId);
             if (progress) {
-                const percentageScore = examRecord.markingResults.maxPossibleScore > 0 
-                    ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100 
+                const percentageScore = examRecord.markingResults.maxPossibleScore > 0
+                    ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100
                     : 0;
 
                 // Update appropriate score map based on activity type

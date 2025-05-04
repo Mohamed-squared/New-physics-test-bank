@@ -6,7 +6,9 @@ import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 // *** Corrected/Verified Import ***
 // Ensure 'showCourseStudyMaterial' is correctly exported from the target file.
-import { showCourseStudyMaterial, triggerSkipExamGeneration, calculateChapterCombinedProgress, getYouTubeVideoId, videoDurationMap, displayChapterSummary } from './ui_course_study_material.js'; // Added videoDurationMap import and displayChapterSummary
+// *** MODIFIED: Import calculateChapterCombinedProgress from course_logic.js ***
+import { calculateChapterCombinedProgress } from './course_logic.js'; // ADDED import
+import { showCourseStudyMaterial, triggerSkipExamGeneration, getYouTubeVideoId, videoDurationMap, displayChapterSummary } from './ui_course_study_material.js'; // Removed duplicate calculateChapterCombinedProgress, Added videoDurationMap import and displayChapterSummary
 import { startAssignmentOrExam } from './ui_course_assignments_exams.js';
 import { SKIP_EXAM_PASSING_PERCENT, YOUTUBE_API_KEY } from './config.js'; // Import config
 import { showMyCoursesDashboard } from './ui_course_dashboard.js'; // Import showMyCoursesDashboard
@@ -150,6 +152,7 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
          // Only include chapters with actual content (PDF or Video) in the average calculation
          if (videoIdsForChapter.length > 0 || pdfPath) {
              // Only calculate progress if not viewer
+             // *** MODIFIED: Use imported function from course_logic.js ***
              const chapterPercent = isViewer ? 0 : calculateChapterCombinedProgress(progress, i, chapterVideoDurationMap, pdfInfo).percent;
              totalCourseProgressSum += chapterPercent;
              chaptersConsideredForAvg++;
@@ -220,7 +223,7 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
                 const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
                 const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
                 const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Get PDF progress info
-                // Use the imported combined progress function
+                // *** MODIFIED: Use the imported combined progress function from course_logic.js ***
                 const { percent: chapterCombinedProgress, watchedStr, totalStr } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
 
                 // Override progress display to 100% if marked studied

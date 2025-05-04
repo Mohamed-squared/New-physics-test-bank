@@ -27,7 +27,8 @@ service cloud.firestore {
                        (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
                         (isAdmin() && // Admin can update specific fields
                          request.resource.data.diff(resource.data).affectedKeys()
-                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId']) // List fields admin is allowed to modify. Added lastSelectedSubjectId
+                           // <<< --- MODIFICATION: Added 'lastSelectedSubjectId' --- >>>
+                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId'])
                         )
                        );
       // User can only create their own doc initially
@@ -91,7 +92,8 @@ service cloud.firestore {
                          'name', 'description', 'majorTag', 'subjectTag', 'youtubePlaylistUrls', // User fields
                          'creatorUid', 'creatorName', 'createdAt', 'status', // System/Required fields
                          'reportedBy', 'reportReason', 'totalChapters', 'chapters', // Added chapters/totalChapters on create for Admin
-                         'relatedSubjectId', 'pdfPathPattern', 'transcriptionPathPattern', 'chapterResources' // Admin only fields
+                         'relatedSubjectId', 'pdfPathPattern', 'transcriptionPathPattern', 'chapterResources', // Admin only fields
+                         'imageUrl', 'coverUrl' // NEW: Allow image URLs on creation
                        ]) &&
                        request.resource.data.creatorUid == request.auth.uid && // Creator must be current user
                        ( // Status logic depends on user role

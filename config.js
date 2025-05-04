@@ -145,6 +145,10 @@ export const FOP_COURSE_DEFINITION = {
         "https://www.youtube.com/playlist?list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr"
     ],
     pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`,
+    // --- NEW: Added Image URLs ---
+    imageUrl: './assets/images/course_thumbnails/fop_physics_thumb.png', // Thumbnail for lists
+    coverUrl: './assets/images/course_covers/fop_physics_cover.jpg',    // Cover for dashboard
+    // --- End NEW ---
     chapters: [
         "Measurement", "Motion Along a Straight Line", "Vectors", "Motion in Two and Three Dimensions",
         "Force and Motion—I", "Force and Motion—II", "Kinetic Energy and Work",

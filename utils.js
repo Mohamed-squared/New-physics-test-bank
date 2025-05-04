@@ -187,4 +187,34 @@ export function daysBetween(date1, date2) {
     // Use Math.floor to handle potential DST issues and ensure integer days
     return Math.floor((secondDate - firstDate) / oneDay);
 }
+
+/**
+ * Extracts the YouTube video ID from various YouTube URL formats.
+ * @param {string} url - The YouTube URL.
+ * @returns {string|null} - The video ID or null if not found/invalid.
+ */
+export function getYouTubeVideoId(url) {
+    if (!url) return null;
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
+            return urlObj.searchParams.get('v');
+        }
+        else if (urlObj.hostname.includes('youtu.be')) {
+            const pathParts = urlObj.pathname.split('/');
+            if (pathParts.length >= 2 && pathParts[1]) {
+                 return pathParts[1].split('?')[0];
+            }
+        }
+         else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.startsWith('/embed/')) {
+             const pathParts = urlObj.pathname.split('/');
+             if (pathParts.length >= 3 && pathParts[2]) {
+                  return pathParts[2].split('?')[0];
+             }
+         }
+    } catch (e) { console.error("Invalid URL format:", url, e); }
+    console.warn("Could not extract YouTube Video ID from URL:", url);
+    return null;
+}
+
 // --- END OF FILE utils.js ---

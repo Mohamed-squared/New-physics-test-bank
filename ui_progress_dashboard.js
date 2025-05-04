@@ -1,5 +1,3 @@
-
-
 // --- START OF FILE ui_progress_dashboard.js ---
 
 import { currentSubject, charts, setCharts } from './state.js'; // Import charts state
@@ -89,22 +87,30 @@ export function closeDashboard() {
 
 // Separate function to handle chart rendering
 export function renderCharts() {
-     // MODIFICATION: Add logs at the start
+     // --- MODIFICATION: Add logs and checks at the start ---
      console.log("[RenderCharts] Attempting to render charts. Current subject ID:", currentSubject?.id);
      console.log("[RenderCharts] Data state being read:", JSON.stringify(currentSubject, null, 2));
      // Check again if subject and chapters exist before rendering
      if (!currentSubject || !currentSubject.chapters) {
-         console.warn("Cannot render charts, subject or chapter data missing.");
+         console.warn("[RenderCharts] Cannot render charts, subject or chapter data missing.");
+         // Optionally display a message in the dashboard content area
+         const dashboardContentEl = document.getElementById('dashboard-content');
+         if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject data is not available for charts.</p>';
          return;
      }
+     // --- END MODIFICATION ---
+
     const chapters = currentSubject.chapters;
     // Filter and sort chapters that have questions
     const chapterNumbers = Object.keys(chapters)
                            .filter(num => chapters[num] && chapters[num].total_questions > 0)
                            .sort((a, b) => parseInt(a) - parseInt(b));
 
+     // --- MODIFICATION: Log filtered chapters ---
+     console.log(`[RenderCharts] Found ${chapterNumbers.length} chapters with questions to chart:`, chapterNumbers);
+     // --- END MODIFICATION ---
+
      if (chapterNumbers.length === 0) {
-         // MODIFICATION: Improve log message
          console.log("[RenderCharts] No chapters with questions found in current subject data to render charts for:", currentSubject?.name);
          // Optionally display a message in the dashboard content area
          const dashboardContentEl = document.getElementById('dashboard-content');
@@ -176,6 +182,7 @@ export function renderCharts() {
         const masteryCtx = document.getElementById('masteryChart')?.getContext('2d');
         const difficultyCtx = document.getElementById('difficultyChart')?.getContext('2d');
 
+        // --- MODIFICATION: Check context before creating chart ---
         // Create Attempted Chart
         if (attemptedCtx) {
             newCharts.attemptedChart = new Chart(attemptedCtx, {
@@ -183,6 +190,8 @@ export function renderCharts() {
                 data: { labels: labels, datasets: [{ label: 'Attempted', data: attempted, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgb(59, 130, 246)', borderWidth: 1 }] },
                 options: commonOptions()
             });
+        } else {
+            console.warn("[RenderCharts] Canvas context for 'attemptedChart' not found.");
         }
 
         // Create Wrong Chart
@@ -192,6 +201,8 @@ export function renderCharts() {
                 data: { labels: labels, datasets: [{ label: 'Wrong', data: wrong, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgb(239, 68, 68)', borderWidth: 1 }] },
                 options: commonOptions()
             });
+        } else {
+            console.warn("[RenderCharts] Canvas context for 'wrongChart' not found.");
         }
 
         // Create Mastery Chart
@@ -204,6 +215,8 @@ export function renderCharts() {
                 data: { labels: labels, datasets: [{ label: 'Mastery Tests', data: mastery, backgroundColor: 'rgba(34, 197, 94, 0.7)', borderColor: 'rgb(34, 197, 94)', borderWidth: 1 }] },
                 options: masteryOptions
             });
+        } else {
+            console.warn("[RenderCharts] Canvas context for 'masteryChart' not found.");
         }
 
         // Create Difficulty Chart (with color coding)
@@ -231,7 +244,10 @@ export function renderCharts() {
                 },
                 options: difficultyOptions
             });
-         }
+         } else {
+            console.warn("[RenderCharts] Canvas context for 'difficultyChart' not found.");
+        }
+         // --- END MODIFICATION ---
 
          setCharts(newCharts); // Update the global/shared charts state
          console.log("Charts rendered successfully.");
@@ -239,10 +255,14 @@ export function renderCharts() {
     } catch (error) {
         console.error("Error rendering charts:", error);
          const dashboardContentEl = document.getElementById('dashboard-content');
+          // --- MODIFICATION: Check element existence in catch block ---
           if (dashboardContentEl) {
               // Clear previous attempts and show error
               dashboardContentEl.innerHTML = '<p class="text-center p-4 text-red-500">An error occurred while rendering the progress charts. Please check the console.</p>';
+          } else {
+              console.error("Also failed to find #dashboard-content to display error message.");
           }
+          // --- END MODIFICATION ---
     }
 }
 // --- END OF FILE ui_progress_dashboard.js ---

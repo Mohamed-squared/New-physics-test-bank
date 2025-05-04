@@ -196,7 +196,12 @@ export function clearUserInfoUI() {
 
 export function updateSubjectInfo() {
      const infoEl = document.getElementById('subject-info');
-    if (!infoEl) return;
+    // --- MODIFICATION: Check if infoEl exists ---
+    if (!infoEl) {
+        console.warn("updateSubjectInfo: Subject info element (#subject-info) not found.");
+        return;
+    }
+    // --- END MODIFICATION ---
 
     const stateCurrentUser = currentUser; // Use the central state variable
 

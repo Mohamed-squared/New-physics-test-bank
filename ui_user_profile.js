@@ -1,5 +1,3 @@
-
-
 // --- START OF FILE ui_user_profile.js ---
 
 // ui_user_profile.js
@@ -241,12 +239,19 @@ export async function updateUserProfile(event) {
     }
 
     const displayNameInput = document.getElementById('displayNameInput');
-    const newDisplayName = displayNameInput?.value.trim();
+    // --- MODIFICATION: Check if displayNameInput exists ---
+    if (!displayNameInput) {
+        console.error("Could not find displayNameInput element.");
+        alert("An internal error occurred. Could not find profile fields.");
+        return;
+    }
+    const newDisplayName = displayNameInput.value.trim();
+    // --- END MODIFICATION ---
     // Photo URL is now handled separately by the cropper callback
 
     if (!newDisplayName) {
         alert("Display Name cannot be empty.");
-        displayNameInput?.focus();
+        displayNameInput.focus(); // Focus the existing input
         return;
     }
 

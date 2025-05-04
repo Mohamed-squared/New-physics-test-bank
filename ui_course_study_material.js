@@ -22,6 +22,8 @@ import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestio
 import { showNotesDocumentsPanel, setLastViewedChapterForNotes } from './ui_notes_documents.js';
 // MODIFIED: Import generateStructuredFilename from filename_utils.js
 import { generateStructuredFilename } from './filename_utils.js';
+// *** ADDED: Import calculateChapterCombinedProgress from course_logic.js ***
+import { calculateChapterCombinedProgress } from './course_logic.js';
 
 
 // --- Module State ---
@@ -428,91 +430,11 @@ export async function handleVideoWatched(videoId) {
     }
 }
 
-// --- Combined Progress Calculation ---
-/**
- * Calculates the combined progress percentage for a chapter based on video and PDF activity.
- * @param {object} progress - The user's full progress data for the course.
- * @param {number} chapterNum - The chapter number.
- * @param {object} chapterVideoDurationMap - Map of { videoId: durationInSeconds } for this chapter.
- * @param {object | null} pdfInfo - Object like { currentPage: number, totalPages: number } or null if no PDF.
- * @returns {{ percent: number, watchedStr: string, totalStr: string }}
+// --- REMOVED: Duplicate Combined Progress Calculation ---
+/*
+ * REMOVED FUNCTION BLOCK FOR calculateChapterCombinedProgress
+ * It is now imported from course_logic.js
  */
-export function calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo) {
-    // Return 0 if viewer mode
-    if (progress?.enrollmentMode === 'viewer') {
-         return { percent: 0, watchedStr: "N/A", totalStr: "N/A" };
-     }
-
-    const watchedVideoDurations = progress.watchedVideoDurations?.[chapterNum] || {};
-    // Use pdfProgress data directly from the user's state
-    const chapterPdfProgress = progress.pdfProgress?.[chapterNum];
-
-    let totalVideoSeconds = 0;
-    let watchedVideoSeconds = 0;
-    let hasVideo = false;
-    if (chapterVideoDurationMap && Object.keys(chapterVideoDurationMap).length > 0) {
-        hasVideo = true;
-        Object.entries(chapterVideoDurationMap).forEach(([videoId, duration]) => {
-            if (typeof duration === 'number' && duration > 0) {
-                totalVideoSeconds += duration;
-                // Clamp watched time PER VIDEO before summing
-                watchedVideoSeconds += Math.min(watchedVideoDurations[videoId] || 0, duration);
-            }
-        });
-        // No need to clamp the sum again if clamped individually
-    }
-
-    let totalPdfEquivalentSeconds = 0;
-    let completedPdfEquivalentSeconds = 0;
-    let hasPdf = false;
-    if (chapterPdfProgress && chapterPdfProgress.totalPages > 0) {
-        hasPdf = true;
-        totalPdfEquivalentSeconds = chapterPdfProgress.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
-        const currentPage = chapterPdfProgress.currentPage || 0;
-        completedPdfEquivalentSeconds = Math.min(currentPage, chapterPdfProgress.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS; // Clamp current page
-    } else if (pdfInfo && pdfInfo.totalPages > 0) {
-         // Fallback to passed pdfInfo if available (e.g., right after PDF load)
-         hasPdf = true;
-         totalPdfEquivalentSeconds = pdfInfo.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
-         const currentPage = pdfInfo.currentPage || 0;
-         completedPdfEquivalentSeconds = Math.min(currentPage, pdfInfo.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS;
-    }
-
-
-    // Format time helper
-    const formatTime = (seconds) => {
-        if (seconds < 60) return `${Math.round(seconds)}s`;
-        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-        return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
-    };
-
-    let combinedTotalSeconds = 0;
-    let combinedCompletedSeconds = 0;
-    let progressPercent = 0;
-
-    if (hasVideo && hasPdf) {
-        combinedTotalSeconds = totalVideoSeconds + totalPdfEquivalentSeconds;
-        combinedCompletedSeconds = watchedVideoSeconds + completedPdfEquivalentSeconds;
-        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
-    } else if (hasVideo) {
-        combinedTotalSeconds = totalVideoSeconds;
-        combinedCompletedSeconds = watchedVideoSeconds;
-        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
-    } else if (hasPdf) {
-        combinedTotalSeconds = totalPdfEquivalentSeconds;
-        combinedCompletedSeconds = completedPdfEquivalentSeconds;
-        progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
-    } else {
-        // No video or PDF content associated
-        return { percent: 0, watchedStr: "0s", totalStr: "0s" };
-    }
-
-    return {
-        percent: progressPercent,
-        watchedStr: formatTime(combinedCompletedSeconds),
-        totalStr: formatTime(combinedTotalSeconds)
-    };
-}
 
 
 // --- Check and Mark Chapter Studied (Modified) ---
@@ -560,7 +482,7 @@ async function checkAndMarkChapterStudied(courseId, chapterNum) {
 
     const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Use stored PDF progress
 
-    // Calculate combined progress
+    // *** MODIFIED: Use imported function from course_logic.js ***
     const { percent: combinedProgressPercent } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
 
     console.log(`Checking study status for Ch ${chapterNum}. Combined Progress: ${combinedProgressPercent}%`);
@@ -1147,18 +1069,21 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         return;
     }
 
-    // MODIFICATION: Moved DOM element getters inside the function
+    // --- MODIFICATION: Check required UI elements ---
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
     const downloadBtn = document.getElementById('download-formula-pdf-btn');
 
     if (!formulaArea || !formulaContent || !downloadBtn) {
-        console.error("Missing UI elements for formula sheet display (formula-sheet-area, formula-sheet-content, download-formula-pdf-btn)");
-        // Optionally show an error message in a different way if these core elements are missing
-        // e.g., find the main content area and display error there.
-        // For now, logging is the primary action.
+        console.error("Missing UI elements for formula sheet display (formula-sheet-area, formula-sheet-content, download-formula-pdf-btn). Cannot proceed.");
+        // Attempt to show error in main area if possible
+        const mainContentArea = document.getElementById('course-dashboard-area');
+        if (mainContentArea) {
+            mainContentArea.innerHTML += `<p class="text-red-500 p-4 text-center">Error: UI components for formula sheet are missing.</p>`;
+        }
         return;
     }
+    // --- END MODIFICATION ---
 
     formulaArea.classList.remove('hidden'); // Make the container visible
     downloadBtn.classList.add('hidden'); // Hide download initially
@@ -1258,15 +1183,20 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         return;
     }
 
-    // MODIFICATION: Moved DOM element getters inside the function
+    // --- MODIFICATION: Check required UI elements ---
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
 
     if (!summaryArea || !summaryContent || !downloadBtn) {
-        console.error("Missing UI elements for chapter summary display (chapter-summary-area, chapter-summary-content, download-summary-pdf-btn)");
+        console.error("Missing UI elements for chapter summary display (chapter-summary-area, chapter-summary-content, download-summary-pdf-btn). Cannot proceed.");
+        const mainContentArea = document.getElementById('course-dashboard-area');
+        if (mainContentArea) {
+            mainContentArea.innerHTML += `<p class="text-red-500 p-4 text-center">Error: UI components for chapter summary are missing.</p>`;
+        }
         return;
     }
+    // --- END MODIFICATION ---
 
     summaryArea.classList.remove('hidden'); // Make the container visible
     downloadBtn.classList.add('hidden'); // Hide download initially
@@ -1677,4 +1607,4 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
 window.triggerSkipExamGeneration = triggerSkipExamGeneration; // Assign to window scope
 window.showCurrentCourseDashboard = showCurrentCourseDashboard; // Ensure Back button works
 
-// --- END OF MODIFIED FILE ui_course_study_material.js ---
+// --- END OF FILE ui_course_study_material.js ---
