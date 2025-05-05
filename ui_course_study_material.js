@@ -77,23 +77,44 @@ export function getSrtFilenameFromTitle(title) {
      // Check if the structured generation was successful
      if (!baseFilename) {
           console.warn(`Could not generate structured filename for title: "${title}". SRT path generation aborted.`);
+          // *** ADDED LOGGING ***
+          console.log('[Filename Util] Final SRT filename:', null, 'for title:', title);
           return null; // Return null if base generation failed
      }
      // Append .srt to the valid base filename
+     // *** ADDED LOGGING ***
+     console.log('[Filename Util] Final SRT filename:', `${baseFilename}.srt`, 'for title:', title);
      return `${baseFilename}.srt`;
 }
 
 // Function to fetch and parse SRT file with timestamps
 async function fetchAndParseSrt(filePath) {
+    // *** ADDED LOGGING ***
+    console.log('[fetchAndParseSrt] Fetching SRT from raw path:', filePath);
     try {
         // Avoid double encoding if path already looks encoded
         const encodedFilePath = filePath.includes('%') ? filePath : encodeURI(filePath);
+        const fetchUrl = `${encodedFilePath}?t=${new Date().getTime()}`; // Cache bust
         console.log(`Fetching SRT from path: ${encodedFilePath}`);
 
-        const response = await fetch(`${encodedFilePath}?t=${new Date().getTime()}`); // Cache bust
+        // *** ADDED LOGGING ***
+        console.log('[fetchAndParseSrt] Attempting fetch from URL:', fetchUrl);
+        const response = await fetch(fetchUrl);
+
+        // *** MODIFICATION START: Check Content-Type - ADDED application/x-subrip ***
+        const contentType = response.headers.get("content-type");
+        // Check if the content type is valid (plain text, srt, or x-subrip)
+        if (!contentType || (!contentType.includes("text/plain") && !contentType.includes("application/srt") && !contentType.includes("text/srt") && !contentType.includes("application/x-subrip"))) {
+            console.warn(`[fetchAndParseSrt] Received incorrect Content-Type: "${contentType}" for ${filePath}. Expected text/plain, application/srt, text/srt, or application/x-subrip. Likely received fallback HTML. Returning empty array.`);
+            return []; // Treat as not found/error
+        }
+        console.log(`[fetchAndParseSrt] Received Content-Type: "${contentType}" for ${filePath}. Proceeding with parsing.`);
+        // *** MODIFICATION END ***
+
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`fetchAndParseSrt: SRT File not found at ${filePath}. (Encoded: ${encodedFilePath}). Returning empty array.`);
+                // *** MODIFIED LOGGING ***
+                console.warn(`[fetchAndParseSrt] 404 - SRT File not found at path: ${filePath} (Encoded: ${encodedFilePath}). Check base path and generated filename.`);
                 return [];
             }
             throw new Error(`HTTP error fetching SRT file! status: ${response.status} for ${filePath}`);
@@ -101,61 +122,129 @@ async function fetchAndParseSrt(filePath) {
         const srtContent = await response.text();
         const lines = srtContent.split(/\r?\n/);
         const entries = [];
-        let currentEntry = null;
         let entryIdCounter = 1; // Use a counter for reliable ID
 
+        // --- MODIFIED timeToSeconds Function (Handles HH:MM:SS,ms and MM:SS,ms) ---
         const timeToSeconds = (timeStr) => {
-            const parts = timeStr.split(/[:,]/);
-            if (parts.length === 4) {
-                const h = parseInt(parts[0], 10); const m = parseInt(parts[1], 10);
-                const s = parseInt(parts[2], 10); const ms = parseInt(parts[3], 10);
-                if (!isNaN(h) && !isNaN(m) && !isNaN(s) && !isNaN(ms)) {
-                    return h * 3600 + m * 60 + s + ms / 1000;
-                }
-            }
-            console.warn("Could not parse time string:", timeStr);
-            return 0;
-        };
+            if (!timeStr || typeof timeStr !== 'string') return 0; // Basic validation
 
+            const parts = timeStr.split(',');
+            if (parts.length !== 2) {
+                console.warn("Could not parse time string: invalid comma separation.", timeStr);
+                return 0;
+            }
+
+            const hmsPart = parts[0];
+            const msStr = parts[1];
+
+            const ms = parseInt(msStr, 10);
+            if (isNaN(ms) || msStr.length > 3) { // Allow 1-3 digits for ms, though standard is 3
+                 console.warn("Could not parse time string: invalid milliseconds part.", msStr, "in", timeStr);
+                 return 0;
+            }
+
+            const timeParts = hmsPart.split(':');
+            let h = 0, m = 0, s = 0;
+
+            if (timeParts.length === 3) { // HH:MM:SS format
+                h = parseInt(timeParts[0], 10);
+                m = parseInt(timeParts[1], 10);
+                s = parseInt(timeParts[2], 10);
+            } else if (timeParts.length === 2) { // MM:SS format
+                h = 0; // Assume hours is zero
+                m = parseInt(timeParts[0], 10);
+                s = parseInt(timeParts[1], 10);
+            } else {
+                console.warn("Could not parse time string: invalid H:M:S structure.", hmsPart, "in", timeStr);
+                return 0;
+            }
+
+            // Check if any part failed to parse
+            if (isNaN(h) || isNaN(m) || isNaN(s)) {
+                console.warn("Could not parse time string: NaN value encountered.", timeParts, "in", timeStr);
+                return 0;
+            }
+
+            // Optional: Add validation for ranges (e.g., m < 60, s < 60) if strict format is needed
+            // if (m >= 60 || s >= 60 || h < 0 || m < 0 || s < 0) {
+            //     console.warn("Could not parse time string: Invalid time component value.", timeParts, "in", timeStr);
+            //     return 0;
+            // }
+
+            return h * 3600 + m * 60 + s + ms / 1000;
+        };
+        // --- END MODIFIED timeToSeconds Function ---
+
+
+        // --- MODIFIED PARSING LOOP START ---
+        let entry = null;
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
-            // Ignore lines that are just numbers (potential old SRT index)
-            if (/^\d+$/.test(line)) continue;
 
-            if (line.includes('-->')) {
-                // Found a time line, finalize previous entry if it exists and has text
-                if (currentEntry && currentEntry.text.length > 0) {
-                     currentEntry.text = currentEntry.text.join(' ');
-                     entries.push(currentEntry);
+            if (!line) { // Skip empty lines
+                // Finalize the previous entry if we hit an empty line and the entry has text
+                if (entry && entry.text.length > 0) {
+                    entry.text = entry.text.join(' ').trim(); // Join text lines
+                    entries.push(entry);
+                    entry = null; // Reset for next block
                 }
-                // Start a new entry
+                continue;
+            }
+
+            // Check for timestamp line (contains '-->')
+            if (line.includes('-->')) {
+                // Finalize previous entry if needed (e.g., if no empty line between entries)
+                if (entry && entry.text.length > 0) {
+                    entry.text = entry.text.join(' ').trim();
+                    entries.push(entry);
+                }
+                // Start new entry
                 const times = line.split('-->');
                 if (times.length === 2) {
-                    currentEntry = {
-                         id: entryIdCounter++, // Use counter for unique ID
-                         start: timeToSeconds(times[0].trim()),
-                         end: timeToSeconds(times[1].trim()),
-                         text: []
-                     };
+                    const startSeconds = timeToSeconds(times[0].trim());
+                    const endSeconds = timeToSeconds(times[1].trim());
+                    // Basic check: ensure end time is after start time
+                    if (endSeconds >= startSeconds) {
+                         entry = {
+                             id: entryIdCounter++,
+                             start: startSeconds,
+                             end: endSeconds,
+                             text: [] // Initialize text array
+                         };
+                    } else {
+                         console.warn(`Malformed timestamp line in SRT: end time (${times[1].trim()}) before start time (${times[0].trim()}). Skipping entry.`);
+                         entry = null; // Discard malformed entry
+                    }
                 } else {
-                     console.warn("Malformed time line:", line);
-                     currentEntry = null; // Discard if time is malformed
+                    console.warn(`Malformed timestamp line in SRT: "${line}". Skipping.`);
+                    entry = null; // Discard malformed entry
                 }
-            } else if (line && currentEntry) {
-                // Append text line to current entry
-                currentEntry.text.push(line);
             }
+            // Check for sequence number line (ignore it)
+            else if (/^\d+$/.test(line) && lines[i+1]?.includes('-->')) {
+                // This line is likely a sequence number preceding a timestamp line. Ignore it.
+                continue;
+            }
+            // Otherwise, treat as text line and append to current entry if valid
+            else if (entry) {
+                entry.text.push(line); // Append the text line
+            }
+            // Ignore lines that come before the first timestamp
         }
-         // Add the very last entry if it exists and has text
-         if (currentEntry && currentEntry.text.length > 0) {
-              currentEntry.text = currentEntry.text.join(' ');
-              entries.push(currentEntry);
-         }
+
+        // Add the very last entry if it exists and has text
+        if (entry && entry.text.length > 0) {
+             entry.text = entry.text.join(' ').trim();
+             entries.push(entry);
+        }
+        // --- MODIFIED PARSING LOOP END ---
 
         console.log(`fetchAndParseSrt: Parsed ${entries.length} entries from ${filePath}`);
         return entries;
     } catch (error) {
         console.error(`Error fetching/parsing SRT file (${filePath}):`, error);
+        // *** ADDED LOGGING ***
+        console.error('[fetchAndParseSrt] Full error object:', error);
         return [];
     }
 }
@@ -678,6 +767,9 @@ export async function initPdfViewer(pdfPath) {
         return;
     }
 
+    // *** MODIFICATION: Log path before try block ***
+    console.log('[PDF Init] Attempting to load PDF. Path variable:', pdfPath);
+
     try {
         if (typeof pdfjsLib === 'undefined') {
              console.error("PDF.js library not loaded.");
@@ -687,6 +779,8 @@ export async function initPdfViewer(pdfPath) {
         console.log(`Attempting to load PDF document from: ${pdfPath}`);
 
         const encodedPdfPath = encodeURI(pdfPath); // Use encodeURI for path with spaces/etc.
+        // *** MODIFICATION: Log encoded path before getDocument ***
+        console.log('[PDF Init] Calling pdfjsLib.getDocument with encoded path:', encodedPdfPath);
         const loadingTask = pdfjsLib.getDocument(encodedPdfPath);
 
         loadingTask.promise.then(async (loadedPdfDoc) => {
@@ -735,30 +829,45 @@ export async function initPdfViewer(pdfPath) {
                 updatePdfProgressAndCheckCompletion(pdfPageNum);
             }
 
-
+        // *** MODIFICATION START: Enhanced error handling for loadingTask.promise ***
         }).catch(error => {
-            console.error(`Error during pdfjsLib.getDocument('${encodedPdfPath}'):`, error.name, error.message);
+            console.error(`[PDF Init] Error during pdfjsLib.getDocument('${encodedPdfPath}'): Name: ${error.name}, Message: ${error.message}`, error);
              let userMessage = `Error loading PDF: ${error.message || 'Unknown error'}.`;
-             if (error.name === 'InvalidPDFException' || error.message?.includes('Invalid PDF structure')) {
-                  userMessage = "Error loading PDF: Invalid PDF file structure. The file might be corrupted or not a valid PDF.";
-             } else if (error.name === 'MissingPDFException' || error.status === 404) {
-                 userMessage = `Error loading PDF: File not found. Checked path: ${pdfPath}`;
-             } else if (error.name === 'NetworkError' || error.message?.includes('fetch')) {
-                 userMessage = `Error loading PDF: Network error. Check path and connection: ${pdfPath}`;
-             } else if (error.name === 'UnknownErrorException') {
-                  userMessage = `Error loading PDF: An unknown error occurred. Check console. Path: ${pdfPath}`;
-             } else if (error.name === 'UnexpectedResponseException') {
-                  userMessage = `Error loading PDF: Server responded unexpectedly (Status: ${error.status}). Path: ${pdfPath}`;
+             switch (error.name) {
+                case 'InvalidPDFException':
+                case 'FormatError': // Sometimes PDF.js uses this
+                    userMessage = "Error: Invalid PDF file structure. The file might be corrupted or not a valid PDF.";
+                    break;
+                case 'MissingPDFException':
+                    userMessage = `Error: PDF file not found. Checked path: <code>${escapeHtml(pdfPath)}</code>`;
+                    break;
+                case 'NetworkError':
+                    userMessage = `Error: Network problem loading PDF. Check your connection and the file path: <code>${escapeHtml(pdfPath)}</code>`;
+                    break;
+                case 'UnknownErrorException':
+                     userMessage = `Error: An unknown error occurred loading the PDF. Check console. Path: <code>${escapeHtml(pdfPath)}</code>`;
+                     break;
+                case 'UnexpectedResponseException':
+                     userMessage = `Error: Server responded unexpectedly (Status: ${error.status}). Path: <code>${escapeHtml(pdfPath)}</code>`;
+                     break;
+                case 'PasswordException':
+                     userMessage = `Error: The PDF file is password protected and cannot be displayed.`;
+                     break;
+                default:
+                    // Keep the generic message if the error name isn't specifically handled
+                    userMessage = `Error loading PDF (${error.name || 'Unknown Type'}): ${error.message || 'No details'}. Path: <code>${escapeHtml(pdfPath)}</code>`;
              }
-             pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">${userMessage}</p>`;
+             pdfViewerContainer.innerHTML = `<div class="p-4 text-center text-red-600 dark:text-red-400">${userMessage}</div>`;
              pdfControls.classList.add('hidden');
              pdfExplainButton.disabled = true;
              cleanupPdfViewer();
+        // *** MODIFICATION END ***
         });
 
     } catch (error) {
-        console.error("Synchronous error in initPdfViewer:", error);
-        pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">Error initializing PDF viewer: ${error.message}.</p>`;
+        // *** MODIFICATION: Enhanced logging for synchronous errors ***
+        console.error("Synchronous error during PDF viewer initialization:", error);
+        pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">Error initializing PDF viewer: ${error.message}. Check console for details.</p>`;
         pdfControls.classList.add('hidden');
         pdfExplainButton.disabled = true;
         cleanupPdfViewer();
@@ -1315,7 +1424,11 @@ async function fetchVideoDurationsIfNeeded(videoIds) {
     if (idsToFetch.length === 0) return;
     console.log(`Fetching durations for ${idsToFetch.length} videos...`);
     const apiKey = YOUTUBE_API_KEY; // Use imported key
-    if (!apiKey || apiKey === "YOUR_API_KEY_HERE") { console.warn("YouTube API Key not configured. Cannot fetch video durations."); idsToFetch.forEach(id => videoDurationMap[id] = null); return; }
+    if (!apiKey || apiKey === "YOUR_API_KEY_HERE" || apiKey === "AIzaSyB8v1IX_H3USSmBCJjee6kQBONAdTjmSuA" /* Avoid using potentially revoked key */ ) {
+        console.warn("YouTube API Key not configured or invalid. Cannot fetch video durations.");
+        idsToFetch.forEach(id => videoDurationMap[id] = null);
+        return;
+     }
     const MAX_IDS_PER_REQUEST = 50;
     try {
         for (let i = 0; i < idsToFetch.length; i += MAX_IDS_PER_REQUEST) {
@@ -1403,29 +1516,64 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
      const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
      chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
      const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
+     // *** MODIFICATION START: Log PDF Path Determination ***
+     console.log(`[PDF Path Debug] Chapter ${chapterNum}: pdfPath determined as: "${pdfPath}". Source values: chapterResources.pdfPath="${chapterResources.pdfPath}", courseDef.pdfPathPattern="${courseDef.pdfPathPattern}"`);
+     // *** MODIFICATION END ***
+
      const currentVideo = chapterLectureVideos[initialVideoIndex];
      const videoId = currentVideo ? getYouTubeVideoId(currentVideo.url) : null;
      const totalVideos = chapterLectureVideos.length;
      currentVideoIndex = initialVideoIndex;
      currentTranscriptionData = []; // Reset transcription
 
-     // MODIFIED: Use the refactored getSrtFilenameFromTitle
-     const srtFilename = currentVideo ? getSrtFilenameFromTitle(currentVideo.title) : null;
-     const srtPath = srtFilename ? `${COURSE_TRANSCRIPTION_BASE_PATH}${srtFilename}` : null;
+     // --- Determine SRT Filename ---
+     let srtFilename = null;
+     if (currentVideo) {
+         // Prioritize pre-defined srtFilename from the course data object
+         if (currentVideo.srtFilename && typeof currentVideo.srtFilename === 'string' && currentVideo.srtFilename.trim() !== '') {
+             srtFilename = currentVideo.srtFilename.trim();
+             console.log(`[SRT Filename] Using pre-defined srtFilename from course data: "${srtFilename}"`);
+         } else {
+             // Fallback: Generate filename from video title
+             srtFilename = getSrtFilenameFromTitle(currentVideo.title);
+              console.log(`[SRT Filename] Generated srtFilename from title "${currentVideo.title}": "${srtFilename}"`);
+         }
+     }
 
+     // --- Determine Transcription Base Path ---
+     let transcriptionBasePath = COURSE_TRANSCRIPTION_BASE_PATH; // Default to global path from config.js
+     if (courseDef && courseDef.transcriptionPathPattern && typeof courseDef.transcriptionPathPattern === 'string' && courseDef.transcriptionPathPattern.trim() !== '') {
+         transcriptionBasePath = courseDef.transcriptionPathPattern.trim();
+         console.log(`[SRT Path] Using course-specific transcriptionPathPattern: "${transcriptionBasePath}"`);
+     } else {
+         console.warn(`[SRT Path] Course-specific transcriptionPathPattern not found or invalid for course "${courseId}". Falling back to global path: "${COURSE_TRANSCRIPTION_BASE_PATH}"`);
+         // transcriptionBasePath is already defaulted to the global path
+     }
+     // Ensure the base path ends with a forward slash
+     if (!transcriptionBasePath.endsWith('/')) {
+         transcriptionBasePath += '/';
+         console.log(`[SRT Path] Added trailing slash to base path: "${transcriptionBasePath}"`);
+     }
+
+     // --- Construct Final SRT Path ---
+     const srtPath = srtFilename ? `${transcriptionBasePath}${srtFilename}` : null;
+     console.log('[SRT Load] Determined final SRT Path:', srtPath); // Log the final path being used
+
+     // --- Continue with other variables ---
      const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
      const progress = userCourseProgressMap.get(courseId);
      const isViewer = progress?.enrollmentMode === 'viewer';
 
      // --- Fetch necessary data ---
      if (srtPath) {
-        // *** MODIFIED: Use fetchAndParseSrt instead of fetchSrtText ***
+        // *** Use fetchAndParseSrt to load and parse the file ***
         currentTranscriptionData = await fetchAndParseSrt(srtPath);
         if(currentTranscriptionData.length === 0) {
-            console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path and file content.`);
+            console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path, permissions, and file content.`);
         }
      } else if (currentVideo) {
-         console.warn(`Could not determine SRT path for video: ${currentVideo.title}. Filename generation might have failed.`);
+         // Adjusted warning message if srtPath couldn't be constructed
+         console.warn(`Could not determine SRT path for video: ${currentVideo.title}. Filename might be missing, invalid, or generation failed.`);
      }
      await fetchVideoDurationsIfNeeded(videoIdsForChapter);
      // --- End Fetching ---
@@ -1462,7 +1610,8 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
              ${srtPath ? `<button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>` : ''}
          </div>` : '';
 
-     const pdfHtml = pdfPath ? `
+     // Define pdfHtml here, potentially updated later
+     let pdfHtml = pdfPath ? `
         <div class="mb-4 border-t pt-4 dark:border-gray-700">
             <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
             <div id="pdf-controls" class="mb-2 hidden items-center gap-3 justify-center">
@@ -1477,6 +1626,18 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                 <p class="text-center p-4 text-muted">Loading PDF...</p>
             </div>
         </div>` : '<p class="text-muted text-center">No PDF available for this chapter.</p>';
+
+     // *** MODIFICATION START: Check PDF Path Validity before init ***
+     let pdfInitializationNeeded = false;
+     if (!pdfPath || !pdfPath.toLowerCase().endsWith('.pdf')) {
+         console.error(`[PDF Path Error] Invalid PDF path determined for Chapter ${chapterNum}: "${pdfPath}". PDF Viewer will not be initialized.`);
+         pdfHtml = `<div class="mb-4 border-t pt-4 dark:border-gray-700"><h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4><p class="text-red-500 p-4 text-center bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-700">Error: Could not determine a valid PDF file path for this chapter. Please check the course configuration. Path provided: "${escapeHtml(pdfPath || 'None')}"</p></div>`;
+         pdfInitializationNeeded = false; // Ensure it's false
+     } else {
+         pdfInitializationNeeded = true; // Path looks okay, mark for initialization
+     }
+     // *** MODIFICATION END ***
+
      const aiExplanationHtml = `
          <div id="ai-explanation-area" class="fixed bottom-4 right-4 w-80 max-h-[60vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 hidden flex flex-col z-50 animate-fade-in">
              <div class="flex justify-between items-center p-2 border-b dark:border-gray-600 flex-shrink-0">
@@ -1490,6 +1651,8 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
          </div>`;
      const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
      const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
+
+     // Assemble main content using potentially updated pdfHtml
      contentArea.innerHTML = `
         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
              <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
@@ -1539,10 +1702,17 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
         </div>
         ${aiExplanationHtml}
      `;
+
      if (videoId) createYTPlayer(videoContainerId, videoId);
      // Only call renderTranscriptionLines if we expect data or need to show the 'no transcription' message based on srtPath attempt
      if (currentVideo) renderTranscriptionLines(); // Render initial transcription state (will show msg if no data/path)
-     if (pdfPath) await initPdfViewer(pdfPath); // Initialize PDF viewer
+
+     // *** MODIFICATION START: Call initPdfViewer only if needed ***
+     if (pdfInitializationNeeded) {
+         await initPdfViewer(pdfPath); // Initialize PDF viewer
+     }
+     // *** MODIFICATION END ***
+
      highlightTranscriptionLine(); // Initial highlight attempt
      checkAndMarkChapterStudied(courseId, chapterNum); // Check status on load
 }

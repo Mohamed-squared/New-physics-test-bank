@@ -27,7 +27,7 @@ service cloud.firestore {
                        (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
                         (isAdmin() && // Admin can update specific fields
                          request.resource.data.diff(resource.data).affectedKeys()
-                           // <<< --- MODIFICATION: Added 'lastSelectedSubjectId' --- >>>
+                           // Added 'lastSelectedSubjectId' to the list of fields admin can update
                            .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId'])
                         )
                        );

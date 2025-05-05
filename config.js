@@ -145,10 +145,8 @@ export const FOP_COURSE_DEFINITION = {
         "https://www.youtube.com/playlist?list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr"
     ],
     pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`,
-    // --- NEW: Added Image URLs ---
     imageUrl: './assets/images/course_thumbnails/fop_physics_thumb.png', // Thumbnail for lists
     coverUrl: './assets/images/course_covers/fop_physics_cover.jpg',    // Cover for dashboard
-    // --- End NEW ---
     chapters: [
         "Measurement", "Motion Along a Straight Line", "Vectors", "Motion in Two and Three Dimensions",
         "Force and Motion—I", "Force and Motion—II", "Kinetic Energy and Work",
@@ -165,8 +163,48 @@ export const FOP_COURSE_DEFINITION = {
         "Quarks, Leptons, and the Big Bang"
     ],
     midcourseChapters: [11, 22, 33],
-    chapterResources: { }
+    chapterResources: {
+        // *** MODIFICATION START: Added example srtFilename ***
+        // NOTE: Replace "Chapter1_Video1_Measurement.srt" etc. with your ACTUAL filenames!
+        1: {
+            lectureUrls: [
+                {
+                    title: "Fundamentals of Physics (01) - Measurement 1 | 1 القياس",
+                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH1_V1",
+                    // ADD THIS LINE:
+                    srtFilename: "Fundamentals_of_Physics_01_Measurement_1_1_القياس.srt"
+                },
+                 {
+                    title: "Fundamentals of Physics (01) - Measurement 2 | 2 القياس",
+                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH1_V2",
+                    // ADD THIS LINE:
+                    srtFilename: "Fundamentals_of_Physics_01_Measurement_2_2_القياس.srt"
+                }
+                // Add more videos for Chapter 1 if they exist...
+            ],
+            pdfPath: `${COURSE_PDF_BASE_PATH}chapter1.pdf`
+        },
+        2: {
+            lectureUrls: [
+                {
+                    title: "Fundamentals of Physics (02) - Motion Along a Straight Line 1 | 1 الحركة في خط مستقيم",
+                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH2_V1",
+                    // ADD THIS LINE:
+                    srtFilename: "Fundamentals_of_Physics_02_Motion_Along_a_Straight_Line_1_1_الحركة_في_خط_مستقيم.srt"
+                }
+                // Add more videos for Chapter 2 if they exist...
+            ],
+             pdfPath: `${COURSE_PDF_BASE_PATH}chapter2.pdf`
+        },
+        // ... Add chapterResources entries for ALL other chapters ...
+        // ... with lectureUrls arrays containing objects like the examples above ...
+        // *** Make sure to include the correct 'srtFilename' for EACH video ***
+        // Example for a chapter without specific overrides (will use pattern):
+        3: {
+            // No lectureUrls or pdfPath specified, will fall back to patterns/defaults if needed
+        }
+        // *** MODIFICATION END ***
+     }
 };
-
 
 // --- END OF FILE config.js ---

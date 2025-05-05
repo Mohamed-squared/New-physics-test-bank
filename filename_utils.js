@@ -1,5 +1,7 @@
 // --- START OF FILE filename_utils.js ---
 
+// --- START OF FILE filename_utils.js ---
+
 /**
  * Clean text for use in filenames by removing special characters
  * and replacing spaces with underscores. Handles basic English and Arabic.
@@ -25,9 +27,9 @@ export function cleanTextForFilename(text) {
 }
 
 /**
- * Generates a structured filename from a specific title format.
+ * Generates a structured filename from a specific title format, EXCLUDING the Arabic part.
  * Example Input: "Calculus (02) - properties of numbers 1 | 1 التفاضل و التكامل - خصائص الأعداد"
- * Example Output: "Calculus_02_properties_of_numbers_1_1_خصائص_الأعداد" (Adjusted Arabic cleaning)
+ * Example Output: "Calculus_02_properties_of_numbers_1"
  * @param {string} title - The original video title.
  * @returns {string|null} - The generated filename or null if format is invalid.
  */
@@ -36,6 +38,7 @@ export function generateStructuredFilename(title) {
     const parts = title.split('|');
     // Allow flexibility: might not always have '|' or Arabic part
     const englishPart = parts[0].trim();
+    // We still parse the Arabic part to potentially clean the English part better, but don't use it in the output.
     const arabicPart = parts.length > 1 ? parts[1].trim() : '';
 
     // Extract part number (e.g., '01' from '(01)')
@@ -54,12 +57,12 @@ export function generateStructuredFilename(title) {
     englishDesc = englishDesc.replace(/^[-_\s]+/, ''); // Include underscore removal
     englishDesc = cleanTextForFilename(englishDesc);
 
-    // Clean Arabic description (basic cleaning)
+    // Clean Arabic description (basic cleaning) - WE DO THIS BUT DON'T ADD IT TO FILENAME
     // Remove specific phrase if present (case-insensitive might be better if needed)
     let arabicDesc = arabicPart.replace('التفاضل و التكامل', '').trim();
     // Remove leading numbers and hyphens/spaces commonly found
     arabicDesc = arabicDesc.replace(/^\d+\s*[-\s_]*/, '').trim();
-    arabicDesc = cleanTextForFilename(arabicDesc);
+    arabicDesc = cleanTextForFilename(arabicDesc); // Clean it, just in case it's useful elsewhere later
 
     // Extract Base name (e.g., "Calculus" or derive from title start?)
     let baseName = "Video"; // Default base
@@ -74,15 +77,19 @@ export function generateStructuredFilename(title) {
     if (englishDesc) {
         fileNameParts.push(englishDesc);
     }
-    if (arabicDesc) {
-        fileNameParts.push(arabicDesc);
-    }
+    // *** MODIFICATION START: Removed Arabic part from filename ***
+    // if (arabicDesc) {
+    //     fileNameParts.push(arabicDesc); // <--- This line is removed/commented out
+    // }
+    // *** MODIFICATION END ***
 
     let fileName = fileNameParts.join('_');
 
     // Final cleanup to ensure no weird artifacts like multiple underscores or leading/trailing ones
     fileName = fileName.replace(/_{2,}/g, '_').replace(/^_+|_+$/g, ''); // More specific to underscore
 
+    // *** ADDED LOGGING ***
+    console.log('[Filename Util] Generated filename (Arabic Excluded):', fileName, 'from title:', title);
     return fileName;
 }
 
@@ -95,13 +102,17 @@ export function generateStructuredFilename(title) {
 export function getSrtFilenameFromTitle(title) {
      if (!title) return null;
      // Call the dedicated function to generate the base filename
-     const baseFilename = generateStructuredFilename(title);
+     const baseFilename = generateStructuredFilename(title); // This now excludes Arabic
      // Check if the structured generation was successful
      if (!baseFilename) {
           console.warn(`Could not generate structured filename for title: "${title}". SRT path generation aborted.`);
+          // *** ADDED LOGGING ***
+          console.log('[Filename Util] Final SRT filename:', null, 'for title:', title);
           return null; // Return null if base generation failed
      }
      // Append .srt to the valid base filename
+     // *** ADDED LOGGING ***
+     console.log('[Filename Util] Final SRT filename:', `${baseFilename}.srt`, 'for title:', title);
      return `${baseFilename}.srt`;
 }
 
