@@ -71,11 +71,13 @@ export function setCurrentUser(newUser) {
 
         // --- MODIFICATION: Determine isAdmin status ---
         let determinedIsAdmin = false;
+        // Check if isAdmin is explicitly provided and is a boolean
         if (typeof newUser.isAdmin === 'boolean') {
-            determinedIsAdmin = newUser.isAdmin;
+            // If isAdmin is set, the primary admin is always admin, otherwise respect the flag.
+            determinedIsAdmin = (newUser.uid === ADMIN_UID) || newUser.isAdmin;
         } else {
             // If isAdmin is not explicitly set (e.g., old user doc or only Auth data provided),
-            // default to true only for the primary admin, false otherwise.
+            // default to true ONLY for the primary admin, false otherwise.
             determinedIsAdmin = (newUser.uid === ADMIN_UID);
         }
         // --- END MODIFICATION ---
@@ -87,7 +89,7 @@ export function setCurrentUser(newUser) {
             username: newUser.username || null,
             displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User',
             photoURL: newUser.photoURL || null,
-            credits: newUser.credits !== undefined ? Number(newUser.credits) : 0, // MODIFIED: Initialize credits
+            credits: newUser.credits !== undefined ? Number(newUser.credits) : 0, // MODIFIED: Initialize/update credits
         };
         console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin, credits: currentUser.credits });
     } else {

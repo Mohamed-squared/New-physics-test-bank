@@ -38,7 +38,8 @@ let currentManagingUserIdForSubjects = null; // MODIFIED: For subject management
 // --- Admin Dashboard UI ---
 
 export function showAdminDashboard() {
-    if (currentUser?.uid !== ADMIN_UID) {
+    // MODIFIED: Check general admin status, not just primary admin
+    if (!currentUser || !currentUser.isAdmin) {
         displayContent('<p class="text-red-500 p-4">Access Denied. Admin privileges required.</p>');
         return;
     }
@@ -189,16 +190,17 @@ export function showAdminDashboard() {
                     <p class="text-sm text-muted mb-3">
                         Configure automatic deletion of old messages in the global chat.
                         <strong>Note:</strong> This setting only stores the configuration. Actual deletion requires a backend Cloud Function (e.g., triggered daily) to read this setting and perform the deletions.
+                        This functionality requires the logged-in user to be the Primary Admin (UID: ${ADMIN_UID}).
                     </p>
                     <div class="flex flex-wrap items-center gap-4">
                         <label for="chat-auto-delete-select" class="text-sm font-medium">Delete messages older than:</label>
-                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm">
+                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm" ${currentUser?.uid !== ADMIN_UID ? 'disabled' : ''}>
                             <option value="0">Disabled</option>
                             <option value="7">7 days</option>
                             <option value="30">30 days</option>
                             <option value="90">90 days</option>
                         </select>
-                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0">Save Setting</button>
+                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0" ${currentUser?.uid !== ADMIN_UID ? 'disabled' : ''}>Save Setting</button>
                     </div>
                     <div id="chat-auto-delete-status" class="mt-3 text-sm"></div>
                 </div>
@@ -245,8 +247,16 @@ async function loadFeedbackForAdmin() {
             const statusClass = status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
             const statusText = status === 'new' ? 'New' : status === 'replied' ? 'Replied' : (status || 'Unknown');
             const senderName = escapeHtml(data.username || 'Unknown User');
-            const isAdminSender = data.userId === ADMIN_UID;
-            const adminIconHtml = isAdminSender ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
+            const isPrimaryAdminSender = data.userId === ADMIN_UID;
+            const senderIsAssignedAdmin = data.isAdmin === true && data.userId !== ADMIN_UID;
+
+            let adminIconHtml = '';
+            if (isPrimaryAdminSender) {
+                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Primary Admin"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
+            } else if (senderIsAssignedAdmin) {
+                 adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Assigned Admin"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>`;
+            }
+
             const textEscaped = escapeHtml(data.feedbackText || 'No text');
             const replyTextEscaped = escapeHtml(data.replyText || '');
              const itemTypeLabel = type === 'feedback' ? 'Feedback' : 'Exam Issue';
@@ -288,7 +298,7 @@ async function loadFeedbackForAdmin() {
 window.loadFeedbackForAdmin = loadFeedbackForAdmin;
 
 export function promptAdminReply(collectionName, itemId, recipientUserId) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser || !currentUser.isAdmin) {
         alert("Action requires admin privileges.");
         return;
     }
@@ -302,7 +312,7 @@ export function promptAdminReply(collectionName, itemId, recipientUserId) {
 window.promptAdminReply = promptAdminReply;
 
 async function handleAdminReply(collectionName, itemId, recipientUserId, replyText) {
-     if (!currentUser || currentUser.uid !== ADMIN_UID) {
+     if (!currentUser || !currentUser.isAdmin) {
         alert("Action requires admin privileges.");
         return;
     }
@@ -328,9 +338,7 @@ async function handleAdminReply(collectionName, itemId, recipientUserId, replyTe
 }
 
 export function confirmDeleteItem(collectionName, itemId) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Admin privileges required."); return;
-    }
+    if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
     if (confirm(`Are you sure you want to permanently delete this ${collectionName === 'feedback' ? 'feedback message' : 'exam issue'} (ID: ${itemId})? This cannot be undone.`)) {
         handleDeleteItem(collectionName, itemId);
     }
@@ -358,7 +366,7 @@ async function deleteDbItem(collectionName, itemId) {
 }
 
 async function handleDeleteItem(collectionName, itemId) {
-     if (!currentUser || currentUser.uid !== ADMIN_UID || !itemId || !collectionName) return;
+     if (!currentUser || !currentUser.isAdmin || !itemId || !collectionName) return;
      showLoading(`Deleting item from ${collectionName}...`);
      const success = await deleteDbItem(collectionName, itemId);
      hideLoading();
@@ -396,8 +404,15 @@ async function loadCoursesForAdmin() {
              const statusClass = course.status === 'pending' ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/80' : 'border-red-400 bg-red-50 dark:bg-red-900/80';
              const statusText = course.status === 'pending' ? 'Pending Approval' : 'Reported';
              const creatorName = escapeHtml(course.creatorName || 'Unknown');
-             const isAdminCreator = course.creatorUid === ADMIN_UID;
-             const adminIconHtml = isAdminCreator ? `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>` : '';
+             const isPrimaryAdminCreator = course.creatorUid === ADMIN_UID;
+             const creatorIsAssignedAdmin = course.creatorIsAdmin === true && course.creatorUid !== ADMIN_UID;
+
+             let adminIconHtml = '';
+             if (isPrimaryAdminCreator) {
+                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Primary Admin"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
+             } else if (creatorIsAssignedAdmin) {
+                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Assigned Admin"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>`;
+             }
              const courseName = escapeHtml(course.name || 'Unnamed Course');
 
              coursesHtml += `
@@ -625,7 +640,7 @@ export async function loadUserBadgesForAdmin() {
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 
 export function promptAddBadge(userId) {
-     if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
      const courseId = prompt(`Enter Course ID for the new badge (e.g., fop_physics_v1):`);
      if (!courseId) return;
      const courseName = prompt(`Enter Course Name for the badge (e.g., Fundamentals of Physics):`, globalCourseDataMap.get(courseId)?.name || '');
@@ -646,7 +661,7 @@ export function promptAddBadge(userId) {
 window.promptAddBadge = promptAddBadge;
 
 export function confirmRemoveBadge(userId, courseId) {
-     if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
      if (confirm(`Are you sure you want to remove the badge for course ID "${courseId}" for user ${userId}?`)) {
          handleRemoveBadgeForUser(userId, courseId);
      }
@@ -754,7 +769,7 @@ export async function loadUserSubjectsForAdmin() {
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 
 export async function handleAdminSubjectApproval(targetUserId, subjectId, newStatus) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID || !targetUserId || !subjectId || !newStatus) {
+    if (!currentUser || !currentUser.isAdmin || !targetUserId || !subjectId || !newStatus) {
         alert("Invalid operation or missing parameters.");
         return;
     }
@@ -771,6 +786,7 @@ export async function handleAdminSubjectApproval(targetUserId, subjectId, newSta
     if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subjectName)}" for this user?`)) {
         showLoading("Updating subject status...");
         try {
+            // Pass the current admin's UID (currentUser.uid)
             const success = await adminUpdateUserSubjectStatus(currentUser.uid, targetUserId, subjectId, newStatus);
             hideLoading();
             if (success) {
@@ -1249,7 +1265,7 @@ window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
 
 
 async function handleDeleteUserFormulaSheetAdmin() {
-    if (!currentUser?.uid || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser?.isAdmin) {
         alert("Admin privileges required.");
         return;
     }
@@ -1296,7 +1312,7 @@ async function handleDeleteUserFormulaSheetAdmin() {
 }
 
 async function handleDeleteUserChapterSummaryAdmin() {
-    if (!currentUser?.uid || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser?.isAdmin) {
         alert("Admin privileges required.");
         return;
     }
@@ -1349,7 +1365,7 @@ window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin
 
 // --- NEW: Delete All Feedback ---
 export function confirmDeleteAllFeedback() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser || !currentUser.isAdmin) {
         alert("Admin privileges required.");
         return;
     }
@@ -1361,7 +1377,7 @@ export function confirmDeleteAllFeedback() {
 window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
 
 async function handleDeleteAllFeedback() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    if (!currentUser || !currentUser.isAdmin) return;
 
     showLoading("Deleting all feedback & issues...");
     try {
@@ -1382,7 +1398,7 @@ async function handleDeleteAllFeedback() {
 
 // Function to list users for admin
 async function listAllUsersAdmin() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) return;
+    if (!currentUser || !currentUser.isAdmin) return;
     const userListArea = document.getElementById('admin-user-list-area');
     const searchInput = document.getElementById('admin-user-list-search');
     if (!userListArea || !searchInput) return;
@@ -1420,23 +1436,21 @@ async function listAllUsersAdmin() {
             const username = escapeHtml(userData.username || '-');
             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString() : 'N/A';
             const userIsAdmin = userData.isAdmin || false;
-            const isAdminUserPrimary = userId === ADMIN_UID;
+            const isPrimaryAdminUser = userId === ADMIN_UID;
 
             let adminBadgeHtml = '';
-            if (isAdminUserPrimary) {
+            if (isPrimaryAdminUser) {
                 adminBadgeHtml = '<span class="text-xs bg-yellow-400 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-100 px-1.5 py-0.5 rounded-full font-semibold">Primary Admin</span>';
             } else if (userIsAdmin) {
                 adminBadgeHtml = '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-700 dark:text-blue-200 px-1.5 py-0.5 rounded-full">Admin</span>';
             }
 
             let toggleAdminButtonHtml = '';
-            if (!isAdminUserPrimary) {
+            if (currentUser.uid === ADMIN_UID && !isPrimaryAdminUser) { // MODIFICATION: Only primary admin can toggle, and not for themselves
                 const buttonText = userIsAdmin ? 'Remove Admin' : 'Make Admin';
                 const buttonClass = userIsAdmin ? 'btn-warning-small' : 'btn-success-small';
-                const isCurrentUserPrimary = currentUser.uid === ADMIN_UID;
-                const disabledAttr = !isCurrentUserPrimary ? 'disabled' : '';
-                const titleAttr = !isCurrentUserPrimary ? 'title="Only the primary admin can change admin status."' : `title="${userIsAdmin ? 'Remove Admin Privileges' : 'Grant Admin Privileges'}"`;
-                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2" ${disabledAttr} ${titleAttr}>${buttonText}</button>`;
+                const titleAttr = userIsAdmin ? 'title="Remove Admin Privileges"' : 'title="Grant Admin Privileges"';
+                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2" ${titleAttr}>${buttonText}</button>`;
             }
 
             usersHtml += `
@@ -1482,17 +1496,25 @@ async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
     }
 
     const actionText = currentIsAdmin ? "remove admin privileges from" : "grant admin privileges to";
-    const targetUserDisplayName = document.querySelector(`#admin-user-list-area li button[onclick*="'${targetUserId}'"]`)?.closest('li')?.querySelector('.font-medium')?.textContent || `User ID ${targetUserId}`;
+    let targetUserDisplayName = `User ID ${targetUserId}`;
+    const userListItem = document.querySelector(`#admin-user-list-area li button[onclick*="'${targetUserId}'"]`)?.closest('li');
+    if (userListItem) {
+        const nameElement = userListItem.querySelector('.font-medium');
+        if (nameElement) targetUserDisplayName = nameElement.textContent.trim();
+    }
 
 
     if (confirm(`Are you sure you want to ${actionText} ${escapeHtml(targetUserDisplayName)}?`)) {
         showLoading("Updating admin status...");
         try {
-            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin);
+            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin); // Call Firestore function
             hideLoading();
             if (success) {
                 alert("Admin status updated successfully.");
-                listAllUsersAdmin();
+                listAllUsersAdmin(); // Refresh the user list
+            } else {
+                 // Firestore function will throw on error, so this path might not be hit often unless it returns false
+                alert("Failed to update admin status. The operation might have been denied or an error occurred.");
             }
         } catch (error) {
             hideLoading();
@@ -1505,7 +1527,7 @@ window.handleToggleAdminStatus = handleToggleAdminStatus;
 
 
 async function viewUserDetailsAdmin(userId) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID || !userId) return;
+    if (!currentUser || !currentUser.isAdmin || !userId) return; // MODIFIED
 
     document.getElementById('user-details-modal')?.remove();
     showLoading(`Loading details for user ${userId}...`);
@@ -1560,7 +1582,11 @@ async function viewUserDetailsAdmin(userId) {
                         displayValue = '<span class="text-gray-400 dark:text-gray-500 italic">null</span>';
                     } else if (typeof value === 'boolean') {
                         if (key === 'isAdmin') {
-                            displayValue = value ? '<span class="text-green-600 dark:text-green-400 font-semibold">TRUE (Admin)</span>' : '<span class="text-red-600 dark:text-red-400">false (User)</span>';
+                            if (userId === ADMIN_UID) {
+                                displayValue = '<span class="text-yellow-600 dark:text-yellow-400 font-semibold">TRUE (Primary Admin)</span>';
+                            } else {
+                                displayValue = value ? '<span class="text-blue-600 dark:text-blue-400 font-semibold">TRUE (Admin)</span>' : '<span class="text-red-600 dark:text-red-400">false (User)</span>';
+                            }
                         } else {
                             displayValue = value ? '<span class="text-green-600 dark:text-green-400">true</span>' : '<span class="text-red-600 dark:text-red-400">false</span>';
                         }
@@ -1578,7 +1604,8 @@ async function viewUserDetailsAdmin(userId) {
                         displayValue = escapeHtml(String(value));
                     }
                      let editButton = '';
-                     if (key === 'username') {
+                     // Only Primary Admin can edit username directly here
+                     if (key === 'username' && currentUser.uid === ADMIN_UID) {
                           editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
                      }
                     return `
@@ -1691,7 +1718,7 @@ async function viewUserDetailsAdmin(userId) {
                         </div>
                          <div>
                             <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Raw User Data (Excerpt)</h4>
-                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete, isAdmin: userData.isAdmin }, null, 2))}</code></pre>
+                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete, isAdmin: userData.isAdmin, credits: userData.credits }, null, 2))}</code></pre>
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
@@ -1711,10 +1738,16 @@ async function viewUserDetailsAdmin(userId) {
 window.viewUserDetailsAdmin = viewUserDetailsAdmin;
 
 function promptAdminChangeUsername(userId, currentUsername) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!currentUser || !currentUser.isAdmin) { // General admin check
         alert("Admin privileges required.");
         return;
     }
+    // Further restrict to primary admin for username changes if desired, or keep as general admin privilege
+    if (currentUser.uid !== ADMIN_UID) {
+        alert("Only the Primary Admin can change usernames directly.");
+        return;
+    }
+
 
     const newUsername = prompt(`Enter new username for user ${userId} (current: "${currentUsername}").\nMust be 3-20 alphanumeric characters or underscores:`);
 
@@ -1756,6 +1789,7 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
              }
         } else {
             hideLoading();
+            // This path might not be hit if adminUpdateUsername throws errors directly
             alert("An unexpected issue occurred while updating the username.");
         }
     } catch (error) {
@@ -1806,8 +1840,9 @@ async function loadChatAutoDeleteSetting() {
 }
 
 export async function saveChatAutoDeleteSetting() {
+    // MODIFIED: Only primary admin can change this global setting
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Admin privileges required.");
+        alert("Primary Admin privileges required to change chat auto-delete settings.");
         return;
     }
 

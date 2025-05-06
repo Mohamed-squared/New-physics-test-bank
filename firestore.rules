@@ -3,148 +3,180 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper function for Admin Check ---
-    function isAdmin() {
-      // Ensure this is your correct Admin Firebase User ID
-      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
+    // --- Helper Functions for Admin Checks ---
+    function isPrimaryAdmin() {
+      // Primary Admin Check (fixed UID)
+      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1"; // <<< REPLACE WITH YOUR ACTUAL ADMIN_UID
     }
 
-    // --- Usernames: Publicly readable, Owner creates, Admin creates/deletes ---
+    function isAssignedAdmin() {
+      // Assigned Admin Check (reads the user's own document)
+      // This requires the user document to exist and have an 'isAdmin' field.
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function canPerformAdminActions() {
+      // A user can perform general admin actions if they are the Primary Admin OR an Assigned Admin.
+      return isPrimaryAdmin() || isAssignedAdmin();
+    }
+
+    // --- Usernames: Publicly readable, Owner or Primary Admin creates, Primary Admin deletes ---
     match /usernames/{username} {
         allow read: if true;
         allow create: if request.auth != null &&
-                         (request.resource.data.userId == request.auth.uid || isAdmin()); // Owner or Admin creates
-        allow delete: if request.auth != null && isAdmin(); // Only Admin deletes
-        allow update: if false; // Prevent updates
+                         (request.resource.data.userId == request.auth.uid || isPrimaryAdmin());
+        allow delete: if request.auth != null && isPrimaryAdmin();
+        allow update: if false; // Prevent direct updates to username registry
     }
 
-    // --- Users: Owner or Admin can manage profile and subcollections ---
+    // --- Users Collection ---
     match /users/{userId} {
-      // Allow owner or admin to read/delete profile
-      allow read, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      // Define update permissions more granularly
-      allow update: if request.auth != null &&
-                       (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
-                        (isAdmin() && // Admin can update specific fields
-                         request.resource.data.diff(resource.data).affectedKeys()
-                           // MODIFIED: Added 'isAdmin' to the list of fields admin can update
-                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId', 'isAdmin', 'appData', 'userNotes']) // Also added appData and userNotes as admin might need to clear/reset these
-                        )
-                       );
-      // User can only create their own doc initially
+      // Read: Owner or any Admin (Primary or Assigned)
+      allow read: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions());
+
+      // Create: Only the user themselves can create their document
       allow create: if request.auth != null && request.auth.uid == userId;
 
-      // --- Subcollection Rules ---
+      // Delete: Owner or Primary Admin
+      allow delete: if request.auth != null && (request.auth.uid == userId || isPrimaryAdmin());
 
-      // Inbox: Owner manages read/update/delete, Admin can send (create) and delete
+      // Update:
+      allow update: if request.auth != null &&
+                       (
+                         // Case 1: Owner updates their own document
+                         (request.auth.uid == userId &&
+                           // Owner CANNOT update 'isAdmin' or 'credits' fields directly
+                           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits'])
+                         ) ||
+                         // Case 2: Primary Admin updates OTHER users' documents
+                         (isPrimaryAdmin() && userId != request.auth.uid &&
+                           // Primary Admin CAN update 'isAdmin' and 'credits' for others, plus other fields
+                           request.resource.data.diff(resource.data).affectedKeys()
+                             .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges',
+                                       'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
+                                       'isAdmin', 'credits', 'appData', 'userNotes'])
+                         ) ||
+                         // Case 3: Primary Admin updates THEIR OWN document
+                         (isPrimaryAdmin() && userId == request.auth.uid &&
+                           // Primary Admin CANNOT update their own 'isAdmin' status (it's inherent)
+                           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin'])
+                         )
+                         // Note: Assigned (non-primary) admins cannot update 'isAdmin' or 'credits' of any user
+                         // based on these rules. They can update other allowed fields if `canPerformAdminActions()`
+                         // were used here with a more general field list, but typically user profile updates
+                         // are done by the owner or primary admin for sensitive fields.
+                       );
+
+      // --- User Subcollections ---
       match /inbox/{messageId} {
-        allow read, update: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && isAdmin(); // Admin can create (send replies)
-        allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin()); // Owner or Admin can delete
+        allow read, update: if request.auth != null && request.auth.uid == userId; // Owner
+        allow create: if request.auth != null && canPerformAdminActions();          // Any Admin can send (create)
+        allow delete: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions()); // Owner or any Admin
       }
 
-      // User-specific Formula Sheets: Owner manages read/write, Admin can read/delete
       match /userFormulaSheets/{sheetId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId; // Owner can read/write
-          allow read, delete: if request.auth != null && isAdmin(); // Admin can read and delete
+        allow read, write: if request.auth != null && request.auth.uid == userId; // Owner
+        allow read, delete: if request.auth != null && canPerformAdminActions();   // Any Admin can read/delete
       }
 
-      // User-specific Chapter Summaries: Owner manages read/write, Admin can read/delete
       match /userChapterSummaries/{summaryId} {
-          allow read, write: if request.auth != null && request.auth.uid == userId; // Owner can read/write
-          allow read, delete: if request.auth != null && isAdmin(); // Admin can read and delete
+        allow read, write: if request.auth != null && request.auth.uid == userId; // Owner
+        allow read, delete: if request.auth != null && canPerformAdminActions();   // Any Admin can read/delete
       }
 
-      // Note: userNotes map is covered by the parent /users/{userId} rule.
-      // If admin needs to modify userNotes directly, it needs to be in the hasOnly list above (added it for completeness).
+      match /creditLog/{logId} {
+        allow read: if request.auth != null && (request.auth.uid == userId || isPrimaryAdmin()); // Owner or Primary Admin
+        allow create: if request.auth != null &&
+                         (
+                           (request.auth.uid == userId && request.resource.data.performedBy == userId) || // User action logging
+                           isPrimaryAdmin() // Primary admin initiated action
+                         );
+        allow update, delete: if false; // Logs are immutable
+      }
     }
 
-    // --- User Course Progress: Owner or Admin can manage ---
-    match /userCourseProgress/{userId}/{courses=**} { // Match any document in subcollections
-       allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    // --- User Course Progress: Owner or any Admin can manage ---
+    match /userCourseProgress/{userId}/{courses=**} {
+       allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions());
     }
 
-    // --- User Exam Storage: Owner manages read/write/create/delete, Admin can read ---
-    match /userExams/{userId}/{exams=**} { // Match any document in subcollections
+    // --- User Exam Storage: Owner manages read/write/create/delete, any Admin can read ---
+    match /userExams/{userId}/{exams=**} {
        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
-       allow read: if request.auth != null && isAdmin(); // Allow admin read (override)
-       // Admins cannot write/delete other users' exams with this rule.
+       allow read: if request.auth != null && canPerformAdminActions();
     }
 
-    // --- Feedback: Auth users create, Admin manages read/update/delete ---
+    // --- Feedback & Exam Issues: Authenticated users create, any Admin manages ---
     match /feedback/{feedbackId} {
       allow create: if request.auth != null;
-      allow read, update, delete: if request.auth != null && isAdmin();
+      allow read, update, delete: if request.auth != null && canPerformAdminActions();
     }
-
-    // --- Exam Issues: Auth users create, Admin manages read/update/delete ---
     match /examIssues/{issueId} {
        allow create: if request.auth != null;
-       allow read, update, delete: if request.auth != null && isAdmin();
+       allow read, update, delete: if request.auth != null && canPerformAdminActions();
     }
 
-    // --- Course Definitions: ---
+    // --- Course Definitions ---
     match /courses/{courseId} {
-      // Allow public read for all courses
-      allow read: if true;
+      allow read: if true; // Publicly readable
 
-      // Allow authenticated users to CREATE courses
+      // Create: Authenticated user, status depends on role
       allow create: if request.auth != null &&
-                       request.resource.data.creatorUid == request.auth.uid && // Creator must be current user
-                       ( // Status logic depends on user role
-                         (request.resource.data.status == 'pending' && !isAdmin()) || // Non-admin submits as pending
-                         (request.resource.data.status == 'approved' && isAdmin()) // Admin submits as approved
-                       );
-                       // Consider if more fields need to be restricted on create for non-admins in .hasOnly([])
+                       request.resource.data.creatorUid == request.auth.uid &&
+                       (
+                         (request.resource.data.status == 'pending' && !isPrimaryAdmin()) || // Non-Primary Admin creates as 'pending'
+                         (request.resource.data.status == 'approved' && isPrimaryAdmin())    // Primary Admin can create as 'approved'
+                       ) &&
+                       // Fields allowed on creation (important for security)
+                       request.resource.data.keys().hasOnly([
+                         'name', 'description', 'majorTag', 'subjectTag', 'youtubePlaylistUrls',
+                         'creatorUid', 'creatorName', 'createdAt', 'status', 'reportedBy',
+                         'reportReason', 'chapterResources', 'imageUrl', 'coverUrl', 'courseDirName',
+                         'prerequisites', 'corequisites', 'totalChapters', 'chapters', 'relatedSubjectId',
+                         'creatorIsAdmin' // Store if creator was an admin at time of creation
+                       ]);
 
-
-      // Allow Admins to UPDATE any field (including status, technical details)
-      allow update: if request.auth != null && isAdmin();
-
-      // Allow Admins to DELETE courses
-      allow delete: if request.auth != null && isAdmin();
+      // Update & Delete: Only Primary Admin
+      allow update, delete: if request.auth != null && isPrimaryAdmin();
     }
 
-    // --- Shared Notes: Public read, Auth create, Owner/Admin manage update/delete ---
+    // --- Shared Notes: Public read, Auth create, Owner/any Admin manage update/delete ---
     match /sharedCourseNotes/{noteId} {
       allow read: if true;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid; // Creator sets correct UID
-      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || canPerformAdminActions());
     }
 
-    // --- Admin Tasks: Only Admin can manage ---
+    // --- Admin Tasks: Only Primary Admin can manage ---
+    // (Assigned admins might view tasks, but only primary admin creates/updates/deletes them via these rules)
     match /adminTasks/{taskId} {
-      // Admin can perform all actions (read, write, create, delete)
-      allow read, write, create, delete: if request.auth != null && isAdmin();
-      // No other users should have access
+      allow read, write, create, delete: if request.auth != null && isPrimaryAdmin();
     }
 
     // --- Global Chat Messages ---
     match /globalChatMessages/{messageId} {
-      // Logged-in users can read and create messages
       allow read, create: if request.auth != null && request.auth.uid != null;
-      // Only the message owner OR an admin can delete
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || isAdmin());
-      // Allow Admin to update ONLY the isPinned field
-      allow update: if request.auth != null && isAdmin() &&
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || canPerformAdminActions());
+      allow update: if request.auth != null && canPerformAdminActions() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned']);
     }
 
-    // --- Settings Collection ---
-    // Rule for chat settings
-    match /settings/chat {
-      // Only Admin can read or write the chat settings document
-      allow read, write: if request.auth != null && isAdmin();
+    // --- Settings Collection (e.g., chat auto-delete) ---
+    match /settings/{settingDocId} {
+      // Only Primary Admin can read or write these global settings
+      allow read, write: if request.auth != null && isPrimaryAdmin();
     }
 
-    // --- Deprecated Global Caches: Read allowed, Write blocked (except Admin) ---
+    // --- Deprecated Global Caches: Read allowed, Write by Primary Admin ---
     match /globalFormulaSheets/{sheetId} {
         allow read: if true;
-        allow write: if request.auth != null && isAdmin();
+        allow write: if request.auth != null && isPrimaryAdmin();
     }
     match /globalChapterSummaries/{summaryId} {
         allow read: if true;
-        allow write: if request.auth != null && isAdmin();
+        allow write: if request.auth != null && isPrimaryAdmin();
     }
   }
 }

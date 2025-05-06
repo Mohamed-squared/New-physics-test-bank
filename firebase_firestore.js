@@ -525,8 +525,9 @@ export async function loadUserData(uid) {
                 displayName: userData.displayName || firebaseAuth?.currentUser?.displayName,
                 photoURL: userData.photoURL || firebaseAuth?.currentUser?.photoURL,
                 username: userData.username || null,
-                isAdmin: userData.isAdmin !== undefined ? userData.isAdmin : (uid === ADMIN_UID),
-                credits: userData.credits !== undefined ? Number(userData.credits) : 0, // Load credits, default to 0
+                // MODIFIED: Correctly determine isAdmin based on Firestore or primary admin
+                isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : (uid === ADMIN_UID),
+                credits: userData.credits !== undefined ? Number(userData.credits) : 0, // MODIFIED: Load credits, default to 0
                 onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
             };
             setCurrentUser(userProfileForState); // Update central state immediately
@@ -558,12 +559,12 @@ export async function loadUserData(uid) {
                   console.log("Initializing userNotes map.");
                   await userRef.update({ userNotes: {} }).catch(e => console.error("Error setting initial userNotes:", e));
              }
-              // Ensure isAdmin field exists, defaulting to false unless it's the ADMIN_UID
+              // --- MODIFICATION: Ensure isAdmin field exists, defaulting based on ADMIN_UID ---
              if (userData.isAdmin === undefined) {
                  console.log(`Initializing isAdmin field for user ${uid}.`);
                  await userRef.update({ isAdmin: (uid === ADMIN_UID) }).catch(e => console.error("Error setting initial isAdmin field:", e));
              }
-             // Ensure credits field exists, defaulting to 0.
+             // --- MODIFICATION: Ensure credits field exists, defaulting to 0. ---
              if (userData.credits === undefined) {
                 console.log(`Initializing credits field for user ${uid}.`);
                 await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
@@ -703,14 +704,16 @@ export async function initializeUserData(uid, email, username, displayName = nul
 
     // --- MODIFICATION: Determine isAdmin status ---
     let initialIsAdmin = (uid === ADMIN_UID); // Default to true only for the primary admin
-    if (docExists && !forceReset && typeof existingUserData.isAdmin === 'boolean') {
-        initialIsAdmin = existingUserData.isAdmin; // Preserve existing isAdmin if present and not force resetting
+    // Preserve existing isAdmin on forceReset if it exists (unlikely scenario, but safe)
+    if (docExists && forceReset && typeof existingUserData.isAdmin === 'boolean') {
+        initialIsAdmin = existingUserData.isAdmin;
     }
     // --- END MODIFICATION ---
 
     // --- MODIFICATION: Initialize credits ---
     let initialCredits = 0;
-    if (docExists && !forceReset && typeof existingUserData.credits === 'number') {
+    // Preserve existing credits on forceReset if it exists
+    if (docExists && forceReset && typeof existingUserData.credits === 'number') {
         initialCredits = existingUserData.credits;
     }
     // --- END MODIFICATION ---
@@ -722,9 +725,9 @@ export async function initializeUserData(uid, email, username, displayName = nul
         // MODIFIED: For initial subjects, set creator to current user if not admin, or keep admin if user is admin
         // This is for *newly initialized users*. initialSubjectData already has ADMIN_UID as creator.
         // If the new user is NOT admin, their initial subjects should reflect their pending status.
-        const isCurrentUserAdmin = (uid === ADMIN_UID); // Check if the user being initialized is the admin
+        const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); // Check if the user being initialized is the admin
         Object.values(defaultAppData.subjects).forEach(subject => {
-            if (!isCurrentUserAdmin) {
+            if (!isCurrentUserInitializingAdmin) {
                 subject.status = 'pending'; // If new user is not admin, their initial subjects are pending
                 subject.creatorUid = uid;
                 subject.creatorName = displayName || username || email?.split('@')[0];
@@ -741,7 +744,7 @@ export async function initializeUserData(uid, email, username, displayName = nul
 
         for (const subjectId in defaultAppData.subjects) {
             const defaultSubject = defaultAppData.subjects[subjectId];
-            if (defaultSubject && (isCurrentUserAdmin || defaultSubject.status === 'approved')) { // Only fetch MD for approved or if admin
+            if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { // Only fetch MD for approved or if admin
                  const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
                  if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
             }
@@ -825,7 +828,11 @@ export async function submitFeedback(feedbackData, user) {
 
 // --- Inbox/Messaging ---
 export async function sendAdminReply(recipientUid, subject, body, adminUser) {
-     if (!db || !adminUser || adminUser.uid !== ADMIN_UID) { console.error("Unauthorized admin reply."); alert("Error: Admin privileges required."); return false; }
+     if (!db || !adminUser || !adminUser.isAdmin) { // MODIFIED: Check adminUser.isAdmin instead of specific UID
+         console.error("Unauthorized admin reply. Admin privileges required.");
+         alert("Error: Admin privileges required.");
+         return false;
+     }
      if (!recipientUid || !subject || !body) { console.error("Missing data for reply."); alert("Error: Missing info for reply."); return false; }
      const messageRef = db.collection('users').doc(recipientUid).collection('inbox').doc();
      try {
@@ -906,7 +913,7 @@ export async function sendWelcomeGuideMessage(userId) {
  * Ensures FoP can be updated.
  */
 export async function updateCourseDefinition(courseId, updates) {
-     if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+     if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check currentUser.isAdmin
          console.error("Permission denied: Admin privileges required.");
          alert("Permission denied. Admin required.");
          return false;
@@ -1013,7 +1020,8 @@ export async function updateCourseDefinition(courseId, updates) {
 export async function addCourseToFirestore(courseData) {
     if (!currentUser) return { success: false, message: "User not logged in." };
 
-    const isAdminUser = currentUser.uid === ADMIN_UID; // Check if current user is the primary admin
+    const isAdminUser = currentUser.isAdmin; // MODIFIED: Use currentUser.isAdmin
+
     const finalStatus = isAdminUser ? 'approved' : 'pending';
 
     // Generate courseDirName
@@ -1054,7 +1062,7 @@ export async function addCourseToFirestore(courseData) {
     let finalChapters = [];
     let finalRelatedSubjectId = null;
 
-    if (isAdminUser) { // Only primary admin can set these directly during creation
+    if (isAdminUser) { // Only admin can set these directly during creation
         finalTotalChapters = parseInt(courseData.totalChapters) || 0;
         if (isNaN(finalTotalChapters) || finalTotalChapters < 0) finalTotalChapters = 0;
         finalChapters = finalTotalChapters > 0
@@ -1157,8 +1165,8 @@ export async function markChapterStudiedInCourse(uid, courseId, chapterNum, meth
  * Allows an admin to mark a course as completed for a user and set the final grade/mark.
  */
 export async function updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus) {
-    // Check admin privileges using firebaseAuth directly
-    if (!firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+    // MODIFIED: Check currentUser.isAdmin for general admin access
+    if (!currentUser || !currentUser.isAdmin) {
         console.error("Permission Denied: Admin required for updateCourseStatusForUser.");
         alert("Admin privileges required.");
         return false;
@@ -1245,7 +1253,7 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
         console.log(`Successfully updated status/grade for course ${courseId}, user ${targetUserId}.`);
 
         // Update local map ONLY if it belongs to the currently logged-in user.
-        if (userCourseProgressMap.has(courseId) && targetUserId === firebaseAuth.currentUser?.uid) {
+        if (currentUser && userCourseProgressMap.has(courseId) && targetUserId === currentUser.uid) {
              const updatedProgressDoc = await progressRef.get(); // Re-fetch after transaction
              if (updatedProgressDoc.exists) {
                  const updatedProgressData = updatedProgressDoc.data();
@@ -1278,7 +1286,7 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
  * Handles adding a new badge via admin action.
  */
 export async function handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate) {
-     if (!firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } // MODIFIED
      showLoading("Adding badge...");
      const userRef = db.collection('users').doc(userId);
      try {
@@ -1307,7 +1315,7 @@ export async function handleAddBadgeForUser(userId, courseId, courseName, grade,
  * Handles removing a badge via admin action.
  */
 export async function handleRemoveBadgeForUser(userId, courseId) {
-     if (!firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } // MODIFIED
      showLoading("Removing badge...");
      const userRef = db.collection('users').doc(userId);
      try {
@@ -1332,7 +1340,7 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
  */
 export async function adminUpdateUsername(userId, oldUsername, newUsername) {
     console.log(`Admin attempting to change username for user ${userId} from "${oldUsername}" to "${newUsername}"`);
-    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check currentUser.isAdmin
         console.error("Permission denied: Admin privileges required for username update.");
         throw new Error("Permission denied: Admin privileges required.");
     }
@@ -1616,7 +1624,7 @@ export async function loadSharedNotes(courseId, chapterNum) {
 
 // --- Admin Functions for Generated Content Deletion ---
 export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
-    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete formula sheet: Admin privileges required");
         return false;
     }
@@ -1641,7 +1649,7 @@ export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
 }
 
 export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
-    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete chapter summary: Admin privileges required");
         return false;
     }
@@ -1667,7 +1675,7 @@ export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
 
 // --- NEW: Delete All Feedback Messages ---
 export async function deleteAllFeedbackMessages() {
-    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { // Added admin check
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         throw new Error("Permission denied: Admin privileges required.");
     }
     console.log("Admin: Deleting all feedback messages...");
@@ -1695,7 +1703,7 @@ export async function deleteAllFeedbackMessages() {
 
 // --- NEW: Delete All Exam Issues ---
 export async function deleteAllExamIssues() {
-    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) { // Added admin check
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         throw new Error("Permission denied: Admin privileges required.");
     }
     console.log("Admin: Deleting all exam issues...");
@@ -1724,13 +1732,13 @@ export async function deleteAllExamIssues() {
 // --- NEW: Delete Inbox Message ---
 export async function deleteInboxMessage(userId, messageId) {
     // Allow admin or owner to delete inbox messages
-    if (!db || !userId || !messageId || !firebaseAuth || !firebaseAuth.currentUser) {
+    if (!db || !userId || !messageId || !currentUser) { // MODIFIED
         console.error("Cannot delete inbox message: Missing DB, userId, messageId, or auth info");
         return false;
     }
 
-    const currentUid = firebaseAuth.currentUser.uid;
-    const isAdminUser = currentUid === ADMIN_UID;
+    const currentUid = currentUser.uid;
+    const isAdminUser = currentUser.isAdmin; // MODIFIED
     const isOwner = currentUid === userId;
 
     if (!isAdminUser && !isOwner) {
@@ -1755,7 +1763,7 @@ export async function deleteInboxMessage(userId, messageId) {
 // --- NEW: Delete Course Activity Progress ---
 export async function deleteCourseActivityProgress(userId, courseId, activityType, activityId) {
     // Only admin can delete specific progress items
-    if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete course activity progress: Admin privileges required");
         alert("Permission denied.");
         return false;
@@ -1925,7 +1933,7 @@ export async function fetchAdminTasks() {
  * @returns {Promise<string|null>} - The ID of the newly created task, or null on failure.
  */
 export async function addAdminTask(taskText) {
-    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to add task.");
         alert("Permission denied: Admin privileges required.");
         return null;
@@ -1959,7 +1967,7 @@ export async function addAdminTask(taskText) {
  * @returns {Promise<boolean>} - True on success, false on failure.
  */
 export async function updateAdminTaskStatus(taskId, newStatus) {
-    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to update task status.");
         alert("Permission denied: Admin privileges required.");
         return false;
@@ -1989,7 +1997,7 @@ export async function updateAdminTaskStatus(taskId, newStatus) {
  * @returns {Promise<boolean>} - True on success, false on failure or if status is not 'done'.
  */
 export async function deleteAdminTask(taskId) {
-    if (!db || !firebaseAuth || !firebaseAuth.currentUser || firebaseAuth.currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to delete task.");
         alert("Permission denied: Admin privileges required.");
         return false;
@@ -2038,7 +2046,7 @@ export async function deleteAdminTask(taskId) {
  * @returns {Promise<boolean>} - True on success, false on failure.
  */
 export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
-    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { // Only primary admin can toggle
         console.error("Permission denied: Only the primary admin can toggle admin status.");
         throw new Error("Permission denied: Only the primary admin can perform this action.");
     }
@@ -2075,7 +2083,7 @@ export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
  * @returns {Promise<boolean>} - True on success, false on failure.
  */
 export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subjectId, newStatus) {
-    if (!db || !firebaseAuth || !adminUid || adminUid !== ADMIN_UID) {
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check current logged-in user's admin status
         console.error("Permission denied: Admin privileges required for this action.");
         alert("Permission denied. Admin privileges required.");
         return false;
@@ -2090,7 +2098,7 @@ export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subje
         return false;
     }
 
-    console.log(`Admin ${adminUid} attempting to update subject ${subjectId} for user ${targetUserId} to status ${newStatus}`);
+    console.log(`Admin ${currentUser.uid} attempting to update subject ${subjectId} for user ${targetUserId} to status ${newStatus}`);
     const targetUserRef = db.collection('users').doc(targetUserId);
 
     try {
@@ -2166,7 +2174,7 @@ export async function updateUserCredits(userId, creditChange, reason) {
                 change: creditChange,
                 newBalance: newCredits, // Store the calculated new balance for the log
                 reason: reason,
-                performedBy: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : 'system' // Track who initiated (if applicable)
+                performedBy: currentUser ? currentUser.uid : 'system' // MODIFIED: Use currentUser from state
             });
         });
 
@@ -2174,19 +2182,18 @@ export async function updateUserCredits(userId, creditChange, reason) {
         
         // If the current user is being updated, refresh their local state
         if (currentUser && currentUser.uid === userId) {
-            currentUser.credits = (currentUser.credits || 0) + creditChange;
+            const oldCredits = currentUser.credits || 0;
+            const newLocalCredits = oldCredits + creditChange;
+            setCurrentUser({ ...currentUser, credits: newLocalCredits }); // Update central state
+
             // Potentially update UI elements displaying credits if not handled by reactivity
-            // For example, if the user profile page is open and shows credits:
-            const creditsDisplay = document.getElementById('user-profile-credits'); // Assume such an ID exists
-            if (creditsDisplay) creditsDisplay.textContent = currentUser.credits.toLocaleString();
+            const creditsDisplay = document.getElementById('user-profile-credits');
+            if (creditsDisplay) creditsDisplay.textContent = newLocalCredits.toLocaleString();
             const marketplaceCreditsDisplay = document.getElementById('marketplace-credit-balance');
-            if (marketplaceCreditsDisplay) marketplaceCreditsDisplay.textContent = currentUser.credits.toLocaleString();
-
-            // Also update the user info in the header if it's the current user
-            // This ensures the central currentUser state is fully up-to-date and UI reflects this.
-            // Fetching and updating again ensures all data is consistent, including credits.
-            await fetchAndUpdateUserInfo(firebaseAuth.currentUser);
-
+            if (marketplaceCreditsDisplay) marketplaceCreditsDisplay.textContent = newLocalCredits.toLocaleString();
+            
+            // The auth listener or other UI update functions might already handle refreshing the header
+            // fetchAndUpdateUserInfo might be too heavy here, setCurrentUser should suffice for state.
         }
         return true;
     } catch (error) {
