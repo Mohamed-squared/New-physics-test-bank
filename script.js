@@ -42,6 +42,9 @@ import { showGlobalChat, sendChatMessage, deleteChatMessage } from './ui_chat.js
 // --- NEW Leaderboard/Marketplace Imports ---
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
+// --- NEW AI Chat Studio Import ---
+import { showAiChatStudio } from './ui_ai_chat_studio.js';
+
 
 // --- Course UI Imports ---
 import { showMyCoursesDashboard, showCurrentCourseDashboard, showNextLesson, showFullStudyMaterial, showCurrentAssignmentsExams, showCurrentCourseProgress, navigateToCourseDashboard, handleCourseAction, confirmUnenroll } from './ui_course_dashboard.js';
@@ -230,6 +233,9 @@ window.showLoginUI = showLoginUI;
 // NEW Leaderboard / Marketplace assignments
 window.showLeaderboard = showLeaderboard;
 window.showMarketplacePlaceholder = showMarketplacePlaceholder;
+
+// NEW AI Chat Studio assignment
+window.showAiChatStudio = showAiChatStudio;
 
 
 window.showMyCoursesDashboard = showMyCoursesDashboard;

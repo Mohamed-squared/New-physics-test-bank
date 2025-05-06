@@ -157,6 +157,19 @@
             color: var(--color-gray-400);
         }
 
+        /* AI Chat Studio specific styles (can be moved to styles.css) */
+        #ai-chat-sessions-sidebar {
+            min-width: 200px; /* Ensure sidebar has a minimum width */
+        }
+        .message-bubble {
+            word-break: break-word; /* Ensure long words break */
+        }
+        .message-content pre { /* Style for preformatted text within messages */
+            white-space: pre-wrap; /* Allow wrapping within pre */
+            word-wrap: break-word; /* Break long words in pre */
+        }
+
+
     </style>
 
 </head>
@@ -256,13 +269,16 @@
                      <span id="inbox-unread-count" class="ml-auto text-xs bg-red-500 text-white rounded-full px-1.5 py-0.5 hidden">0</span>
                  </a>
 
-                 <!-- *** MODIFIED: REMOVED PING SPAN *** -->
+                 <!-- *** MODIFIED: REMOVED PING SPAN, Added AI Chat Studio Link *** -->
                  <a href="#" onclick="window.showGlobalChat(); return false;" class="sidebar-link">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-3.04 8.333-7.125 9.343A.75.75 0 0 1 13.125 21v-3.033a1.14 1.14 0 0 1 .768-1.075 47.838 47.838 0 0 0 5.339-3.771A.75.75 0 0 1 21 12Zm-18 0c0 4.556 3.04 8.333 7.125 9.343a.75.75 0 0 0 .75-.75v-3.033a1.14 1.14 0 0 0-.768-1.075 47.838 47.838 0 0 1-5.339-3.771 .75.75 0 0 0-1.518.924 49.335 49.335 0 0 0 7.125 4.97V21a.75.75 0 0 0 .75.75 11.21 11.21 0 0 0 7.875-9.75A11.25 11.25 0 0 0 12 3c-5.21 0-9.65 3.54-10.875 8.25a.75.75 0 0 1-1.35-.48c-1.533-5.402 1.74-10.77 7.225-10.77 5.486 0 10.75 4.368 10.75 10.75 0 5.485-4.368 10.75-10.75 10.75-5.485 0-10.75-4.368-10.75-10.75Z" /></svg>
                      Global Chat
-                     <!-- REMOVED: <span class="notification-ping chat-ping hidden"></span> -->
                  </a>
-                 <!-- *** END GLOBAL CHAT LINK *** -->
+                 <a href="#" onclick="window.showAiChatStudio(); return false;" class="sidebar-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-7.5h1.5m9 0h1.5" /></svg>
+                    AI Chat Studio
+                </a>
+                 <!-- *** END GLOBAL CHAT & AI STUDIO LINK *** -->
 
                  <a href="#" id="admin-panel-link" onclick="showAdminDashboard(); return false;" class="sidebar-link" style="display: none;">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
