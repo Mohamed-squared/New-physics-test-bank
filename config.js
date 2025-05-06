@@ -89,34 +89,36 @@ export const initialSubjectData = {
         "1": { // Linked to FoP Course
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // Default filename for general test gen
+            "fileName": "chapters.md", // MCQ file name
+            "courseDirName": "fop_physics_v1", // Directory name for this subject's content
+            "problemsFileName": "TextProblems.md", // Problems file name
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
-            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO, // Added ratio
-            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES, // Added duration
+            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
+            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
             "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
-            "pending_exams": [], // Old PDF pending list
-            // exam_history is deprecated here, moved to userExams collection
-            "status": "approved", // MODIFIED: Added status
-            "creatorUid": ADMIN_UID, // MODIFIED: Added creatorUid
-            "creatorName": "System", // MODIFIED: Added creatorName
-            "createdAt": new Date(0).toISOString(), // MODIFIED: Added createdAt (epoch for system default)
+            "pending_exams": [],
+            "status": "approved",
+            "creatorUid": ADMIN_UID,
+            "creatorName": "System",
+            "createdAt": new Date(0).toISOString(),
         },
         "2": { // Example unrelated subject
             "id": "2",
             "name": "ABC of Aviation",
-            "fileName": "ABC_of_Aviation.md",
+            "fileName": "ABC_of_Aviation.md", // MCQ file name
+            "courseDirName": "abc_of_aviation", // Directory name for this subject's content
+            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
-            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO, // Added ratio
-            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES, // Added duration
+            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
+            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
             "chapters": {}, // Populated by MD parse
             "studied_chapters": [],
             "pending_exams": [],
-            // exam_history is deprecated here
-            "status": "approved", // MODIFIED: Added status
-            "creatorUid": ADMIN_UID, // MODIFIED: Added creatorUid
-            "creatorName": "System", // MODIFIED: Added creatorName
-            "createdAt": new Date(0).toISOString(), // MODIFIED: Added createdAt
+            "status": "approved",
+            "creatorUid": ADMIN_UID,
+            "creatorName": "System",
+            "createdAt": new Date(0).toISOString(),
         }
     }
 };
@@ -159,7 +161,6 @@ export const FOP_COURSE_DEFINITION = {
     id: FOP_COURSE_ID,
     name: "Fundamentals of Physics",
     description: "A comprehensive course covering the fundamentals of physics.",
-    // *** NEW: Directory name for paths ***
     courseDirName: "fop_physics_v1", // Used to build resource paths
     totalChapters: 44,
     relatedSubjectId: "1",
@@ -184,10 +185,13 @@ export const FOP_COURSE_DEFINITION = {
         "Quarks, Leptons, and the Big Bang"
     ],
     midcourseChapters: [11, 22, 33],
-    // *** MODIFIED: Use Subject Tags (strings) instead of Course IDs ***
     prerequisites: [], // Example subject tags
     corequisites: [], // Example: ["calculus_1"]
     chapterResources: {}
 };
 
+// *** NEW: AI Model Configuration ***
+export const AVAILABLE_AI_MODELS = ["gemini-2.5-pro-exp-03-25", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"];
+export const DEFAULT_PRIMARY_AI_MODEL = "gemini-2.5-pro-exp-03-25"; // Fallback if user settings are not loaded
+export const DEFAULT_FALLBACK_AI_MODEL = "gemini-1.5-pro"; // Fallback if primary fails
 // --- END OF FILE config.js ---

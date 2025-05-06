@@ -7,7 +7,7 @@ export let data = null; // Holds the user's specific app data { subjects: { ... 
 export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
 
 // --- MODIFICATION: Import ADMIN_UID at the top level ---
-import { ADMIN_UID } from './config.js';
+import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL } from './config.js';
 // --- END MODIFICATION ---
 
 /* Example structure for currentUser after successful login and profile fetch:
@@ -41,6 +41,14 @@ export let activeCourseId = null;
 // --- Video Duration Cache ---
 // Cache for video durations - Map of { videoId: durationInSeconds }
 export let videoDurationMap = {};
+
+// --- NEW AI Chat Studio State ---
+export let userAiChatSettings = {
+    primaryModel: DEFAULT_PRIMARY_AI_MODEL,
+    fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
+    customSystemPrompts: {} // Key: functionKey, Value: custom prompt string
+};
+export let globalAiSystemPrompts = {}; // Key: functionKey, Value: global default prompt string
 
 // --- State Modifiers ---
 export function setAuth(newAuth) {
@@ -128,6 +136,34 @@ export function updateGlobalCourseData(courseId, courseData) {
      globalCourseDataMap.set(courseId, courseData);
 }
 
+// --- NEW AI Chat Studio State Modifiers ---
+export function setUserAiChatSettings(settings) {
+    // Ensure the structure is valid before setting
+    if (settings && typeof settings.primaryModel === 'string' &&
+        typeof settings.fallbackModel === 'string' &&
+        typeof settings.customSystemPrompts === 'object') {
+        userAiChatSettings = settings;
+        console.log("[State] User AI Chat Settings updated:", userAiChatSettings);
+    } else {
+        console.warn("[State] Attempted to set invalid User AI Chat Settings. Using defaults.", settings);
+        userAiChatSettings = {
+            primaryModel: DEFAULT_PRIMARY_AI_MODEL,
+            fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
+            customSystemPrompts: {}
+        };
+    }
+}
+export function setGlobalAiSystemPrompts(prompts) {
+    if (prompts && typeof prompts === 'object') {
+        globalAiSystemPrompts = prompts;
+        console.log("[State] Global AI System Prompts updated:", globalAiSystemPrompts);
+    } else {
+        console.warn("[State] Attempted to set invalid Global AI System Prompts. Using empty object.", prompts);
+        globalAiSystemPrompts = {};
+    }
+}
+
+
 // --- State Reset ---
 export function clearUserSession() {
     // Note: We call setCurrentUser(null) externally during logout process usually.
@@ -142,6 +178,14 @@ export function clearUserSession() {
     // Do NOT clear globalCourseDataMap here, it's global definition data
     // Clear video duration cache
     videoDurationMap = {};
+
+    // --- NEW: Reset User AI Chat Settings to default on logout ---
+    setUserAiChatSettings({
+        primaryModel: DEFAULT_PRIMARY_AI_MODEL,
+        fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
+        customSystemPrompts: {}
+    });
+    // Global AI System Prompts are not user-specific, so don't clear them here.
 
     document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');
