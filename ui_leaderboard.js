@@ -2,7 +2,7 @@
 
 // ui_leaderboard.js
 
-import { displayContent, setActiveSidebarLink } from './ui_core.js';
+import { displayContent, setActiveSidebarLink, clearContent } from './ui_core.js';
 import { db, currentUser } from './state.js';
 import { escapeHtml, showLoading, hideLoading } from './utils.js';
 

@@ -1,5 +1,4 @@
 // --- START OF FILE ui_test_generation.js ---
-
 import { currentSubject, currentUser, data } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 // Import test_logic functions
@@ -36,7 +35,7 @@ async function getCurrentSubjectMarkdown() {
         console.error("getCurrentSubjectMarkdown: No current subject selected.");
         return null;
     }
-    const mcqFileName = currentSubject.fileName;
+    const mcqFileName = currentSubject.fileName; // This is the base name of the MCQ file
     if (!mcqFileName || typeof mcqFileName !== 'string' || mcqFileName.trim() === '') {
         console.error(`getCurrentSubjectMarkdown: Missing or invalid 'fileName' (for MCQs) for subject "${currentSubject.name || currentSubject.id}".`);
         return null;
@@ -52,10 +51,10 @@ async function getCurrentSubjectMarkdown() {
         return null;
     }
 
-    // Sanitize the MCQ filename itself (though it should ideally be clean already)
-    const safeMcqFileName = mcqFileName.replace(/[^a-zA-Z0-9_.\-]/g, '_'); // Basic sanitization for filename part
+    // Sanitize the MCQ filename itself using cleanTextForFilename for consistency
+    const safeMcqFileNameForPath = cleanTextForFilename(mcqFileName); 
 
-    const url = `${COURSE_BASE_PATH}/${derivedCourseDirName}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${safeMcqFileName}?t=${new Date().getTime()}`;
+    const url = `${COURSE_BASE_PATH}/${derivedCourseDirName}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${safeMcqFileNameForPath}?t=${new Date().getTime()}`;
 
     console.log(`Fetching main subject Markdown (for MCQs) from: ${url}`);
     try {
@@ -89,7 +88,10 @@ export function showTestGenerationDashboard() {
      // Check if chapters object exists and has keys AFTER initial loading/parsing
      if (!currentSubject.chapters || Object.keys(currentSubject.chapters).length === 0) {
           // This might happen if the initial parse failed or the MD file was empty/malformed
-          displayContent(`<p class="text-yellow-500 p-4">The current subject '${escapeHtml(currentSubject.name)}' has no chapters loaded. This could be due to a missing or incorrectly formatted Markdown file (${escapeHtml(currentSubject.fileName || 'Not Specified')}) in its 'Questions' folder. Please check the subject setup and file.</p><button onclick="window.initializeApp()" class="btn-secondary mt-2">Reload Data</button>`);
+          const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
+          const mcqFile = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'Not Specified';
+          const expectedPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFile}`;
+          displayContent(`<p class="text-yellow-500 p-4">The current subject '${escapeHtml(currentSubject.name)}' has no chapters loaded. This could be due to a missing or incorrectly formatted Markdown file. Expected path for MCQs: <code>${escapeHtml(expectedPath)}</code>. Please check the subject setup and file.</p><button onclick="window.initializeApp()" class="btn-secondary mt-2">Reload Data</button>`);
          setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
           return;
       }
@@ -134,7 +136,18 @@ export function promptChapterSelectionForTest() {
                            .sort((a, b) => parseInt(a) - parseInt(b));
 
     if (chapterNumbers.length === 0) {
-        displayContent('<p class="text-red-500 p-4">No chapters with available MCQs or Problems (from default source) found in this subject. Check Markdown files (MCQs: <code>fileName</code>, Problems: <code>problemsFileName</code>) in the subject\'s <code>Questions</code> folder and ensure they are parsed correctly.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>');
+        const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
+        const mcqFile = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'MCQ file not specified';
+        const problemFile = currentSubject.problemsFileName ? cleanTextForFilename(currentSubject.problemsFileName) : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
+        const expectedMCQPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFile}`;
+        const expectedProblemPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${problemFile}`;
+
+        displayContent(`<p class="text-red-500 p-4">No chapters with available MCQs or Problems (from default source) found in this subject. Check Markdown files and ensure they are parsed correctly. Expected paths:</p>
+        <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
+             <li>MCQs: <code>${escapeHtml(expectedMCQPath)}</code></li>
+             <li>Problems: <code>${escapeHtml(expectedProblemPath)}</code></li>
+        </ul>
+        <button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
     }
@@ -302,7 +315,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
     const subjectMarkdownContent = await getCurrentSubjectMarkdown();
 
     // 2. Parse Problems from designated file(s)
-    const problemSourceType = 'text_problems';
+    const problemSourceType = 'text_problems'; // Default source type for problems
+    
     const courseDir = currentSubject.courseDirName
         ? cleanTextForFilename(currentSubject.courseDirName)
         : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
@@ -314,16 +328,20 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
         return;
     }
     
+    // Use subject.problemsFileName if available, otherwise default. Clean it for path use.
     const problemsFileToUse = (currentSubject.problemsFileName && currentSubject.problemsFileName.trim() !== '')
-        ? cleanTextForFilename(currentSubject.problemsFileName) // Sanitize filename
-        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
+        ? cleanTextForFilename(currentSubject.problemsFileName)
+        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME; // Fallback to global default
 
     const problemsFilePath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${problemsFileToUse}`;
     console.log(`Attempting to parse problems from: ${problemsFilePath} (Subject: ${currentSubject.id}, Source: ${problemSourceType})`);
 
-    const parsedProblemsData = await parseChapterProblems(problemsFilePath, currentSubject.id, problemSourceType);
+    // This function updates window.subjectProblemCache
+    await parseChapterProblems(problemsFilePath, currentSubject.id, problemSourceType); 
     const problemCacheKey = `${currentSubject.id}|${problemSourceType}`;
+    // Ensure problemCache is retrieved AFTER parseChapterProblems may have updated it.
     const problemCache = window.subjectProblemCache?.get(problemCacheKey) || {};
+
 
     let relevantChaptersForMcqAllocation = {};
     let chaptersInScopeNumbers = [];
@@ -360,12 +378,13 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
      chaptersInScopeNumbers.forEach(chapNum => {
           totalAvailableProblemsInScope += (problemCache[chapNum]?.length || 0);
      });
-     console.log(`Scope determined: ${chaptersInScopeNumbers.length} chapters. Available in scope: ${totalAvailableMcqsInScope} MCQs (from ${currentSubject.fileName || 'MCQ file'}), ${totalAvailableProblemsInScope} Problems (from ${problemsFileToUse}).`);
+     const mcqFileUsedDisplay = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'Not Specified';
+     console.log(`Scope determined: ${chaptersInScopeNumbers.length} chapters. Available in scope: ${totalAvailableMcqsInScope} MCQs (from ${mcqFileUsedDisplay}), ${totalAvailableProblemsInScope} Problems (from ${problemsFileToUse}).`);
 
      // 5. Exit if no questions or problems available
      if (totalAvailableMcqsInScope === 0 && totalAvailableProblemsInScope === 0) {
          hideLoading();
-         const mcqFileMsg = currentSubject.fileName ? `MCQ file: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${currentSubject.fileName}</code>` : "MCQ file not specified.";
+         const mcqFileMsg = currentSubject.fileName ? `MCQ file: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFileUsedDisplay}</code>` : "MCQ file not specified in subject config.";
          const problemFileMsg = `Problem file: <code>${problemsFilePath}</code>`;
          displayContent(`<p class="text-yellow-500 p-4">Could not generate test: No available MCQs or Problems found in the selected scope. Check that the following files exist, are not empty, and are correctly formatted:</p>
          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
@@ -532,8 +551,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
                  }
                  console.log(`Successfully extracted ${selectedMcqs.length} MCQs.`);
              } else {
-                 console.error("Error: Targeted MCQs but the main subject Markdown content (MCQs) failed to load. Cannot extract MCQ text.");
-                  mcqAllocationDetailsHtml = `<p class="text-red-500 font-semibold">Error loading MCQ definitions (${escapeHtml(currentSubject.fileName || 'File Not Specified')}). MCQs could not be included.</p>`;
+                 console.error(`Error: Targeted MCQs but the main subject Markdown content (MCQs from ${mcqFileUsedDisplay}) failed to load. Cannot extract MCQ text.`);
+                  mcqAllocationDetailsHtml = `<p class="text-red-500 font-semibold">Error loading MCQ definitions (${escapeHtml(mcqFileUsedDisplay || 'File Not Specified')}). MCQs could not be included.</p>`;
                  selectedMcqs = []; mcqAnswers = {}; selectedMcqMap = {}; actualTotalSelectedMcqs = 0;
              }
         } else {
@@ -553,15 +572,14 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
 
     if (actualTotalQuestionsGenerated === 0) {
         hideLoading();
-        const mcqFileUsed = currentSubject.fileName || 'MCQ File';
-        const problemFileUsed = (currentSubject.problemsFileName && currentSubject.problemsFileName.trim() !== '')
-            ? currentSubject.problemsFileName
+        const problemFileUsedDisplay = (currentSubject.problemsFileName && currentSubject.problemsFileName.trim() !== '')
+            ? cleanTextForFilename(currentSubject.problemsFileName)
             : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
 
         displayContent(`<p class="text-red-500 p-4 font-semibold">Test Generation Failed.</p><p class="text-yellow-600 dark:text-yellow-400 p-4">Could not generate any questions or problems. This might be because:</p>
         <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
             <li>No MCQs or Problems were available in the selected chapter scope.</li>
-            <li>The required Markdown definition files (e.g., "${escapeHtml(mcqFileUsed)}" or "${escapeHtml(problemFileUsed)}") were missing, empty, or could not be loaded from the subject's 'Questions' folder: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/</code>.</li>
+            <li>The required Markdown definition files (e.g., "${escapeHtml(mcqFileUsedDisplay)}" for MCQs or "${escapeHtml(problemFileUsedDisplay)}" for Problems) were missing, empty, or could not be loaded from the subject's 'Questions' folder: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/</code>.</li>
             <li>There was an error during the question selection process.</li>
         </ul>
         <button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-4">Back to Test Setup</button>`);

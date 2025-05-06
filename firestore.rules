@@ -47,8 +47,14 @@ service cloud.firestore {
                        (
                          // Case 1: Owner updates their own document
                          (request.auth.uid == userId &&
-                           // Owner CANNOT update 'isAdmin' or 'credits' fields directly
-                           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits'])
+                           // Owner CANNOT update 'isAdmin'
+                           !request.resource.data.diff(resource.data).affectedKeys().has('isAdmin') &&
+                           // Allow all other specified fields for owner update, including 'credits' and 'userNotes'
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                               'username', 'displayName', 'photoURL', 'completedCourseBadges',
+                               'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
+                               'credits', 'appData', 'userNotes'
+                           ])
                          ) ||
                          // Case 2: Primary Admin updates OTHER users' documents
                          (isPrimaryAdmin() && userId != request.auth.uid &&
@@ -61,12 +67,14 @@ service cloud.firestore {
                          // Case 3: Primary Admin updates THEIR OWN document
                          (isPrimaryAdmin() && userId == request.auth.uid &&
                            // Primary Admin CANNOT update their own 'isAdmin' status (it's inherent)
-                           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin'])
+                           !request.resource.data.diff(resource.data).affectedKeys().has('isAdmin') &&
+                           // Primary Admin CAN update their own allowed fields
+                           request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                               'username', 'displayName', 'photoURL', 'completedCourseBadges',
+                               'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
+                               'credits', 'appData', 'userNotes'
+                           ])
                          )
-                         // Note: Assigned (non-primary) admins cannot update 'isAdmin' or 'credits' of any user
-                         // based on these rules. They can update other allowed fields if `canPerformAdminActions()`
-                         // were used here with a more general field list, but typically user profile updates
-                         // are done by the owner or primary admin for sensitive fields.
                        );
 
       // --- User Subcollections ---

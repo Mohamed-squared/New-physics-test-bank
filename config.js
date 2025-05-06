@@ -1,5 +1,3 @@
-// --- START OF FILE config.js ---
-
 // --- Configuration ---
 
 // Admin User ID
@@ -89,9 +87,9 @@ export const initialSubjectData = {
         "1": { // Linked to FoP Course
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // MCQ file name
+            "fileName": "chapters.md", // MCQ file name (e.g., courses/fop_physics_v1/Questions/chapters.md)
             "courseDirName": "fop_physics_v1", // Directory name for this subject's content
-            "problemsFileName": "TextProblems.md", // Problems file name
+            "problemsFileName": "chapters.md", // Problems file name (e.g., courses/fop_physics_v1/Questions/chapters.md if same file)
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
             "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
             "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
@@ -106,9 +104,9 @@ export const initialSubjectData = {
         "2": { // Example unrelated subject
             "id": "2",
             "name": "ABC of Aviation",
-            "fileName": "ABC_of_Aviation.md", // MCQ file name
+            "fileName": "ABC_Aviation_MCQ.md", // MCQ file name (e.g., courses/abc_of_aviation/Questions/ABC_Aviation_MCQ.md)
             "courseDirName": "abc_of_aviation", // Directory name for this subject's content
-            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name
+            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name (e.g., courses/abc_of_aviation/Questions/ABC_Aviation_Problems.md)
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
             "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
             "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,

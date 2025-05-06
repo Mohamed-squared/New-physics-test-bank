@@ -1,5 +1,7 @@
 // --- START OF FILE ui_online_test.js ---
 
+// --- START OF FILE ui_online_test.js ---
+
 import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js'; // Added globalCourseDataMap and updateUserCourseProgress
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
 import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js'; // Added escapeHtml and getFormattedDate
@@ -184,6 +186,9 @@ export async function displayCurrentQuestion() {
     // Ensure question has an ID
     const questionId = question.id || `q-${index+1}`;
     console.log(`Displaying question ${questionId} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
+    
+    // MODIFICATION: Log UserAnswers state before rendering
+    console.log('[DisplayQuestion] Rendering QID:', questionId, 'UserAnswers state:', JSON.stringify(currentOnlineTestState.userAnswers));
 
     let imageHtml = question.image ? `<img src="${question.image}" alt="Question Image" class="max-w-full h-auto mx-auto my-4 border dark:border-gray-600 rounded" onerror="this.style.display='none';">` : '';
     let answerAreaHtml = '';
@@ -200,11 +205,19 @@ export async function displayCurrentQuestion() {
               <p class="text-xs text-muted mt-1">Explain your reasoning and show key steps. Use basic text formatting and simple math notation (e.g., ^ for power, * for multiply). Full LaTeX is not supported here.</p>
          </div>`;
     } else { // MCQ
-         answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => `
+         answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
+             // MODIFICATION: Log option details and comparison
+             console.log('[DisplayQuestion] Option:', opt.letter, 'Type:', typeof opt.letter, 'Current Answer for Q:', currentOnlineTestState.userAnswers[questionId], 'Match:', currentOnlineTestState.userAnswers[questionId] === opt.letter);
+             
+             const isChecked = currentOnlineTestState.userAnswers[questionId] === opt.letter;
+             console.log(`[DisplayQuestion] QID ${questionId}, Option ${opt.letter}: Stored='${currentOnlineTestState.userAnswers[questionId]}' (Type: ${typeof currentOnlineTestState.userAnswers[questionId]}), OptionVal='${opt.letter}' (Type: ${typeof opt.letter}), Match: ${isChecked}`);
+             
+             return `
              <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150 option-label">
-                 <input type="radio" name="mcqOption-${questionId}" value="${opt.letter}" class="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-1" ${currentOnlineTestState.userAnswers[questionId] === opt.letter ? 'checked' : ''} onchange="window.recordAnswer('${questionId}', this.value)">
+                 <input type="radio" name="mcqOption-${questionId}" value="${opt.letter}" class="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-1" ${isChecked ? 'checked' : ''} onchange="window.recordAnswer('${questionId}', this.value)">
                  <div class="flex items-baseline w-full"><span class="font-mono w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div>
-             </label>`).join('') + `</div>` : '<p class="text-sm text-yellow-600 mt-4">(No MC options found)</p>';
+             </label>`;
+         }).join('') + `</div>` : '<p class="text-sm text-yellow-600 mt-4">(No MC options found)</p>';
     }
 
     const htmlContent = `
@@ -246,6 +259,8 @@ export function navigateQuestion(direction) {
 }
 
 export function recordAnswer(questionId, answer) {
+    // MODIFICATION: Log questionId and answer
+    console.log('[RecordAnswer] QID:', questionId, 'Answer:', answer, 'Type:', typeof answer);
     if (!currentOnlineTestState) return;
     // For text areas, we might want to debounce this later if performance becomes an issue
     console.log(`Answer recorded for ${questionId}: ${answer.substring(0, 50)}...`);

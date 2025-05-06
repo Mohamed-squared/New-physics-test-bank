@@ -1,5 +1,3 @@
-// --- START OF FILE firebase_firestore.js ---
-
 // firebase_firestore.js
 
 import {
@@ -10,13 +8,17 @@ import {
 import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
 // Import ALL needed config values
-import { initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, SKIP_EXAM_PASSING_PERCENT } from './config.js'; // Added SKIP_EXAM_PASSING_PERCENT
+import { 
+    initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
+    FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
+    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, DEFAULT_COURSE_QUESTIONS_FOLDER
+} from './config.js'; // Added SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, DEFAULT_COURSE_QUESTIONS_FOLDER
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js'; // Added fetchAndUpdateUserInfo
 import { showOnboardingUI } from './ui_onboarding.js';
 // *** MODIFIED: Import calculateTotalMark, getLetterGrade ***
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
 // *** NEW: Import filename utility ***
-import { cleanTextForFilename } from './filename_utils.js'; // Assuming this exists elsewhere
+import { cleanTextForFilename } from './filename_utils.js';
 
 // --- Constants ---
 const userFormulaSheetSubCollection = "userFormulaSheets";
@@ -32,33 +34,40 @@ const userCreditLogSubCollection = "creditLog"; // NEW: For credit transactions
  * Returns the markdown text content or null if fetch fails.
  */
 async function fetchMarkdownForSubject(subject) {
-     if (!subject) return null;
-    // Use subject.fileName, default logic might need adjustment based on expected import data format
-    let fileName = subject.fileName;
-    if (!fileName) {
-         // Fallback logic if fileName is missing
-         fileName = (subject.name === "Fundamentals of Physics") ? "chapters.md" : `${subject.name}.md`;
-         console.warn(`Subject ${subject.id} missing fileName, falling back to ${fileName}`);
+    if (!subject) return null;
+
+    const courseDir = subject.courseDirName 
+        ? cleanTextForFilename(subject.courseDirName) 
+        : cleanTextForFilename(subject.name || `subject_${subject.id}`);
+    
+    if (!courseDir) {
+        console.warn(`fetchMarkdownForSubject: Could not determine courseDir for subject ${subject.id} ('${subject.name}'). Cannot fetch markdown.`);
+        return null;
     }
-    // Sanitize filename: replace spaces with underscores, remove invalid chars
-    const safeFileName = fileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.-]/g, '');
-    const url = `./${safeFileName}?t=${new Date().getTime()}`; // Add cache buster - Use relative path from index.html
+
+    // subject.fileName should be the base name of the MCQ file.
+    // Use cleanTextForFilename for subject.fileName for safety, and provide a fallback.
+    const safeBaseFileName = subject.fileName 
+        ? cleanTextForFilename(subject.fileName) 
+        : 'default_mcqs.md'; // Fallback filename if not specified
+
+    const url = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${safeBaseFileName}?t=${new Date().getTime()}`;
 
     console.log(`Fetching Markdown from: ${url}`);
     try {
         const response = await fetch(url);
         if (!response.ok) {
             if (response.status === 404) {
-                console.warn(`Markdown file not found: ${url}. Subject: ${subject.name}`);
+                console.warn(`Markdown file not found: ${url}. Subject: ${subject.name} (ID: ${subject.id})`);
                 return null; // File not found is acceptable here
             }
             throw new Error(`HTTP error fetching markdown! status: ${response.status} for ${url}`);
         }
         const mdContent = await response.text();
-        console.log(`Markdown fetched successfully for subject ${subject.name}.`);
+        console.log(`Markdown fetched successfully for subject ${subject.name} (ID: ${subject.id}).`);
         return mdContent;
     } catch (error) {
-        console.error(`Error fetching Markdown for subject ${subject.name} (${url}):`, error);
+        console.error(`Error fetching Markdown for subject ${subject.name} (ID: ${subject.id}) (${url}):`, error);
         return null; // Indicate fetch failure
     }
 }
@@ -589,7 +598,7 @@ export async function loadUserData(uid) {
                          if (subjectMarkdown !== null) {
                               const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown);
                               if (subjectModified) { appDataWasModifiedBySync = true; }
-                         } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing.`); }
+                         } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing or could not be fetched from expected path.`); }
                      } else {
                          console.log(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) due to status '${subject.status}' and user role.`);
                          // Ensure chapters object exists even if not synced
@@ -606,7 +615,7 @@ export async function loadUserData(uid) {
                      if (!subject) continue;
                      // Subject fields
                      if (!subject.name) { subject.name = `Subject ${subjectId}`; needsAppDataSaveAfterLoad = true; }
-                     if (!subject.fileName) { subject.fileName = `${subject.name}.md`.replace(/\s+/g, '_'); needsAppDataSaveAfterLoad = true; }
+                     if (!subject.fileName) { subject.fileName = `${cleanTextForFilename(subject.name || `subject_${subjectId}`)}.md`; needsAppDataSaveAfterLoad = true; } // Ensure clean filename
                      subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
                      subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
                      // Ensure numeric defaults for ratio/duration/maxQ
@@ -2212,6 +2221,3 @@ export async function updateUserCredits(userId, creditChange, reason) {
 // This cannot be directly implemented in `firebase_firestore.js` without modifying `ui_exams_dashboard.js`.
 // Ensure this call is added to the success path of `submitPendingResults`.
 // --- END: User Credit System ---
-
-
-// --- END OF FILE firebase_firestore.js ---

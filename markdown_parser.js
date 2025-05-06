@@ -139,17 +139,35 @@ export function parseChaptersFromMarkdown(mdContent) {
 /**
  * Extracts specific MCQs from Markdown content, filtering by chapter scope.
  * @param {string} mdContent - The full Markdown text.
- * @param {Array<number>} chapterScope - Array of chapter numbers to extract questions from.
+ * @param {Array<number>|object} chapterScopeOrQuestionMap - Array of chapter numbers to extract questions from, OR a map of {chapterNum: [questionNumbers]} for specific questions.
  * @param {string} [sourceType='unknown'] - Identifier for the source file (e.g., 'text_mcq'), used for generating IDs.
  * @returns {object} - { questions: Array<QuestionObject>, answers: { questionId: correctAnswer } }
  */
-export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType = 'unknown') {
+export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMap, sourceType = 'unknown') {
     const extracted = { questions: [], answers: {} };
     // *** MODIFIED: Handle potentially empty/null mdContent gracefully ***
-    if (!mdContent || !chapterScope || chapterScope.length === 0) {
+    if (!mdContent || !chapterScopeOrQuestionMap) {
         // console.warn("extractQuestionsFromMarkdown: Invalid args or empty content/scope.");
         return extracted;
     }
+
+    let chapterKeysInScope;
+    let specificQuestionsMode = false;
+    if (Array.isArray(chapterScopeOrQuestionMap)) {
+        chapterKeysInScope = chapterScopeOrQuestionMap.map(String);
+    } else if (typeof chapterScopeOrQuestionMap === 'object' && chapterScopeOrQuestionMap !== null) {
+        chapterKeysInScope = Object.keys(chapterScopeOrQuestionMap).map(String);
+        specificQuestionsMode = true; // We are in specific question extraction mode
+    } else {
+        console.warn("extractQuestionsFromMarkdown: Invalid chapterScopeOrQuestionMap type. Expected array or object.", chapterScopeOrQuestionMap);
+        return extracted; // Return empty if invalid
+    }
+
+    if (chapterKeysInScope.length === 0) {
+        // console.warn("extractQuestionsFromMarkdown: Empty scope.");
+        return extracted;
+    }
+
     const lines = mdContent.split('\n');
     let currentChapter = null;
     let currentQuestion = null;
@@ -160,9 +178,6 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType
     const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/;
     const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i;
     const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
-
-    // Convert chapterScope numbers to strings for easier comparison
-    const chapterScopeStrings = chapterScope.map(String);
 
     function finalizeQuestion() {
         if (currentQuestion && currentChapter) {
@@ -217,8 +232,7 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType
         if (chapterMatch) {
             finalizeQuestion();
             const chapterNumStr = chapterMatch[1];
-            // *** MODIFIED: Only process chapters within the scope ***
-            if (chapterScopeStrings.includes(chapterNumStr)) {
+            if (chapterKeysInScope.includes(chapterNumStr)) {
                 currentChapter = chapterNumStr;
                 processingState = 'seeking_question';
                 // console.log(`Extracting from Chapter ${currentChapter} (${sourceType})`);
@@ -237,13 +251,27 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType
             finalizeQuestion();
             const qNum = parseInt(questionMatch[1], 10);
             const firstLineText = questionMatch[2];
-            // Check if question number is valid
+            
             if (!isNaN(qNum) && qNum > 0) {
-                 currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
-                 processingState = 'in_question_text';
+                if (specificQuestionsMode) {
+                    const questionsToExtractForThisChapter = chapterScopeOrQuestionMap[currentChapter];
+                    if (questionsToExtractForThisChapter && questionsToExtractForThisChapter.includes(qNum)) {
+                        currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
+                        processingState = 'in_question_text';
+                    } else {
+                        // This specific question number is not requested for this chapter
+                        currentQuestion = null;
+                        // console.log(`Skipping Q${qNum} in Ch ${currentChapter} as it's not in the specific selection map.`);
+                    }
+                } else {
+                    // Not in specific questions mode (i.e., chapterScopeOrQuestionMap was an array of chapters)
+                    // Extract all questions from this chapter.
+                    currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
+                    processingState = 'in_question_text';
+                }
             } else {
                  console.warn(`Invalid question number found in Ch ${currentChapter}, Line: ${line}`);
-                 currentQuestion = null; // Skip this potential question block
+                 currentQuestion = null;
                  processingState = 'seeking_question';
             }
             continue;
@@ -273,8 +301,9 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType
             }
 
             if (processingState === 'in_options' && currentQuestion.options.length > 0) {
+                // Append to the last option's text if it's a multi-line option
                 currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line;
-            } else if (processingState !== 'found_answer') {
+            } else if (processingState !== 'found_answer') { // Append to question text if not an answer line or option continuation
                 currentQuestion.textLines.push(line);
             }
         }
@@ -333,6 +362,4 @@ export function parseSkipExamText(rawText, chapterNum) {
     else if (extracted.questions.length < 10 && lines.length > 50) console.warn(`Parsed only ${extracted.questions.length} Skip MCQs. AI output might be incomplete/inconsistent.`);
     return extracted;
 }
-
-
 // --- END OF FILE markdown_parser.js ---
