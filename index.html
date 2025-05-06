@@ -76,7 +76,9 @@
 
     <!-- NEW: PDF Viewer Styles (Basic) & OTHER STYLES -->
     <style>
-        #pdf-viewer-container { position: relative; border: 1px solid var(--border-color); background-color: var(--color-gray-200); overflow: auto; }
+        /* --- START MODIFICATION: Removed overflow: auto from #pdf-viewer-container --- */
+        #pdf-viewer-container { position: relative; border: 1px solid var(--border-color); background-color: var(--color-gray-200); }
+        /* --- END MODIFICATION --- */
         .dark #pdf-viewer-container { border-color: var(--border-color-dark); background-color: var(--color-gray-700); }
         #pdf-canvas { display: block; margin: 0 auto; } /* Center canvas */
         #pdf-text-layer { position: absolute; left: 0; top: 0; right: 0; bottom: 0; overflow: hidden; opacity: 0.2; line-height: 1.0; }
@@ -159,14 +161,14 @@
 
 </head>
 <body>
-    <!-- START MODIFICATION: Public Homepage Container -->
-    <div id="public-homepage-container" class="hidden">
+    <!-- START MODIFICATION: Public Homepage Container with overflow and height -->
+    <div id="public-homepage-container" class="hidden overflow-y-auto h-screen">
         <!-- Content from public_homepage.html will be injected here -->
     </div>
     <!-- END MODIFICATION -->
 
-    <!-- START MODIFICATION: App Layout initially hidden -->
-    <div class="app-layout hidden">
+    <!-- START MODIFICATION: App Layout with height and flex -->
+    <div class="app-layout hidden h-screen flex">
     <!-- END MODIFICATION -->
         <!-- Sidebar -->
         <aside id="sidebar" class="hidden md:flex">

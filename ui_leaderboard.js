@@ -12,7 +12,9 @@ export async function showLeaderboard() {
         return;
     }
     setActiveSidebarLink('showLeaderboard', 'sidebar-standard-nav');
+    // --- START MODIFICATION: Call clearContent before showLoading ---
     clearContent(); // Clear previous content
+    // --- END MODIFICATION ---
     showLoading("Loading Leaderboard...");
 
     let leaderboardHtml = `
@@ -86,7 +88,9 @@ export async function showLeaderboard() {
 
 export function showMarketplacePlaceholder() {
     setActiveSidebarLink('showMarketplacePlaceholder', 'sidebar-standard-nav');
+    // --- START MODIFICATION: Call clearContent first ---
     clearContent(); // Clear previous content
+    // --- END MODIFICATION ---
 
     const placeholderHtml = `
         <div class="max-w-xl mx-auto animate-fade-in">
