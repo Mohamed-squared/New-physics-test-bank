@@ -3,7 +3,7 @@
 // --- Configuration ---
 
 // Admin User ID
-export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1"; // Replace with your actual Admin UID
+export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1";
 
 // Google AI API Key
 export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Keep your Gemini key separate
@@ -12,6 +12,20 @@ export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Keep
 // WARNING: Embedding this directly in frontend code is INSECURE for production.
 // Use a backend proxy or Cloud Function in a real application.
 export const YOUTUBE_API_KEY = "AIzaSyB8v1IX_H3USSmBCJjee6kQBONAdTjmSuA"; // User provided key
+
+// --- File Path Configuration ---
+export const COURSE_BASE_PATH = "./courses"; // Base directory for all course content
+export const DEFAULT_COURSE_PDF_FOLDER = "PDFs";
+export const DEFAULT_COURSE_TRANSCRIPTION_FOLDER = "Transcriptions";
+// *** NEW: Folder for course-specific questions/problems ***
+export const DEFAULT_COURSE_QUESTIONS_FOLDER = "Questions";
+// *** NEW: Default filenames within the Questions folder ***
+export const DEFAULT_COURSE_TEXT_MCQ_FILENAME = "TextMCQ.md";
+export const DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME = "TextProblems.md";
+export const DEFAULT_COURSE_LECTURE_MCQ_FILENAME = "LecturesMCQ.md";
+export const DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME = "LecturesProblems.md";
+// --- End File Path Configuration ---
+
 
 export const PDF_GENERATION_OPTIONS = {
     margin: 1.5, // Margin in cm
@@ -30,16 +44,16 @@ export const LATEX_PACKAGES = `\\usepackage{enumitem} % For customizing list lab
 \\usepackage{graphicx}
 \\usepackage{amsmath} % For mathematical expressions
 \\usepackage{amsfonts} % Common math fonts
-\\usepackage{amssymb} % More symbols
+\\usepackage{amssymb} // More symbols
 \\usepackage{xcolor}  % For colors if needed
-\\usepackage{hyperref} % For clickable links if needed
+\\usepackage{hyperref} // For clickable links if needed
 \\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=magenta}
 `;
 export const LATEX_BEGIN_DOCUMENT = "\\begin{document}";
 export const LATEX_END_DOCUMENT = "\\end{document}";
 
 // --- Test Generation Settings ---
-export const DEFAULT_MAX_QUESTIONS = 42;
+export const DEFAULT_MAX_QUESTIONS = 42; // For TestGen only
 export const DEFAULT_MCQ_PROBLEM_RATIO = 0.5; // Default 50% MCQs, 50% Problems
 export const DEFAULT_ONLINE_TEST_DURATION_MINUTES = 120; // 2 hours default for TestGen
 
@@ -66,6 +80,8 @@ export const EXAM_DURATIONS_MINUTES = {
     skip_exam: Math.max(15, Math.min(60, Math.round(EXAM_QUESTION_COUNTS.skip_exam * 1.5))) // Shorter duration for skip MCQs
 };
 
+// *** NEW: Ratio for Text vs Lecture sources in course exams ***
+export const COURSE_EXAM_TEXT_LECTURE_RATIO = 0.5; // 50% Text, 50% Lecture by default
 
 // Default structure for a *new* user's subject data if none exists
 export const initialSubjectData = {
@@ -81,6 +97,10 @@ export const initialSubjectData = {
             "studied_chapters": [],
             "pending_exams": [], // Old PDF pending list
             // exam_history is deprecated here, moved to userExams collection
+            "status": "approved", // MODIFIED: Added status
+            "creatorUid": ADMIN_UID, // MODIFIED: Added creatorUid
+            "creatorName": "System", // MODIFIED: Added creatorName
+            "createdAt": new Date(0).toISOString(), // MODIFIED: Added createdAt (epoch for system default)
         },
         "2": { // Example unrelated subject
             "id": "2",
@@ -93,6 +113,10 @@ export const initialSubjectData = {
             "studied_chapters": [],
             "pending_exams": [],
             // exam_history is deprecated here
+            "status": "approved", // MODIFIED: Added status
+            "creatorUid": ADMIN_UID, // MODIFIED: Added creatorUid
+            "creatorName": "System", // MODIFIED: Added creatorName
+            "createdAt": new Date(0).toISOString(), // MODIFIED: Added createdAt
         }
     }
 };
@@ -102,10 +126,6 @@ export const DEFAULT_PROFILE_PIC_URL = './default-avatar.png'; // Use relative p
 
 // --- Course System Configuration ---
 export const FOP_COURSE_ID = "fop_physics_v1"; // Unique ID for the Fundamentals of Physics course
-
-// Base paths for course resources (adjust as needed)
-export const COURSE_PDF_BASE_PATH = "./Fundamentals of Physics PDFs/";
-export const COURSE_TRANSCRIPTION_BASE_PATH = "./Fundamentals of Physics Transcriptions/";
 
 // --- Course Grading Weights ---
 export const GRADING_WEIGHTS = {
@@ -139,12 +159,13 @@ export const FOP_COURSE_DEFINITION = {
     id: FOP_COURSE_ID,
     name: "Fundamentals of Physics",
     description: "A comprehensive course covering the fundamentals of physics.",
+    // *** NEW: Directory name for paths ***
+    courseDirName: "fop_physics_v1", // Used to build resource paths
     totalChapters: 44,
     relatedSubjectId: "1",
     youtubePlaylistUrls: [
         "https://www.youtube.com/playlist?list=PLUdYlQf0_sSsb2tNcA3gtgOt8LGH6tJbr"
     ],
-    pdfPathPattern: `${COURSE_PDF_BASE_PATH}chapter{num}.pdf`,
     imageUrl: './assets/images/course_thumbnails/fop_physics_thumb.png', // Thumbnail for lists
     coverUrl: './assets/images/course_covers/fop_physics_cover.jpg',    // Cover for dashboard
     chapters: [
@@ -163,48 +184,10 @@ export const FOP_COURSE_DEFINITION = {
         "Quarks, Leptons, and the Big Bang"
     ],
     midcourseChapters: [11, 22, 33],
-    chapterResources: {
-        // *** MODIFICATION START: Added example srtFilename ***
-        // NOTE: Replace "Chapter1_Video1_Measurement.srt" etc. with your ACTUAL filenames!
-        1: {
-            lectureUrls: [
-                {
-                    title: "Fundamentals of Physics (01) - Measurement 1 | 1 القياس",
-                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH1_V1",
-                    // ADD THIS LINE:
-                    srtFilename: "Fundamentals_of_Physics_01_Measurement_1_1_القياس.srt"
-                },
-                 {
-                    title: "Fundamentals of Physics (01) - Measurement 2 | 2 القياس",
-                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH1_V2",
-                    // ADD THIS LINE:
-                    srtFilename: "Fundamentals_of_Physics_01_Measurement_2_2_القياس.srt"
-                }
-                // Add more videos for Chapter 1 if they exist...
-            ],
-            pdfPath: `${COURSE_PDF_BASE_PATH}chapter1.pdf`
-        },
-        2: {
-            lectureUrls: [
-                {
-                    title: "Fundamentals of Physics (02) - Motion Along a Straight Line 1 | 1 الحركة في خط مستقيم",
-                    url: "https://www.youtube.com/watch?v=EXAMPLE_VIDEO_ID_CH2_V1",
-                    // ADD THIS LINE:
-                    srtFilename: "Fundamentals_of_Physics_02_Motion_Along_a_Straight_Line_1_1_الحركة_في_خط_مستقيم.srt"
-                }
-                // Add more videos for Chapter 2 if they exist...
-            ],
-             pdfPath: `${COURSE_PDF_BASE_PATH}chapter2.pdf`
-        },
-        // ... Add chapterResources entries for ALL other chapters ...
-        // ... with lectureUrls arrays containing objects like the examples above ...
-        // *** Make sure to include the correct 'srtFilename' for EACH video ***
-        // Example for a chapter without specific overrides (will use pattern):
-        3: {
-            // No lectureUrls or pdfPath specified, will fall back to patterns/defaults if needed
-        }
-        // *** MODIFICATION END ***
-     }
+    // *** MODIFIED: Use Subject Tags (strings) instead of Course IDs ***
+    prerequisites: [], // Example subject tags
+    corequisites: [], // Example: ["calculus_1"]
+    chapterResources: {}
 };
 
 // --- END OF FILE config.js ---

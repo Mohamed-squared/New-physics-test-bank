@@ -1,9 +1,9 @@
-
-
 // firebase_auth.js
 import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js'; // Added auth import
 import { showLoading, hideLoading } from './utils.js';
-import { initializeUserData, loadUserData, loadGlobalCourseDefinitions } from './firebase_firestore.js';
+// --- START MODIFICATION: Added sendWelcomeGuideMessage import ---
+import { initializeUserData, loadUserData, loadGlobalCourseDefinitions, sendWelcomeGuideMessage } from './firebase_firestore.js';
+// --- END MODIFICATION ---
 import { showLoginUI, hideLoginUI, fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink, displayContent } from './ui_core.js';
 import { updateAdminPanelVisibility } from './script.js';
 // REMOVED: showMyCoursesDashboard import - rely on global assignment in script.js
@@ -41,12 +41,23 @@ export async function signUpUser(username, email, password) {
         console.log('Signed up:', user);
 
         // Pass username to initializeUserData
+        // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
         await initializeUserData(user.uid, email, username, null, null, false);
 
         // Reserve username in the separate collection
         await db.collection('usernames').doc(usernameLower).set({ userId: user.uid });
         console.log(`Username ${usernameLower} reserved for user ${user.uid}`);
+        
+        // --- START MODIFICATION: Send welcome guide message ---
+        if (user && user.uid) {
+            console.log("New user signed up. Sending welcome guide message.");
+            sendWelcomeGuideMessage(user.uid).catch(err => {
+                console.error("Error sending welcome guide message on signup:", err);
+            });
+        }
+        // --- END MODIFICATION ---
         // onAuthStateChanged will handle UI updates and loading data
+
     } catch (error) {
         console.error("Sign up error:", error);
         if (error.code === 'auth/email-already-in-use') {
@@ -123,7 +134,11 @@ export function signInWithGoogle() {
         .then(async (result) => {
             showLoading("Processing Google Sign-in..."); // Update loading message
             const user = result.user;
-            console.log('Google sign in success:', user);
+            // --- START MODIFICATION: Check if it's a new user for welcome message ---
+            const isNewUser = result.additionalUserInfo?.isNewUser || false;
+            // --- END MODIFICATION ---
+            console.log('Google sign in success:', user, 'Is new user:', isNewUser);
+
             // Generate a potential username and check for uniqueness
             const potentialUsername = (user.email?.split('@')[0] || `user_${user.uid.substring(0,6)}`).replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20);
             let finalUsername = potentialUsername;
@@ -153,7 +168,17 @@ export function signInWithGoogle() {
             }
 
             // Initialize user data (or update if exists), passing the chosen username
+            // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
             await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL);
+            
+            // --- START MODIFICATION: Send welcome guide message if new Google user ---
+            if (isNewUser && user && user.uid) {
+                console.log("New Google user signed up. Sending welcome guide message.");
+                sendWelcomeGuideMessage(user.uid).catch(err => {
+                    console.error("Error sending welcome guide message on Google signup:", err);
+                });
+            }
+            // --- END MODIFICATION ---
              // onAuthStateChanged will handle subsequent UI updates and data loading
         })
         .catch((error) => {
@@ -227,31 +252,40 @@ export function setupAuthListener() {
     console.log("Setting up Firebase Auth listener...");
     auth.onAuthStateChanged(async user => {
         console.log("Auth state changed. User:", user ? user.uid : 'None');
-        setCurrentUser(user); // Update global state *first*
-        updateAdminPanelVisibility(); // Update admin link visibility based on new user state
+        
+        // --- MODIFICATION: setCurrentUser is now called AFTER fetchAndUpdateUserInfo ---
+        // This ensures that custom user data (like isAdmin) from Firestore is included
+        // when setting the global currentUser state.
+        // updateAdminPanelVisibility() is called after currentUser is fully set.
 
         if (user) {
             console.log("User signed in: ", user.uid);
-            showLoading("Loading user data..."); // Show loading indicator early
+            showLoading("Loading user data..."); 
 
-            fetchAndUpdateUserInfo(user); // Fetch and update UI early
+            document.getElementById('public-homepage-container')?.classList.add('hidden');
+            document.querySelector('.app-layout')?.classList.remove('hidden');
+
+            // fetchAndUpdateUserInfo fetches Firestore data and then calls setCurrentUser internally.
+            await fetchAndUpdateUserInfo(user); 
+            // Now currentUser in state.js should have the isAdmin field if fetched.
+
+            updateAdminPanelVisibility(); // Call after currentUser is fully set with Firestore data
 
             console.log("Loading global course definitions...");
-            await loadGlobalCourseDefinitions(); // Load course structures first
+            await loadGlobalCourseDefinitions(); 
 
             console.log("Calling loadUserData (includes course progress)...");
             try {
-                await loadUserData(user.uid); // Load user appData AND course progress
+                // loadUserData might update parts of the user document (like appData or missing fields)
+                // but fetchAndUpdateUserInfo is responsible for the initial load for currentUser state.
+                await loadUserData(user.uid); 
                 console.log("loadUserData (including onboarding check) finished.");
 
-                // Check if onboarding UI is displayed. If not, hide login and show default dashboard.
                 if (!document.getElementById('onboarding-container')) {
-                    hideLoginUI();
-                    // Default to showHomeDashboard after login
+                    hideLoginUI(); // This will hide #login-section
                     showHomeDashboard();
                 }
-                // Onboarding UI hides loading itself when complete.
-                // If onboarding was already done, hide loading here.
+                // Ensure hideLoading is called after all async operations related to login are complete
                 if (!document.getElementById('onboarding-container')) {
                     hideLoading();
                 }
@@ -264,15 +298,21 @@ export function setupAuthListener() {
                 }
                 alert(alertMessage);
                 hideLoading();
-                signOutUser();
+                signOutUser(); 
             }
-        } else {
-            console.log("User signed out.");
-            clearUserSession(); // Reset application state
-            clearUserInfoUI(); // Clear header UI elements
-            showLoginUI(); // Show login form
-            setActiveSidebarLink(''); // Ensure no link is active
-            hideLoading(); // Ensure loading is hidden
+        } else { // User is signed out
+            console.log("User signed out. Showing public homepage.");
+            setCurrentUser(null); // Clear global user state immediately
+            updateAdminPanelVisibility(); // Update admin link visibility
+            clearUserSession();       
+            clearUserInfoUI();      
+            
+            document.getElementById('public-homepage-container')?.classList.remove('hidden');
+            document.querySelector('.app-layout')?.classList.add('hidden');
+            
+            setActiveSidebarLink(''); 
+            hideLoading();            
         }
     });
 }
+// --- END OF FILE firebase_auth.js ---

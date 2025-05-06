@@ -15,6 +15,8 @@ import { updateSubjectInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
 // *** MODIFIED: Import calculateTotalMark, getLetterGrade ***
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
+// *** NEW: Import filename utility ***
+import { cleanTextForFilename } from './filename_utils.js'; // Assuming this exists elsewhere
 
 // --- Constants ---
 const userFormulaSheetSubCollection = "userFormulaSheets";
@@ -100,6 +102,12 @@ export async function saveUserData(uid, appDataToSave = data) {
                  subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
                  subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams : [];
                  // exam_history is deprecated here
+
+                 // MODIFIED: Ensure subject status and creator fields exist
+                 subject.status = subject.status || 'approved'; // Default to approved if missing
+                 subject.creatorUid = subject.creatorUid || ADMIN_UID; // Default to admin if missing
+                 subject.creatorName = subject.creatorName || 'System'; // Default to system if missing
+                 subject.createdAt = subject.createdAt || new Date(0).toISOString(); // Default to epoch if missing
              });
         }
         // --- End Validation ---
@@ -147,7 +155,7 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
                     console.error("Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
                     delete dataToSave.enrollmentDate; // Remove if conversion fails
                 }
-             } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate._methodName === 'serverTimestamp') {
+             } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate?._methodName === 'serverTimestamp') {
                  // It's already a serverTimestamp placeholder, leave it alone
                  console.log("enrollmentDate is already serverTimestamp, keeping as is.");
              } else {
@@ -346,8 +354,8 @@ export async function unenrollFromCourse(uid, courseId) {
 /**
  * Loads global course definition data from Firestore.
  * Updates the `globalCourseDataMap` state.
- * **MODIFIED:** Ensures FoP exists in Firestore, creating it from config if missing.
- * **MODIFIED:** Initializes imageUrl and coverUrl.
+ * Ensures FoP exists in Firestore, creating it from config if missing.
+ * Initializes imageUrl, coverUrl, prerequisites (as string array), and corequisites (as string array).
  */
 export async function loadGlobalCourseDefinitions() {
     if (!db) { console.error("Firestore DB not initialized"); return; }
@@ -368,10 +376,17 @@ export async function loadGlobalCourseDefinitions() {
             finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
             finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
             finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || (Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters.length : 0); // Recalculate if 0
-            // --- NEW: Initialize Image URLs ---
+            // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) ---
             finalCourseData.imageUrl = finalCourseData.imageUrl || null;
             finalCourseData.coverUrl = finalCourseData.coverUrl || null;
-            // --- End NEW ---
+            // Ensure prereqs/coreqs are arrays of strings, default to empty array
+            finalCourseData.prerequisites = Array.isArray(finalCourseData.prerequisites)
+                                            ? finalCourseData.prerequisites.filter(item => typeof item === 'string')
+                                            : [];
+            finalCourseData.corequisites = Array.isArray(finalCourseData.corequisites)
+                                           ? finalCourseData.corequisites.filter(item => typeof item === 'string')
+                                           : [];
+            // --- End MODIFICATION ---
 
             updateGlobalCourseData(doc.id, finalCourseData);
             console.log(`Loaded global course definition: ${finalCourseData.name} (${doc.id}), Status: ${finalCourseData.status || 'N/A'}`);
@@ -394,10 +409,16 @@ export async function loadGlobalCourseDefinitions() {
             fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
             fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
             fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
-            // --- NEW: Initialize Image URLs for FoP creation ---
+            // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) for FoP creation ---
             fopDef.imageUrl = fopDef.imageUrl || null;
             fopDef.coverUrl = fopDef.coverUrl || null;
-            // --- End NEW ---
+            fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
+                                   ? fopDef.prerequisites.filter(item => typeof item === 'string')
+                                   : [];
+            fopDef.corequisites = Array.isArray(fopDef.corequisites)
+                                  ? fopDef.corequisites.filter(item => typeof item === 'string')
+                                  : [];
+            // --- End MODIFICATION ---
 
             // Add createdAt timestamp (or set it during creation)
             fopDef.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -418,10 +439,16 @@ export async function loadGlobalCourseDefinitions() {
                     createdData.chapters = Array.isArray(createdData.chapters) ? createdData.chapters : [];
                     createdData.midcourseChapters = Array.isArray(createdData.midcourseChapters) ? createdData.midcourseChapters : [];
                     createdData.totalChapters = Number(createdData.totalChapters) || (Array.isArray(createdData.chapters) ? createdData.chapters.length : 0);
-                    // --- NEW: Initialize Image URLs on refetch ---
+                    // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) on refetch ---
                     createdData.imageUrl = createdData.imageUrl || null;
                     createdData.coverUrl = createdData.coverUrl || null;
-                    // --- End NEW ---
+                    createdData.prerequisites = Array.isArray(createdData.prerequisites)
+                                                ? createdData.prerequisites.filter(item => typeof item === 'string')
+                                                : [];
+                    createdData.corequisites = Array.isArray(createdData.corequisites)
+                                                ? createdData.corequisites.filter(item => typeof item === 'string')
+                                                : [];
+                    // --- End MODIFICATION ---
                     updateGlobalCourseData(FOP_COURSE_ID, createdData); // Update map with created data
                 } else {
                     console.error(`Failed to fetch FOP course ${FOP_COURSE_ID} immediately after creation.`);
@@ -448,10 +475,16 @@ export async function loadGlobalCourseDefinitions() {
              fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
              fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
              fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
-             // --- NEW: Initialize Image URLs for FoP fallback ---
+             // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) for FoP fallback ---
              fopDef.imageUrl = fopDef.imageUrl || null;
              fopDef.coverUrl = fopDef.coverUrl || null;
-             // --- End NEW ---
+             fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
+                                    ? fopDef.prerequisites.filter(item => typeof item === 'string')
+                                    : [];
+             fopDef.corequisites = Array.isArray(fopDef.corequisites)
+                                   ? fopDef.corequisites.filter(item => typeof item === 'string')
+                                   : [];
+             // --- End MODIFICATION ---
              updateGlobalCourseData(FOP_COURSE_ID, fopDef);
         }
     }
@@ -479,6 +512,14 @@ export async function loadUserData(uid) {
             let loadedAppData = userData.appData;
             console.log("User appData loaded from Firestore.");
 
+            // --- MODIFICATION: Pass isAdmin to setCurrentUser ---
+            // The actual setting of currentUser.isAdmin will be handled by setCurrentUser in state.js
+            // based on userData.isAdmin or defaulting if missing.
+            // No direct action here, but ensure userData (which contains isAdmin if present)
+            // is the basis for what fetchAndUpdateUserInfo passes to setCurrentUser.
+            // The setCurrentUser in state.js should already handle this based on prior instructions.
+            // --- END MODIFICATION ---
+
             // --- appData Initialization/Validation ---
             if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
                 console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
@@ -500,11 +541,11 @@ export async function loadUserData(uid) {
                   console.log("Initializing userNotes map.");
                   await userRef.update({ userNotes: {} }).catch(e => console.error("Error setting initial userNotes:", e));
              }
-              // Ensure userFormulaSheets exists (as a subcollection reference isn't stored here)
-              // No need to add anything to the main user doc for subcollections
-
-              // Ensure userChapterSummaries exists (as a subcollection reference isn't stored here)
-              // No need to add anything to the main user doc for subcollections
+              // Ensure isAdmin field exists, defaulting to false unless it's the ADMIN_UID
+             if (userData.isAdmin === undefined) {
+                 console.log(`Initializing isAdmin field for user ${uid}.`);
+                 await userRef.update({ isAdmin: (uid === ADMIN_UID) }).catch(e => console.error("Error setting initial isAdmin field:", e));
+             }
 
 
             // --- End appData Initialization ---
@@ -518,11 +559,19 @@ export async function loadUserData(uid) {
                  for (const subjectId in data.subjects) {
                      const subject = data.subjects[subjectId];
                      if (!subject) continue;
-                     const subjectMarkdown = await fetchMarkdownForSubject(subject);
-                     if (subjectMarkdown !== null) {
-                          const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown);
-                          if (subjectModified) { appDataWasModifiedBySync = true; }
-                     } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing.`); }
+
+                     // MODIFIED: Only sync for 'approved' subjects or if admin
+                     if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
+                         const subjectMarkdown = await fetchMarkdownForSubject(subject);
+                         if (subjectMarkdown !== null) {
+                              const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown);
+                              if (subjectModified) { appDataWasModifiedBySync = true; }
+                         } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing.`); }
+                     } else {
+                         console.log(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) due to status '${subject.status}' and user role.`);
+                         // Ensure chapters object exists even if not synced
+                         subject.chapters = subject.chapters || {};
+                     }
                  }
                  if (appDataWasModifiedBySync) { needsAppDataSaveAfterLoad = true; }
              } else { console.warn("Cannot sync appData with Markdown - state.data.subjects is missing."); }
@@ -542,25 +591,34 @@ export async function loadUserData(uid) {
                      subject.defaultTestDurationMinutes = Number(subject.defaultTestDurationMinutes) || 120;
                      subject.max_questions_per_test = Number(subject.max_questions_per_test) || 42;
 
+                     // MODIFIED: Validate subject status and creator fields
+                     subject.status = subject.status || 'approved';
+                     subject.creatorUid = subject.creatorUid || ADMIN_UID; // Default if old data
+                     subject.creatorName = subject.creatorName || 'System';
+                     subject.createdAt = subject.createdAt || new Date(0).toISOString();
+
+
                      subject.chapters = typeof subject.chapters === 'object' ? subject.chapters : {};
-                     // Chapter fields
-                     for (const chapNum in subject.chapters) {
-                        const chap = subject.chapters[chapNum];
-                        if (!chap) continue;
-                        chap.total_questions = Number(chap.total_questions) ?? 0;
-                        chap.total_attempted = Number(chap.total_attempted) ?? 0;
-                        chap.total_wrong = Number(chap.total_wrong) ?? 0;
-                        chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
-                        chap.consecutive_mastery = Number(chap.consecutive_mastery) ?? 0;
-                        // Validate available_questions
-                        const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
-                        const currentAvailableSet = new Set(Array.isArray(chap.available_questions) ? chap.available_questions : []);
-                        const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
-                        if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
-                             chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
-                        } else if (chap.available_questions === undefined) {
-                             chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
-                        }
+                     // Chapter fields (only if subject is approved or user is admin, otherwise they might be empty)
+                     if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
+                         for (const chapNum in subject.chapters) {
+                            const chap = subject.chapters[chapNum];
+                            if (!chap) continue;
+                            chap.total_questions = Number(chap.total_questions) ?? 0;
+                            chap.total_attempted = Number(chap.total_attempted) ?? 0;
+                            chap.total_wrong = Number(chap.total_wrong) ?? 0;
+                            chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
+                            chap.consecutive_mastery = Number(chap.consecutive_mastery) ?? 0;
+                            // Validate available_questions
+                            const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
+                            const currentAvailableSet = new Set(Array.isArray(chap.available_questions) ? chap.available_questions : []);
+                            const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
+                            if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
+                                 chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
+                            } else if (chap.available_questions === undefined) {
+                                 chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
+                            }
+                         }
                      }
                  }
               } else { console.warn("Cannot validate/repair appData - state.data.subjects is missing."); }
@@ -577,12 +635,12 @@ export async function loadUserData(uid) {
                 const subjectKeys = Object.keys(data.subjects);
                 let subjectToSelectId = null;
                 // Prioritize currently selected if valid, otherwise first in list
-                if (currentSubject && data.subjects[currentSubject.id]) {
+                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') { // MODIFIED: Check status
                      subjectToSelectId = currentSubject.id;
-                 } else if (userData.lastSelectedSubjectId && data.subjects[userData.lastSelectedSubjectId]) { // Load last selected from profile
+                 } else if (userData.lastSelectedSubjectId && data.subjects[userData.lastSelectedSubjectId] && data.subjects[userData.lastSelectedSubjectId].status === 'approved') { // MODIFIED: Check status
                      subjectToSelectId = userData.lastSelectedSubjectId;
-                 } else if (subjectKeys.length > 0) {
-                     subjectToSelectId = subjectKeys[0];
+                 } else { // Find first approved subject
+                     subjectToSelectId = subjectKeys.find(key => data.subjects[key].status === 'approved') || null;
                  }
                 setCurrentSubject(subjectToSelectId ? data.subjects[subjectToSelectId] : null);
                 updateSubjectInfo();
@@ -620,12 +678,44 @@ export async function initializeUserData(uid, email, username, displayName = nul
     let docExists = false; let existingUserData = null;
     if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) { console.error("Error checking user existence:", e); } }
     const usernameLower = username ? username.toLowerCase() : (existingUserData?.username || null);
+
+    // --- MODIFICATION: Determine isAdmin status ---
+    let initialIsAdmin = (uid === ADMIN_UID); // Default to true only for the primary admin
+    if (docExists && !forceReset && typeof existingUserData.isAdmin === 'boolean') {
+        initialIsAdmin = existingUserData.isAdmin; // Preserve existing isAdmin if present and not force resetting
+    }
+    // --- END MODIFICATION ---
+
     if (!docExists || forceReset) {
         console.log(`Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}`);
         let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
+
+        // MODIFIED: For initial subjects, set creator to current user if not admin, or keep admin if user is admin
+        // This is for *newly initialized users*. initialSubjectData already has ADMIN_UID as creator.
+        // If the new user is NOT admin, their initial subjects should reflect their pending status.
+        const isCurrentUserAdmin = (uid === ADMIN_UID); // Check if the user being initialized is the admin
+        Object.values(defaultAppData.subjects).forEach(subject => {
+            if (!isCurrentUserAdmin) {
+                subject.status = 'pending'; // If new user is not admin, their initial subjects are pending
+                subject.creatorUid = uid;
+                subject.creatorName = displayName || username || email?.split('@')[0];
+                subject.createdAt = new Date().toISOString();
+            } else {
+                // If the new user *is* the admin, initial subjects are pre-approved and by system/admin
+                subject.status = 'approved';
+                subject.creatorUid = ADMIN_UID; // Or 'uid' if admin should "own" them
+                subject.creatorName = 'System'; // Or admin's display name
+                subject.createdAt = new Date(0).toISOString(); // Keep as default for admin
+            }
+        });
+
+
         for (const subjectId in defaultAppData.subjects) {
             const defaultSubject = defaultAppData.subjects[subjectId];
-            if (defaultSubject) { const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject); if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); } }
+            if (defaultSubject && (isCurrentUserAdmin || defaultSubject.status === 'approved')) { // Only fetch MD for approved or if admin
+                 const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
+                 if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
+            }
         }
         const dataToSet = {
              email: email, username: usernameLower,
@@ -634,8 +724,9 @@ export async function initializeUserData(uid, email, username, displayName = nul
              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
              onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
              appData: defaultAppData,
-             completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [], // Initialize badges
-             userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {} // Initialize notes
+             completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
+             userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
+             isAdmin: initialIsAdmin // --- MODIFICATION: Set isAdmin field ---
         };
         try {
             await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
@@ -650,8 +741,13 @@ export async function initializeUserData(uid, email, username, displayName = nul
         if (existingUserData && !existingUserData.displayName) { updatesNeeded.displayName = displayName || username || email?.split('@')[0]; }
         if (existingUserData && existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
         if (existingUserData && existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
-        if (existingUserData && !existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; } // Ensure badges exist
-        if (existingUserData && !existingUserData.userNotes) { updatesNeeded.userNotes = {}; } // Ensure notes exist
+        if (existingUserData && !existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
+        if (existingUserData && !existingUserData.userNotes) { updatesNeeded.userNotes = {}; }
+        // --- MODIFICATION: Ensure isAdmin field is initialized if missing ---
+        if (existingUserData && existingUserData.isAdmin === undefined) {
+            updatesNeeded.isAdmin = (uid === ADMIN_UID); // Default to true only for primary admin, false for others
+        }
+        // --- END MODIFICATION ---
          if (Object.keys(updatesNeeded).length > 0) {
              console.log(`Updating missing fields for ${uid}:`, Object.keys(updatesNeeded));
              try {
@@ -709,10 +805,70 @@ export async function markMessageAsRead(messageId, user) {
       catch (error) { console.error(`Error marking message ${messageId} read:`, error); return false; }
 }
 
+// --- START MODIFICATION: Send Welcome Guide Message ---
+/**
+ * Sends a welcome message with a link to the guide.pdf to a new user's inbox.
+ * @param {string} userId - The ID of the new user.
+ */
+export async function sendWelcomeGuideMessage(userId) {
+    if (!db) {
+        console.error("Firestore DB not initialized. Cannot send welcome message.");
+        return false;
+    }
+    if (!userId) {
+        console.error("User ID is missing. Cannot send welcome message.");
+        return false;
+    }
+
+    // Construct the full URL to the guide.pdf
+    // Assumes guide.pdf is in ./assets/documents/ relative to index.html
+    const guideUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/assets/documents/guide.pdf`;
+
+    const subject = "Welcome to Lyceum! Quick Start Guide";
+    const body = `
+        <p>Hello and welcome to Lyceum!</p>
+        <p>We're excited to have you on board. To help you get started and make the most out of our platform, please check out our Quick Start Guide:</p>
+        <p><a href="${guideUrl}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline;">View Lyceum Quick Start Guide (PDF)</a></p>
+        <p>This guide covers:</p>
+        <ul>
+            <li>Navigating the dashboard</li>
+            <li>Setting up your subjects</li>
+            <li>Generating your first test</li>
+            <li>Exploring courses and AI tools</li>
+            <li>And much more!</li>
+        </ul>
+        <p>If you have any questions, don't hesitate to reach out to support or ask in the Global Chat.</p>
+        <p>Happy learning!</p>
+        <p>The Lyceum Team</p>
+    `;
+
+    const messageData = {
+        senderId: 'system',
+        senderName: 'Lyceum Guide',
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        subject: subject,
+        body: body,
+        isRead: false
+    };
+
+    try {
+        await db.collection('users').doc(userId).collection('inbox').add(messageData);
+        console.log(`Welcome guide message sent to user ${userId}.`);
+        return true;
+    } catch (error) {
+        console.error(`Error sending welcome guide message to user ${userId}:`, error);
+        // Optionally, you might want to retry or log this for manual follow-up
+        return false;
+    }
+}
+// --- END MODIFICATION ---
+
+
 // --- Admin Function to Update Course Definition ---
 /**
  * Updates or creates a course definition in Firestore.
- * **MODIFIED:** Ensures FoP can be updated.
+ * Handles prerequisites and corequisites as arrays of strings (Subject Tags).
+ * Ensures FoP can be updated.
  */
 export async function updateCourseDefinition(courseId, updates) {
      if (!db || !firebaseAuth || firebaseAuth.currentUser?.uid !== ADMIN_UID) {
@@ -728,47 +884,77 @@ export async function updateCourseDefinition(courseId, updates) {
      const courseRef = db.collection('courses').doc(courseId);
      console.log(`Admin attempting to update/set course ${courseId} with:`, updates);
      try {
+         // --- MODIFIED: Ensure prereqs/coreqs are arrays of strings ---
+         if (updates.prerequisites !== undefined) {
+             if (!Array.isArray(updates.prerequisites)) {
+                 console.warn("Correcting prerequisites to empty array in update because it wasn't an array.");
+                 updates.prerequisites = [];
+             } else {
+                 // Ensure all elements are strings and non-empty after trimming
+                 updates.prerequisites = updates.prerequisites
+                                            .filter(tag => typeof tag === 'string')
+                                            .map(tag => tag.trim())
+                                            .filter(tag => tag);
+                 console.log(`Cleaned prerequisites:`, updates.prerequisites);
+             }
+         }
+         if (updates.corequisites !== undefined) {
+              if (!Array.isArray(updates.corequisites)) {
+                   console.warn("Correcting corequisites to empty array in update because it wasn't an array.");
+                   updates.corequisites = [];
+              } else {
+                  // Ensure all elements are strings and non-empty after trimming
+                  updates.corequisites = updates.corequisites
+                                            .filter(tag => typeof tag === 'string')
+                                            .map(tag => tag.trim())
+                                            .filter(tag => tag);
+                   console.log(`Cleaned corequisites:`, updates.corequisites);
+              }
+         }
+         // --- End MODIFICATION ---
+
          // Use set with merge to handle nested updates correctly and create if non-existent.
-         // No special condition needed to prevent FoP update.
          await courseRef.set(updates, { merge: true });
          console.log(`Course definition for ${courseId} updated/created successfully.`);
 
          // Update local state map after successful save
-         // Fetch the data directly after setting to ensure consistency (especially for new creations)
          const updatedDoc = await courseRef.get();
          if (updatedDoc.exists) {
              const currentData = globalCourseDataMap.get(courseId) || {};
              const updatedDataFromFS = { id: courseId, ...updatedDoc.data() };
 
-             // Perform deep merge locally as well (especially for chapterResources)
+             // Perform deep merge locally as well
              const mergedData = { ...currentData, ...updatedDataFromFS }; // Prioritize FS data
              // Deep merge chapterResources if present in both FS data and updates
              if (updatedDataFromFS.chapterResources && updates.chapterResources) {
-                 mergedData.chapterResources = { ...(currentData.chapterResources || {}) }; // Start with current local (if any)
-                 // Merge updates into the chapterResources
+                 mergedData.chapterResources = { ...(currentData.chapterResources || {}) }; // Start with current local
                  for (const chapNum in updates.chapterResources) {
                      mergedData.chapterResources[chapNum] = {
                          ...(currentData.chapterResources?.[chapNum] || {}), // Existing chapter data
                          ...(updates.chapterResources[chapNum]) // Apply updates
                      };
-                     // Deep merge the inner lectureUrls array specifically if needed (complex, keep simple for now)
-                     // ... (URL merging logic as before, if required) ...
                  }
              } else if (updatedDataFromFS.chapterResources) {
-                 mergedData.chapterResources = updatedDataFromFS.chapterResources; // If only FS has it, use that
+                 mergedData.chapterResources = updatedDataFromFS.chapterResources;
              } else if (updates.chapterResources) {
-                 mergedData.chapterResources = updates.chapterResources; // If only updates has it, use that
+                 mergedData.chapterResources = updates.chapterResources;
              }
 
-             // Ensure other fields from FS are prioritized
+             // Ensure other fields from FS are prioritized and initialized
              mergedData.youtubePlaylistUrls = Array.isArray(updatedDataFromFS.youtubePlaylistUrls) ? updatedDataFromFS.youtubePlaylistUrls : [];
              mergedData.chapters = Array.isArray(updatedDataFromFS.chapters) ? updatedDataFromFS.chapters : [];
              mergedData.midcourseChapters = Array.isArray(updatedDataFromFS.midcourseChapters) ? updatedDataFromFS.midcourseChapters : [];
              mergedData.totalChapters = Number(updatedDataFromFS.totalChapters) || (Array.isArray(mergedData.chapters) ? mergedData.chapters.length : 0);
-             // --- NEW: Initialize Image URLs after update ---
+             // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) after update ---
              mergedData.imageUrl = updatedDataFromFS.imageUrl || null;
              mergedData.coverUrl = updatedDataFromFS.coverUrl || null;
-             // --- End NEW ---
+             mergedData.prerequisites = Array.isArray(updatedDataFromFS.prerequisites)
+                                        ? updatedDataFromFS.prerequisites.filter(item => typeof item === 'string')
+                                        : [];
+             mergedData.corequisites = Array.isArray(updatedDataFromFS.corequisites)
+                                       ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string')
+                                       : [];
+             // --- End MODIFICATION ---
 
              updateGlobalCourseData(courseId, mergedData); // Update local state map
              console.log("Local course definition map updated after Firestore save.");
@@ -783,6 +969,93 @@ export async function updateCourseDefinition(courseId, updates) {
          return false;
      }
 }
+
+/**
+ * Adds a new course to Firestore.
+ * MODIFIED: Includes prerequisites and corequisites as arrays of strings (Subject Tags).
+ */
+export async function addCourseToFirestore(courseData) {
+    if (!currentUser) return { success: false, message: "User not logged in." };
+
+    const isAdminUser = currentUser.uid === ADMIN_UID; // Check if current user is the primary admin
+    const finalStatus = isAdminUser ? 'approved' : 'pending';
+
+    // Generate courseDirName
+    let courseDirName = courseData.courseDirName ? cleanTextForFilename(courseData.courseDirName)
+                       : cleanTextForFilename(courseData.name);
+    if (!courseDirName) {
+        courseDirName = `course_${Date.now()}`;
+        console.warn("Could not generate valid courseDirName from name, using timestamp fallback:", courseDirName);
+    }
+
+    let dataToSet = {
+        name: courseData.name || 'Untitled Course',
+        description: courseData.description || null,
+        majorTag: courseData.majorTag || null,
+        subjectTag: courseData.subjectTag || null,
+        youtubePlaylistUrls: courseData.youtubePlaylistUrls || [],
+        creatorUid: currentUser.uid,
+        creatorName: currentUser.displayName || currentUser.email,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        status: finalStatus,
+        reportedBy: [],
+        reportReason: null,
+        chapterResources: {},
+        imageUrl: courseData.imageUrl || null,
+        coverUrl: courseData.coverUrl || null,
+        courseDirName: courseDirName,
+        // --- MODIFIED: Add prereqs/coreqs (expecting arrays of strings) ---
+        prerequisites: Array.isArray(courseData.prerequisites)
+                       ? courseData.prerequisites.filter(item => typeof item === 'string' && item.trim()) // Ensure strings
+                       : [],
+        corequisites: Array.isArray(courseData.corequisites)
+                      ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) // Ensure strings
+                      : [],
+        // --- End MODIFICATION ---
+    };
+
+    let finalTotalChapters = 0;
+    let finalChapters = [];
+    let finalRelatedSubjectId = null;
+
+    if (isAdminUser) { // Only primary admin can set these directly during creation
+        finalTotalChapters = parseInt(courseData.totalChapters) || 0;
+        if (isNaN(finalTotalChapters) || finalTotalChapters < 0) finalTotalChapters = 0;
+        finalChapters = finalTotalChapters > 0
+            ? Array.from({ length: finalTotalChapters }, (_, i) => `Chapter ${i + 1}`)
+            : [];
+        finalRelatedSubjectId = courseData.relatedSubjectId || null;
+    } else {
+        finalTotalChapters = 0;
+        finalChapters = [];
+        finalRelatedSubjectId = null;
+    }
+
+    dataToSet.totalChapters = finalTotalChapters;
+    dataToSet.chapters = finalChapters;
+    dataToSet.relatedSubjectId = finalRelatedSubjectId;
+
+    try {
+        const docRef = await db.collection('courses').add(dataToSet);
+        // Create local data copy, convert server timestamp placeholder
+        const savedData = { ...dataToSet, id: docRef.id };
+        delete savedData.createdAt; // Remove placeholder
+        savedData.createdAt = new Date(); // Add approximate client date
+
+        // --- MODIFIED: Ensure arrays are present in local state data too ---
+        savedData.prerequisites = Array.isArray(savedData.prerequisites) ? savedData.prerequisites : [];
+        savedData.corequisites = Array.isArray(savedData.corequisites) ? savedData.corequisites : [];
+        // --- End MODIFICATION ---
+
+        updateGlobalCourseData(docRef.id, savedData);
+
+        return { success: true, id: docRef.id, status: finalStatus };
+    } catch (error) {
+        console.error("Error adding course:", error);
+        return { success: false, message: error.message };
+    }
+}
+
 
 // --- Mark Chapter Studied in Course ---
 export async function markChapterStudiedInCourse(uid, courseId, chapterNum, method = "unknown") {
@@ -1415,10 +1688,10 @@ export async function deleteInboxMessage(userId, messageId) {
     }
 
     const currentUid = firebaseAuth.currentUser.uid;
-    const isAdmin = currentUid === ADMIN_UID;
+    const isAdminUser = currentUid === ADMIN_UID;
     const isOwner = currentUid === userId;
 
-    if (!isAdmin && !isOwner) {
+    if (!isAdminUser && !isOwner) {
          console.error(`Permission denied: User ${currentUid} cannot delete message ${messageId} for user ${userId}`);
          alert("Permission denied.");
          return false;
@@ -1711,6 +1984,105 @@ export async function deleteAdminTask(taskId) {
     } catch (error) {
         console.error(`Error deleting admin task ${taskId}:`, error);
         alert(`Failed to delete task: ${error.message}`);
+        return false;
+    }
+}
+
+// --- NEW: Toggle User Admin Status ---
+/**
+ * Toggles the isAdmin status for a target user. Only callable by the primary admin.
+ * @param {string} targetUserId - The UID of the user whose admin status is to be toggled.
+ * @param {boolean} currentIsAdmin - The current isAdmin status of the target user.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
+export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
+    if (!db || !firebaseAuth || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Only the primary admin can toggle admin status.");
+        alert("Permission denied: Only the primary admin can perform this action.");
+        return false;
+    }
+    if (!targetUserId) {
+        console.error("Target User ID is missing for toggling admin status.");
+        alert("Internal Error: Target user ID missing.");
+        return false;
+    }
+    if (targetUserId === ADMIN_UID) {
+        console.warn("Primary admin cannot change their own admin status.");
+        alert("The primary admin's status cannot be changed through this interface.");
+        return false;
+    }
+
+    const newIsAdminStatus = !currentIsAdmin;
+    const userRef = db.collection('users').doc(targetUserId);
+
+    console.log(`Primary admin toggling admin status for user ${targetUserId} from ${currentIsAdmin} to ${newIsAdminStatus}.`);
+    try {
+        await userRef.update({ isAdmin: newIsAdminStatus });
+        console.log(`Successfully updated isAdmin status for user ${targetUserId} to ${newIsAdminStatus}.`);
+        return true;
+    } catch (error) {
+        console.error(`Error toggling admin status for user ${targetUserId}:`, error);
+        alert(`Failed to toggle admin status: ${error.message}`);
+        return false;
+    }
+}
+
+// MODIFIED: New function for admin to update another user's subject status
+/**
+ * Admin function to update the status of a subject for a specific user.
+ * @param {string} adminUid - The UID of the admin performing the action.
+ * @param {string} targetUserId - The UID of the user whose subject status is to be updated.
+ * @param {string} subjectId - The ID of the subject within the target user's appData.
+ * @param {'pending' | 'approved' | 'rejected'} newStatus - The new status for the subject.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
+export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subjectId, newStatus) {
+    if (!db || !firebaseAuth || !adminUid || adminUid !== ADMIN_UID) {
+        console.error("Permission denied: Admin privileges required for this action.");
+        alert("Permission denied. Admin privileges required.");
+        return false;
+    }
+    if (!targetUserId || !subjectId || !newStatus) {
+        console.error("Missing targetUserId, subjectId, or newStatus for adminUpdateUserSubjectStatus.");
+        alert("Internal Error: Missing data for subject status update.");
+        return false;
+    }
+    if (!['pending', 'approved', 'rejected'].includes(newStatus)) {
+        alert("Invalid status provided.");
+        return false;
+    }
+
+    console.log(`Admin ${adminUid} attempting to update subject ${subjectId} for user ${targetUserId} to status ${newStatus}`);
+    const targetUserRef = db.collection('users').doc(targetUserId);
+
+    try {
+        const userDoc = await targetUserRef.get();
+        if (!userDoc.exists) {
+            console.error(`Target user ${targetUserId} not found.`);
+            alert("Target user not found.");
+            return false;
+        }
+
+        const userData = userDoc.data();
+        if (!userData.appData || !userData.appData.subjects || !userData.appData.subjects[subjectId]) {
+            console.error(`Subject ${subjectId} not found in appData for user ${targetUserId}.`);
+            alert("Subject not found for the target user.");
+            return false;
+        }
+
+        // Create a deep copy to modify, then update the whole appData
+        const newAppData = JSON.parse(JSON.stringify(userData.appData));
+        newAppData.subjects[subjectId].status = newStatus;
+        // Optionally, if approving, admin could be noted as approver
+        // newAppData.subjects[subjectId].approvedBy = adminUid;
+        // newAppData.subjects[subjectId].approvedAt = new Date().toISOString();
+
+        await targetUserRef.update({ appData: newAppData });
+        console.log(`Successfully updated status for subject ${subjectId} of user ${targetUserId} to ${newStatus}.`);
+        return true;
+    } catch (error) {
+        console.error(`Error updating subject status for user ${targetUserId}:`, error);
+        alert(`Failed to update subject status: ${error.message}`);
         return false;
     }
 }

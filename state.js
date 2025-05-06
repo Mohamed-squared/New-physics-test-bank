@@ -1,4 +1,3 @@
-/* === state.js === */
 // --- START OF FILE state.js ---
 
 // --- Core Data & State ---
@@ -6,6 +5,11 @@ export let auth = null;
 export let db = null;
 export let data = null; // Holds the user's specific app data { subjects: { ... } }
 export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
+
+// --- MODIFICATION: Import ADMIN_UID at the top level ---
+import { ADMIN_UID } from './config.js';
+// --- END MODIFICATION ---
+
 /* Example structure for currentUser after successful login and profile fetch:
 {
     uid: string,
@@ -15,7 +19,7 @@ export let currentUser = null; // Holds the Firebase Auth user object AND potent
     photoURL: string | null,    // From Firebase Auth profile
     // --- Custom data typically fetched from Firestore 'users/{uid}' ---
     username: string | null,   // Unique username for mentions etc. (e.g., 'john_doe')
-    isAdmin: boolean,          // Example custom field
+    isAdmin: boolean,          // True if user has admin privileges
     // ... other profile fields ...
 }
 */
@@ -49,33 +53,41 @@ export function setData(newData) {
 }
 /**
  * Sets the current user state.
- * Expects an object containing combined Firebase Auth data and custom profile data (like username).
+ * Expects an object containing combined Firebase Auth data and custom profile data (like username, isAdmin).
  * @param {object | null} newUser - The user object or null if logged out.
- * Should include fields like uid, email, displayName, photoURL, username, etc.
+ * Should include fields like uid, email, displayName, photoURL, username, isAdmin, etc.
  */
 export function setCurrentUser(newUser) {
+    // --- MODIFICATION: Removed dynamic import, ADMIN_UID is now available from top-level import ---
+    // --- END MODIFICATION ---
+
     if (newUser) {
-        // --- MODIFIED: Added validation ---
         // Basic structure validation: Ensure UID is present.
         if (!newUser.uid) {
             console.error("setCurrentUser validation failed: Attempted to set user with missing UID. Aborting state update.", newUser);
             return; // Prevent setting invalid user state
         }
-        // --- End Modification ---
 
-         // Merge the new user data. Ensure username is handled.
-         // Prioritize Firestore username if the incoming object provides it separately,
-         // otherwise, assume it's already part of the newUser object.
+        // --- MODIFICATION: Determine isAdmin status ---
+        let determinedIsAdmin = false;
+        if (typeof newUser.isAdmin === 'boolean') {
+            determinedIsAdmin = newUser.isAdmin;
+        } else {
+            // If isAdmin is not explicitly set (e.g., old user doc or only Auth data provided),
+            // default to true only for the primary admin, false otherwise.
+            determinedIsAdmin = (newUser.uid === ADMIN_UID);
+        }
+        // --- END MODIFICATION ---
+
+         // Merge the new user data. Ensure username, displayName, photoURL, and isAdmin are handled.
         currentUser = {
             ...newUser, // Spread all properties from the provided object
-            // Ensure username exists, prioritize newUser.username, default to null
+            isAdmin: determinedIsAdmin, // Set determined admin status
             username: newUser.username || null,
-            // Ensure displayName exists, prioritize newUser.displayName, fallback to email part, then 'User'
             displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User',
-            // Ensure photoURL exists, prioritize newUser.photoURL, default to null (or a default pic URL later)
             photoURL: newUser.photoURL || null,
         };
-        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL });
+        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin });
     } else {
         currentUser = null;
         console.log("[State] Current user cleared (logged out).");
@@ -137,11 +149,9 @@ export function clearUserSession() {
      // Clear course dashboard area as well
      document.getElementById('course-dashboard-area')?.replaceChildren();
      document.getElementById('course-dashboard-area')?.classList.add('hidden');
-     // MODIFIED: Removed call to clearMentionNotification() as it's no longer in this file
-     // clearMentionNotification(); // Removed
 }
 
-/** Structure Update Notes for currentUser (added username) */
+/** Structure Update Notes for currentUser (added username, isAdmin) */
 /*
 currentUser object:
 {
@@ -151,15 +161,10 @@ currentUser object:
     displayName: string | null, // From Firebase Auth profile
     photoURL: string | null,    // From Firebase Auth profile
     username: string | null,    // Custom unique username from Firestore, used for mentions (e.g., 'john_doe')
-    // Potentially other custom fields like isAdmin, registrationDate, etc.
+    isAdmin: boolean,          // True if user has admin privileges
+    // Potentially other custom fields like registrationDate, etc.
 }
 */
-
-// MODIFIED: Removed the mention notification functions and constant
-// const GLOBAL_CHAT_LINK_ID = 'nav-global-chat'; // REMOVED
-// export function notifyNewMention() { ... } // REMOVED
-// export function clearMentionNotification() { ... } // REMOVED
-
 
 // --- Structure Update Notes for userCourseProgress items ---
 /* userCourseProgress/{userId}/courses/{courseId} document structure:

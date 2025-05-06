@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable no-alert */
 // --- START OF FILE ui_admin_dashboard.js ---
 
 // ui_admin_dashboard.js
@@ -23,7 +21,9 @@ import {
     fetchAdminTasks,      // <-- Import new function
     addAdminTask,         // <-- Import new function
     updateAdminTaskStatus,// <-- Import new function
-    deleteAdminTask       // <-- Import new function
+    deleteAdminTask,       // <-- Import new function
+    toggleUserAdminStatus, // <-- MODIFIED: Import toggleUserAdminStatus
+    adminUpdateUserSubjectStatus // MODIFIED: Import for subject status
 } from './firebase_firestore.js'; // Import badge handlers & course definition update
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowseCourses, showAddCourseForm } from './ui_courses.js'; // Added showBrowseCourses, showAddCourseForm
@@ -33,19 +33,18 @@ import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowse
 // State for Playlist Management section
 let selectedVideosForAssignment = []; // Array to hold { videoId, title }
 let currentLoadedPlaylistCourseId = null;
+let currentManagingUserIdForSubjects = null; // MODIFIED: For subject management
 
 // --- Admin Dashboard UI ---
 
 export function showAdminDashboard() {
-    // Use imported currentUser from state.js
     if (currentUser?.uid !== ADMIN_UID) {
         displayContent('<p class="text-red-500 p-4">Access Denied. Admin privileges required.</p>');
         return;
     }
     clearContent();
-    setActiveSidebarLink('showAdminDashboard', 'sidebar-standard-nav'); // Target standard nav
+    setActiveSidebarLink('showAdminDashboard', 'sidebar-standard-nav');
 
-    // MODIFIED: Changed layout to use cards/buttons
     displayContent(`
         <div class="animate-fade-in space-y-8">
             <h2 class="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">Admin Dashboard</h2>
@@ -101,6 +100,19 @@ export function showAdminDashboard() {
                         <p class="text-muted text-sm">Enter a User ID or Email and click 'Load'.</p>
                     </div>
                 </div>
+
+                 <!-- MODIFIED: User Subject Management Card (Full Width) -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Subject Management (Approval)</h3>
+                    <div class="flex gap-4 mb-4">
+                        <input type="text" id="admin-user-search-subjects" placeholder="Enter User ID or Email..." class="flex-grow text-sm">
+                        <button onclick="window.loadUserSubjectsForAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Load User's Subjects</button>
+                    </div>
+                    <div id="admin-user-subjects-area" class="max-h-96 overflow-y-auto pr-2">
+                        <p class="text-muted text-sm">Enter a User ID or Email to load their subjects for approval.</p>
+                    </div>
+                </div>
+
 
                 <!-- User Listing Card (Full Width) -->
                 <div class="content-card md:col-span-2">
@@ -197,9 +209,9 @@ export function showAdminDashboard() {
     `);
     loadFeedbackForAdmin();
     loadCoursesForAdmin();
-    populateAdminCourseSelect(); // Populate course dropdown
-    loadAdminTasks(); // <<< Load Admin Tasks
-    loadChatAutoDeleteSetting(); // <<< Load Chat Auto-Deletion Setting
+    populateAdminCourseSelect();
+    loadAdminTasks();
+    loadChatAutoDeleteSetting();
 }
 
 // --- Feedback ---
@@ -209,15 +221,13 @@ async function loadFeedbackForAdmin() {
     feedbackArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
 
     try {
-        // Load Feedback
         const feedbackSnapshot = await db.collection('feedback')
                                          .orderBy('timestamp', 'desc')
-                                         .limit(30) // Limit initial load
+                                         .limit(30)
                                          .get();
-        // Load Exam Issues
         const issuesSnapshot = await db.collection('examIssues')
                                        .orderBy('timestamp', 'desc')
-                                       .limit(20) // Limit initial load
+                                       .limit(20)
                                        .get();
 
         if (feedbackSnapshot.empty && issuesSnapshot.empty) {
@@ -231,7 +241,7 @@ async function loadFeedbackForAdmin() {
             const id = doc.id;
             const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
             const collectionName = type === 'feedback' ? 'feedback' : 'examIssues';
-             const status = data.status || 'new'; // Default to new if missing
+             const status = data.status || 'new';
             const statusClass = status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
             const statusText = status === 'new' ? 'New' : status === 'replied' ? 'Replied' : (status || 'Unknown');
             const senderName = escapeHtml(data.username || 'Unknown User');
@@ -275,9 +285,8 @@ async function loadFeedbackForAdmin() {
         feedbackArea.innerHTML = `<p class="text-red-500 text-sm">Error loading feedback/issues: ${error.message}</p>`;
     }
  }
-window.loadFeedbackForAdmin = loadFeedbackForAdmin; // Assign for refresh button
+window.loadFeedbackForAdmin = loadFeedbackForAdmin;
 
-// --- MODIFIED: promptAdminReply takes collection name ---
 export function promptAdminReply(collectionName, itemId, recipientUserId) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Action requires admin privileges.");
@@ -290,9 +299,8 @@ export function promptAdminReply(collectionName, itemId, recipientUserId) {
         alert("Reply cannot be empty.");
     }
 }
-window.promptAdminReply = promptAdminReply; // Assign to window
+window.promptAdminReply = promptAdminReply;
 
-// --- MODIFIED: handleAdminReply takes collection name ---
 async function handleAdminReply(collectionName, itemId, recipientUserId, replyText) {
      if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Action requires admin privileges.");
@@ -300,19 +308,17 @@ async function handleAdminReply(collectionName, itemId, recipientUserId, replyTe
     }
 
     showLoading("Sending reply...");
-    // Subject line indicates the source collection
     const subject = `Reply regarding ${collectionName === 'feedback' ? 'Feedback' : 'Exam Issue'} ${itemId}`;
     const success = await sendAdminReply(recipientUserId, subject, replyText, currentUser);
     if (success) {
         try {
-            // Update status in the correct collection
             await db.collection(collectionName).doc(itemId).update({
                 status: 'replied',
                 replyText: replyText
             });
             console.log(`${collectionName} item ${itemId} status updated to replied.`);
             alert("Reply sent successfully!");
-            loadFeedbackForAdmin(); // Refresh the list
+            loadFeedbackForAdmin();
         } catch (updateError) {
             console.error(`Error updating ${collectionName} status:`, updateError);
             alert(`Reply sent, but failed to update ${collectionName} status.`);
@@ -321,7 +327,6 @@ async function handleAdminReply(collectionName, itemId, recipientUserId, replyTe
     hideLoading();
 }
 
-// --- NEW: Generic Delete Item Confirmation ---
 export function confirmDeleteItem(collectionName, itemId) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required."); return;
@@ -330,15 +335,13 @@ export function confirmDeleteItem(collectionName, itemId) {
         handleDeleteItem(collectionName, itemId);
     }
 }
-window.confirmDeleteItem = confirmDeleteItem; // Assign to window
+window.confirmDeleteItem = confirmDeleteItem;
 
-// --- NEW: Generic Delete Item Handler ---
 async function deleteDbItem(collectionName, itemId) {
     if (!db || !itemId || !collectionName) {
         console.error("Cannot delete item: DB not available or ID/collection missing.");
         return false;
     }
-    // Validate collection name
     if (!['feedback', 'examIssues'].includes(collectionName)) {
          console.error("Invalid collection name for deletion:", collectionName);
          return false;
@@ -361,7 +364,7 @@ async function handleDeleteItem(collectionName, itemId) {
      hideLoading();
      if (success) {
          alert("Item deleted.");
-         loadFeedbackForAdmin(); // Refresh list
+         loadFeedbackForAdmin();
      } else {
          alert("Failed to delete item.");
      }
@@ -374,10 +377,9 @@ async function loadCoursesForAdmin() {
      if (!coursesArea) return;
      coursesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
      try {
-          // Fetch pending OR reported courses, order by creation date
          const coursesSnapshot = await db.collection('courses')
              .where('status', 'in', ['pending', 'reported'])
-             .orderBy('createdAt', 'desc') // Requires composite index (status ASC, createdAt DESC) or (status DESC, createdAt DESC)
+             .orderBy('createdAt', 'desc')
              .limit(50)
              .get();
 
@@ -387,7 +389,7 @@ async function loadCoursesForAdmin() {
          }
 
          let coursesHtml = '<div class="space-y-3">';
-         coursesSnapshot.forEach(doc => { // Changed snapshot variable name
+         coursesSnapshot.forEach(doc => {
              const course = doc.data();
              const courseId = doc.id;
              const date = course.createdAt ? new Date(course.createdAt.toDate()).toLocaleString() : 'N/A';
@@ -429,14 +431,13 @@ async function loadCoursesForAdmin() {
          console.error("Error loading courses for admin:", error);
          if (error.code === 'failed-precondition') {
               coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: Missing Firestore index. Please create a composite index on 'courses' collection: <strong>status ASC, createdAt DESC</strong> (or DESC/DESC). Check browser console for a direct link to create it.</p>`;
-              // Firestore usually logs a link to create the index in the console.
               console.error("Firestore index required for admin course query. Look for a URL in the Firestore error message to create it.");
          } else {
              coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}.</p>`;
          }
      }
  }
-window.loadCoursesForAdmin = loadCoursesForAdmin; // Assign for refresh button
+window.loadCoursesForAdmin = loadCoursesForAdmin;
 
 // --- User Course Management ---
 export async function loadUserCoursesForAdmin() {
@@ -456,7 +457,7 @@ export async function loadUserCoursesForAdmin() {
     let targetUserId = null;
 
     try {
-        targetUserId = await findUserId(searchTerm); // Use shared findUserId function
+        targetUserId = await findUserId(searchTerm);
         if (!targetUserId) throw new Error("User not found with the provided ID or Email.");
 
         const progressCollectionRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses');
@@ -496,7 +497,7 @@ export async function loadUserCoursesForAdmin() {
         userCoursesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
     }
 }
-window.loadUserCoursesForAdmin = loadUserCoursesForAdmin; // Assign for button
+window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 
 export async function handleAdminMarkCourseComplete(userId, courseId) {
      const courseName = globalCourseDataMap.get(courseId)?.name || courseId;
@@ -521,7 +522,6 @@ export async function handleAdminMarkCourseComplete(userId, courseId) {
 
      if (success) {
          alert(`Successfully updated course "${courseName}" status to '${newStatus}' for user ${userId}.`);
-         // Reload if the input field still matches the user ID or email
          const searchInput = document.getElementById('admin-user-search-courses');
          const searchTerm = searchInput?.value.trim();
          if (searchTerm) {
@@ -535,13 +535,13 @@ export async function handleAdminMarkCourseComplete(userId, courseId) {
          }
      }
 }
-window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete; // Assign to window
+window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 
 // --- User Badge Management ---
 async function findUserId(searchTerm) {
      let targetUserId = null;
      const lowerSearchTerm = searchTerm.toLowerCase();
-     if (!searchTerm) return null; // Avoid unnecessary queries
+     if (!searchTerm) return null;
 
      if (lowerSearchTerm.includes('@')) {
          console.log(`Finding user by email: ${lowerSearchTerm}`);
@@ -551,14 +551,12 @@ async function findUserId(searchTerm) {
              console.log(`Found user ID by email: ${targetUserId}`);
          }
      } else {
-         // Assume it's a UID
          console.log(`Checking if ${searchTerm} is a valid user ID...`);
          const userDoc = await db.collection('users').doc(searchTerm).get();
          if (userDoc.exists) {
              targetUserId = userDoc.id;
              console.log(`Confirmed user ID: ${targetUserId}`);
          } else {
-             // Try searching by username as a fallback? Requires another query.
              console.log(`User ID ${searchTerm} not found directly. Trying username lookup...`);
              const usernameQuery = await db.collection('usernames').doc(lowerSearchTerm).get();
              if (usernameQuery.exists) {
@@ -624,7 +622,7 @@ export async function loadUserBadgesForAdmin() {
         badgesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
     }
 }
-window.loadUserBadgesForAdmin = loadUserBadgesForAdmin; // Assign for button
+window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 
 export function promptAddBadge(userId) {
      if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
@@ -639,14 +637,13 @@ export function promptAddBadge(userId) {
      if (completionDateStr) {
          try {
              if (!/^\d{4}-\d{2}-\d{2}$/.test(completionDateStr)) throw new Error("Invalid date format.");
-              // Use UTC to avoid timezone issues with prompt input
              completionDate = new Date(completionDateStr + 'T00:00:00Z');
              if (isNaN(completionDate.getTime())) throw new Error("Invalid date value.");
          } catch(e) { alert("Invalid date format. Please use YYYY-MM-DD."); return; }
      }
      handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate);
 }
-window.promptAddBadge = promptAddBadge; // Assign to window
+window.promptAddBadge = promptAddBadge;
 
 export function confirmRemoveBadge(userId, courseId) {
      if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Admin privileges required."); return; }
@@ -654,7 +651,143 @@ export function confirmRemoveBadge(userId, courseId) {
          handleRemoveBadgeForUser(userId, courseId);
      }
 }
-window.confirmRemoveBadge = confirmRemoveBadge; // Assign to window
+window.confirmRemoveBadge = confirmRemoveBadge;
+
+
+// MODIFIED: User Subject Management
+export async function loadUserSubjectsForAdmin() {
+    const searchInput = document.getElementById('admin-user-search-subjects');
+    const subjectsArea = document.getElementById('admin-user-subjects-area');
+    if (!searchInput || !subjectsArea) return;
+
+    const searchTerm = searchInput.value.trim();
+    if (!searchTerm) {
+        subjectsArea.innerHTML = '<p class="text-yellow-500 text-sm">Please enter a User ID or Email.</p>';
+        currentManagingUserIdForSubjects = null;
+        return;
+    }
+
+    subjectsArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
+    showLoading("Finding user and loading subjects...");
+
+    try {
+        const targetUserId = await findUserId(searchTerm);
+        if (!targetUserId) {
+            currentManagingUserIdForSubjects = null;
+            throw new Error("User not found with the provided ID, Email, or Username.");
+        }
+        currentManagingUserIdForSubjects = targetUserId; // Store for actions
+
+        const userDoc = await db.collection('users').doc(targetUserId).get();
+        if (!userDoc.exists) {
+            currentManagingUserIdForSubjects = null;
+            throw new Error("User document does not exist.");
+        }
+
+        const userData = userDoc.data();
+        const userSubjects = userData.appData?.subjects || {};
+        const displayName = escapeHtml(userData.displayName || userData.username || userData.email);
+        hideLoading();
+
+        let subjectsHtml = `<h4 class="text-md font-medium mb-2">Subjects for User: ${displayName} (ID: ${targetUserId})</h4>`;
+        const subjectEntries = Object.entries(userSubjects);
+
+        if (subjectEntries.length === 0) {
+            subjectsHtml += '<p class="text-sm text-muted">User has no subjects defined.</p>';
+        } else {
+            subjectsHtml += '<ul class="space-y-2 list-none p-0">';
+            subjectEntries.forEach(([id, subject]) => {
+                const subjectName = escapeHtml(subject.name || 'Unnamed Subject');
+                const status = subject.status || 'approved';
+                const creatorName = escapeHtml(subject.creatorName || 'Unknown');
+                const createdAt = subject.createdAt ? new Date(subject.createdAt).toLocaleDateString() : 'N/A';
+
+                let statusBadgeClass = 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-200';
+                let statusText = 'Approved';
+                if (status === 'pending') {
+                    statusBadgeClass = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-200';
+                    statusText = 'Pending';
+                } else if (status === 'rejected') {
+                    statusBadgeClass = 'bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-200';
+                    statusText = 'Rejected';
+                }
+
+                let adminActionsHtml = '';
+                if (status === 'pending') {
+                    adminActionsHtml = `
+                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'approved')" title="Approve Subject" class="btn-success-small text-xs">Approve</button>
+                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'rejected')" title="Reject Subject" class="btn-danger-small text-xs">Reject</button>
+                    `;
+                } else if (status === 'rejected') {
+                    adminActionsHtml = `
+                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'approved')" title="Re-approve Subject" class="btn-success-small text-xs">Re-approve</button>
+                    `;
+                } else { // Approved
+                     adminActionsHtml = `
+                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'rejected')" title="Revoke (Reject) Subject" class="btn-warning-small text-xs">Revoke</button>
+                    `;
+                }
+
+
+                subjectsHtml += `
+                    <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm flex-wrap">
+                        <div class="flex-grow">
+                            <span class="font-medium">${subjectName}</span>
+                            <span class="text-xs px-1.5 py-0.5 rounded-full ${statusBadgeClass} ml-2">${statusText}</span>
+                            <span class="block text-xs text-muted">Created by: ${creatorName} on ${createdAt} (UID: ${subject.creatorUid || 'N/A'})</span>
+                        </div>
+                        <div class="flex space-x-1 flex-shrink-0">
+                            ${adminActionsHtml}
+                        </div>
+                    </li>`;
+            });
+            subjectsHtml += '</ul>';
+        }
+        subjectsArea.innerHTML = subjectsHtml;
+    } catch (error) {
+        hideLoading();
+        console.error("Error loading user subjects for admin:", error);
+        subjectsArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
+        currentManagingUserIdForSubjects = null;
+    }
+}
+window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
+
+export async function handleAdminSubjectApproval(targetUserId, subjectId, newStatus) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID || !targetUserId || !subjectId || !newStatus) {
+        alert("Invalid operation or missing parameters.");
+        return;
+    }
+    if (targetUserId !== currentManagingUserIdForSubjects) { // Ensure context is correct
+        alert("User context mismatch. Please reload subjects for the correct user.");
+        return;
+    }
+
+    const subjectNameElement = document.querySelector(`#admin-user-subjects-area li div.flex-grow span.font-medium`);
+    const subjectName = subjectNameElement ? subjectNameElement.textContent : `Subject ID ${subjectId}`;
+
+    const action = newStatus === 'approved' ? 'approve' : (newStatus === 'rejected' ? 'reject' : 'update');
+
+    if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subjectName)}" for this user?`)) {
+        showLoading("Updating subject status...");
+        try {
+            const success = await adminUpdateUserSubjectStatus(currentUser.uid, targetUserId, subjectId, newStatus);
+            hideLoading();
+            if (success) {
+                alert(`Subject "${escapeHtml(subjectName)}" has been ${newStatus}.`);
+                loadUserSubjectsForAdmin(); // Refresh the list for the current user
+            } else {
+                alert(`Failed to update subject status.`);
+            }
+        } catch (error) {
+            hideLoading();
+            console.error("Error handling admin subject approval:", error);
+            alert(`Failed to update subject status: ${error.message}`);
+        }
+    }
+}
+window.handleAdminSubjectApproval = handleAdminSubjectApproval;
+
 
 // --- Admin Tasks Management ---
 async function loadAdminTasks() {
@@ -663,7 +796,7 @@ async function loadAdminTasks() {
     tasksArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
 
     try {
-        const tasks = await fetchAdminTasks(); // Use imported function
+        const tasks = await fetchAdminTasks();
 
         if (tasks.length === 0) {
             tasksArea.innerHTML = '<p class="text-sm text-muted">No admin tasks found.</p>';
@@ -678,8 +811,8 @@ async function loadAdminTasks() {
             const dateStr = task.createdAt ? task.createdAt.toLocaleDateString() : 'N/A';
             const statusClass = isDone ? 'bg-green-100 dark:bg-green-900/50 line-through text-muted' : 'bg-yellow-50 dark:bg-yellow-900/50';
             const buttonIcon = isDone ?
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>' : // Checked circle
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; // Empty circle outline
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>' :
+                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
 
             tasksHtml += `
                 <li class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 ${statusClass}">
@@ -721,40 +854,36 @@ async function handleAddAdminTask() {
     }
 
     showLoading("Adding task...");
-    const newTaskId = await addAdminTask(taskText); // Use imported function
+    const newTaskId = await addAdminTask(taskText);
     hideLoading();
 
     if (newTaskId) {
-        input.value = ''; // Clear input
-        loadAdminTasks(); // Refresh list
+        input.value = '';
+        loadAdminTasks();
     }
-    // Error alert is handled within addAdminTask in firebase_firestore.js
 }
 
 async function handleToggleAdminTask(taskId, isCurrentlyDone) {
     const newStatus = isCurrentlyDone ? 'pending' : 'done';
     showLoading(`Updating task status to ${newStatus}...`);
-    const success = await updateAdminTaskStatus(taskId, newStatus); // Use imported function
+    const success = await updateAdminTaskStatus(taskId, newStatus);
     hideLoading();
     if (success) {
-        loadAdminTasks(); // Refresh list
+        loadAdminTasks();
     }
-    // Error alert is handled within updateAdminTaskStatus in firebase_firestore.js
 }
 
 async function handleDeleteAdminTask(taskId) {
-    // Optional confirmation
     if (!confirm(`Are you sure you want to delete this completed task (ID: ${taskId})?`)) {
         return;
     }
 
     showLoading("Deleting task...");
-    const success = await deleteAdminTask(taskId); // Use imported function
+    const success = await deleteAdminTask(taskId);
     hideLoading();
     if (success) {
-        loadAdminTasks(); // Refresh list
+        loadAdminTasks();
     }
-    // Error alert (e.g., trying to delete pending) is handled within deleteAdminTask in firebase_firestore.js
 }
 
 
@@ -762,13 +891,12 @@ async function handleDeleteAdminTask(taskId) {
 function populateAdminCourseSelect() {
     const select = document.getElementById('admin-playlist-course-select');
     if (!select) return;
-    select.innerHTML = '<option value="">Select Course...</option>'; // Reset
+    select.innerHTML = '<option value="">Select Course...</option>';
     globalCourseDataMap.forEach((course, courseId) => {
-        // List courses that have *any* playlist URL defined
         if (course.youtubePlaylistUrls?.length > 0 || course.youtubePlaylistUrl) {
              const option = document.createElement('option');
              option.value = courseId;
-             option.textContent = escapeHtml(course.name || courseId); // Escape name
+             option.textContent = escapeHtml(course.name || courseId);
              select.appendChild(option);
         }
     });
@@ -812,7 +940,7 @@ async function fetchPlaylistItems(playlistId, apiKey, pageToken = null) {
 async function loadPlaylistForAdmin() {
     const select = document.getElementById('admin-playlist-course-select');
     const videosArea = document.getElementById('admin-playlist-videos-area');
-    const actionArea = document.getElementById('admin-video-action-area'); // Updated ID
+    const actionArea = document.getElementById('admin-video-action-area');
     if (!select || !videosArea || !actionArea) return;
 
     const courseId = select.value;
@@ -823,7 +951,6 @@ async function loadPlaylistForAdmin() {
     }
 
     const courseDef = globalCourseDataMap.get(courseId);
-    // Use youtubePlaylistUrls preferentially
     const playlistUrls = courseDef?.youtubePlaylistUrls?.length > 0 ? courseDef.youtubePlaylistUrls : (courseDef?.youtubePlaylistUrl ? [courseDef.youtubePlaylistUrl] : []);
 
     if (playlistUrls.length === 0) {
@@ -832,16 +959,16 @@ async function loadPlaylistForAdmin() {
          return;
     }
 
-     if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === "YOUR_API_KEY_HERE") { // Check actual constant name
+     if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === "YOUR_API_KEY_HERE") {
           alert("YouTube API Key is not configured in config.js. Cannot load playlist.");
           videosArea.innerHTML = `<p class="text-danger text-sm">YouTube API Key missing in configuration.</p>`;
           return;
      }
 
     videosArea.innerHTML = `<div class="flex justify-center items-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading videos...</p></div>`;
-    actionArea.classList.add('hidden'); // Hide actions while loading
-    selectedVideosForAssignment = []; // Reset selection
-    updateSelectedVideoCount(); // Update count display
+    actionArea.classList.add('hidden');
+    selectedVideosForAssignment = [];
+    updateSelectedVideoCount();
     currentLoadedPlaylistCourseId = courseId;
 
     let allVideos = [];
@@ -857,17 +984,17 @@ async function loadPlaylistForAdmin() {
              }
 
              let nextPageToken = null;
-             let positionOffset = allVideos.length; // Keep track of position across multiple playlists
+             let positionOffset = allVideos.length;
              do {
                   const data = await fetchPlaylistItems(playlistId, YOUTUBE_API_KEY, nextPageToken);
                   if (data.items) {
                       allVideos.push(...data.items
-                          .filter(item => item.snippet?.resourceId?.videoId) // Ensure video ID exists
+                          .filter(item => item.snippet?.resourceId?.videoId)
                           .map(item => ({
                            videoId: item.snippet.resourceId.videoId,
                            title: item.snippet.title,
                            thumbnail: item.snippet.thumbnails?.default?.url,
-                           position: (item.snippet.position ?? 0) + positionOffset // Adjust position based on offset
+                           position: (item.snippet.position ?? 0) + positionOffset
                       })));
                   }
                   nextPageToken = data.nextPageToken;
@@ -886,10 +1013,9 @@ async function loadPlaylistForAdmin() {
     } else if (allVideos.length === 0) {
          videosArea.innerHTML = '<p class="text-muted text-sm">No valid videos found in the specified playlist(s).</p>';
     } else {
-         // Sort by final calculated position
          allVideos.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
          renderPlaylistVideos(allVideos, videosArea);
-         actionArea.classList.remove('hidden'); // Show actions after loading
+         actionArea.classList.remove('hidden');
     }
 }
 window.loadPlaylistForAdmin = loadPlaylistForAdmin;
@@ -900,10 +1026,9 @@ function renderPlaylistVideos(videos, container) {
          <button onclick="window.toggleSelectAllVideos(true)" class="btn-secondary-small text-xs mr-1">Select All</button>
          <button onclick="window.toggleSelectAllVideos(false)" class="btn-secondary-small text-xs">Select None</button>
      </div>
-     <ul class="space-y-1 list-none p-0">`; // Use list-none and p-0
+     <ul class="space-y-1 list-none p-0">`;
      videos.forEach(video => {
-         if (!video.videoId || !video.title) return; // Skip invalid items
-         // Escape single quotes in title for the onclick attribute
+         if (!video.videoId || !video.title) return;
          const escapedTitle = escapeHtml(video.title.replace(/'/g, "\\'"));
          videosHtml += `
               <li id="admin-video-${video.videoId}" class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer" onclick="window.toggleVideoSelection(this, '${video.videoId}', '${escapedTitle}')">
@@ -922,15 +1047,14 @@ function toggleSelectAllVideos(select) {
     checkboxes.forEach(cb => {
         if (cb.checked !== select) {
             cb.checked = select;
-            // Trigger the selection logic manually for each toggled checkbox
             const videoId = cb.value;
-            const videoTitle = cb.dataset.title; // Use data-title which is already escaped
+            const videoTitle = cb.dataset.title;
             updateSelectionState(videoId, videoTitle, select);
             cb.closest('li')?.classList.toggle('ring-2', select);
             cb.closest('li')?.classList.toggle('ring-primary-500', select);
         }
     });
-    updateSelectedVideoCount(); // Update UI after toggling all
+    updateSelectedVideoCount();
 }
 window.toggleSelectAllVideos = toggleSelectAllVideos;
 
@@ -938,18 +1062,14 @@ window.toggleSelectAllVideos = toggleSelectAllVideos;
 function toggleVideoSelection(listItem, videoId, videoTitle) {
      const checkbox = listItem.querySelector('input[type="checkbox"]');
      if (!checkbox) return;
-     checkbox.checked = !checkbox.checked; // Toggle the checkbox state
+     checkbox.checked = !checkbox.checked;
 
-     // Update selection state array
-     // Use the data-title attribute for consistency, as it's already escaped properly for HTML
      const actualTitle = checkbox.dataset.title;
      updateSelectionState(videoId, actualTitle, checkbox.checked);
 
-     // Update UI for this item
      listItem.classList.toggle('ring-2', checkbox.checked);
      listItem.classList.toggle('ring-primary-500', checkbox.checked);
 
-     // Update overall count and button states
      updateSelectedVideoCount();
 }
 window.toggleVideoSelection = toggleVideoSelection;
@@ -961,7 +1081,6 @@ function updateSelectionState(videoId, videoTitle, isSelected) {
      } else if (!isSelected && index > -1) {
           selectedVideosForAssignment.splice(index, 1);
      }
-     // console.log("Current selection:", selectedVideosForAssignment); // Optional: for debugging
 }
 
 function updateSelectedVideoCount() {
@@ -982,7 +1101,6 @@ function updateSelectedVideoCount() {
      if (unassignBtn) {
           unassignBtn.disabled = count === 0 || !chapterNumValid;
      }
-     // Add event listener to chapter input to re-evaluate button states
      if (chapterNumInput && !chapterNumInput.dataset.listenerAttached) {
          chapterNumInput.addEventListener('input', updateSelectedVideoCount);
          chapterNumInput.dataset.listenerAttached = 'true';
@@ -1008,24 +1126,19 @@ async function handleAssignVideoToChapter() {
      showLoading(`Assigning ${selectedVideosForAssignment.length} video(s) to Chapter ${chapterNum}...`);
 
      try {
-          // Fetch latest course data directly to avoid stale state issues
           const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
           const currentCourseData = courseDoc.data() || {};
-          // const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
 
           const chapterResources = { ...(currentCourseData.chapterResources || {}) };
           chapterResources[chapterNum] = chapterResources[chapterNum] || {};
-          // Ensure lectureUrls is an array of objects {url, title}
           let currentLectures = chapterResources[chapterNum].lectureUrls || [];
-          // Filter out any non-object entries (backward compatibility)
           currentLectures = currentLectures.filter(lec => typeof lec === 'object' && lec.url && lec.title);
 
           let addedCount = 0;
           selectedVideosForAssignment.forEach(video => {
                const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-               // Check if URL already exists in the array of objects
                if (!currentLectures.some(lec => lec.url === videoUrl)) {
-                    currentLectures.push({ url: videoUrl, title: video.title }); // Use the title stored during selection
+                    currentLectures.push({ url: videoUrl, title: video.title });
                     addedCount++;
                }
           });
@@ -1036,20 +1149,19 @@ async function handleAssignVideoToChapter() {
                return;
           }
 
-          chapterResources[chapterNum].lectureUrls = currentLectures; // Assign updated array
+          chapterResources[chapterNum].lectureUrls = currentLectures;
           const updates = { chapterResources };
           const success = await updateCourseDefinition(currentLoadedPlaylistCourseId, updates);
 
           if (success) {
                hideLoading();
                alert(`${addedCount} video(s) successfully assigned to Chapter ${chapterNum} for course "${escapeHtml(courseDef?.name || currentLoadedPlaylistCourseId)}".`);
-               // Clear selection visually
                selectedVideosForAssignment = [];
                updateSelectedVideoCount();
                document.querySelectorAll('#admin-playlist-videos-area input[type="checkbox"]').forEach(cb => cb.checked = false);
                document.querySelectorAll('#admin-playlist-videos-area li').forEach(li => li.classList.remove('ring-2', 'ring-primary-500'));
           } else {
-               hideLoading(); // Error handled in updateCourseDefinition
+               hideLoading();
           }
      } catch (error) {
           hideLoading();
@@ -1083,10 +1195,8 @@ async function handleUnassignVideoFromChapter() {
      showLoading(`Unassigning ${selectedVideosForAssignment.length} video(s) from Chapter ${chapterNum}...`);
 
      try {
-          // Fetch latest course data
           const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
           const currentCourseData = courseDoc.data() || {};
-          // const currentCourseData = globalCourseDataMap.get(currentLoadedPlaylistCourseId) || (await db.collection('courses').doc(currentLoadedPlaylistCourseId).get()).data() || {};
 
           const chapterResources = { ...(currentCourseData.chapterResources || {}) };
 
@@ -1100,13 +1210,12 @@ async function handleUnassignVideoFromChapter() {
           const selectedUrlsToRemove = selectedVideosForAssignment.map(v => `https://www.youtube.com/watch?v=${v.videoId}`);
           let removedCount = 0;
 
-          // Filter out the selected videos
           const updatedLectures = currentLectures.filter(lec => {
                if (selectedUrlsToRemove.includes(lec.url)) {
                     removedCount++;
-                    return false; // Exclude this lecture
+                    return false;
                }
-               return true; // Keep this lecture
+               return true;
           });
 
           if (removedCount === 0) {
@@ -1115,9 +1224,7 @@ async function handleUnassignVideoFromChapter() {
                return;
           }
 
-          // Update the chapter's lectureUrls
           chapterResources[chapterNum].lectureUrls = updatedLectures;
-          // If array is empty after removal, keep empty array.
 
           const updates = { chapterResources };
           const success = await updateCourseDefinition(currentLoadedPlaylistCourseId, updates);
@@ -1125,13 +1232,12 @@ async function handleUnassignVideoFromChapter() {
           if (success) {
                hideLoading();
                alert(`${removedCount} video(s) successfully unassigned from Chapter ${chapterNum}.`);
-               // Clear selection visually
                selectedVideosForAssignment = [];
                updateSelectedVideoCount();
                document.querySelectorAll('#admin-playlist-videos-area input[type="checkbox"]').forEach(cb => cb.checked = false);
                document.querySelectorAll('#admin-playlist-videos-area li').forEach(li => li.classList.remove('ring-2', 'ring-primary-500'));
           } else {
-               hideLoading(); // Error handled in updateCourseDefinition
+               hideLoading();
           }
      } catch (error) {
           hideLoading();
@@ -1141,20 +1247,6 @@ async function handleUnassignVideoFromChapter() {
 }
 window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
 
-
-// Assign functions needed by buttons to window scope (already done in previous versions)
-// Ensure all new functions are added if not already present.
-window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
-window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
-window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
-window.promptAddBadge = promptAddBadge;
-window.confirmRemoveBadge = confirmRemoveBadge;
-window.promptAdminReply = promptAdminReply; // Make sure this is assigned if used by onclick
-// window.handleCourseApproval = handleCourseApproval; // From ui_courses.js
-// window.showCourseDetails = showCourseDetails; // From ui_courses.js
-// window.showEditCourseForm = showEditCourseForm; // From ui_courses.js
-
-// Add the new handler functions at the end of the file before the window assignments
 
 async function handleDeleteUserFormulaSheetAdmin() {
     if (!currentUser?.uid || currentUser.uid !== ADMIN_UID) {
@@ -1166,7 +1258,7 @@ async function handleDeleteUserFormulaSheetAdmin() {
     const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
     const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
     const statusArea = document.getElementById('admin-delete-content-status');
-    statusArea.innerHTML = ''; // Clear previous status
+    statusArea.innerHTML = '';
 
     if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
         statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
@@ -1181,13 +1273,13 @@ async function handleDeleteUserFormulaSheetAdmin() {
             statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
             return;
         }
-        hideLoading(); // Hide after finding user, before confirm
+        hideLoading();
 
         if (!confirm(`Are you sure you want to delete the formula sheet for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
             return;
         }
 
-        showLoading("Deleting formula sheet..."); // Show again for delete operation
+        showLoading("Deleting formula sheet...");
         const success = await deleteUserFormulaSheet(targetUserId, courseId, chapterNum);
         hideLoading();
 
@@ -1213,7 +1305,7 @@ async function handleDeleteUserChapterSummaryAdmin() {
     const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
     const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
     const statusArea = document.getElementById('admin-delete-content-status');
-    statusArea.innerHTML = ''; // Clear previous status
+    statusArea.innerHTML = '';
 
 
     if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
@@ -1229,13 +1321,13 @@ async function handleDeleteUserChapterSummaryAdmin() {
             statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
             return;
         }
-        hideLoading(); // Hide after finding user, before confirm
+        hideLoading();
 
         if (!confirm(`Are you sure you want to delete the chapter summary for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
             return;
         }
 
-        showLoading("Deleting chapter summary..."); // Show again for delete operation
+        showLoading("Deleting chapter summary...");
         const success = await deleteUserChapterSummary(targetUserId, courseId, chapterNum);
         hideLoading();
 
@@ -1273,7 +1365,6 @@ async function handleDeleteAllFeedback() {
 
     showLoading("Deleting all feedback & issues...");
     try {
-        // Delete both feedback and exam issues
         const [feedbackCount, issuesCount] = await Promise.all([
             deleteAllFeedbackMessages(),
             deleteAllExamIssues()
@@ -1302,23 +1393,17 @@ async function listAllUsersAdmin() {
 
     try {
         let query;
-        // Decide query based on search term
          if (searchTerm.includes('@')) {
-            // Exact email match is efficient
             query = db.collection('users').where('email', '==', searchTerm);
          } else if (searchTerm) {
-            // Basic non-indexed search (less efficient, case-sensitive, only prefix match on displayName)
-            // For better search, use Algolia or similar, or duplicate searchable fields in lowercase.
             console.warn("Admin user search by name is basic: case-sensitive, prefix match on displayName.");
             query = db.collection('users').orderBy('displayName').startAt(searchTerm).endAt(searchTerm + '\uf8ff');
-            // Alternative: try searching by username (requires another indexed field or separate collection lookup)
          } else {
-            // No search term, list recent users (or order by name)
-             query = db.collection('users').orderBy('displayName').limit(100); // Or orderBy('createdAt', 'desc')
+             query = db.collection('users').orderBy('displayName').limit(100);
          }
 
 
-        const snapshot = await query.limit(100).get(); // Limit results for performance
+        const snapshot = await query.limit(100).get();
         hideLoading();
 
         if (snapshot.empty) {
@@ -1332,22 +1417,38 @@ async function listAllUsersAdmin() {
             const userId = doc.id;
             const displayName = escapeHtml(userData.displayName || userData.username || 'N/A');
             const email = escapeHtml(userData.email || 'N/A');
-             const username = escapeHtml(userData.username || '-'); // Display username
+            const username = escapeHtml(userData.username || '-');
             const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString() : 'N/A';
-            const isAdminUser = userId === ADMIN_UID;
+            const userIsAdmin = userData.isAdmin || false;
+            const isAdminUserPrimary = userId === ADMIN_UID;
+
+            let adminBadgeHtml = '';
+            if (isAdminUserPrimary) {
+                adminBadgeHtml = '<span class="text-xs bg-yellow-400 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-100 px-1.5 py-0.5 rounded-full font-semibold">Primary Admin</span>';
+            } else if (userIsAdmin) {
+                adminBadgeHtml = '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-700 dark:text-blue-200 px-1.5 py-0.5 rounded-full">Admin</span>';
+            }
+
+            let toggleAdminButtonHtml = '';
+            if (!isAdminUserPrimary) {
+                const buttonText = userIsAdmin ? 'Remove Admin' : 'Make Admin';
+                const buttonClass = userIsAdmin ? 'btn-warning-small' : 'btn-success-small';
+                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2">${buttonText}</button>`;
+            }
 
             usersHtml += `
                 <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex items-center gap-3 text-sm flex-wrap">
                     <img src="${escapeHtml(userData.photoURL || DEFAULT_PROFILE_PIC_URL)}" alt="${displayName}'s avatar" class="w-10 h-10 rounded-full object-cover border dark:border-gray-600 flex-shrink-0" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
                     <div class="flex-grow min-w-[200px]">
-                        <span class="font-medium">${displayName}</span> ${isAdminUser ? '<span class="text-xs bg-yellow-200 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">Admin</span>' : ''}<br>
+                        <span class="font-medium">${displayName}</span> ${adminBadgeHtml}<br>
                          <span class="text-xs text-muted">Username: ${username}</span><br>
                         <span class="text-xs text-muted">Email: ${email}</span><br>
                         <span class="text-xs text-muted">UID: ${userId}</span><br>
                         <span class="text-xs text-muted">Created: ${createdAt}</span>
                     </div>
-                    <div class="flex-shrink-0">
+                    <div class="flex-shrink-0 flex flex-col items-end gap-1">
                         <button onclick="window.viewUserDetailsAdmin('${userId}')" class="btn-secondary-small text-xs">View Details</button>
+                        ${toggleAdminButtonHtml}
                     </div>
                 </li>
             `;
@@ -1367,13 +1468,43 @@ async function listAllUsersAdmin() {
 }
 window.listAllUsersAdmin = listAllUsersAdmin;
 
-// Function to view detailed user data
+async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Permission Denied: Only the primary admin can perform this action.");
+        return;
+    }
+    if (targetUserId === ADMIN_UID) {
+        alert("The primary admin's status cannot be changed.");
+        return;
+    }
+
+    const actionText = currentIsAdmin ? "remove admin privileges from" : "grant admin privileges to";
+    const targetUserDisplayName = document.querySelector(`#admin-user-list-area li button[onclick*="'${targetUserId}'"]`)?.closest('li')?.querySelector('.font-medium')?.textContent || `User ID ${targetUserId}`;
+
+
+    if (confirm(`Are you sure you want to ${actionText} ${escapeHtml(targetUserDisplayName)}?`)) {
+        showLoading("Updating admin status...");
+        try {
+            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin);
+            hideLoading();
+            if (success) {
+                alert("Admin status updated successfully.");
+                listAllUsersAdmin();
+            }
+        } catch (error) {
+            hideLoading();
+            console.error("Error toggling admin status:", error);
+            alert(`Failed to toggle admin status: ${error.message}`);
+        }
+    }
+}
+window.handleToggleAdminStatus = handleToggleAdminStatus;
+
+
 async function viewUserDetailsAdmin(userId) {
     if (!currentUser || currentUser.uid !== ADMIN_UID || !userId) return;
 
-    // Remove existing modal first
     document.getElementById('user-details-modal')?.remove();
-
     showLoading(`Loading details for user ${userId}...`);
 
     try {
@@ -1392,23 +1523,18 @@ async function viewUserDetailsAdmin(userId) {
             courseProgress[doc.id] = doc.data();
         });
 
-        // Clean up data for display (e.g., convert timestamps)
         const displayUserData = { ...userData };
         if (displayUserData.createdAt?.toDate) displayUserData.createdAt = displayUserData.createdAt.toDate().toISOString();
         if (displayUserData.lastAppDataUpdate?.toDate) displayUserData.lastAppDataUpdate = displayUserData.lastAppDataUpdate.toDate().toISOString();
-        // Recursively convert timestamps in course progress
         const cleanCourseProgress = JSON.parse(JSON.stringify(courseProgress, (key, value) => {
-            // Attempt to convert Firestore Timestamp-like objects
              if (value && typeof value === 'object' && value.hasOwnProperty('seconds') && value.hasOwnProperty('nanoseconds')) {
-                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; } // Return original value if conversion fails
+                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; }
              }
              return value;
         }));
 
         hideLoading();
 
-        // --- START MODIFICATION ---
-        // Generate user profile HTML
         const userProfileHtml = `
             <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="col-span-2 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -1425,15 +1551,16 @@ async function viewUserDetailsAdmin(userId) {
                     </dd>
                 </div>
                 ${Object.entries(displayUserData).map(([key, value]) => {
-                    // Skip complex/large fields handled separately AND photoURL (handled above)
                     if (['completedCourseBadges', 'appData', 'userNotes', 'photoURL'].includes(key)) return '';
-
-                    // Format the value based on its type
                     let displayValue = '';
                     if (value === null || value === undefined) {
                         displayValue = '<span class="text-gray-400 dark:text-gray-500 italic">null</span>';
                     } else if (typeof value === 'boolean') {
-                        displayValue = value ? '<span class="text-green-600 dark:text-green-400">true</span>' : '<span class="text-red-600 dark:text-red-400">false</span>';
+                        if (key === 'isAdmin') {
+                            displayValue = value ? '<span class="text-green-600 dark:text-green-400 font-semibold">TRUE (Admin)</span>' : '<span class="text-red-600 dark:text-red-400">false (User)</span>';
+                        } else {
+                            displayValue = value ? '<span class="text-green-600 dark:text-green-400">true</span>' : '<span class="text-red-600 dark:text-red-400">false</span>';
+                        }
                     } else if (Array.isArray(value)) {
                         displayValue = `<span class="text-purple-600 dark:text-purple-400">Array(${value.length})</span>`;
                         if (value.length > 0) {
@@ -1443,18 +1570,14 @@ async function viewUserDetailsAdmin(userId) {
                             </ul>`;
                         }
                     } else if (typeof value === 'object') {
-                         // Basic object display
                          displayValue = '<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-1 rounded max-h-24 overflow-auto">' + escapeHtml(JSON.stringify(value, null, 2)) + '</pre>';
                     } else {
                         displayValue = escapeHtml(String(value));
                     }
-
-                     // Add Edit button for username
                      let editButton = '';
                      if (key === 'username') {
                           editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
                      }
-
                     return `
                         <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
                             <dt class="text-xs font-medium text-gray-700 dark:text-gray-300">${escapeHtml(key)}</dt>
@@ -1464,19 +1587,15 @@ async function viewUserDetailsAdmin(userId) {
                 }).join('')}
             </dl>
         `;
-        // --- END MODIFICATION ---
 
-        // Generate badges HTML if they exist
         const badgesHtml = displayUserData.completedCourseBadges?.length ? `
             <div class="mt-4">
                 <h4 class="text-sm font-semibold mb-2 text-primary-600 dark:text-primary-400">Completed Course Badges (${displayUserData.completedCourseBadges.length})</h4>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     ${displayUserData.completedCourseBadges.map(badge => {
-                         // Convert potential Firestore Timestamp in badge to displayable date
                          let completionDateStr = 'N/A';
                          if (badge.completionDate) {
                               try {
-                                   // Check if it's already a Date object (less likely here) or needs toDate()
                                    const dateObj = badge.completionDate.toDate ? badge.completionDate.toDate() : new Date(badge.completionDate);
                                    if (!isNaN(dateObj)) completionDateStr = dateObj.toLocaleDateString();
                               } catch(e){ console.warn("Error parsing badge completion date:", badge.completionDate, e); }
@@ -1498,7 +1617,6 @@ async function viewUserDetailsAdmin(userId) {
             </div>
         ` : '';
 
-        // Generate course progress HTML
         const courseProgressHtml = Object.entries(cleanCourseProgress).length ? `
             <div class="grid grid-cols-1 gap-4">
                 ${Object.entries(cleanCourseProgress).map(([courseId, progress]) => {
@@ -1506,17 +1624,14 @@ async function viewUserDetailsAdmin(userId) {
                     const courseName = courseDef?.name || courseId;
                     const studiedChapters = progress.courseStudiedChapters?.length || 0;
                     const totalChapters = courseDef?.totalChapters || '?';
-                     const status = progress.status || 'enrolled'; // Default status
+                     const status = progress.status || 'enrolled';
                     const statusClass = status === 'completed' ? 'text-green-600 dark:text-green-400' :
                                       status === 'failed' ? 'text-red-600 dark:text-red-400' :
                                       'text-blue-600 dark:text-blue-400';
-                    // Safely get last activity date string
                     let lastActivityStr = 'N/A';
                     if (progress.lastActivityDate) {
                          try { lastActivityStr = new Date(progress.lastActivityDate).toLocaleDateString(); } catch(e){}
                     }
-
-
                     return `
                         <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-600 shadow-sm">
                             <div class="flex justify-between items-start mb-2">
@@ -1573,7 +1688,7 @@ async function viewUserDetailsAdmin(userId) {
                         </div>
                          <div>
                             <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Raw User Data (Excerpt)</h4>
-                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete }, null, 2))}</code></pre>
+                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete, isAdmin: userData.isAdmin }, null, 2))}</code></pre>
                         </div>
                     </div>
                     <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
@@ -1592,7 +1707,6 @@ async function viewUserDetailsAdmin(userId) {
 }
 window.viewUserDetailsAdmin = viewUserDetailsAdmin;
 
-// --- NEW: Admin Change Username Functions ---
 function promptAdminChangeUsername(userId, currentUsername) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required.");
@@ -1601,7 +1715,7 @@ function promptAdminChangeUsername(userId, currentUsername) {
 
     const newUsername = prompt(`Enter new username for user ${userId} (current: "${currentUsername}").\nMust be 3-20 alphanumeric characters or underscores:`);
 
-    if (newUsername === null) return; // User cancelled
+    if (newUsername === null) return;
 
     const trimmedUsername = newUsername.trim();
     const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
@@ -1618,7 +1732,7 @@ function promptAdminChangeUsername(userId, currentUsername) {
 
     handleAdminChangeUsername(userId, currentUsername, trimmedUsername);
 }
-window.promptAdminChangeUsername = promptAdminChangeUsername; // Assign to window scope
+window.promptAdminChangeUsername = promptAdminChangeUsername;
 
 async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
     showLoading("Updating username...");
@@ -1627,21 +1741,17 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
         if (success) {
             hideLoading();
             alert(`Username successfully changed to "${newUsername}".`);
-            // Refresh the modal if it's open for this user
             if (document.getElementById('user-details-modal')) {
                  const modalTitle = document.getElementById('user-details-title');
-                 // Check if the modal is for the user we just updated
                  if (modalTitle && modalTitle.textContent.includes(userId)) {
-                     viewUserDetailsAdmin(userId); // Refresh the details modal
+                     viewUserDetailsAdmin(userId);
                  }
             }
-             // Optionally, refresh the main user list if the updated user is visible
              const userListArea = document.getElementById('admin-user-list-area');
              if (userListArea && userListArea.innerHTML.includes(userId)) {
-                  listAllUsersAdmin(); // Refresh the list
+                  listAllUsersAdmin();
              }
         } else {
-            // Should not happen if adminUpdateUsername throws errors
             hideLoading();
             alert("An unexpected issue occurred while updating the username.");
         }
@@ -1654,10 +1764,6 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
 
 
 // --- NEW: Chat Auto-Deletion Functions ---
-
-/**
- * Loads the chat auto-deletion setting from Firestore and updates the UI.
- */
 async function loadChatAutoDeleteSetting() {
     const selectElement = document.getElementById('chat-auto-delete-select');
     const statusArea = document.getElementById('chat-auto-delete-status');
@@ -1674,12 +1780,11 @@ async function loadChatAutoDeleteSetting() {
         const settingsRef = db.collection('settings').doc('chat');
         const docSnap = await settingsRef.get();
 
-        let currentDays = 0; // Default to 0 (Disabled)
+        let currentDays = 0;
         if (docSnap.exists) {
             currentDays = docSnap.data()?.autoDeleteDays ?? 0;
         }
 
-        // Ensure the value exists in the select options, otherwise default to 0
         const validOptions = Array.from(selectElement.options).map(opt => parseInt(opt.value));
         if (validOptions.includes(currentDays)) {
             selectElement.value = currentDays.toString();
@@ -1687,19 +1792,16 @@ async function loadChatAutoDeleteSetting() {
             console.warn(`Stored autoDeleteDays value (${currentDays}) not found in options. Defaulting to Disabled.`);
             selectElement.value = "0";
         }
-        statusArea.innerHTML = ''; // Clear loading message
+        statusArea.innerHTML = '';
         console.log("[Admin] Loaded chat auto-delete setting:", selectElement.value);
 
     } catch (error) {
         console.error("Error loading chat auto-delete setting:", error);
         statusArea.innerHTML = `<p class="text-red-500 text-xs">Error loading setting: ${error.message}</p>`;
-        selectElement.value = "0"; // Default to disabled on error
+        selectElement.value = "0";
     }
 }
 
-/**
- * Saves the selected chat auto-deletion interval to Firestore.
- */
 export async function saveChatAutoDeleteSetting() {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Admin privileges required.");
@@ -1716,7 +1818,7 @@ export async function saveChatAutoDeleteSetting() {
         return;
     }
 
-    statusArea.innerHTML = ''; // Clear previous status
+    statusArea.innerHTML = '';
     showLoading("Saving setting...");
 
     try {
@@ -1731,7 +1833,6 @@ export async function saveChatAutoDeleteSetting() {
         hideLoading();
         statusArea.innerHTML = `<p class="text-green-500 text-xs">Setting saved successfully!</p>`;
         console.log("[Admin] Saved chat auto-delete setting:", selectedValue);
-        // Optionally show success message for a few seconds then clear
         setTimeout(() => { if(statusArea) statusArea.innerHTML = ''; }, 3000);
 
     } catch (error) {
@@ -1741,7 +1842,6 @@ export async function saveChatAutoDeleteSetting() {
         alert(`Failed to save setting: ${error.message}`);
     }
 }
-// Assign new chat function to window scope
 window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
 
 
@@ -1767,18 +1867,17 @@ window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
 window.listAllUsersAdmin = listAllUsersAdmin;
 window.viewUserDetailsAdmin = viewUserDetailsAdmin;
 window.promptAdminChangeUsername = promptAdminChangeUsername;
-// Assign external functions used in onclick attributes
+window.handleToggleAdminStatus = handleToggleAdminStatus;
 window.handleCourseApproval = handleCourseApproval;
 window.showCourseDetails = showCourseDetails;
 window.showEditCourseForm = showEditCourseForm;
-window.showBrowseCourses = showBrowseCourses; // Added
-window.showAddCourseForm = showAddCourseForm;   // Added
-// Assign new task handlers to window scope
-// window.loadAdminTasks = loadAdminTasks; // Optional: Not usually called directly from HTML
+window.showBrowseCourses = showBrowseCourses;
+window.showAddCourseForm = showAddCourseForm;
 window.handleAddAdminTask = handleAddAdminTask;
 window.handleToggleAdminTask = handleToggleAdminTask;
 window.handleDeleteAdminTask = handleDeleteAdminTask;
-// Assign new chat auto-delete function to window scope
-window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting; // Explicitly assigned again
+window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
+window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; // MODIFIED: Add subject loader
+window.handleAdminSubjectApproval = handleAdminSubjectApproval; // MODIFIED: Add subject approval handler
 
 // --- END OF FILE ui_admin_dashboard.js ---

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" class="light"> <!-- Basic structure, will be injected -->
+<head>
+    <!-- Note: Meta tags, title, and global CSS/JS are in index.html -->
+    <!-- This file is for content injection only -->
+    <style>
+        /* Minimal styles for the public homepage, can be expanded or use Tailwind utility classes directly */
+        .hero-section {
+            /* TODO: Add hero background image */
+            background-color: #f0f9ff; /* light blue-ish bg */
+            /* Placeholder for background image: background-image: url('./assets/images/hero-bg.jpg'); background-size: cover; background-position: center; */
+        }
+        .dark .hero-section {
+            background-color: #1f2937; /* dark gray-blue bg */
+        }
+        .feature-icon {
+            /* Placeholder for actual icons */
+            display: inline-block;
+            width: 2rem; height: 2rem;
+            background-color: #3b82f6; /* blue-500 */
+            color: white;
+            border-radius: 0.25rem;
+            text-align: center;
+            line-height: 2rem;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="public-home-content" class="text-gray-800 dark:text-gray-200">
+        <!-- Hero Section -->
+        <section class="hero-section py-16 md:py-24 text-center">
+            <div class="container mx-auto px-6">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 text-primary-600 dark:text-primary-400">Lyceum - Your Personal Tutor</h1>
+                <p class="text-lg md:text-xl mb-8 text-gray-700 dark:text-gray-300">Master any subject with AI-powered test generation, structured courses, and personalized learning tools.</p>
+                <button onclick="window.showLoginUI()" class="btn-primary-lg px-8 py-3 text-lg font-semibold rounded shadow-lg hover:shadow-xl transition duration-300">
+                    Get Started Now
+                </button>
+                 <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Already have an account? <a href="#" onclick="window.showLoginUI()" class="text-primary-600 dark:text-primary-400 hover:underline">Login here</a>.</p>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="py-16 bg-white dark:bg-gray-800">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center mb-12">Powerful Features</h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">T</div>
+                        <h3 class="text-xl font-semibold mb-2">AI Test Generation</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Create custom tests from your study material or our extensive question banks.</p>
+                    </div>
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">C</div>
+                        <h3 class="text-xl font-semibold mb-2">Structured Courses</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Enroll in guided courses with lessons, assignments, and progress tracking.</p>
+                    </div>
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">AI</div>
+                        <h3 class="text-xl font-semibold mb-2">AI Learning Tools</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Get explanations, generate summaries, and improve your notes with AI assistance.</p>
+                    </div>
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">P</div>
+                        <h3 class="text-xl font-semibold mb-2">Progress Tracking</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Monitor your learning journey with detailed dashboards and analytics.</p>
+                    </div>
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">N</div>
+                        <h3 class="text-xl font-semibold mb-2">Notes & Documents</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Create, manage, and share your study notes and documents efficiently.</p>
+                    </div>
+                    <div class="feature-item p-6 bg-gray-50 dark:bg-gray-700 rounded-lg shadow">
+                        <!-- TODO: Add feature icons (e.g., SVG or font icons) -->
+                        <div class="feature-icon">💬</div>
+                        <h3 class="text-xl font-semibold mb-2">Global Chat</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Connect with other learners, ask questions, and share insights.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- How it Works Section -->
+        <section class="py-16 bg-gray-100 dark:bg-gray-900">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center mb-12">Get Started in 3 Easy Steps</h2>
+                <div class="flex flex-col md:flex-row justify-around items-center text-center">
+                    <div class="step mb-8 md:mb-0">
+                        <div class="text-5xl text-primary-500 dark:text-primary-400 mb-2">1</div>
+                        <h3 class="text-xl font-semibold mb-1">Sign Up / Login</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Create your free account or log in.</p>
+                    </div>
+                    <div class="step mb-8 md:mb-0">
+                        <div class="text-5xl text-primary-500 dark:text-primary-400 mb-2">2</div>
+                        <h3 class="text-xl font-semibold mb-1">Choose Your Path</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Select a subject or enroll in a course.</p>
+                    </div>
+                    <div class="step">
+                        <div class="text-5xl text-primary-500 dark:text-primary-400 mb-2">3</div>
+                        <h3 class="text-xl font-semibold mb-1">Learn & Test</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Utilize AI tools, study materials, and generate tests.</p>
+                    </div>
+                </div>
+                <!-- TODO: Add illustrative screenshot of the app -->
+                <!-- <img src="./assets/images/app-screenshot.png" alt="Lyceum App Screenshot" class="mt-12 mx-auto rounded-lg shadow-xl max-w-3xl"> -->
+            </div>
+        </section>
+
+        <!-- Footer Section -->
+        <footer class="py-8 bg-gray-800 dark:bg-black text-gray-400 dark:text-gray-500 text-center">
+            <div class="container mx-auto px-6">
+                <p class="mb-2">© <span id="currentYear"></span> Lyceum. All rights reserved.</p>
+                <div class="social-links">
+                    <!-- Placeholder for social media link -->
+                    <a href="https://x.com/@LyceumEdu" target="_blank" rel="noopener noreferrer" class="hover:text-primary-400 dark:hover:text-primary-300 mx-2">Follow us on X</a>
+                    <!-- Add more social links here -->
+                </div>
+                 <p class="text-xs mt-4">Lyceum is an AI-assisted learning platform. Always verify critical information.</p>
+            </div>
+        </footer>
+    </div>
+    <script>
+        // Small script for dynamic year in footer, if this page were standalone.
+        // Since it's injected, this might not be ideal. Consider setting year via main script.
+        if (document.getElementById('currentYear')) {
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+        }
+    </script>
+</body>
+</html>

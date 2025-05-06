@@ -10,8 +10,9 @@ import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-// *** MODIFIED: Changed loadChapterSummary to loadUserChapterSummary ***
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary } from './firebase_firestore.js';
+// MODIFIED: Added adminUpdateUserSubjectStatus import
+import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, sendWelcomeGuideMessage, adminUpdateUserSubjectStatus } from './firebase_firestore.js';
+
 
 // --- UI Imports ---
 import { importData, exportData, showImportExportDashboard } from './ui_import_export.js';
@@ -19,51 +20,42 @@ import { displayContent, clearContent, showLoginUI, hideLoginUI, updateSubjectIn
 import { showHomeDashboard } from './ui_home_dashboard.js';
 import { showTestGenerationDashboard, promptChapterSelectionForTest, getSelectedChaptersAndPromptTestType, promptTestType, startTestGeneration } from './ui_test_generation.js';
 import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js';
-// MODIFIED: Import new submitOnlineTest function
 import { launchOnlineTestUI, navigateQuestion, recordAnswer, confirmSubmitOnlineTest, confirmForceSubmit, submitOnlineTest } from './ui_online_test.js';
-// MODIFIED: Added triggerAIExplanationWrapper, promptAdminEditAnswerPlaceholder
 import {
     showExamsDashboard, enterResultsForm, submitPendingResults, showExamDetails,
     confirmDeletePendingExam, confirmDeleteCompletedExam, overrideQuestionCorrectness,
     promptFeedback, triggerAIExplanationWrapper, promptAdminEditAnswerPlaceholder
 } from './ui_exams_dashboard.js';
 import { showManageStudiedChapters, toggleStudiedChapter } from './ui_studied_chapters.js';
-import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubject, confirmDeleteSubject, deleteSubject } from './ui_subjects.js';
+// MODIFIED: Added handleSubjectApproval to import
+import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubject, confirmDeleteSubject, deleteSubject, handleSubjectApproval } from './ui_subjects.js';
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
-// Added handleAdminMarkCourseComplete, loadUserBadgesForAdmin, promptAddBadge, handleAddBadgeForUser, confirmRemoveBadge
-import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge } from './ui_admin_dashboard.js'; // Removed duplicate badge handlers
+// MODIFIED: Added loadUserSubjectsForAdmin, handleAdminSubjectApproval
+import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js';
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
 import { showInbox, handleMarkRead } from './ui_inbox.js';
-// NEW: Import Profile Picture Cropping UI
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
-// *** NEW: Chat UI Imports ***
 import { showGlobalChat, sendChatMessage, deleteChatMessage } from './ui_chat.js';
 
 
 // --- Course UI Imports ---
-// Renamed showCurrentStudyMaterial to showNextLesson in dashboard import
 import { showMyCoursesDashboard, showCurrentCourseDashboard, showNextLesson, showFullStudyMaterial, showCurrentAssignmentsExams, showCurrentCourseProgress, navigateToCourseDashboard, handleCourseAction, confirmUnenroll } from './ui_course_dashboard.js';
 import { showCourseEnrollment, handlePaceSelection } from './ui_course_enrollment.js';
-// *** MODIFIED Import: Added handleVideoWatched, calculateChapterCombinedProgress, getYouTubeVideoId, displayChapterSummary, downloadChapterSummaryPdf ***
 import {
      showCourseStudyMaterial, displayFormulaSheet, handleExplainSelection,
-     navigateChapterMaterial, loadYouTubeAPI, handleVideoWatched, // handleVideoWatched ADDED
+     navigateChapterMaterial, loadYouTubeAPI, handleVideoWatched,
      initPdfViewer, cleanupPdfViewer, handlePdfSnapshotForAI,
      triggerSkipExamGeneration, askQuestionAboutTranscription,
-     handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf, getYouTubeVideoId, // ADDED these exports
-     displayChapterSummary, downloadChapterSummaryPdf // ADDED summary functions
+     handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf, getYouTubeVideoId,
+     displayChapterSummary, downloadChapterSummaryPdf
 } from './ui_course_study_material.js';
 import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_assignments_exams.js';
-import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js'; // Added renderCourseCharts
-// NEW: Import for the content menu UI
+import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js';
 import { displayCourseContentMenu } from './ui_course_content_menu.js';
-// MODIFIED: Import Notes UI wrappers
-import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, showCurrentNotesDocuments } from './ui_notes_documents.js'; // Use Wrappers + added showCurrentNotesDocuments
-// MODIFIED: Removed reportQuestionIssue from this import
+import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, showCurrentNotesDocuments } from './ui_notes_documents.js';
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection } from './exam_storage.js';
-// NEW: Import the actual convertNoteToLatex from AI module
 import { convertNoteToLatex } from './ai_integration.js';
 import { calculateChapterCombinedProgress } from './course_logic.js';
 
@@ -73,6 +65,28 @@ import { calculateChapterCombinedProgress } from './course_logic.js';
 async function initializeApp() {
     console.log("Initializing Lyceum (Module)...");
     showLoading("Initializing...");
+
+    const publicHomepageContainer = document.getElementById('public-homepage-container');
+    if (publicHomepageContainer) {
+        try {
+            const response = await fetch('./public_homepage.html?t=' + new Date().getTime());
+            if (response.ok) {
+                const html = await response.text();
+                publicHomepageContainer.innerHTML = html;
+                const currentYearSpan = publicHomepageContainer.querySelector('#currentYear');
+                if (currentYearSpan) {
+                    currentYearSpan.textContent = new Date().getFullYear();
+                }
+            } else {
+                console.error("Failed to load public_homepage.html:", response.status, response.statusText);
+                publicHomepageContainer.innerHTML = `<p class="text-center text-red-500 p-8">Error: Could not load homepage content. Please try refreshing.</p>`;
+            }
+        } catch (error) {
+            console.error("Error fetching public_homepage.html:", error);
+            publicHomepageContainer.innerHTML = `<p class="text-center text-red-500 p-8">Error: Could not load homepage content. Please try refreshing.</p>`;
+        }
+    }
+
 
     // Theme Init
     const themeToggle = document.getElementById('theme-toggle');
@@ -90,18 +104,15 @@ async function initializeApp() {
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
-             // Re-render charts if dashboards are visible
              const progressDash = document.getElementById('dashboard');
              const courseDashArea = document.getElementById('course-dashboard-area');
-             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); // Check if a course chart exists
+             const courseProgressCanvas = document.getElementById('assignmentScoresChart');
 
              if (progressDash && !progressDash.classList.contains('hidden')) {
-                window.renderCharts(); // Use window scope for standard progress
+                window.renderCharts();
              }
-             // Re-render course charts if visible and data is available
              if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseCharts === 'function') {
                  console.log("Theme changed, attempting to re-render course charts if visible.");
-                 // Access state directly from the imported module
                  if (userCourseProgressMap && activeCourseId && userCourseProgressMap.has(activeCourseId)) {
                      window.renderCourseCharts(userCourseProgressMap.get(activeCourseId));
                  } else {
@@ -113,19 +124,18 @@ async function initializeApp() {
                  }
              }
 
-            // Re-initialize Mermaid theme
              if (typeof mermaid !== 'undefined') {
                   mermaid.initialize({
-                    startOnLoad: false, // Don't auto-render on load
-                    theme: isDark ? 'dark' : 'default', // Or 'neutral', 'forest'
-                    securityLevel: 'loose', // Allow scripts if needed, use 'strict' or 'antiscript' for safety
+                    startOnLoad: false,
+                    theme: isDark ? 'dark' : 'default',
+                    securityLevel: 'loose',
                     themeVariables: {
                         darkMode: isDark,
-                        primaryColor: isDark ? '#0ea5e9' : '#0284c7', // Example primary color mapping
-                        primaryTextColor: isDark ? '#e5e7eb' : '#ffffff', // Example text on primary
-                        lineColor: isDark ? '#64748b' : '#9ca3af', // Example line color
-                        mainBkg: isDark ? '#1e293b' : '#ffffff', // Example background
-                        textColor: isDark ? '#cbd5e1' : '#374151', // Example default text,
+                        primaryColor: isDark ? '#0ea5e9' : '#0284c7',
+                        primaryTextColor: isDark ? '#e5e7eb' : '#ffffff',
+                        lineColor: isDark ? '#64748b' : '#9ca3af',
+                        mainBkg: isDark ? '#1e293b' : '#ffffff',
+                        textColor: isDark ? '#cbd5e1' : '#374151',
                     }
                  });
                  console.log(`Mermaid theme re-initialized to: ${isDark ? 'dark' : 'default'}`);
@@ -142,7 +152,7 @@ async function initializeApp() {
          menuButton.addEventListener('click', (e) => {
              e.stopPropagation();
              sidebar.classList.toggle('is-open');
-             sidebar.classList.toggle('hidden'); // Also toggle base hidden class
+             sidebar.classList.toggle('hidden');
              overlay.classList.toggle('is-visible');
          });
          overlay.addEventListener('click', () => {
@@ -150,9 +160,8 @@ async function initializeApp() {
              sidebar.classList.add('hidden');
              overlay.classList.remove('is-visible');
          });
-         sidebar.querySelectorAll('.sidebar-link, .sidebar-dropdown-toggle').forEach(link => { // Include dropdown toggles
+         sidebar.querySelectorAll('.sidebar-link, .sidebar-dropdown-toggle').forEach(link => {
              link.addEventListener('click', (e) => {
-                 // Only close if it's NOT a dropdown toggle button itself
                  if (!e.currentTarget.classList.contains('sidebar-dropdown-toggle')) {
                      sidebar.classList.remove('is-open');
                      sidebar.classList.add('hidden');
@@ -179,20 +188,17 @@ async function initializeApp() {
               alert("Fatal Error: Firebase configuration is missing or incorrect.");
               return;
          }
-        // MODIFIED: Use original imported names
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        // Assign to window scope for potential external access or older onclick handlers
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-        setupAuthListener(); // This will handle user loading
+        setupAuthListener();
     } catch (e) {
         hideLoading();
         console.error("Firebase initialization error:", e);
         alert("Error initializing Firebase services: " + e.message);
     }
 
-    // Initialize Mermaid.js (Unchanged)
      if (typeof mermaid !== 'undefined') {
          const isDark = document.documentElement.classList.contains('dark');
          mermaid.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default' });
@@ -201,58 +207,53 @@ async function initializeApp() {
          console.warn("Mermaid not loaded yet. Will initialize later if needed.");
      }
 
-    // Load YouTube API Async (Unchanged)
     loadYouTubeAPI();
 
     console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
 
 // --- Global Function Assignments ---
-// Ensure all functions called by onclick attributes in HTML are assigned to the window scope
-
-// Core UI / Navigation (Standard Test Gen)
 window.showHomeDashboard = showHomeDashboard;
 window.showTestGenerationDashboard = showTestGenerationDashboard;
 window.showManageStudiedChapters = showManageStudiedChapters;
 window.showExamsDashboard = showExamsDashboard;
-window.showProgressDashboard = showProgressDashboard; // Standard progress
+window.showProgressDashboard = showProgressDashboard;
 window.showManageSubjects = showManageSubjects;
 window.showUserProfileDashboard = showUserProfileDashboard;
-window.closeDashboard = closeDashboard; // Closes standard progress dashboard
+window.closeDashboard = closeDashboard;
 window.initializeApp = initializeApp;
+window.showLoginUI = showLoginUI;
 
-// Course UI Functions
-window.showMyCoursesDashboard = showMyCoursesDashboard; // List enrolled courses
+
+window.showMyCoursesDashboard = showMyCoursesDashboard;
 window.showBrowseCourses = showBrowseCourses;
-window.showAddCourseForm = showAddCourseForm; // Admin
-window.showEditCourseForm = showEditCourseForm; // Admin
-window.submitNewCourse = submitNewCourse; // Admin
-window.handleUpdateCourse = handleUpdateCourse; // Admin
+window.showAddCourseForm = showAddCourseForm;
+window.showEditCourseForm = showEditCourseForm;
+window.submitNewCourse = submitNewCourse;
+window.handleUpdateCourse = handleUpdateCourse;
 window.handleCourseSearch = handleCourseSearch;
 window.showCourseDetails = showCourseDetails;
 window.handleReportCourse = handleReportCourse;
-window.handleCourseApproval = handleCourseApproval; // Admin
-window.showCourseEnrollment = showCourseEnrollment; // User action
-window.handlePaceSelection = handlePaceSelection; // User action from enrollment form
+window.handleCourseApproval = handleCourseApproval;
+window.showCourseEnrollment = showCourseEnrollment;
+window.handlePaceSelection = handlePaceSelection;
 window.navigateToCourseDashboard = navigateToCourseDashboard;
-window.handleCourseAction = handleCourseAction; // Handles buttons within course dash
-window.confirmUnenroll = confirmUnenroll; // NEW: Assign unenroll confirm
+window.handleCourseAction = handleCourseAction;
+window.confirmUnenroll = confirmUnenroll;
 
-// Course-Specific Dashboard Navigation (called from sidebar)
 window.showCurrentCourseDashboard = showCurrentCourseDashboard;
 window.showNextLesson = showNextLesson;
 window.showFullStudyMaterial = showFullStudyMaterial;
 window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
 window.showCurrentCourseProgress = showCurrentCourseProgress;
-window.showCurrentNotesDocuments = showCurrentNotesDocuments; // NEW: Assign notes link handler
+window.showCurrentNotesDocuments = showCurrentNotesDocuments;
 
-// Course Study Material Functions
 window.showCourseStudyMaterial = showCourseStudyMaterial;
 window.displayFormulaSheet = displayFormulaSheet;
-window.displayChapterSummary = displayChapterSummary; // NEW
+window.displayChapterSummary = displayChapterSummary;
 window.handleExplainSelection = handleExplainSelection;
 window.navigateChapterMaterial = navigateChapterMaterial;
-window.handleVideoWatched = handleVideoWatched; // *** ASSIGNED handleVideoWatched ***
+window.handleVideoWatched = handleVideoWatched;
 window.initPdfViewer = initPdfViewer;
 window.cleanupPdfViewer = cleanupPdfViewer;
 window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;
@@ -261,65 +262,52 @@ window.askQuestionAboutTranscription = askQuestionAboutTranscription;
 window.handleTranscriptionClick = handleTranscriptionClick;
 window.highlightTranscriptionLine = highlightTranscriptionLine;
 window.downloadFormulaSheetPdf = downloadFormulaSheetPdf;
-window.downloadChapterSummaryPdf = downloadChapterSummaryPdf; // NEW
-window.calculateChapterCombinedProgress = calculateChapterCombinedProgress; // Assign if needed globally (unlikely)
-window.getYouTubeVideoId = getYouTubeVideoId; // Assign if needed globally (unlikely)
+window.downloadChapterSummaryPdf = downloadChapterSummaryPdf;
+window.getYouTubeVideoId = getYouTubeVideoId;
 
-// Course Assignments/Exams Functions
 window.showCourseAssignmentsExams = showCourseAssignmentsExams;
 window.startAssignmentOrExam = startAssignmentOrExam;
 
-// Course Progress Functions
 window.showCourseProgressDetails = showCourseProgressDetails;
 window.renderCourseCharts = renderCourseCharts;
 
-// Course Content Menu Function
 window.displayCourseContentMenu = displayCourseContentMenu;
 
-// Notes & Documents Functions (NEW)
 window.showNotesDocumentsPanel = showNotesDocumentsPanel;
-window.addNewNoteWrapper = addNewNoteWrapper; // Use Wrappers for consistency
+window.addNewNoteWrapper = addNewNoteWrapper;
 window.editNoteWrapper = editNoteWrapper;
-window.saveNoteChangesWrapper = saveNoteChangesWrapper; // Use Wrapper
-window.uploadNoteWrapper = uploadNoteWrapper; // Use Wrapper
-window.deleteNoteWrapper = deleteNoteWrapper; // Use Wrapper
-window.shareCurrentNoteWrapper = shareCurrentNoteWrapper; // Needs implementation
+window.saveNoteChangesWrapper = saveNoteChangesWrapper;
+window.uploadNoteWrapper = uploadNoteWrapper;
+window.deleteNoteWrapper = deleteNoteWrapper;
+window.shareCurrentNoteWrapper = shareCurrentNoteWrapper;
 window.viewNoteWrapper = viewNoteWrapper;
-window.convertNoteToLatexWrapper = convertNoteToLatexWrapper; // Renamed wrapper
-window.improveNoteWithAIWrapper = improveNoteWithAIWrapper; // Corrected: Use wrapper
-window.reviewNoteWithAIWrapper = reviewNoteWithAIWrapper; // NEW: Assign review wrapper
-window.downloadNoteAsTexWrapper = downloadNoteAsTexWrapper; // NEW: Assign TeX download wrapper
+window.convertNoteToLatexWrapper = convertNoteToLatexWrapper;
+window.improveNoteWithAIWrapper = improveNoteWithAIWrapper;
+window.reviewNoteWithAIWrapper = reviewNoteWithAIWrapper;
+window.downloadNoteAsTexWrapper = downloadNoteAsTexWrapper;
 
-// Exam Storage/Review Functions (NEW)
 window.showExamReviewUI = showExamReviewUI;
-window.showAIExplanationSection = showAIExplanationSection; // Add AI explanation function
-// MODIFIED: Assign showIssueReportingModal to the name expected by the onclick
+window.showAIExplanationSection = showAIExplanationSection;
 window.reportQuestionIssue = showIssueReportingModal;
-window.showIssueReportingModal = showIssueReportingModal; // Keep original name assignment too if needed elsewhere
+window.showIssueReportingModal = showIssueReportingModal;
 window.submitIssueReport = submitIssueReport;
 
 
-// Test Generation (Standard)
 window.promptTestType = promptTestType;
 window.promptChapterSelectionForTest = promptChapterSelectionForTest;
 window.getSelectedChaptersAndPromptTestType = getSelectedChaptersAndPromptTestType;
 window.startTestGeneration = startTestGeneration;
 
-// PDF / TeX Generation (Standard)
 window.downloadTexFileWrapper = downloadTexFile;
-// PDF generation attached dynamically via event listeners in ui_test_generation.js
 
-// Online Test (Shared)
 window.navigateQuestion = navigateQuestion;
 window.recordAnswer = recordAnswer;
 window.confirmSubmitOnlineTest = confirmSubmitOnlineTest;
 window.confirmForceSubmit = confirmForceSubmit;
 window.submitOnlineTest = submitOnlineTest;
 
-// Exams Dashboard (Standard Test Gen)
 window.enterResultsForm = enterResultsForm;
 window.submitPendingResults = submitPendingResults;
-// Ensure the function called by onclick exists on window
 window.showExamDetailsWrapper = async (index) => { if (index !== null && index >= 0 && typeof showExamDetails === 'function') { await showExamDetails(index); } else { console.error("showExamDetails function not available or index invalid."); } };
 window.confirmDeletePendingExam = confirmDeletePendingExam;
 window.confirmDeleteCompletedExam = confirmDeleteCompletedExam;
@@ -328,7 +316,6 @@ window.promptFeedback = promptFeedback;
 window.triggerAIExplanation = triggerAIExplanationWrapper;
 window.promptAdminEditAnswer = promptAdminEditAnswerPlaceholder;
 
-// Studied Chapters (Standard Test Gen)
 window.toggleStudiedChapter = toggleStudiedChapter;
 
 // Subject Management (Standard Test Gen)
@@ -338,89 +325,74 @@ window.updateSubject = updateSubject;
 window.addSubject = addSubject;
 window.confirmDeleteSubject = confirmDeleteSubject;
 window.deleteSubject = deleteSubject;
+// MODIFIED: Assign subject approval handler from ui_subjects
+window.handleSubjectApproval = handleSubjectApproval;
 
-// User Profile / Auth / Inbox / Chat  *** MODIFIED SECTION TITLE ***
 window.updateUserProfile = updateUserProfile;
 window.signOutUserWrapper = signOutUser;
-window.handleProfilePictureSelect = handleProfilePictureSelect; // Profile Pic Cropping
-window.showInbox = showInbox; // Inbox UI
-window.handleMarkRead = handleMarkRead; // Inbox action
-// *** NEW: Assign Chat functions ***
+window.handleProfilePictureSelect = handleProfilePictureSelect;
+window.showInbox = showInbox;
+window.handleMarkRead = handleMarkRead;
 window.showGlobalChat = showGlobalChat;
 window.sendChatMessage = sendChatMessage;
 window.deleteChatMessage = deleteChatMessage;
 
-// Import/Export (Standard Test Gen Data)
 window.importData = importData;
 window.exportData = exportData;
 window.showImportExportDashboard = showImportExportDashboard;
 
-// Onboarding (Initial Setup)
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
-// Admin / Inbox / Feedback / Tasks *** MODIFIED SECTION TITLE ***
+// Admin Dashboard Functions
 window.showAdminDashboard = showAdminDashboard;
 window.promptAdminReply = promptAdminReply;
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
-// Badge Management (Admin)
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 window.promptAddBadge = promptAddBadge;
-window.handleAddBadgeForUser = handleAddBadgeForUser; // Defined in firebase_firestore.js
+window.handleAddBadgeForUser = handleAddBadgeForUser;
 window.confirmRemoveBadge = confirmRemoveBadge;
-window.handleRemoveBadgeForUser = handleRemoveBadgeForUser; // Defined in firebase_firestore.js
-// Note: Admin Task functions are typically called from within ui_admin_dashboard.js,
-//       so direct window assignment might not be needed unless called from HTML.
+window.handleRemoveBadgeForUser = handleRemoveBadgeForUser;
+// MODIFIED: Assign subject management functions from ui_admin_dashboard
+window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
+window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
 
-// Utility Functions (If called directly from HTML, though unlikely)
-// window.showLoading = showLoading;
-// window.hideLoading = hideLoading;
-// window.escapeHtml = escapeHtml;
-window.renderMathIn = renderMathIn; // Assign MathJax render function
+window.renderMathIn = renderMathIn;
 
-// Sidebar Dropdown Toggle Function
 window.toggleSidebarDropdown = function(contentId, arrowId) {
     const content = document.getElementById(contentId);
     const arrow = document.getElementById(arrowId);
-    const button = arrow?.closest('.sidebar-dropdown-toggle'); // Get the parent button
+    const button = arrow?.closest('.sidebar-dropdown-toggle');
     if (content && arrow && button) {
         const isOpen = content.classList.toggle('open');
         button.classList.toggle('open', isOpen);
-        // Also toggle max-height for animation if using CSS transitions
-        // Use scrollHeight to dynamically set max-height for smooth animation
         content.style.maxHeight = isOpen ? content.scrollHeight + "px" : "0";
-
-        // Check if any child link is active and keep parent highlighted
         const hasActiveChild = content.querySelector('.sidebar-link.active-link');
         button.classList.toggle('active-parent', !!hasActiveChild);
     }
 };
 
-// --- Dynamic UI Updates ---
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
-    const adminIcon = document.getElementById('admin-indicator-icon'); // Assuming an icon exists near the username
-    // Access state directly instead of passing as argument
+    const adminIcon = document.getElementById('admin-indicator-icon');
     const stateCurrentUser = currentUser;
 
-    const isAdmin = stateCurrentUser && stateCurrentUser.uid === ADMIN_UID;
+    const isAdmin = stateCurrentUser && stateCurrentUser.uid === ADMIN_UID; // Or stateCurrentUser.isAdmin for broader admin access
 
     if (adminPanelLink) {
         adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
     }
-    // Toggle visibility of a dedicated admin icon if it exists
     if (adminIcon) {
          adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
 
     if (stateCurrentUser) {
-        fetchAndUpdateUserInfo(stateCurrentUser); // Refresh user display (might add admin icon here too)
+        fetchAndUpdateUserInfo(stateCurrentUser);
     }
 }
 
 
-// --- Auth Form Handling ---
 function attachAuthListeners() {
     console.log("Attempting to attach auth listeners...");
     const loginForm = document.getElementById('login-form');
@@ -457,7 +429,6 @@ function attachAuthListeners() {
     console.log("Finished attempting to attach auth listeners.");
 }
 
-// --- Run Initialization & Attach Listeners ---
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initializeApp();

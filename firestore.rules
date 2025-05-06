@@ -27,8 +27,8 @@ service cloud.firestore {
                        (request.auth.uid == userId || // Owner can update their own doc (implicitly all allowed fields)
                         (isAdmin() && // Admin can update specific fields
                          request.resource.data.diff(resource.data).affectedKeys()
-                           // Added 'lastSelectedSubjectId' to the list of fields admin can update
-                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId'])
+                           // MODIFIED: Added 'isAdmin' to the list of fields admin can update
+                           .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges', 'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId', 'isAdmin', 'appData', 'userNotes']) // Also added appData and userNotes as admin might need to clear/reset these
                         )
                        );
       // User can only create their own doc initially
@@ -36,25 +36,27 @@ service cloud.firestore {
 
       // --- Subcollection Rules ---
 
-      // Inbox: Owner manages read/update/delete, Admin can send (create)
+      // Inbox: Owner manages read/update/delete, Admin can send (create) and delete
       match /inbox/{messageId} {
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && isAdmin();
+        allow read, update: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && isAdmin(); // Admin can create (send replies)
+        allow delete: if request.auth != null && (request.auth.uid == userId || isAdmin()); // Owner or Admin can delete
       }
 
-      // User-specific Formula Sheets: Owner manages read/write/delete, Admin can read
+      // User-specific Formula Sheets: Owner manages read/write, Admin can read/delete
       match /userFormulaSheets/{sheetId} {
-          allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-          allow read: if request.auth != null && isAdmin(); // Allow admin read (override write/delete)
+          allow read, write: if request.auth != null && request.auth.uid == userId; // Owner can read/write
+          allow read, delete: if request.auth != null && isAdmin(); // Admin can read and delete
       }
 
-      // User-specific Chapter Summaries: Owner manages read/write/delete, Admin can read
+      // User-specific Chapter Summaries: Owner manages read/write, Admin can read/delete
       match /userChapterSummaries/{summaryId} {
-          allow read, write, delete: if request.auth != null && request.auth.uid == userId;
-          allow read: if request.auth != null && isAdmin(); // Allow admin read (override write/delete)
+          allow read, write: if request.auth != null && request.auth.uid == userId; // Owner can read/write
+          allow read, delete: if request.auth != null && isAdmin(); // Admin can read and delete
       }
 
-      // Note: userNotes map is covered by the parent /users/{userId} rule
+      // Note: userNotes map is covered by the parent /users/{userId} rule.
+      // If admin needs to modify userNotes directly, it needs to be in the hasOnly list above (added it for completeness).
     }
 
     // --- User Course Progress: Owner or Admin can manage ---
@@ -86,20 +88,14 @@ service cloud.firestore {
       // Allow public read for all courses
       allow read: if true;
 
-      // Allow authenticated users to CREATE courses, but only with specific fields
+      // Allow authenticated users to CREATE courses
       allow create: if request.auth != null &&
-                       request.resource.data.keys().hasOnly([
-                         'name', 'description', 'majorTag', 'subjectTag', 'youtubePlaylistUrls', // User fields
-                         'creatorUid', 'creatorName', 'createdAt', 'status', // System/Required fields
-                         'reportedBy', 'reportReason', 'totalChapters', 'chapters', // Added chapters/totalChapters on create for Admin
-                         'relatedSubjectId', 'pdfPathPattern', 'transcriptionPathPattern', 'chapterResources', // Admin only fields
-                         'imageUrl', 'coverUrl' // NEW: Allow image URLs on creation
-                       ]) &&
                        request.resource.data.creatorUid == request.auth.uid && // Creator must be current user
                        ( // Status logic depends on user role
                          (request.resource.data.status == 'pending' && !isAdmin()) || // Non-admin submits as pending
                          (request.resource.data.status == 'approved' && isAdmin()) // Admin submits as approved
                        );
+                       // Consider if more fields need to be restricted on create for non-admins in .hasOnly([])
 
 
       // Allow Admins to UPDATE any field (including status, technical details)

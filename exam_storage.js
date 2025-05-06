@@ -1,5 +1,7 @@
 // --- START OF FILE exam_storage.js ---
 
+// --- START OF FILE exam_storage.js ---
+
 
 
 // --- START OF FILE exam_storage.js ---
@@ -815,10 +817,11 @@ export async function deleteCompletedExamV2(examId) {
                         }
                     });
 
-                    // Update the global state immediately
+                    // Update the global state immediately - IMPORTANT for subsequent UI refresh
                     setData({...data}); // Trigger potential reactivity if framework supports it
+                    console.log("[DeleteExam] Local state `data` updated via setData().");
 
-                    // *** MODIFICATION START ***
+                    // *** MODIFICATION START: Save AFTER local update, BEFORE exam delete ***
                     // Save the entire updated data object back to Firestore *BEFORE* deleting the exam doc
                     console.log(`[DeleteExam] Preparing to save updated app data (data.subjects) to Firestore because appDataModified is true...`);
                     await saveUserData(currentUser.uid, data); // Pass the modified 'data' object
@@ -840,21 +843,35 @@ export async function deleteCompletedExamV2(examId) {
         await examRef.delete();
         console.log(`[DeleteExam] Successfully deleted exam ${examId} from userExams collection.`);
 
+        // Refresh the progress dashboard AFTER all modifications (local state, Firestore save, Firestore delete) are done
+        // This ensures the dashboard reads the final state reflected in `data` and `currentSubject`
+        // *** MODIFICATION START: Moved dashboard refresh here ***
+        if (appDataModified && typeof window.showProgressDashboard === 'function') {
+            console.log("[DeleteExam] Preparing to refresh progress dashboard. Current subject ID:", currentSubject?.id);
+            // Log the state that the dashboard *should* be reading now
+            try {
+                const subjectStateForDashboard = JSON.stringify(data?.subjects?.[currentSubject?.id], null, 2);
+                console.log("[DeleteExam] Current subject data state being passed implicitly to dashboard:", subjectStateForDashboard.substring(0, 500) + (subjectStateForDashboard.length > 500 ? '...' : '')); // Log snippet
+            } catch (e) {
+                console.warn("[DeleteExam] Could not stringify current subject data for logging.");
+            }
+            console.log("[DeleteExam] Refreshing progress dashboard NOW...");
+             window.showProgressDashboard(); // Re-render the dashboard
+        } else if (appDataModified) {
+             console.warn("[DeleteExam] appDataModified is true, but window.showProgressDashboard is not defined, cannot refresh dashboard.");
+        } else {
+             console.log("[DeleteExam] No app data was modified, skipping dashboard refresh.");
+        }
+        // *** MODIFICATION END ***
+
         hideLoading();
         alert(`Exam ${examId} deleted successfully.${appDataModified ? `\n(${questionsRestoredCount} MCQs restored, stats adjusted)` : ''}`);
 
-        // Refresh the progress dashboard AFTER all modifications (local and Firestore) are done
-        // This ensures the dashboard reads the final state
-        // *** MODIFICATION START ***
-        console.log("[DeleteExam] Preparing to refresh progress dashboard. Current subject ID:", currentSubject?.id);
-        console.log("[DeleteExam] Current subject data state being passed implicitly to dashboard:", JSON.stringify(data?.subjects?.[currentSubject?.id], null, 2));
-        console.log("[DeleteExam] Refreshing progress dashboard...");
-        // *** MODIFICATION END ***
-        if (typeof window.showProgressDashboard === 'function') {
-             window.showProgressDashboard();
-        } else {
-             console.warn("[DeleteExam] window.showProgressDashboard is not defined, cannot refresh dashboard.");
-        }
+        // Remove any potential redundant refresh call from here
+        // if (typeof window.showProgressDashboard === 'function') { // REMOVED from here
+        //      window.showProgressDashboard();
+        // }
+
         return true;
 
     } catch (error) {

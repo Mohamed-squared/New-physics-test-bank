@@ -1,3 +1,5 @@
+/* --- START OF FILE styles.css --- */
+
 /* === styles.css === */
 /* ==========================================================================
    Professional TestGen Pro Styles - styles.css
@@ -323,8 +325,15 @@ hr {
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .whitespace-pre-wrap { white-space: pre-wrap; } /* Useful for feedback/transcriptions */
 .break-words { overflow-wrap: break-word; word-wrap: break-word; } /* Ensure long words break */
-.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
-
+.line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;          /* Required for -webkit-line-clamp to work */
+    -webkit-box-orient: vertical;  /* Required for -webkit-line-clamp to work */
+    -webkit-line-clamp: 1;         /* Fallback for older WebKit, and Firefox */
+    line-clamp: 1;                 /* Standard property, will be used by modern browsers */
+                                   /* Note: `line-clamp` standard is evolving to work with other display types, */
+                                   /* but this combination is currently robust for wide support. */
+}
 /* Color utilities */
 .text-success { color: var(--color-success-600); }
 .dark .text-success { color: var(--color-success-400); }
@@ -1665,7 +1674,7 @@ details > div { /* Content inside details */
 /* --- Mention Suggestion Popup Styles --- */
 #mention-suggestion-popup {
     position: absolute;
-    z-index: 80; /* Above chat content, below modal */
+    z-index: 80; /* Above chat content, below modal header/footer but above messages */
     background-color: var(--color-white);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
@@ -1673,8 +1682,8 @@ details > div { /* Content inside details */
     max-height: 150px; /* Limit height */
     overflow-y: auto; /* Allow scrolling */
     min-width: 180px; /* Minimum width */
-    /* bottom: 100%; Position above input - JS will handle exact placement */
-    /* margin-bottom: 0.5rem; Space between input and popup */
+    /* `bottom` and `left` will be set by JavaScript */
+    /* `display: none;` is managed by .hidden class */
 }
 .dark #mention-suggestion-popup {
     background-color: var(--color-gray-700);
@@ -1694,16 +1703,21 @@ details > div { /* Content inside details */
     display: flex;
     align-items: center;
     transition: background-color 0.1s ease-in-out; /* Smooth hover */
+    color: var(--color-gray-700); /* Default text color for items */
+}
+.dark #mention-suggestion-popup li {
+    color: var(--color-gray-200); /* Default dark text color */
 }
 
+
 #mention-suggestion-popup li:hover,
-#mention-suggestion-popup li.active {
+#mention-suggestion-popup li.active { /* .active class for keyboard navigation */
     background-color: var(--color-primary-100);
     color: var(--color-primary-700);
 }
 .dark #mention-suggestion-popup li:hover,
 .dark #mention-suggestion-popup li.active {
-    background-color: var(--color-primary-700);
+    background-color: var(--color-primary-700); /* Use a primary shade for active/hover in dark */
     color: var(--color-primary-100);
 }
 
@@ -1714,10 +1728,11 @@ details > div { /* Content inside details */
     margin-right: 0.5rem; /* mr-2 */
     vertical-align: middle;
     flex-shrink: 0;
+    object-fit: cover; /* Ensure avatar scales nicely */
 }
 
 #mention-suggestion-popup li .font-medium {
-    /* Default user display name styling */
+    /* User display name styling (Tailwind class already used in JS) */
     flex-grow: 1; /* Allow name to take space */
     white-space: nowrap;
     overflow: hidden;
@@ -1725,13 +1740,25 @@ details > div { /* Content inside details */
 }
 
 #mention-suggestion-popup li .text-xs {
-    /* Username styling */
+    /* Username styling (Tailwind class already used in JS) */
     color: var(--color-gray-500);
     flex-shrink: 0; /* Prevent username shrinking */
+    margin-left: 0.25rem; /* space between display name and username */
 }
 .dark #mention-suggestion-popup li .text-xs {
     color: var(--color-gray-400);
 }
+
+/* Ensure active/hovered item's sub-elements (like username) also get contrasting color if needed */
+#mention-suggestion-popup li.active .text-xs,
+#mention-suggestion-popup li:hover .text-xs {
+    color: var(--color-primary-500);
+}
+.dark #mention-suggestion-popup li.active .text-xs,
+.dark #mention-suggestion-popup li:hover .text-xs {
+    color: var(--color-primary-200);
+}
+
 
 /* --- Pinned Message Highlight --- */
 .pinned-message-highlight {
@@ -1836,3 +1863,4 @@ details > div { /* Content inside details */
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.2); opacity: 0.7; }
 }
+/* --- END OF FILE styles.css --- */

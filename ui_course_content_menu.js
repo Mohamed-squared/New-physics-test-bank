@@ -12,13 +12,11 @@ import { showCourseStudyMaterial, triggerSkipExamGeneration, getYouTubeVideoId, 
 import { startAssignmentOrExam } from './ui_course_assignments_exams.js';
 import { SKIP_EXAM_PASSING_PERCENT, YOUTUBE_API_KEY } from './config.js'; // Import config
 import { showMyCoursesDashboard } from './ui_course_dashboard.js'; // Import showMyCoursesDashboard
+// *** ADDED: Import filename utility ***
+import { getSrtFilenameFromTitle } from './filename_utils.js'; // Import utility for SRT filenames
 
-// --- Helper to get SRT filename (remains same) ---
-function getSrtFilenameFromTitle(title) {
-     if (!title) return null;
-     const cleanedTitle = title.replace(/[<>:"\/\\|?*]+/g, '_').trim();
-     return cleanedTitle.endsWith('.srt') ? cleanedTitle : `${cleanedTitle}.srt`;
-}
+// --- Helper to get SRT filename (MOVED to filename_utils.js) ---
+// function getSrtFilenameFromTitle(title) { ... } // REMOVED
 
 // --- Function to fetch video durations (remains same) ---
 async function fetchVideoDurations(videoIds) {
@@ -111,11 +109,14 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
 
     // --- Pre-fetch all video durations for the course ---
     let allVideoIdsInCourse = new Set();
-    for (let i = 1; i <= courseDef.totalChapters; i++) {
-        const chapterResources = courseDef.chapterResources?.[i] || {};
-        const lectureUrls = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
-                             .filter(lec => typeof lec === 'object' && lec.url);
-        lectureUrls.forEach(lec => { const videoId = getYouTubeVideoId(lec.url); if (videoId) allVideoIdsInCourse.add(videoId); });
+    if (courseDef.chapterResources) { // Check if chapterResources exists
+        for (let i = 1; i <= courseDef.totalChapters; i++) {
+            const chapterResources = courseDef.chapterResources?.[i] || {};
+            // Ensure lectureUrls exists and is an array before filtering/mapping
+            const lectureUrls = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
+                                 .filter(lec => typeof lec === 'object' && lec.url);
+            lectureUrls.forEach(lec => { const videoId = getYouTubeVideoId(lec.url); if (videoId) allVideoIdsInCourse.add(videoId); });
+        }
     }
     // Fetch durations and update the global cache (videoDurationMap)
     await fetchVideoDurations(Array.from(allVideoIdsInCourse));
@@ -125,7 +126,7 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
 
     // Overall Course Progress (now based on chapter completion %)
     let totalCourseProgressSum = 0;
-    const totalChapters = courseDef.totalChapters || 1;
+    const totalChapters = courseDef.totalChapters || 0; // Default to 0 if undefined
     let chaptersConsideredForAvg = 0; // Only count chapters with content
 
     // --- NEW: Use combined studied logic ---
@@ -133,8 +134,9 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
     if (progress.lastSkipExamScore) {
         for (let i = 1; i <= totalChapters; i++) {
             const skipScore = progress.lastSkipExamScore[i] || progress.lastSkipExamScore[String(i)];
+            // Use SKIP_EXAM_PASSING_PERCENT from config
             if (skipScore !== undefined && skipScore !== null && skipScore >= SKIP_EXAM_PASSING_PERCENT) {
-                studiedChaptersSet.add(i);
+                studiedChaptersSet.add(i); // Add chapter number (integer)
             }
         }
     }
@@ -143,9 +145,13 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
 
     for(let i = 1; i <= totalChapters; i++) {
          const chapterResources = courseDef.chapterResources?.[i] || {};
+         // Ensure lectureUrls exists and is an array before filtering/mapping
          const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
          const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
-         const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
+         // Build chapter-specific duration map from global cache
+         const chapterVideoDurationMap = {};
+         videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
+
          const pdfInfo = progress.pdfProgress?.[i] || null;
          const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', i);
 
@@ -163,11 +169,11 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
 
 
     let contentHtml = `<div class="animate-fade-in space-y-6">
-        <div class="flex justify-between items-center">
-             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(courseDef.name)} - Study Material & Exams</h2>
+        <div class="flex justify-between items-center flex-wrap gap-2">
+             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(courseDef.name)} - Study Material</h2>
              <button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary-small">Back to Dashboard</button>
         </div>
-        <p class="text-sm text-muted">Browse all chapters, access study materials, and take related quizzes or exams.</p>
+        <p class="text-sm text-muted">Browse all chapters, access study materials, and track your progress. Use the skip exam option to test out of chapters you already know.</p>
 
         <!-- Overall Progress (Hidden for Viewer) -->
         ${!isViewer ? `
@@ -176,6 +182,7 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
             <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mt-1">
                  <div class="bg-gradient-to-r from-blue-400 to-primary-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: ${overallProgressPercent}%" title="${overallProgressPercent}% Average Chapter Progress (${studiedChaptersCount}/${totalChapters} Chapters Marked Studied)"></div>
             </div>
+            <p class="text-xs text-muted mt-1">${studiedChaptersCount} / ${totalChapters} Chapters Marked as Studied</p>
         </div>
         ` : ''}
 
@@ -186,18 +193,25 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
     } else {
         for (let i = 1; i <= totalChapters; i++) {
             const chapterNum = i;
-            let chapterTitle = `Chapter ${chapterNum}`;
-            if (courseDef.chapters && Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterNum) {
-                chapterTitle = courseDef.chapters[chapterNum - 1] || chapterTitle;
+
+            // --- MODIFIED: Get Chapter Title ---
+            // Assumes courseDef.chapters is an array of titles/names fetched/defined elsewhere
+            let chapterTitle = `Chapter ${chapterNum}`; // Default
+            if (courseDef.chapters && Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterNum && courseDef.chapters[chapterNum - 1]) {
+                // Use the title from the array if it exists and is not empty
+                chapterTitle = courseDef.chapters[chapterNum - 1];
             }
+            // --- End Modification ---
 
             const isStudied = studiedChaptersSet.has(chapterNum); // Use combined set
             const lastSkipScore = progress.lastSkipExamScore?.[chapterNum];
             const skipAttempts = progress.skipExamAttempts?.[chapterNum] || 0;
+            const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT; // Get threshold
 
             // Check content existence for skip exam
             const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
             const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
+            // Ensure lectureUrls exists and is an array before filtering/mapping
             const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.title);
             const hasTranscriptionSource = lecturesForChapter.some(lec => getSrtFilenameFromTitle(lec.title));
             const canAttemptSkip = pdfPath || hasTranscriptionSource; // Check if PDF or Transcription exists
@@ -207,20 +221,25 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
              if (!isViewer) {
                  if (isStudied) {
                       // If studied (either by progress or skip exam pass), show status
-                      skipExamStatusHtml = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">${lastSkipScore !== undefined ? `(Skip Passed: ${lastSkipScore.toFixed(0)}%)` : '(Progress Complete)'}</span>`;
-                 } else if (lastSkipScore !== undefined && lastSkipScore < SKIP_EXAM_PASSING_PERCENT) {
+                      const reason = lastSkipScore !== undefined && lastSkipScore >= skipExamThreshold ? `(Skip Passed: ${lastSkipScore.toFixed(0)}%)` : '(Progress Complete)';
+                      skipExamStatusHtml = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">${reason}</span>`;
+                 } else if (lastSkipScore !== undefined && lastSkipScore < skipExamThreshold) {
                       // If failed last attempt AND not yet studied by progress
-                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs ml-auto" title="Last Score: ${lastSkipScore.toFixed(0)}%. Attempts: ${skipAttempts}. Needs ${SKIP_EXAM_PASSING_PERCENT}%">Retake Skip Exam</button>`;
+                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGenerationWrapper('${courseId}', ${chapterNum})" class="btn-warning-small text-xs ml-auto" title="Last Score: ${lastSkipScore.toFixed(0)}%. Attempts: ${skipAttempts}. Needs ${skipExamThreshold}%">Retake Skip Exam</button>`;
                  } else {
-                      // If never attempted (or previous pass doesn't matter because progress isn't 100%)
-                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs ml-auto" ${!canAttemptSkip ? 'disabled title="No content for exam generation"' : `title="Pass (${SKIP_EXAM_PASSING_PERCENT}%) to mark chapter as studied"`}>Take Skip Exam</button>`;
+                      // If never attempted or previous pass doesn't matter because progress isn't 100%
+                      skipExamStatusHtml = `<button onclick="window.triggerSkipExamGenerationWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs ml-auto" ${!canAttemptSkip ? 'disabled title="No content for exam generation"' : `title="Pass (${skipExamThreshold}%) to mark chapter as studied"`}>Take Skip Exam</button>`;
                  }
              }
 
             // --- Chapter Progress Bar (Using Combined Progress, Hidden for Viewer) ---
             let progressBarHtml = '';
             if (!isViewer) {
-                const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+                // Ensure lectureUrls exists and is an array before filtering/mapping
+                const videoIdsForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
+                                             .filter(lec => typeof lec === 'object' && lec.url && lec.title)
+                                             .map(lec => getYouTubeVideoId(lec.url))
+                                             .filter(id => id !== null);
                 const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
                 const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Get PDF progress info
                 // *** MODIFIED: Use the imported combined progress function from course_logic.js ***
@@ -240,20 +259,21 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
                 `;
             }
 
+            // --- MODIFIED: Use chapterTitle in the display ---
             contentHtml += `
                 <div class="content-card bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 p-0 overflow-hidden">
-                     <div class="p-3 flex justify-between items-center ${isStudied ? 'bg-green-50 dark:bg-green-900/30' : ''}">
-                          <span class="font-semibold text-gray-700 dark:text-gray-200">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</span>
-                          ${isViewer ? '<span class="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-700 dark:text-purple-100 rounded-full font-medium ml-2">Viewer</span>' : (isStudied ? '<span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 rounded-full font-medium ml-2">Studied</span>' : '')}
-                          ${skipExamStatusHtml} <!-- Skip exam status/button (hidden if viewer) -->
+                     <div class="p-3 flex justify-between items-center gap-2 flex-wrap ${isStudied && !isViewer ? 'bg-green-50 dark:bg-green-900/30' : ''}">
+                          <span class="font-semibold text-gray-700 dark:text-gray-200 truncate" title="Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</span>
+                          <div class="flex items-center gap-2 ml-auto">
+                             ${isViewer ? '<span class="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 dark:bg-purple-700 dark:text-purple-100 rounded-full font-medium">Viewer</span>' : (isStudied ? '<span class="text-xs px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100 rounded-full font-medium">Studied</span>' : '')}
+                             ${skipExamStatusHtml} <!-- Skip exam status/button (hidden if viewer) -->
+                          </div>
                      </div>
                      <div class="p-3 border-t dark:border-gray-600 bg-gray-50 dark:bg-gray-700/30 space-y-2 text-sm" id="chapter-progress-${chapterNum}">
                           ${progressBarHtml} <!-- Progress bar (hidden if viewer) -->
                           <div class="flex flex-wrap gap-2 items-center mt-2">
-                               <button onclick="window.showCourseStudyMaterial('${courseId}', ${chapterNum})" class="btn-primary-small text-xs">${isStudied ? 'Review Chapter' : 'View Chapter'}</button> <!-- Changed text for viewer -->
-                               <!-- Quick access buttons REMOVED FROM HERE -->
-                               <!-- Removed: <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" ...>Formulas</button> -->
-                               <!-- Removed: <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" ...>Summary</button> -->
+                               <button onclick="window.showCourseStudyMaterialWrapper('${courseId}', ${chapterNum})" class="btn-primary-small text-xs">${isStudied && !isViewer ? 'Review Chapter' : 'View Chapter'}</button>
+                               <!-- Quick access buttons REMOVED FROM HERE, now inside Study Material view -->
                           </div>
                      </div>
                 </div>
@@ -265,10 +285,11 @@ export async function displayCourseContentMenu(courseId = activeCourseId) {
     displayContent(contentHtml, 'course-dashboard-area');
 }
 
-// Assign to window scope if needed elsewhere (showCurrentCourseDashboard is likely assigned in its own file)
+// Assign to window scope
 window.showCurrentCourseDashboard = showMyCoursesDashboard;
-window.triggerSkipExamGeneration = triggerSkipExamGeneration;
-window.showCourseStudyMaterial = showCourseStudyMaterial;
+// Add wrappers to ensure context is passed correctly if needed, or directly assign if functions handle globals well
+window.triggerSkipExamGenerationWrapper = (courseId, chapterNum) => triggerSkipExamGeneration(courseId, chapterNum);
+window.showCourseStudyMaterialWrapper = (courseId, chapterNum) => showCourseStudyMaterial(courseId, chapterNum);
 // Note: displayFormulaSheet and displayChapterSummary are imported but primarily called from ui_course_study_material.js now
 
 

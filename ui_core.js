@@ -12,24 +12,41 @@ import { sendPasswordReset } from './firebase_auth.js'; // Import password reset
 
 export function showLoginUI() {
     console.log("Running showLoginUI...");
+
+    // --- START MODIFICATION: Ensure app layout is visible and public homepage is hidden ---
+    document.getElementById('public-homepage-container')?.classList.add('hidden');
+    const appLayout = document.querySelector('.app-layout');
+    if (appLayout) appLayout.classList.remove('hidden');
+    // --- END MODIFICATION ---
+
     document.getElementById('login-section')?.classList.remove('hidden');
     document.getElementById('content')?.classList.add('hidden');
     document.getElementById('dashboard')?.classList.add('hidden'); // Hide progress dashboard
     document.getElementById('course-dashboard-area')?.classList.add('hidden'); // Hide course dashboard
     document.getElementById('online-test-area')?.classList.add('hidden');
-    document.getElementById('user-section')?.classList.add('hidden');
+    document.getElementById('user-section')?.classList.add('hidden'); // User section hidden until login successful
     document.getElementById('subject-info')?.replaceChildren();
     document.querySelectorAll('.auth-required').forEach(el => el.style.display = 'none');
     // Hide specific sidebar groups
     document.getElementById('sidebar-standard-nav')?.style.setProperty('display', 'none', 'important');
     document.getElementById('sidebar-course-nav')?.style.setProperty('display', 'none', 'important');
-    updateAdminPanelVisibility();
+    updateAdminPanelVisibility(); // This will also be called by auth listener, but good for direct calls
     showLoginFormOnly(); // Ensure login form is shown by default
 }
 
 export function hideLoginUI() {
     console.log("Running hideLoginUI...");
     document.getElementById('login-section')?.classList.add('hidden');
+    
+    // --- START MODIFICATION: Ensure app layout is visible and public homepage is hidden (when transitioning from login to app content) ---
+    // This is generally true if hideLoginUI is called after a successful login,
+    // as the auth listener would have already handled app-layout visibility.
+    // However, adding it here ensures consistency if called in other contexts.
+    document.getElementById('public-homepage-container')?.classList.add('hidden');
+    const appLayout = document.querySelector('.app-layout');
+    if (appLayout) appLayout.classList.remove('hidden');
+    // --- END MODIFICATION ---
+
     // Don't automatically show content, let specific functions decide
     // document.getElementById('content')?.classList.remove('hidden');
     document.getElementById('user-section')?.classList.remove('hidden');

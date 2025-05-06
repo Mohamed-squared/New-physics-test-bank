@@ -1,6 +1,6 @@
 // --- START OF FILE ui_progress_dashboard.js ---
 
-import { currentSubject, charts, setCharts } from './state.js'; // Import charts state
+import { currentSubject, charts, setCharts, data } from './state.js'; // Import charts state & data
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
 import { calculateDifficulty } from './test_logic.js'; // Import necessary logic
 import { showManageSubjects } from './ui_subjects.js'; // Import for link
@@ -12,7 +12,16 @@ Chart.register(...registerables); // Register necessary components
 // --- Progress Dashboard ---
 
 export function showProgressDashboard() {
+     // *** MODIFICATION: Added logging at the start ***
+     console.log(`[showProgressDashboard] Called. Current subject ID: ${currentSubject?.id}`);
+     try {
+         const chaptersSnippet = JSON.stringify(currentSubject?.chapters, (key, value) => typeof value === 'bigint' ? value.toString() : value); // Handle BigInt if any
+         console.log(`[showProgressDashboard] currentSubject.chapters data being used: ${chaptersSnippet.substring(0, 500)}${chaptersSnippet.length > 500 ? '...' : ''}`);
+     } catch (e) { console.warn("[showProgressDashboard] Could not stringify chapter data for logging."); }
+     // *** END MODIFICATION ***
+
      if (!currentSubject) {
+         console.log("[showProgressDashboard] No currentSubject selected.");
          displayContent('<p class="text-yellow-500 p-4">Please select a subject to view its progress dashboard.</p><button onclick="window.showManageSubjects()" class="btn-secondary mt-2">Manage Subjects</button>');
          setActiveSidebarLink('showProgressDashboard', 'sidebar-standard-nav'); // Still set active link
          return;
@@ -22,20 +31,23 @@ export function showProgressDashboard() {
 
     const dashboardContentEl = document.getElementById('dashboard-content');
     if (!dashboardContentEl) {
-         console.error("Dashboard content element (#dashboard-content) not found.");
+         console.error("[showProgressDashboard] Dashboard content element (#dashboard-content) not found.");
          return;
     }
 
     // Check if subject has chapters defined
+    // *** MODIFICATION: Ensure we are reading the latest currentSubject ***
     const chapters = currentSubject.chapters;
     if (!chapters || Object.keys(chapters).length === 0) {
-         dashboardContentEl.innerHTML = `<p class="text-red-500 p-4 text-center">No chapter data available for subject "${currentSubject.name || 'Unnamed'}" to display the dashboard.</p>`;
+         console.log(`[showProgressDashboard] No chapter data available for subject "${currentSubject.name || 'Unnamed'}" to display the dashboard.`);
+         dashboardContentEl.innerHTML = `<p class="text-yellow-500 p-4 text-center">No chapter data available for subject "${currentSubject.name || 'Unnamed'}" to display the dashboard.</p>`;
          return;
     }
 
     // Check if there are any chapters with actual questions (total_questions > 0)
     const chaptersWithQuestions = Object.keys(chapters).filter(num => chapters[num] && chapters[num].total_questions > 0);
     if (chaptersWithQuestions.length === 0) {
+         console.log(`[showProgressDashboard] No chapters with questions defined for subject "${currentSubject.name || 'Unnamed'}". Cannot display progress.`);
          dashboardContentEl.innerHTML = `<p class="text-yellow-500 p-4 text-center">No chapters with questions defined for subject "${currentSubject.name || 'Unnamed'}". Cannot display progress.</p>`;
          return;
     }
@@ -87,20 +99,31 @@ export function closeDashboard() {
 
 // Separate function to handle chart rendering
 export function renderCharts() {
-     // --- MODIFICATION: Add logs and checks at the start ---
+     // *** MODIFICATION: Added logging and re-read state at the start ***
      console.log("[RenderCharts] Attempting to render charts. Current subject ID:", currentSubject?.id);
-     console.log("[RenderCharts] Data state being read:", JSON.stringify(currentSubject, null, 2));
-     // Check again if subject and chapters exist before rendering
-     if (!currentSubject || !currentSubject.chapters) {
-         console.warn("[RenderCharts] Cannot render charts, subject or chapter data missing.");
-         // Optionally display a message in the dashboard content area
+     // Explicitly read currentSubject from state *inside* the function
+     const activeSubject = currentSubject;
+     if (!activeSubject) {
+         console.warn("[RenderCharts] Cannot render charts, currentSubject is null or undefined.");
          const dashboardContentEl = document.getElementById('dashboard-content');
          if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject data is not available for charts.</p>';
          return;
      }
-     // --- END MODIFICATION ---
+     try {
+         const subjectStateSnippet = JSON.stringify(activeSubject, (key, value) => typeof value === 'bigint' ? value.toString() : value);
+         console.log("[RenderCharts] Data state being read for charts:", subjectStateSnippet.substring(0, 500) + (subjectStateSnippet.length > 500 ? '...' : ''));
+     } catch(e) { console.warn("[RenderCharts] Could not stringify subject data for logging."); }
 
-    const chapters = currentSubject.chapters;
+     // Check again if subject and chapters exist before rendering
+     if (!activeSubject.chapters) {
+         console.warn("[RenderCharts] Cannot render charts, subject.chapters data missing.");
+         const dashboardContentEl = document.getElementById('dashboard-content');
+         if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject chapter data is not available for charts.</p>';
+         return;
+     }
+     // *** END MODIFICATION ***
+
+    const chapters = activeSubject.chapters; // Use the locally captured activeSubject
     // Filter and sort chapters that have questions
     const chapterNumbers = Object.keys(chapters)
                            .filter(num => chapters[num] && chapters[num].total_questions > 0)
@@ -111,7 +134,7 @@ export function renderCharts() {
      // --- END MODIFICATION ---
 
      if (chapterNumbers.length === 0) {
-         console.log("[RenderCharts] No chapters with questions found in current subject data to render charts for:", currentSubject?.name);
+         console.log("[RenderCharts] No chapters with questions found in current subject data to render charts for:", activeSubject?.name);
          // Optionally display a message in the dashboard content area
          const dashboardContentEl = document.getElementById('dashboard-content');
          if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">No data to display in charts.</p>';
@@ -128,11 +151,15 @@ export function renderCharts() {
 
     try {
         // Prepare data arrays for charts
-        const attempted = chapterNumbers.map(num => chapters[num]?.total_attempted || 0);
-        const wrong = chapterNumbers.map(num => chapters[num]?.total_wrong || 0);
-        const mastery = chapterNumbers.map(num => chapters[num]?.consecutive_mastery || 0);
-        const difficulty = chapterNumbers.map(num => calculateDifficulty(chapters[num]));
+        // *** MODIFICATION: Ensure default values (0) if properties are missing/null/undefined ***
+        const attempted = chapterNumbers.map(num => chapters[num]?.total_attempted ?? 0);
+        const wrong = chapterNumbers.map(num => chapters[num]?.total_wrong ?? 0);
+        const mastery = chapterNumbers.map(num => chapters[num]?.consecutive_mastery ?? 0);
+        const difficulty = chapterNumbers.map(num => calculateDifficulty(chapters[num])); // calculateDifficulty should handle potential undefined input
         const labels = chapterNumbers.map(num => `Ch ${num}`); // Labels for X-axis
+
+        // Log prepared data arrays for verification
+        console.log("[RenderCharts] Data for charts:", { labels, attempted, wrong, mastery, difficulty });
 
         // Chart configuration based on theme
         const isDarkMode = document.documentElement.classList.contains('dark');
@@ -185,6 +212,7 @@ export function renderCharts() {
         // --- MODIFICATION: Check context before creating chart ---
         // Create Attempted Chart
         if (attemptedCtx) {
+            console.log("[RenderCharts] Creating Attempted Chart");
             newCharts.attemptedChart = new Chart(attemptedCtx, {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Attempted', data: attempted, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgb(59, 130, 246)', borderWidth: 1 }] },
@@ -196,6 +224,7 @@ export function renderCharts() {
 
         // Create Wrong Chart
         if (wrongCtx) {
+            console.log("[RenderCharts] Creating Wrong Chart");
             newCharts.wrongChart = new Chart(wrongCtx, {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Wrong', data: wrong, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgb(239, 68, 68)', borderWidth: 1 }] },
@@ -207,9 +236,11 @@ export function renderCharts() {
 
         // Create Mastery Chart
         if (masteryCtx) {
+             console.log("[RenderCharts] Creating Mastery Chart");
             // Suggest a max Y-axis value for mastery (e.g., slightly above typical mastery goal)
             const masteryOptions = commonOptions();
-            masteryOptions.scales.y.suggestedMax = Math.max(7, ...mastery) + 1; // Show slightly above max achieved or 7
+            const maxMasteryValue = mastery.length > 0 ? Math.max(7, ...mastery) : 7; // Default max suggestion
+            masteryOptions.scales.y.suggestedMax = maxMasteryValue + 1; // Show slightly above max achieved or 7
             newCharts.masteryChart = new Chart(masteryCtx, {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Mastery Tests', data: mastery, backgroundColor: 'rgba(34, 197, 94, 0.7)', borderColor: 'rgb(34, 197, 94)', borderWidth: 1 }] },
@@ -221,6 +252,7 @@ export function renderCharts() {
 
         // Create Difficulty Chart (with color coding)
          if (difficultyCtx) {
+            console.log("[RenderCharts] Creating Difficulty Chart");
             const difficultyOptions = commonOptions();
              difficultyOptions.scales.y.max = 150; // Set explicit max for difficulty scale
              difficultyOptions.scales.y.ticks.callback = function(value) { return value + '%'; }; // Add '%' to Y-axis ticks
@@ -250,17 +282,17 @@ export function renderCharts() {
          // --- END MODIFICATION ---
 
          setCharts(newCharts); // Update the global/shared charts state
-         console.log("Charts rendered successfully.");
+         console.log("[RenderCharts] Charts rendered successfully.");
 
     } catch (error) {
-        console.error("Error rendering charts:", error);
+        console.error("[RenderCharts] Error rendering charts:", error);
          const dashboardContentEl = document.getElementById('dashboard-content');
           // --- MODIFICATION: Check element existence in catch block ---
           if (dashboardContentEl) {
               // Clear previous attempts and show error
               dashboardContentEl.innerHTML = '<p class="text-center p-4 text-red-500">An error occurred while rendering the progress charts. Please check the console.</p>';
           } else {
-              console.error("Also failed to find #dashboard-content to display error message.");
+              console.error("[RenderCharts] Also failed to find #dashboard-content to display error message.");
           }
           // --- END MODIFICATION ---
     }

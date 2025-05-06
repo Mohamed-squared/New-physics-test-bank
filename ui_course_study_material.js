@@ -2,26 +2,29 @@
 
 // ui_course_study_material.js
 
-import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress } from './state.js';
+// *** MODIFIED: Import 'data' state for subject access ***
+import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress, data } from './state.js';
 // MODIFIED: Import USER-SPECIFIC save/load functions for sheets/summaries
 import { saveUserCourseProgress, markChapterStudiedInCourse, saveUserFormulaSheet, loadUserFormulaSheet, saveUserChapterSummary, loadUserChapterSummary } from './firebase_firestore.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
-// *** Corrected base path import + added new config value ***
-import { COURSE_TRANSCRIPTION_BASE_PATH, PDF_WORKER_SRC, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS, COURSE_PDF_BASE_PATH, YOUTUBE_API_KEY } from './config.js'; // Added YT Key
-// MODIFIED: Import generateSkipExam from ai_integration (not ui_test_generation)
+// *** MODIFIED: Import new path config values, remove old ones ***
+// *** MODIFIED: Import EXAM_QUESTION_COUNTS and EXAM_DURATIONS_MINUTES ***
+import { COURSE_BASE_PATH, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER, PDF_WORKER_SRC, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS, YOUTUBE_API_KEY, EXAM_QUESTION_COUNTS, EXAM_DURATIONS_MINUTES } from './config.js'; // Added YT Key, New Path Config, Exam Counts/Durations
+// MODIFIED: Removed import of generateSkipExam from ai_integration
 // *** UPDATED Imports: Use USER-SPECIFIC save/load functions and WHOLE PDF AI ***
-import { generateFormulaSheet, explainStudyMaterialSnippet, generateSkipExam, getExplanationForPdfSnapshot, getAllPdfTextForAI, generateChapterSummary, askAboutPdfDocument } from './ai_integration.js';
-import { parseSkipExamText } from './markdown_parser.js';
+import { generateFormulaSheet, explainStudyMaterialSnippet, getExplanationForPdfSnapshot, getAllPdfTextForAI, generateChapterSummary, askAboutPdfDocument } from './ai_integration.js';
+// *** MODIFIED: Import extractQuestionsFromMarkdown (not parseSkipExamText) ***
+import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { generateAndDownloadPdfWithMathJax } from './ui_pdf_generation.js';
 import { showCurrentCourseDashboard } from './ui_course_dashboard.js';
-// MODIFIED: Import test_logic functions for problem selection/combination
+// MODIFIED: Import test_logic functions for problem selection/combination (Keep if needed elsewhere, but not used in skip exam now)
 import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
 // MODIFIED: Import notes functions - Added setLastViewedChapterForNotes
 import { showNotesDocumentsPanel, setLastViewedChapterForNotes } from './ui_notes_documents.js';
-// MODIFIED: Import generateStructuredFilename from filename_utils.js
-import { generateStructuredFilename } from './filename_utils.js';
+// *** MODIFIED: Import filename utils ***
+import { generateStructuredFilename, getSrtFilenameFromTitle } from './filename_utils.js';
 // *** ADDED: Import calculateChapterCombinedProgress from course_logic.js ***
 import { calculateChapterCombinedProgress } from './course_logic.js';
 
@@ -68,57 +71,56 @@ let currentTranscriptionExplanationHistory = [];
 
 // --- Helper Functions ---
 
-// MODIFIED: Function to get the expected SRT filename using generateStructuredFilename
-// *** EXPORTED TO FIX ERROR ***
-export function getSrtFilenameFromTitle(title) {
-     if (!title) return null;
-     // Call the dedicated function to generate the base filename
-     const baseFilename = generateStructuredFilename(title);
-     // Check if the structured generation was successful
-     if (!baseFilename) {
-          console.warn(`Could not generate structured filename for title: "${title}". SRT path generation aborted.`);
-          // *** ADDED LOGGING ***
-          console.log('[Filename Util] Final SRT filename:', null, 'for title:', title);
-          return null; // Return null if base generation failed
-     }
-     // Append .srt to the valid base filename
-     // *** ADDED LOGGING ***
-     console.log('[Filename Util] Final SRT filename:', `${baseFilename}.srt`, 'for title:', title);
-     return `${baseFilename}.srt`;
-}
+// *** REMOVED: Local getSrtFilenameFromTitle - now imported from filename_utils.js ***
 
 // Function to fetch and parse SRT file with timestamps
 async function fetchAndParseSrt(filePath) {
     // *** ADDED LOGGING ***
     console.log('[fetchAndParseSrt] Fetching SRT from raw path:', filePath);
+    if (!filePath) {
+        console.warn('[fetchAndParseSrt] Received null or empty file path. Aborting fetch.');
+        return [];
+    }
     try {
         // Avoid double encoding if path already looks encoded
         const encodedFilePath = filePath.includes('%') ? filePath : encodeURI(filePath);
         const fetchUrl = `${encodedFilePath}?t=${new Date().getTime()}`; // Cache bust
-        console.log(`Fetching SRT from path: ${encodedFilePath}`);
+        // *** MODIFIED LOGGING ***
+        console.log(`[fetchAndParseSrt] Attempting fetch from URL: ${fetchUrl}`);
 
-        // *** ADDED LOGGING ***
-        console.log('[fetchAndParseSrt] Attempting fetch from URL:', fetchUrl);
         const response = await fetch(fetchUrl);
 
         // *** MODIFICATION START: Check Content-Type - ADDED application/x-subrip ***
         const contentType = response.headers.get("content-type");
+        console.log(`[fetchAndParseSrt] Received Content-Type: "${contentType}" for ${filePath}.`); // Log received type
         // Check if the content type is valid (plain text, srt, or x-subrip)
-        if (!contentType || (!contentType.includes("text/plain") && !contentType.includes("application/srt") && !contentType.includes("text/srt") && !contentType.includes("application/x-subrip"))) {
-            console.warn(`[fetchAndParseSrt] Received incorrect Content-Type: "${contentType}" for ${filePath}. Expected text/plain, application/srt, text/srt, or application/x-subrip. Likely received fallback HTML. Returning empty array.`);
-            return []; // Treat as not found/error
+        const validContentTypes = ["text/plain", "application/srt", "text/srt", "application/x-subrip"];
+        const isValidContentType = contentType && validContentTypes.some(validType => contentType.includes(validType));
+
+        if (!isValidContentType) {
+            console.warn(`[fetchAndParseSrt] Received potentially incorrect Content-Type: "${contentType}" for ${filePath}. Expected one of: ${validContentTypes.join(', ')}. Processing anyway, but might indicate server config issue or fallback HTML.`);
+            // Decide whether to proceed or fail based on status code below
         }
-        console.log(`[fetchAndParseSrt] Received Content-Type: "${contentType}" for ${filePath}. Proceeding with parsing.`);
         // *** MODIFICATION END ***
 
         if (!response.ok) {
             if (response.status === 404) {
-                // *** MODIFIED LOGGING ***
                 console.warn(`[fetchAndParseSrt] 404 - SRT File not found at path: ${filePath} (Encoded: ${encodedFilePath}). Check base path and generated filename.`);
                 return [];
             }
+             // If status is not OK, but content type looked wrong, still treat as error
+             if (!isValidContentType && response.status !== 200) { // Check status if type was weird
+                  console.error(`[fetchAndParseSrt] Received bad status (${response.status}) AND potentially incorrect Content-Type ("${contentType}") for ${filePath}. Returning empty array.`);
+                  return [];
+             }
+            // Throw error for other non-OK statuses
             throw new Error(`HTTP error fetching SRT file! status: ${response.status} for ${filePath}`);
         }
+        // If response IS ok, but content type was weird, log it but proceed
+        if (!isValidContentType) {
+             console.log(`[fetchAndParseSrt] Response status is OK (${response.status}), proceeding with parsing despite unusual Content-Type: "${contentType}"`);
+        }
+
         const srtContent = await response.text();
         const lines = srtContent.split(/\r?\n/);
         const entries = [];
@@ -126,12 +128,18 @@ async function fetchAndParseSrt(filePath) {
 
         // --- MODIFIED timeToSeconds Function (Handles HH:MM:SS,ms and MM:SS,ms) ---
         const timeToSeconds = (timeStr) => {
-            if (!timeStr || typeof timeStr !== 'string') return 0; // Basic validation
+             if (!timeStr || typeof timeStr !== 'string') return 0; // Basic validation
 
             const parts = timeStr.split(',');
             if (parts.length !== 2) {
-                console.warn("Could not parse time string: invalid comma separation.", timeStr);
-                return 0;
+                // Try parsing without milliseconds if comma is missing
+                if (!timeStr.includes(':')) {
+                    console.warn("Could not parse time string: invalid format.", timeStr);
+                    return 0;
+                }
+                // If ':' is present but ',' isn't, assume 0 milliseconds
+                parts[0] = timeStr;
+                parts[1] = '000';
             }
 
             const hmsPart = parts[0];
@@ -140,7 +148,8 @@ async function fetchAndParseSrt(filePath) {
             const ms = parseInt(msStr, 10);
             if (isNaN(ms) || msStr.length > 3) { // Allow 1-3 digits for ms, though standard is 3
                  console.warn("Could not parse time string: invalid milliseconds part.", msStr, "in", timeStr);
-                 return 0;
+                 // Don't return 0, just use 0 for ms part
+                 // return 0;
             }
 
             const timeParts = hmsPart.split(':');
@@ -154,7 +163,10 @@ async function fetchAndParseSrt(filePath) {
                 h = 0; // Assume hours is zero
                 m = parseInt(timeParts[0], 10);
                 s = parseInt(timeParts[1], 10);
-            } else {
+            } else if (timeParts.length === 1 && !isNaN(parseInt(timeParts[0], 10))) { // Seconds only?
+                 h = 0; m = 0; s = parseInt(timeParts[0], 10);
+            }
+            else {
                 console.warn("Could not parse time string: invalid H:M:S structure.", hmsPart, "in", timeStr);
                 return 0;
             }
@@ -165,13 +177,7 @@ async function fetchAndParseSrt(filePath) {
                 return 0;
             }
 
-            // Optional: Add validation for ranges (e.g., m < 60, s < 60) if strict format is needed
-            // if (m >= 60 || s >= 60 || h < 0 || m < 0 || s < 0) {
-            //     console.warn("Could not parse time string: Invalid time component value.", timeParts, "in", timeStr);
-            //     return 0;
-            // }
-
-            return h * 3600 + m * 60 + s + ms / 1000;
+            return h * 3600 + m * 60 + s + (isNaN(ms) ? 0 : ms / 1000); // Handle NaN ms
         };
         // --- END MODIFIED timeToSeconds Function ---
 
@@ -181,32 +187,34 @@ async function fetchAndParseSrt(filePath) {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
 
-            if (!line) { // Skip empty lines
-                // Finalize the previous entry if we hit an empty line and the entry has text
+            // Skip empty lines between entries
+            if (!line) {
                 if (entry && entry.text.length > 0) {
-                    entry.text = entry.text.join(' ').trim(); // Join text lines
+                    // Finalize the current entry when an empty line is encountered
+                    entry.text = entry.text.join(' ').trim();
                     entries.push(entry);
-                    entry = null; // Reset for next block
+                    entry = null; // Reset for the next entry
                 }
-                continue;
+                continue; // Move to the next line
             }
 
             // Check for timestamp line (contains '-->')
             if (line.includes('-->')) {
-                // Finalize previous entry if needed (e.g., if no empty line between entries)
+                // If we were already building an entry, finalize it first
+                // (This handles cases where the index number line might be missing)
                 if (entry && entry.text.length > 0) {
                     entry.text = entry.text.join(' ').trim();
                     entries.push(entry);
                 }
-                // Start new entry
+
                 const times = line.split('-->');
                 if (times.length === 2) {
                     const startSeconds = timeToSeconds(times[0].trim());
                     const endSeconds = timeToSeconds(times[1].trim());
-                    // Basic check: ensure end time is after start time
                     if (endSeconds >= startSeconds) {
+                         // Start a new entry with parsed times
                          entry = {
-                             id: entryIdCounter++,
+                             id: entryIdCounter++, // Use counter for reliable ID
                              start: startSeconds,
                              end: endSeconds,
                              text: [] // Initialize text array
@@ -220,19 +228,19 @@ async function fetchAndParseSrt(filePath) {
                     entry = null; // Discard malformed entry
                 }
             }
-            // Check for sequence number line (ignore it)
+            // Check if the line is just a number (likely the SRT index) AND the *next* line looks like a timestamp
+            // This helps ignore the index line itself
             else if (/^\d+$/.test(line) && lines[i+1]?.includes('-->')) {
-                // This line is likely a sequence number preceding a timestamp line. Ignore it.
-                continue;
+                continue; // Skip the index line
             }
-            // Otherwise, treat as text line and append to current entry if valid
+            // If we have a valid current entry being built, append this line as text
             else if (entry) {
-                entry.text.push(line); // Append the text line
+                entry.text.push(line);
             }
-            // Ignore lines that come before the first timestamp
+            // Ignore lines that appear before the first valid timestamp entry
         }
 
-        // Add the very last entry if it exists and has text
+        // Finalize the last entry if the file didn't end with an empty line
         if (entry && entry.text.length > 0) {
              entry.text = entry.text.join(' ').trim();
              entries.push(entry);
@@ -252,25 +260,40 @@ async function fetchAndParseSrt(filePath) {
 
 // Function to parse YouTube URL
 export function getYouTubeVideoId(url) { // Export if needed by other modules
-    if (!url) return null;
+     if (!url) return null;
     try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
-            return urlObj.searchParams.get('v');
+        // Handle standard watch URLs (youtube.com/watch?v=...)
+        if (url.includes('youtube.com/watch')) {
+            const urlParams = new URLSearchParams(new URL(url).search);
+            const videoId = urlParams.get('v');
+            if (videoId) return videoId;
         }
-        else if (urlObj.hostname.includes('youtu.be')) {
-            const pathParts = urlObj.pathname.split('/');
-            if (pathParts.length >= 2 && pathParts[1]) {
-                 return pathParts[1].split('?')[0];
-            }
+        // Handle short URLs (youtu.be/...)
+        else if (url.includes('youtu.be/')) {
+             const pathParts = new URL(url).pathname.split('/');
+             // The ID is usually the first part after the slash
+             if (pathParts.length >= 2 && pathParts[1]) {
+                  // Remove potential query params like ?t=...
+                  return pathParts[1].split('?')[0];
+             }
         }
-         else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.startsWith('/embed/')) {
-             const pathParts = urlObj.pathname.split('/');
+        // Handle embed URLs (youtube.com/embed/...)
+         else if (url.includes('youtube.com/embed/')) {
+             const pathParts = new URL(url).pathname.split('/');
+             // The ID is usually the part after /embed/
              if (pathParts.length >= 3 && pathParts[2]) {
                   return pathParts[2].split('?')[0];
              }
          }
-    } catch (e) { console.error("Invalid URL format:", url, e); }
+         // Handle shorts URLs (youtube.com/shorts/...) - Added
+         else if (url.includes('youtube.com/shorts/')) {
+             const pathParts = new URL(url).pathname.split('/');
+             if (pathParts.length >= 3 && pathParts[2]) {
+                 return pathParts[2].split('?')[0];
+             }
+         }
+
+    } catch (e) { console.error("Invalid URL format provided to getYouTubeVideoId:", url, e); }
     console.warn("Could not extract YouTube Video ID from URL:", url);
     return null;
 }
@@ -279,74 +302,118 @@ export function getYouTubeVideoId(url) { // Export if needed by other modules
 export function loadYouTubeAPI() {
     if (ytApiLoaded || window.ytApiLoadingInitiated) {
         console.log(`YouTube API ${ytApiLoaded ? 'already loaded' : 'loading already initiated'}.`);
-        if(ytApiLoaded) window.onYouTubeIframeAPIReady?.();
+        // If already loaded, ensure the ready callback is triggered for any latecomers
+        if(ytApiLoaded && typeof window.onYouTubeIframeAPIReady === 'function') {
+            try { window.onYouTubeIframeAPIReady(); } catch (e) { console.error("Error re-triggering onYouTubeIframeAPIReady:", e); }
+        }
         return;
     }
     console.log("Loading YouTube IFrame Player API...");
-    window.ytApiLoadingInitiated = true;
+    window.ytApiLoadingInitiated = true; // Set flag
 
     const tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
+    // Insert before the first script tag to avoid potential conflicts
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    if (firstScriptTag && firstScriptTag.parentNode) {
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    } else {
+        // Fallback if no script tags exist yet (unlikely but safe)
+        document.head.appendChild(tag);
+    }
 
+
+    // Define the global callback function that the API will call
     window.onYouTubeIframeAPIReady = () => {
         console.log("YouTube IFrame Player API Ready.");
         ytApiLoaded = true;
-        window.ytApiLoadingInitiated = false;
+        window.ytApiLoadingInitiated = false; // Reset flag
 
+        // Process any players that were queued before the API loaded
         console.log(`Processing YouTube player initialization queue (${ytInitializationQueue.length} items)`);
-        ytInitializationQueue.forEach(item => {
+        // Use a temporary copy and clear the original queue *before* processing
+        // to prevent race conditions if initialization triggers another queue attempt.
+        const queueToProcess = [...ytInitializationQueue];
+        ytInitializationQueue = [];
+
+        queueToProcess.forEach(item => {
+            // Double-check YT.Player exists before creating
             if (window.YT && window.YT.Player) {
                 createYTPlayer(item.elementId, item.videoId);
             } else {
-                console.error(`YT.Player still not available when processing queue for ${item.elementId}`);
+                // This case should theoretically not happen if onYouTubeIframeAPIReady is called correctly
+                console.error(`YT.Player still not available when processing queue for ${item.elementId}. Re-queueing.`);
+                // Re-queue if creation fails - indicates a potential loading issue
+                ytInitializationQueue.push(item);
             }
         });
-        ytInitializationQueue = [];
+         // If re-queueing happened, maybe try processing again after a delay? Or log a more severe error.
+         if (ytInitializationQueue.length > 0) {
+              console.error(`Failed to initialize ${ytInitializationQueue.length} YT players from queue. API might not be fully functional.`);
+         }
     };
  }
 
 function createYTPlayer(elementId, videoId) {
-    const container = document.getElementById(elementId);
+     const container = document.getElementById(elementId);
     if (!container) {
         console.error(`Cannot create YT Player: Container element #${elementId} not found in DOM.`);
         return;
     }
-    if (!videoId) {
-         console.error(`Cannot create YT Player for #${elementId}: Invalid videoId provided.`);
+    // Check for invalid videoId formats (e.g., null, undefined, empty string, non-string)
+    if (!videoId || typeof videoId !== 'string' || videoId.trim().length === 0) {
+         console.error(`Cannot create YT Player for #${elementId}: Invalid videoId provided ('${videoId}').`);
          container.innerHTML = `<p class="text-red-500 text-sm p-4">Error: Invalid video ID provided.</p>`;
          return;
     }
 
+    // Check if API is ready, queue if not
     if (!ytApiLoaded || !window.YT || !window.YT.Player) {
         console.log(`YouTube API not ready, queueing player creation for ${elementId} (Video ID: ${videoId})`);
+        // Avoid duplicate queue entries for the same element
         if (!ytInitializationQueue.some(item => item.elementId === elementId)) {
              ytInitializationQueue.push({ elementId, videoId });
         }
+        // Provide user feedback in the container
         container.innerHTML = `<div class="flex items-center justify-center h-full bg-black rounded text-center p-4"><p class="text-gray-400 text-sm italic">Waiting for YouTube API...</p></div>`;
+        // Ensure the API loading process is initiated if it hasn't been already
+        if (!window.ytApiLoadingInitiated) {
+            loadYouTubeAPI();
+        }
         return;
     }
 
     console.log(`Creating YouTube player for element ${elementId} with video ID ${videoId}`);
     try {
-         container.innerHTML = ''; // Clear placeholder
+         // Clear placeholder content before creating player
+         container.innerHTML = '';
+         // Store player state placeholder - player instance added in onReady
          ytPlayers[elementId] = { player: null, videoId: videoId, intervalId: null, totalDuration: null };
 
+        // Create the YT Player instance
         const player = new YT.Player(elementId, {
-            height: '360',
-            width: '100%',
+            // Dimensions can be handled by CSS aspect-ratio usually
+            // height: '360', // Example fixed height
+            // width: '100%', // Example width
             videoId: videoId,
-            playerVars: { 'playsinline': 1 },
+            playerVars: {
+                'playsinline': 1, // Important for mobile playback without fullscreen
+                'modestbranding': 1, // Reduce YouTube logo
+                'rel': 0 // Don't show related videos at the end
+            },
             events: {
                 'onReady': (event) => onPlayerReady(event, elementId),
                 'onStateChange': (event) => onPlayerStateChange(event, videoId, elementId),
                 'onError': (event) => onPlayerError(event, videoId, elementId)
             }
         });
-        ytPlayers[elementId].player = player;
+        // Note: Player instance is assigned to ytPlayers[elementId].player inside onPlayerReady
+        // ytPlayers[elementId].player = player; // Assign player instance immediately (optional, but can be useful)
+
     } catch (error) {
         console.error(`Failed to create YouTube player for ${elementId}:`, error);
         container.innerHTML = `<p class="text-red-500 text-sm p-4">Error loading video player. Check console and try disabling extensions.</p>`;
+        // Clean up state if creation failed
         if (ytPlayers[elementId]) {
              delete ytPlayers[elementId];
         }
@@ -355,139 +422,229 @@ function createYTPlayer(elementId, videoId) {
 
 function onPlayerReady(event, elementId) {
     const playerState = ytPlayers[elementId];
-    if (!playerState) return;
+    if (!playerState) {
+        console.warn(`onPlayerReady called for element ${elementId}, but no player state found.`);
+        return;
+    }
     console.log(`Player ready: ${playerState.videoId} (Element: ${elementId})`);
+
+    // Assign the actual player object to our state tracking
+    playerState.player = event.target;
+
     try {
-        const duration = event.target.getDuration();
-        playerState.totalDuration = duration;
-        videoDurationMap[playerState.videoId] = duration; // Cache duration globally
+        const duration = playerState.player.getDuration();
+        if (duration > 0) {
+            playerState.totalDuration = duration;
+            videoDurationMap[playerState.videoId] = duration; // Cache duration globally
+            console.log(`Video ${playerState.videoId} Duration: ${playerState.totalDuration}s`);
+        } else {
+             console.warn(`Video ${playerState.videoId} reported duration 0 or invalid.`);
+             playerState.totalDuration = null;
+        }
+
 
         // Initialize progress tracking only if not in viewer mode
         const progress = userCourseProgressMap.get(currentCourseIdInternal);
         if (progress && progress.enrollmentMode !== 'viewer') {
              progress.watchedVideoDurations = progress.watchedVideoDurations || {};
              progress.watchedVideoDurations[currentChapterNumber] = progress.watchedVideoDurations[currentChapterNumber] || {};
+             // Initialize watch duration to 0 if not already present
              if (progress.watchedVideoDurations[currentChapterNumber][playerState.videoId] === undefined) {
                   progress.watchedVideoDurations[currentChapterNumber][playerState.videoId] = 0;
              }
+             // Initialize local watch status using potentially stored progress
              videoWatchStatus[playerState.videoId] = {
                  watchedDuration: progress.watchedVideoDurations[currentChapterNumber][playerState.videoId],
-                 isComplete: false,
+                 isComplete: false, // This will be determined later based on watch time
                  lastTrackedTime: null // Initialize last tracked time
              };
+             console.log(`Initialized watch status for ${playerState.videoId}: ${videoWatchStatus[playerState.videoId].watchedDuration}s watched (from progress)`);
         } else {
-            videoWatchStatus[playerState.videoId] = { watchedDuration: 0, isComplete: false, lastTrackedTime: null }; // Initialize for viewers, but don't save
+            // For viewers, just initialize locally without using stored progress
+            videoWatchStatus[playerState.videoId] = { watchedDuration: 0, isComplete: false, lastTrackedTime: null };
+            console.log(`Initialized watch status for ${playerState.videoId} (Viewer mode).`);
         }
-        console.log(`Video ${playerState.videoId} Duration: ${playerState.totalDuration}s`);
+
     } catch (e) {
-         console.error("Error getting duration in onPlayerReady:", e);
-         playerState.totalDuration = null; // Mark duration as unknown
+         console.error("Error during onPlayerReady operations:", e);
+         playerState.totalDuration = null; // Mark duration as unknown on error
     }
 }
 
 function onPlayerError(event, videoId, elementId) {
-     console.error(`YouTube Player Error for video ${videoId} (Element: ${elementId}): Code ${event.data}`);
+      console.error(`YouTube Player Error for video ${videoId} (Element: ${elementId}): Code ${event.data}`);
      const container = document.getElementById(elementId);
      let errorMsg = `Error loading video (Code: ${event.data}).`;
-     if (event.data === 2) errorMsg = "Invalid video ID.";
-     else if (event.data === 5) errorMsg = "HTML5 Player Error. Try reloading or disabling extensions.";
-     else if (event.data === 100) errorMsg = "Video not found or removed.";
-     else if (event.data === 101 || event.data === 150) errorMsg = "Video owner disabled embedding. Watch on YouTube directly.";
-     else errorMsg = "Playback error. Check console or try disabling browser extensions (like ad blockers)."
 
+     // Provide more specific error messages based on YT API error codes
+     // https://developers.google.com/youtube/iframe_api_reference#onError
+     switch(event.data) {
+        case 2: // Invalid parameter (often videoId)
+            errorMsg = "Invalid video ID. The video may not exist or the link is incorrect."; break;
+        case 5: // HTML5 Player Error
+            errorMsg = "HTML5 Player Error. Try reloading the page or disabling browser extensions (like ad blockers)."; break;
+        case 100: // Video not found or private
+            errorMsg = "Video not found, removed by user, or marked as private."; break;
+        case 101: // Embedding disabled by owner
+        case 150: // Same as 101, but different phrasing sometimes
+            errorMsg = "Video owner has disabled embedding. You might need to watch it directly on YouTube."; break;
+        default:
+            errorMsg = `Playback error (Code: ${event.data}). Please check your connection or try again later. Reloading may help.`;
+     }
+
+     // Display error in the video container
      if (container) container.innerHTML = `<div class="flex items-center justify-center h-full bg-black rounded text-center p-4"><p class="text-red-500 text-sm">${errorMsg}</p></div>`;
+
+     // Clean up state for the errored player
      if (ytPlayers[elementId]) {
           if (ytPlayers[elementId].intervalId) clearInterval(ytPlayers[elementId].intervalId);
-          delete ytPlayers[elementId];
+          delete ytPlayers[elementId]; // Remove from active players
+          delete videoWatchStatus[videoId]; // Remove watch status
      }
 }
 
 function onPlayerStateChange(event, videoId, elementId) {
-    const playerState = ytPlayers[elementId];
-    if (!playerState) return;
-    // Only track/save if not in viewer mode
+     const playerState = ytPlayers[elementId];
+    if (!playerState || !playerState.player) { // Check if player instance exists
+        console.warn(`onPlayerStateChange for ${elementId} but player state or instance is missing.`);
+        return;
+    }
+
     const progress = userCourseProgressMap.get(currentCourseIdInternal);
     const isViewer = progress?.enrollmentMode === 'viewer';
+    const playerInstance = playerState.player; // Get the YT Player instance
 
-    if (event.data === YT.PlayerState.PLAYING) {
-        console.log(`Video playing: ${videoId}`);
-        if (playerState.intervalId === null) {
-            if(playerState.intervalId) clearInterval(playerState.intervalId); // Clear any stale interval just in case
-            playerState.intervalId = setInterval(() => {
-                if (!isViewer) trackWatchTime(videoId, elementId); // Only track time if not viewer
-                highlightTranscriptionLine();
-            }, 1000);
-        }
-    } else {
-        if (playerState.intervalId !== null) {
-            clearInterval(playerState.intervalId);
-            playerState.intervalId = null;
-            console.log(`Watch time tracking stopped for ${videoId}`);
-            if (!isViewer) saveVideoWatchProgress(videoId); // Save progress when paused/stopped only if not viewer
-        }
-        if (event.data == YT.PlayerState.ENDED) {
-            console.log(`Video ended: ${videoId}`);
-            // Check if watched enough, update status (even for viewer, just locally)
-            if (videoWatchStatus[videoId] && playerState.totalDuration) {
-                 const progressPercent = (videoWatchStatus[videoId].watchedDuration / playerState.totalDuration);
-                 if (progressPercent >= VIDEO_WATCH_THRESHOLD_PERCENT) {
-                      videoWatchStatus[videoId].isComplete = true;
-                      console.log(`Video ${videoId} marked as complete internally (>= ${VIDEO_WATCH_THRESHOLD_PERCENT*100}% watched).`);
-                 } else {
-                      console.log(`Video ${videoId} ended but watch threshold (${VIDEO_WATCH_THRESHOLD_PERCENT*100}%) not met (${(progressPercent*100).toFixed(1)}%).`);
-                 }
+    try { // Wrap in try-catch as playerInstance methods can sometimes fail
+        if (event.data === YT.PlayerState.PLAYING) {
+            console.log(`Video playing: ${videoId}`);
+            // Start interval only if not already running
+            if (playerState.intervalId === null) {
+                // Clear any potential zombie interval first
+                if(playerState.intervalId) clearInterval(playerState.intervalId);
+                // Start new interval: Track watch time (if not viewer) & highlight transcription
+                playerState.intervalId = setInterval(() => {
+                    if (!isViewer) trackWatchTime(videoId, elementId); // Only track time if not viewer
+                    highlightTranscriptionLine(); // Always highlight transcription
+                }, 1000);
+                console.log(`Watch time tracking started for ${videoId}`);
             }
-            // Save final progress and check chapter completion only if not viewer
-            if (!isViewer) {
-                saveVideoWatchProgress(videoId).then(() => {
-                    checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
-                });
+        } else { // Includes PAUSED, BUFFERING, ENDED, CUED
+            // If interval is running, clear it
+            if (playerState.intervalId !== null) {
+                clearInterval(playerState.intervalId);
+                playerState.intervalId = null;
+                console.log(`Watch time tracking stopped for ${videoId} (State: ${event.data})`);
+                // Save progress when paused or stopped (only if not viewer)
+                if (!isViewer) {
+                    saveVideoWatchProgress(videoId); // Save accumulated time
+                }
+            }
+            // Specifically handle the ENDED state
+            if (event.data === YT.PlayerState.ENDED) {
+                console.log(`Video ended: ${videoId}`);
+                 // Ensure watch status exists and duration is known
+                if (videoWatchStatus[videoId] && playerState.totalDuration > 0) {
+                     // Update watched duration to the total duration on end, ensures 100% if watched fully
+                     videoWatchStatus[videoId].watchedDuration = playerState.totalDuration;
+                     videoWatchStatus[videoId].isComplete = true; // Mark as complete
+                     console.log(`Video ${videoId} marked as complete internally (status: ENDED).`);
+                } else if (videoWatchStatus[videoId]) {
+                    // If duration wasn't fetched, still mark complete on 'ENDED' state
+                    videoWatchStatus[videoId].isComplete = true;
+                    console.log(`Video ${videoId} marked as complete internally (status: ENDED, duration unknown).`);
+                }
+
+                // Save final progress and check chapter completion (only if not viewer)
+                if (!isViewer) {
+                    saveVideoWatchProgress(videoId).then(() => {
+                        checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+                    }).catch(err => console.error("Error saving progress after video ended:", err));
+                }
             }
         }
+    } catch (e) {
+         console.error("Error handling player state change:", e);
+         // Attempt to clear interval on error to prevent issues
+         if (playerState && playerState.intervalId) {
+             clearInterval(playerState.intervalId);
+             playerState.intervalId = null;
+         }
     }
 }
 
-async function trackWatchTime(videoId, elementId) { // Make async
+async function trackWatchTime(videoId, elementId) { // Make async for potential awaits later
     const playerState = ytPlayers[elementId];
-    if (!playerState || !playerState.player || typeof playerState.player.getCurrentTime !== 'function') return;
+    // Ensure player and necessary methods exist
+    if (!playerState || !playerState.player || typeof playerState.player.getCurrentTime !== 'function') {
+         console.warn("trackWatchTime: Player state or getCurrentTime function missing for", elementId);
+         // Stop interval if player is invalid
+         if (playerState && playerState.intervalId) {
+              clearInterval(playerState.intervalId);
+              playerState.intervalId = null;
+         }
+         return;
+    }
+
     // Double check viewer mode before tracking
     const progress = userCourseProgressMap.get(currentCourseIdInternal);
-    if (progress?.enrollmentMode === 'viewer') return;
-
+    if (progress?.enrollmentMode === 'viewer') return; // Don't track for viewers
 
     try {
          const currentTime = playerState.player.getCurrentTime();
-         if (videoWatchStatus[videoId]) {
-              // Increment only if time actually moved forward significantly
-              if (videoWatchStatus[videoId].lastTrackedTime === null || currentTime > videoWatchStatus[videoId].lastTrackedTime + 0.5) {
-                   const timeIncrement = (videoWatchStatus[videoId].lastTrackedTime === null) ? 1 : currentTime - videoWatchStatus[videoId].lastTrackedTime;
-                   videoWatchStatus[videoId].watchedDuration = (videoWatchStatus[videoId].watchedDuration || 0) + timeIncrement;
-                   videoWatchStatus[videoId].lastTrackedTime = currentTime;
+         const totalDuration = playerState.totalDuration; // Get cached duration
 
-                   // Save progress periodically (e.g., every 30 seconds) AND check completion
-                   if (Math.round(videoWatchStatus[videoId].watchedDuration) % 30 === 0) {
-                        await saveVideoWatchProgress(videoId); // Await save
-                        await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber); // Await check
+         if (videoWatchStatus[videoId] && totalDuration > 0) { // Ensure status exists and duration is valid
+              const watchedStatus = videoWatchStatus[videoId];
+              // Increment only if time actually moved forward significantly (avoid small fluctuations)
+              if (watchedStatus.lastTrackedTime === null || currentTime > watchedStatus.lastTrackedTime + 0.5) {
+                   const timeIncrement = (watchedStatus.lastTrackedTime === null) ? 1 : currentTime - watchedStatus.lastTrackedTime;
+                   // Ensure watched duration doesn't exceed total duration
+                   watchedStatus.watchedDuration = Math.min(totalDuration, (watchedStatus.watchedDuration || 0) + timeIncrement);
+                   watchedStatus.lastTrackedTime = currentTime;
+
+                   // Check if watch threshold is met
+                   const progressPercent = watchedStatus.watchedDuration / totalDuration;
+                   if (progressPercent >= VIDEO_WATCH_THRESHOLD_PERCENT && !watchedStatus.isComplete) {
+                       watchedStatus.isComplete = true;
+                       console.log(`Video ${videoId} reached watch threshold (>= ${VIDEO_WATCH_THRESHOLD_PERCENT*100}%). Marked complete internally.`);
+                       // Trigger save and chapter check immediately when threshold is met
+                       await saveVideoWatchProgress(videoId);
+                       await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+                   }
+
+                   // Save progress periodically (e.g., every 30 seconds of *accumulated* watch time)
+                   if (Math.round(watchedStatus.watchedDuration) > 0 && Math.round(watchedStatus.watchedDuration) % 30 === 0) {
+                        await saveVideoWatchProgress(videoId);
+                        // No need to check chapter studied here again if already done at threshold
+                        // await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
                    }
               }
+         } else if (totalDuration === null) {
+             // Can't calculate percentage if duration unknown, maybe track time anyway?
+             // console.log("Tracking time for video with unknown duration:", videoId);
          }
     } catch (e) {
          console.warn("Error getting current time in trackWatchTime:", e);
-         if (playerState.intervalId) clearInterval(playerState.intervalId); // Stop timer on error
-         playerState.intervalId = null;
+         // Stop timer on error
+         if (playerState.intervalId) { clearInterval(playerState.intervalId); playerState.intervalId = null; }
     }
 }
 
-// Returns Promise
+
+// Returns Promise from saveUserCourseProgress
 async function saveVideoWatchProgress(videoId) {
-     if (!currentUser || !currentCourseIdInternal || !currentChapterNumber || !videoWatchStatus[videoId]) {
+      if (!currentUser || !currentCourseIdInternal || !currentChapterNumber || !videoWatchStatus[videoId]) {
           console.warn(`Cannot save video progress for ${videoId}: Missing context or status.`);
-          return Promise.resolve(); // Return resolved promise
+          return Promise.resolve(); // Return resolved promise for consistency
      }
      const progress = userCourseProgressMap.get(currentCourseIdInternal);
      // DO NOT SAVE if viewer mode
-     if (!progress || progress.enrollmentMode === 'viewer') return Promise.resolve();
+     if (!progress || progress.enrollmentMode === 'viewer') {
+          console.log(`Viewer mode for ${videoId}, skipping save.`);
+          return Promise.resolve();
+     }
 
+     // Ensure the nested structure exists
      progress.watchedVideoDurations = progress.watchedVideoDurations || {};
      progress.watchedVideoDurations[currentChapterNumber] = progress.watchedVideoDurations[currentChapterNumber] || {};
 
@@ -496,101 +653,159 @@ async function saveVideoWatchProgress(videoId) {
      const totalDuration = videoDurationMap[videoId]; // Use cached duration
      const clampedDuration = (typeof totalDuration === 'number' && totalDuration > 0) ? Math.min(newDuration, totalDuration) : newDuration;
 
+     // Only save if the clamped duration has changed
      if (progress.watchedVideoDurations[currentChapterNumber][videoId] !== clampedDuration) {
           progress.watchedVideoDurations[currentChapterNumber][videoId] = clampedDuration;
-          console.log(`Saving watched duration for ${videoId}: ${clampedDuration}s`);
-          updateUserCourseProgress(currentCourseIdInternal, progress); // Update local state
-          // Return the promise from Firestore save
-          return saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress).catch(err => {
-               console.error(`Failed to save video progress to Firestore for ${videoId}:`, err);
-               // Optionally re-throw or handle error differently
-          });
+          console.log(`Saving watched duration for ${videoId} (Ch ${currentChapterNumber}): ${clampedDuration}s`);
+          updateUserCourseProgress(currentCourseIdInternal, progress); // Update local state immediately
+
+          // Return the promise from Firestore save operation
+          return saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress)
+              .then(() => console.log(`Firestore save successful for video ${videoId} progress.`))
+              .catch(err => {
+                   console.error(`Failed to save video progress to Firestore for ${videoId}:`, err);
+                   // Optionally re-throw or handle error differently, e.g., notify user
+                   // throw err; // Re-throw if the caller needs to know about the failure
+              });
+     } else {
+         // console.log(`Video progress for ${videoId} hasn't changed (${clampedDuration}s). No save needed.`);
+         return Promise.resolve(); // Return resolved promise if no change
      }
-     return Promise.resolve(); // Return resolved promise if no change
 }
 
-// Function triggered after video ends and progress is saved
+// Function triggered potentially after video ends or threshold reached
 export async function handleVideoWatched(videoId) {
-    console.log(`handleVideoWatched called for video ${videoId}.`);
+     console.log(`handleVideoWatched called for video ${videoId}. Checking chapter study status.`);
     // Only check if not in viewer mode
     const progress = userCourseProgressMap.get(currentCourseIdInternal);
     if (progress?.enrollmentMode !== 'viewer') {
+        // Ensure progress is saved *before* checking study status
+        await saveVideoWatchProgress(videoId);
         await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
+    } else {
+        console.log(`Viewer mode, skipping study status check for Ch ${currentChapterNumber}.`);
     }
 }
-
-// --- REMOVED: Duplicate Combined Progress Calculation ---
-/*
- * REMOVED FUNCTION BLOCK FOR calculateChapterCombinedProgress
- * It is now imported from course_logic.js
- */
 
 
 // --- Check and Mark Chapter Studied (Modified) ---
 async function checkAndMarkChapterStudied(courseId, chapterNum) {
-    if (!currentUser || !courseId || !chapterNum) return;
+     if (!currentUser || !courseId || !chapterNum) {
+         console.warn("checkAndMarkChapterStudied: Missing user, courseId, or chapterNum.");
+         return;
+     }
 
     const progress = userCourseProgressMap.get(courseId);
     const courseDef = globalCourseDataMap.get(courseId);
-    if (!progress || !courseDef) return;
+    if (!progress || !courseDef) {
+        console.warn(`checkAndMarkChapterStudied: Missing progress or course definition for ${courseId}.`);
+        return;
+    }
 
     // Do not mark studied if viewer mode
-    if (progress.enrollmentMode === 'viewer') return;
+    if (progress.enrollmentMode === 'viewer') {
+         console.log(`Viewer mode, skipping study status check for Ch ${chapterNum}.`);
+         return;
+    }
 
-    // Skip if already studied via this method
-    if (progress.courseStudiedChapters?.includes(chapterNum)) {
-         console.log(`Chapter ${chapterNum} already marked studied. Skipping check.`);
+    // Check if already marked studied in the progress map (using Set for efficiency)
+    const studiedChaptersSet = new Set(progress.courseStudiedChapters || []);
+    if (studiedChaptersSet.has(chapterNum)) {
+         // console.log(`Chapter ${chapterNum} already marked studied. Skipping check.`);
          return;
     }
 
     // Check if Skip Exam passed for this chapter
     const skipScore = progress.lastSkipExamScore?.[chapterNum];
-    if (skipScore !== undefined && skipScore !== null && skipScore >= SKIP_EXAM_PASSING_PERCENT) {
-         await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNum, "skip_exam_pass");
-         console.log(`Chapter ${chapterNum} marked as studied due to passing skip exam.`);
-         // Update UI element immediately if possible
-         const studyButton = document.querySelector(`#chapter-progress-${chapterNum} button[onclick*="showCourseStudyMaterial"]`);
-         const skipButton = document.querySelector(`#chapter-progress-${chapterNum} button[onclick*="triggerSkipExamGeneration"]`);
-         const progressBarContainer = document.getElementById(`chapter-progress-${chapterNum}`);
-         if(progressBarContainer) { progressBarContainer.closest('.content-card')?.classList.add('bg-green-50', 'dark:bg-green-900/30'); }
-         if(studyButton) studyButton.textContent = 'Review Chapter';
-         if(skipButton) skipButton.outerHTML = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">(Skip Exam Passed: ${skipScore.toFixed(0)}%)</span>`;
+    const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
+    if (skipScore !== undefined && skipScore !== null && skipScore >= skipExamThreshold) {
+         console.log(`Chapter ${chapterNum} passed skip exam (Score: ${skipScore} >= ${skipExamThreshold}). Marking studied.`);
+         try {
+            await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNum, "skip_exam_pass");
+            console.log(`Chapter ${chapterNum} marked as studied in Firestore due to passing skip exam.`);
+            // Update local state immediately
+            progress.courseStudiedChapters = progress.courseStudiedChapters || [];
+            if (!progress.courseStudiedChapters.includes(chapterNum)) {
+                 progress.courseStudiedChapters.push(chapterNum);
+                 updateUserCourseProgress(courseId, { courseStudiedChapters: progress.courseStudiedChapters });
+            }
+            // Update UI element immediately if possible (example for content menu view)
+            // This might need adjustment depending on the current view
+            const studyButton = document.querySelector(`#chapter-progress-${chapterNum} button[onclick*="showCourseStudyMaterial"]`);
+            const skipButtonContainer = document.querySelector(`#chapter-progress-${chapterNum} .flex.items-center.gap-2.ml-auto`); // Target the container
+            const progressBarContainer = document.getElementById(`chapter-progress-${chapterNum}`);
+            if(progressBarContainer) { progressBarContainer.closest('.content-card')?.classList.add('bg-green-50', 'dark:bg-green-900/30'); }
+            if(studyButton) studyButton.textContent = 'Review Chapter';
+            if(skipButtonContainer) {
+                 skipButtonContainer.innerHTML = `<span class="text-xs text-green-600 dark:text-green-400 font-medium">(Skip Passed: ${skipScore.toFixed(0)}%)</span>`;
+            }
+         } catch(error) {
+             console.error(`Failed to mark Ch ${chapterNum} studied after skip exam pass:`, error);
+         }
          return; // Stop checking if skip exam passed
     }
 
-
-    // Get necessary data for combined progress calculation
+    // --- Calculate Combined Progress ---
     const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
+    // Ensure lectureUrls exists and is an array before filtering/mapping
     const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
     const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+    // Build chapter-specific duration map from global cache
     const chapterVideoDurationMap = {};
+    let missingDuration = false;
     videoIdsForChapter.forEach(id => {
-        if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; }
-        else { console.warn(`Duration missing for video ${id} in chapter ${chapterNum} during check.`); }
+        if (videoDurationMap[id] !== undefined && videoDurationMap[id] !== null) {
+             chapterVideoDurationMap[id] = videoDurationMap[id];
+        } else {
+             console.warn(`Duration missing or null for video ${id} in chapter ${chapterNum} during study check.`);
+             missingDuration = true;
+        }
     });
+    // If any duration is missing, we cannot reliably calculate 100% progress yet.
+    if (missingDuration && videoIdsForChapter.length > 0) {
+        console.log(`Ch ${chapterNum}: Skipping study check due to missing video duration(s). Will re-check later.`);
+        return;
+    }
 
     const pdfInfo = progress.pdfProgress?.[chapterNum] || null; // Use stored PDF progress
 
     // *** MODIFIED: Use imported function from course_logic.js ***
-    const { percent: combinedProgressPercent } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
+    const { percent: combinedProgressPercent, isComplete } = calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo);
 
-    console.log(`Checking study status for Ch ${chapterNum}. Combined Progress: ${combinedProgressPercent}%`);
+    console.log(`Checking study status for Ch ${chapterNum}. Combined Progress: ${combinedProgressPercent}%, Is Complete Flag: ${isComplete}`);
 
-    // Condition: Mark studied if combined progress is 100%
-    if (combinedProgressPercent >= 100) {
-        await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNum, "progress_complete");
-        console.log(`Chapter ${chapterNum} marked as studied due to reaching 100% combined progress.`);
-        // Optionally update the progress bar visually immediately
-        const progressBarContainer = document.getElementById(`chapter-progress-${chapterNum}`);
-        if (progressBarContainer) {
-            const progressBar = progressBarContainer.querySelector('.bg-blue-500');
-            const progressText = progressBarContainer.querySelector('.progress-tooltip-text');
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = 'Completed: 100%';
-             // Also update the card background and skip button if applicable
-             progressBarContainer.closest('.content-card')?.classList.add('bg-green-50', 'dark:bg-green-900/30');
-             const skipButton = document.querySelector(`#chapter-progress-${chapterNum} button[onclick*="triggerSkipExamGeneration"]`);
-             if(skipButton) skipButton.outerHTML = `<span class="text-xs text-green-600 dark:text-green-400 font-medium ml-auto">(Progress Complete)</span>`;
+    // Condition: Mark studied if combined progress calculation indicates completion (isComplete flag)
+    if (isComplete) { // Use the isComplete flag from the calculator
+        console.log(`Chapter ${chapterNum} reached 100% combined progress. Marking studied.`);
+        try {
+             await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNum, "progress_complete");
+             console.log(`Chapter ${chapterNum} marked as studied in Firestore due to reaching 100% progress.`);
+            // Update local state immediately
+            progress.courseStudiedChapters = progress.courseStudiedChapters || [];
+            if (!progress.courseStudiedChapters.includes(chapterNum)) {
+                 progress.courseStudiedChapters.push(chapterNum);
+                 updateUserCourseProgress(courseId, { courseStudiedChapters: progress.courseStudiedChapters });
+            }
+            // Optionally update the progress bar visually immediately (example for content menu view)
+            const progressBarContainer = document.getElementById(`chapter-progress-${chapterNum}`);
+            if (progressBarContainer) {
+                const progressBar = progressBarContainer.querySelector('.bg-blue-500'); // Target blue bar specifically
+                const progressTooltip = progressBarContainer.querySelector('.progress-tooltip-text');
+                if (progressBar) { progressBar.style.width = '100%'; progressBar.classList.remove('bg-blue-500'); progressBar.classList.add('!bg-green-500'); }
+                if (progressTooltip) progressTooltip.textContent = 'Completed: 100%';
+                progressBarContainer.closest('.content-card')?.classList.add('bg-green-50', 'dark:bg-green-900/30');
+                const skipButtonContainer = progressBarContainer.closest('.content-card').querySelector('.flex.items-center.gap-2.ml-auto'); // Find container again
+                 if(skipButtonContainer) {
+                     // Check if it already shows skip status, otherwise add progress complete
+                     if (!skipButtonContainer.querySelector('span')?.textContent.includes('Skip Passed')) {
+                         skipButtonContainer.innerHTML = `<span class="text-xs text-green-600 dark:text-green-400 font-medium">(Progress Complete)</span>`;
+                     }
+                 }
+                 const studyButton = progressBarContainer.querySelector('button[onclick*="showCourseStudyMaterial"]');
+                 if(studyButton) studyButton.textContent = 'Review Chapter';
+            }
+        } catch(error) {
+             console.error(`Failed to mark Ch ${chapterNum} studied after progress completion:`, error);
         }
     } else {
          console.log(`Chapter ${chapterNum} not yet 100% complete (${combinedProgressPercent}%).`);
@@ -600,455 +815,666 @@ async function checkAndMarkChapterStudied(courseId, chapterNum) {
 
 // --- Transcription Interaction ---
 export function highlightTranscriptionLine() {
-    if (!currentTranscriptionData || currentTranscriptionData.length === 0) return;
+     if (!currentTranscriptionData || currentTranscriptionData.length === 0) return;
+    // Determine the currently active player based on internal state
     const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
     const activePlayerState = ytPlayers[currentPlayerElementId];
     let currentTime = 0;
 
+    // Get current time from the active player
     if (activePlayerState && activePlayerState.player && typeof activePlayerState.player.getCurrentTime === 'function') {
          try { currentTime = activePlayerState.player.getCurrentTime(); }
          catch (e) { console.warn("Could not get current time from player", e); return; }
-    } else { return; }
+    } else {
+         // console.log("No active player found or player not ready for transcription sync.");
+         return;
+    } // Don't sync if no player or player not ready
 
     const transcriptionContainer = document.getElementById('transcription-content');
-    if (!transcriptionContainer) return;
+    if (!transcriptionContainer) return; // Container not in DOM
 
     let currentLineId = null;
+    // Find the transcription entry matching the current video time
     for (const entry of currentTranscriptionData) {
         if (currentTime >= entry.start && currentTime <= entry.end) {
             currentLineId = `t-line-${entry.id}`;
-            break;
+            break; // Found the matching line
         }
     }
 
-    // Remove highlight from previously highlighted lines
+    // Remove highlight from all lines first for efficiency
     transcriptionContainer.querySelectorAll('.transcription-line.active').forEach(el => {
-        el.classList.remove('active', 'bg-yellow-100', 'dark:bg-yellow-700/50', 'p-2');
-        el.classList.add('p-1');
+        el.classList.remove('active', 'bg-yellow-100', 'dark:bg-yellow-700/50', 'p-2', 'font-semibold'); // Remove styles
+        el.classList.add('p-1'); // Reset padding
     });
 
     const currentLineElement = currentLineId ? document.getElementById(currentLineId) : null;
 
     if (isTranscriptionExpanded) {
+        // --- Expanded View ---
         if (currentLineElement) {
-            currentLineElement.classList.add('active', 'bg-yellow-100', 'dark:bg-yellow-700/50', 'p-2');
-            currentLineElement.classList.remove('p-1');
-            // Only scroll if the element is not already fully visible
+            // Apply highlight styles
+            currentLineElement.classList.add('active', 'bg-yellow-100', 'dark:bg-yellow-700/50', 'p-2', 'font-semibold');
+            currentLineElement.classList.remove('p-1'); // Adjust padding
+
+            // --- Smooth Scroll into View ---
+            // Check if the element is fully visible within the scrollable container
             const containerRect = transcriptionContainer.getBoundingClientRect();
             const lineRect = currentLineElement.getBoundingClientRect();
-            if (lineRect.top < containerRect.top || lineRect.bottom > containerRect.bottom) {
+            const isVisible = lineRect.top >= containerRect.top && lineRect.bottom <= containerRect.bottom;
+
+            if (!isVisible) {
+                 // Use 'nearest' to minimize scrolling distance
                  currentLineElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }
     } else {
-        // Collapsed view
+        // --- Collapsed View ---
+        // Hide all lines by default
         transcriptionContainer.querySelectorAll('.transcription-line').forEach(el => { el.classList.add('hidden'); });
         const placeholder = transcriptionContainer.querySelector('.transcription-placeholder');
+
         if (currentLineElement) {
+            // Show only the current line
             currentLineElement.classList.remove('hidden');
-            currentLineElement.classList.add('active');
-            placeholder?.classList.add('hidden'); // Hide placeholder if line found
+            currentLineElement.classList.add('active'); // Mark as active (no visual style needed here)
+            placeholder?.classList.add('hidden'); // Hide placeholder if a line is found
         } else {
-            if (placeholder) { placeholder.classList.remove('hidden'); }
-            else { // Add placeholder if it doesn't exist
+            // Show placeholder if no line matches current time
+            if (placeholder) {
+                placeholder.classList.remove('hidden');
+            } else {
+                 // Add placeholder if it doesn't exist (should be rare after initial render)
                  const p = document.createElement('p');
                  p.className = 'transcription-placeholder text-xs italic text-muted p-1';
-                 p.textContent = '(Transcription sync... )'; // Modified placeholder text
+                 p.textContent = '(Syncing transcription...)';
                  transcriptionContainer.prepend(p);
             }
         }
     }
 }
 
+
 export function handleTranscriptionClick(event) {
-    const lineElement = event.target.closest('.transcription-line');
+     const lineElement = event.target.closest('.transcription-line');
+    // Ensure element exists and has the start time data attribute
     if (!lineElement || !lineElement.dataset.startTime) return;
+
     const startTime = parseFloat(lineElement.dataset.startTime);
+    // Ensure parsing was successful
     if (isNaN(startTime)) return;
+
+    // Find the player associated with the current view
     const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
     const playerToSeek = ytPlayers[currentPlayerElementId]?.player;
-    if (playerToSeek && typeof playerToSeek.seekTo === 'function') {
+
+    // Check if player exists and has the seekTo method
+    if (playerToSeek && typeof playerToSeek.seekTo === 'function' && typeof playerToSeek.playVideo === 'function') {
          console.log(`Seeking video to ${startTime}s`);
-         playerToSeek.seekTo(startTime, true);
-         playerToSeek.playVideo();
+         playerToSeek.seekTo(startTime, true); // true allows seek ahead
+         playerToSeek.playVideo(); // Start playing from the new position
     } else {
-         console.warn("Could not find current player to seek for transcription click.");
+         console.warn("Could not find current player or 'seekTo'/'playVideo' method for transcription click.");
     }
 }
 window.handleTranscriptionClick = handleTranscriptionClick; // Assign to window
 
 function toggleTranscriptionView() {
-     isTranscriptionExpanded = !isTranscriptionExpanded;
+      isTranscriptionExpanded = !isTranscriptionExpanded;
      const container = document.getElementById('transcription-content');
      const toggleBtn = document.getElementById('transcription-toggle-btn');
      if (!container || !toggleBtn) return;
-     container.classList.toggle('max-h-32', !isTranscriptionExpanded);
-     container.classList.toggle('max-h-96', isTranscriptionExpanded);
+
+     // Adjust container max-height for expand/collapse animation
+     container.classList.toggle('max-h-32', !isTranscriptionExpanded); // Collapsed height
+     container.classList.toggle('max-h-96', isTranscriptionExpanded); // Expanded height (adjust as needed)
+
+     // Update button text and title
      toggleBtn.textContent = isTranscriptionExpanded ? 'Collapse Transcription' : 'Expand Transcription';
      toggleBtn.title = isTranscriptionExpanded ? 'Show only the current line being spoken' : 'Show the full transcription text';
+
+     // Re-render lines to show/hide them based on the new state
      renderTranscriptionLines();
+     // Immediately highlight the current line in the new view state
      highlightTranscriptionLine();
 }
 window.toggleTranscriptionView = toggleTranscriptionView;
 
 function renderTranscriptionLines() {
-     const container = document.getElementById('transcription-content');
+      const container = document.getElementById('transcription-content');
      if (!container) return;
-     container.innerHTML = '';
+     container.innerHTML = ''; // Clear previous content
+
      if (currentTranscriptionData && currentTranscriptionData.length > 0) {
+          // Generate HTML for each transcription line
           const linesHtml = currentTranscriptionData.map(entry =>
-              `<span id="t-line-${entry.id}" class="transcription-line block p-1 rounded cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-800/50 ${isTranscriptionExpanded ? '' : 'hidden'}" data-start-time="${entry.start}" onclick="window.handleTranscriptionClick(event)">${escapeHtml(entry.text)}</span>`
+              `<span id="t-line-${entry.id}"
+                     class="transcription-line block p-1 rounded cursor-pointer hover:bg-yellow-200 dark:hover:bg-yellow-800/50 transition-colors duration-150 ease-in-out ${isTranscriptionExpanded ? '' : 'hidden'}"
+                     data-start-time="${entry.start}"
+                     onclick="window.handleTranscriptionClick(event)">${escapeHtml(entry.text)}</span>`
           ).join('');
           container.innerHTML = linesHtml;
+
+          // Add placeholder for collapsed view (initially hidden)
           if (!isTranscriptionExpanded) {
                const placeholder = document.createElement('p');
                placeholder.className = 'transcription-placeholder text-xs italic text-muted p-1 hidden';
-               placeholder.textContent = '(Transcription sync... )';
-               container.prepend(placeholder);
+               placeholder.textContent = '(Syncing transcription...)';
+               container.prepend(placeholder); // Add placeholder at the beginning
           }
      } else {
+           // Display message if no transcription data
            container.innerHTML = '<p class="text-sm text-muted italic p-1">No transcription available for the current video.</p>';
      }
 }
 
+
 // --- Cleanup Functions ---
 window.cleanupYouTubePlayers = () => {
-     console.log(`Attempting to cleanup ${Object.keys(ytPlayers).length} YT player instances.`);
-    Object.values(ytPlayers).forEach(playerData => {
+      console.log(`Attempting to cleanup ${Object.keys(ytPlayers).length} YT player instances.`);
+    Object.entries(ytPlayers).forEach(([elementId, playerData]) => {
         try {
              if (playerData && playerData.player && typeof playerData.player.destroy === 'function') {
-                  console.log(`Destroying player for video ${playerData.videoId}`);
-                  if (playerData.intervalId) clearInterval(playerData.intervalId);
-                  try { playerData.player.destroy(); } catch (destroyError) { console.warn("Error during player.destroy():", destroyError); }
-             } else if (playerData) { console.log(`Player instance invalid during cleanup.`); }
-        } catch (e) { console.error("Error destroying YT player:", e); }
+                  console.log(`Destroying player for video ${playerData.videoId} (Element: ${elementId})`);
+                  // Clear associated interval timer
+                  if (playerData.intervalId) {
+                      clearInterval(playerData.intervalId);
+                      console.log(`Cleared interval for ${elementId}`);
+                  }
+                  // Destroy the player instance
+                  try {
+                      playerData.player.destroy();
+                  } catch (destroyError) {
+                      // Log destroy error but continue cleanup
+                      console.warn(`Error during player.destroy() for ${elementId}:`, destroyError);
+                  }
+             } else if (playerData) {
+                  console.log(`Player instance for ${elementId} was invalid or already destroyed during cleanup.`);
+                   if (playerData.intervalId) clearInterval(playerData.intervalId); // Still clear interval if it exists
+             }
+        } catch (e) {
+            // Catch errors during the cleanup process for a single player
+            console.error(`Error destroying YT player instance ${elementId}:`, e);
+        }
     });
+    // Reset state variables
     ytPlayers = {};
     ytInitializationQueue = [];
-    videoWatchStatus = {};
+    videoWatchStatus = {}; // Clear individual video watch status
     if(transcriptionHighlightInterval) clearInterval(transcriptionHighlightInterval);
     transcriptionHighlightInterval = null;
-    // videoDurationMap = {}; // DO NOT Clear duration cache on cleanup - keep it for next time
+    // videoDurationMap = {}; // DO NOT Clear duration cache - keep it globally
     console.log("Cleaned up YouTube players state.");
 };
 
 export const cleanupPdfViewer = () => {
-    pdfDoc = null; pdfPageNum = 1; pdfPageRendering = false; pdfPageNumPending = null;
-    pdfCanvas = null; pdfCtx = null; pdfViewerContainer = null;
-    currentPdfTextContent = null;
+     // Release PDF document object if loaded
+     if (pdfDoc) {
+        // pdfDoc.destroy(); // Call destroy method if available (check PDF.js version)
+        // pdfDoc.cleanup(); // Or cleanup method
+     }
+    pdfDoc = null;
+    pdfPageNum = 1;
+    pdfPageRendering = false;
+    pdfPageNumPending = null;
+    pdfScale = 1.5; // Reset scale
+    pdfCanvas = null; // Release canvas reference
+    pdfCtx = null; // Release context reference
+    pdfViewerContainer = null; // Release container reference
+    currentPdfTextContent = null; // Clear extracted text
     pdfTotalPages = 0; // Reset total pages
+
+    // Remove event listeners to prevent memory leaks
     const prevButton = document.getElementById('pdf-prev');
     const nextButton = document.getElementById('pdf-next');
+    const explainButton = document.getElementById('pdf-explain-button');
+    const askFullDocButton = document.querySelector('#pdf-controls button[onclick*="askAboutFullPdf"]'); // More specific selector
+
     if (prevButton) prevButton.onclick = null;
     if (nextButton) nextButton.onclick = null;
+    if (explainButton) explainButton.onclick = null;
+    if (askFullDocButton) askFullDocButton.onclick = null;
+
+
+    // Clear the viewer container content
+    const viewerElement = document.getElementById('pdf-viewer-container');
+    if (viewerElement) {
+        viewerElement.innerHTML = ''; // Remove canvas or error messages
+    }
+
     console.log("Cleaned up PDF viewer state.");
 };
 window.cleanupPdfViewer = cleanupPdfViewer;
 
 // --- PDF.js Functions ---
 export async function initPdfViewer(pdfPath) {
+    // 1. Cleanup previous instance
     cleanupPdfViewer();
+
+    // 2. Get references to essential DOM elements
     pdfViewerContainer = document.getElementById('pdf-viewer-container');
     const pdfControls = document.getElementById('pdf-controls');
-    const pdfExplainButton = document.getElementById('pdf-explain-button');
+    const pdfExplainButton = document.getElementById('pdf-explain-button'); // Ask AI (Page) button
+    const askFullDocButton = document.querySelector('#pdf-controls button[onclick*="askAboutFullPdf"]'); // Ask AI (Doc) button
 
-    if (!pdfViewerContainer || !pdfControls || !pdfExplainButton) {
-         console.error("PDF viewer elements not found!");
+
+    // 3. Check if elements exist
+    if (!pdfViewerContainer || !pdfControls || !pdfExplainButton || !askFullDocButton) {
+         console.error("PDF viewer UI elements not found! Required: #pdf-viewer-container, #pdf-controls, #pdf-explain-button, askAboutFullPdf button.");
+         // Display error within the main content area if possible
          displayContent('<p class="text-red-500 p-4">Error: PDF viewer UI elements are missing.</p>', 'course-dashboard-area');
-         return;
+         return; // Cannot proceed
      }
-    pdfViewerContainer.innerHTML = `<div class="p-4 text-center"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-2 text-sm text-muted">Loading PDF from: ${pdfPath || 'N/A'}...</p></div>`;
-    pdfControls.classList.add('hidden');
-    pdfExplainButton.disabled = true;
 
+    // 4. Initial UI state: Show loading, hide controls
+    pdfViewerContainer.innerHTML = `<div class="p-4 text-center"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-2 text-sm text-muted">Loading PDF from: ${escapeHtml(pdfPath) || 'N/A'}...</p></div>`;
+    pdfControls.classList.add('hidden'); // Hide Prev/Next/Page#/Ask buttons initially
+    pdfExplainButton.disabled = true; // Disable Ask AI button
+    askFullDocButton.disabled = true;
+
+
+    // 5. Validate PDF Path
     if (!pdfPath) {
         console.error("initPdfViewer: No PDF path provided.");
         pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">Error: No PDF file path specified for this chapter.</p>`;
         return;
     }
+     // Basic check if it ends with .pdf (case-insensitive)
+     if (!pdfPath.toLowerCase().endsWith('.pdf')) {
+         console.error(`initPdfViewer: Invalid PDF path "${pdfPath}". Does not end with '.pdf'.`);
+         pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">Error: Invalid PDF file path provided. Path must end with '.pdf'.<br>Path: <code>${escapeHtml(pdfPath)}</code></p>`;
+         return;
+     }
 
-    // *** MODIFICATION: Log path before try block ***
+
     console.log('[PDF Init] Attempting to load PDF. Path variable:', pdfPath);
 
+    // 6. Load PDF using PDF.js
     try {
+        // Check if PDF.js library is loaded
         if (typeof pdfjsLib === 'undefined') {
-             console.error("PDF.js library not loaded.");
+             console.error("PDF.js library (pdfjsLib) not loaded.");
              throw new Error("PDF library not available.");
          }
+        // Set worker source
         pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER_SRC;
-        console.log(`Attempting to load PDF document from: ${pdfPath}`);
+        console.log(`[PDF Init] PDF worker source set to: ${PDF_WORKER_SRC}`);
 
-        const encodedPdfPath = encodeURI(pdfPath); // Use encodeURI for path with spaces/etc.
-        // *** MODIFICATION: Log encoded path before getDocument ***
-        console.log('[PDF Init] Calling pdfjsLib.getDocument with encoded path:', encodedPdfPath);
+        // Encode path for URL safety (handles spaces, etc.)
+        // Avoid double encoding if it already contains %
+        const encodedPdfPath = pdfPath.includes('%') ? pdfPath : encodeURI(pdfPath);
+
+        // *** MODIFICATION: Added Log before getDocument ***
+        console.log(`[PDF Init] Attempting to load PDF. Final Encoded Path: ${encodedPdfPath}`);
         const loadingTask = pdfjsLib.getDocument(encodedPdfPath);
+        // *** END MODIFICATION ***
 
+        // 7. Handle successful load
         loadingTask.promise.then(async (loadedPdfDoc) => {
-            pdfDoc = loadedPdfDoc;
-            pdfTotalPages = pdfDoc.numPages; // Store total pages
-            console.log('PDF loaded successfully:', pdfTotalPages, 'pages');
+            pdfDoc = loadedPdfDoc; // Store the loaded document object
+            pdfTotalPages = pdfDoc.numPages; // Store total page count
+            console.log(`PDF loaded successfully: ${pdfTotalPages} pages.`);
 
-            // Initialize PDF progress in state only if not viewer mode
+            // Restore page number from progress if available and not viewer
             const progress = userCourseProgressMap.get(currentCourseIdInternal);
             const isViewer = progress?.enrollmentMode === 'viewer';
             let initialPageNum = 1;
             if (progress && !isViewer) {
                 progress.pdfProgress = progress.pdfProgress || {};
                 progress.pdfProgress[currentChapterNumber] = progress.pdfProgress[currentChapterNumber] || { currentPage: 0, totalPages: 0 };
-                // Set total pages if not set or different
+                // Update total pages in progress if necessary
                 if (progress.pdfProgress[currentChapterNumber].totalPages !== pdfTotalPages) {
                     progress.pdfProgress[currentChapterNumber].totalPages = pdfTotalPages;
-                    // Trigger a save? Only needed if totalPages changes significantly
-                    saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress);
+                     // Don't await save here, do it after rendering first page if needed
+                     // saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress);
                 }
-                // Set initial page number based on saved progress
+                // Get stored page, ensure it's within valid range
                 initialPageNum = Math.max(1, progress.pdfProgress[currentChapterNumber].currentPage || 1);
-                initialPageNum = Math.min(initialPageNum, pdfTotalPages); // Ensure within bounds
-                pdfPageNum = initialPageNum; // Update module state variable
+                initialPageNum = Math.min(initialPageNum, pdfTotalPages);
+                pdfPageNum = initialPageNum; // Set the current page number state
                 console.log(`Restored PDF to page ${pdfPageNum} from progress.`);
             } else {
-                 pdfPageNum = 1; // Start at page 1 for viewers or if no progress
+                 pdfPageNum = 1; // Default to page 1 for viewers or no progress
             }
 
+            // Update UI: Show controls, set page numbers
             pdfControls.classList.remove('hidden');
-            pdfExplainButton.disabled = false;
-            document.getElementById('pdf-page-num').textContent = pdfPageNum; // Show current page
+            pdfExplainButton.disabled = false; // Enable Ask AI (Page)
+             askFullDocButton.disabled = false; // Enable Ask AI (Doc)
+            document.getElementById('pdf-page-num').textContent = pdfPageNum;
             document.getElementById('pdf-page-count').textContent = pdfTotalPages;
+
+            // Create canvas element for rendering
             pdfCanvas = document.createElement('canvas');
             pdfCanvas.id = 'pdf-canvas';
+            // pdfCanvas.className = 'mx-auto block'; // Center canvas if needed
             pdfCtx = pdfCanvas.getContext('2d');
-            pdfViewerContainer.innerHTML = '';
-            pdfViewerContainer.appendChild(pdfCanvas);
+            pdfViewerContainer.innerHTML = ''; // Clear loading indicator
+            pdfViewerContainer.appendChild(pdfCanvas); // Add canvas to container
 
-            await renderPdfPage(pdfPageNum); // Render the potentially restored page
+            // Render the initial page
+            await renderPdfPage(pdfPageNum);
+
+            // Set up event listeners for buttons AFTER elements are ready
             document.getElementById('pdf-prev').onclick = onPrevPage;
             document.getElementById('pdf-next').onclick = onNextPage;
+            // pdfExplainButton onclick is set in HTML
+            // askFullDocButton onclick is set in HTML
 
-            // Update progress even on initial load if it wasn't already current (and not viewer)
-            if (progress && !isViewer && progress.pdfProgress[currentChapterNumber].currentPage !== pdfPageNum) {
-                updatePdfProgressAndCheckCompletion(pdfPageNum);
+            // Update progress if the restored page differs from the initial state (1)
+             // And save total pages if it changed
+            if (progress && !isViewer && (progress.pdfProgress[currentChapterNumber].currentPage !== pdfPageNum || progress.pdfProgress[currentChapterNumber].totalPages !== pdfTotalPages) ) {
+                updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress (includes saving)
             }
 
-        // *** MODIFICATION START: Enhanced error handling for loadingTask.promise ***
+        // 8. Handle loading errors
+        // *** MODIFICATION: Replaced .catch block with more detailed version ***
         }).catch(error => {
             console.error(`[PDF Init] Error during pdfjsLib.getDocument('${encodedPdfPath}'): Name: ${error.name}, Message: ${error.message}`, error);
              let userMessage = `Error loading PDF: ${error.message || 'Unknown error'}.`;
+             // Provide more specific user feedback based on error type
              switch (error.name) {
                 case 'InvalidPDFException':
-                case 'FormatError': // Sometimes PDF.js uses this
-                    userMessage = "Error: Invalid PDF file structure. The file might be corrupted or not a valid PDF.";
-                    break;
+                case 'FormatError':
+                    userMessage = "Error: Invalid PDF file structure. The file might be corrupted or not a valid PDF."; break;
                 case 'MissingPDFException':
-                    userMessage = `Error: PDF file not found. Checked path: <code>${escapeHtml(pdfPath)}</code>`;
-                    break;
+                    userMessage = `Error: PDF file not found. Checked path: <code>${escapeHtml(pdfPath)}</code>`; break;
                 case 'NetworkError':
-                    userMessage = `Error: Network problem loading PDF. Check your connection and the file path: <code>${escapeHtml(pdfPath)}</code>`;
-                    break;
+                    userMessage = `Error: Network problem loading PDF. Check your connection and the file path: <code>${escapeHtml(pdfPath)}</code>`; break;
                 case 'UnknownErrorException':
-                     userMessage = `Error: An unknown error occurred loading the PDF. Check console. Path: <code>${escapeHtml(pdfPath)}</code>`;
-                     break;
+                     userMessage = `Error: An unknown error occurred loading the PDF. Check console. Path: <code>${escapeHtml(pdfPath)}</code>`; break;
                 case 'UnexpectedResponseException':
-                     userMessage = `Error: Server responded unexpectedly (Status: ${error.status}). Path: <code>${escapeHtml(pdfPath)}</code>`;
-                     break;
+                     // Display server status if available
+                     const statusText = error.status ? ` (Status: ${error.status})` : '';
+                     userMessage = `Error: Server responded unexpectedly${statusText}. Path: <code>${escapeHtml(pdfPath)}</code>`; break;
                 case 'PasswordException':
-                     userMessage = `Error: The PDF file is password protected and cannot be displayed.`;
-                     break;
+                     userMessage = `Error: The PDF file is password protected and cannot be displayed.`; break;
                 default:
-                    // Keep the generic message if the error name isn't specifically handled
                     userMessage = `Error loading PDF (${error.name || 'Unknown Type'}): ${error.message || 'No details'}. Path: <code>${escapeHtml(pdfPath)}</code>`;
              }
+             // Display error in the viewer container
              pdfViewerContainer.innerHTML = `<div class="p-4 text-center text-red-600 dark:text-red-400">${userMessage}</div>`;
+             // Ensure controls remain hidden and buttons disabled
              pdfControls.classList.add('hidden');
              pdfExplainButton.disabled = true;
-             cleanupPdfViewer();
-        // *** MODIFICATION END ***
+             askFullDocButton.disabled = true;
+             cleanupPdfViewer(); // Clean up potentially partially initialized state
         });
+        // *** END MODIFICATION ***
 
     } catch (error) {
-        // *** MODIFICATION: Enhanced logging for synchronous errors ***
+        // Catch synchronous errors during initialization (e.g., pdfjsLib not defined)
         console.error("Synchronous error during PDF viewer initialization:", error);
         pdfViewerContainer.innerHTML = `<p class="text-red-500 p-4">Error initializing PDF viewer: ${error.message}. Check console for details.</p>`;
         pdfControls.classList.add('hidden');
         pdfExplainButton.disabled = true;
-        cleanupPdfViewer();
+         askFullDocButton.disabled = true;
+        cleanupPdfViewer(); // Clean up state
     }
 }
 
+
 async function renderPdfPage(num) {
-    if (!pdfDoc || pdfPageRendering) { pdfPageNumPending = num; return; }
-    pdfPageRendering = true;
+    // Prevent concurrent rendering or rendering if pdfDoc is not loaded
+    if (!pdfDoc || pdfPageRendering) {
+        if (!pdfDoc) console.warn("renderPdfPage called but pdfDoc is null.");
+        if (pdfPageRendering) pdfPageNumPending = num; // Queue the page if already rendering
+        return;
+    }
+
+    pdfPageRendering = true; // Set rendering flag
+    // Update page number display and button states
     document.getElementById('pdf-page-num').textContent = num;
     document.getElementById('pdf-prev').disabled = (num <= 1);
-    document.getElementById('pdf-next').disabled = (num >= pdfDoc.numPages);
+    document.getElementById('pdf-next').disabled = (num >= pdfTotalPages); // Use stored total pages
 
     try {
+        // console.log(`Rendering page ${num}...`);
         const page = await pdfDoc.getPage(num);
-        const viewport = page.getViewport({ scale: pdfScale });
+        const viewport = page.getViewport({ scale: pdfScale }); // Get viewport with current scale
+
+        // Ensure canvas and context are still valid
         if (!pdfCanvas || !pdfCtx) { throw new Error("PDF canvas or context missing during render."); }
+
+        // Set canvas dimensions to match viewport
         pdfCanvas.height = viewport.height;
         pdfCanvas.width = viewport.width;
-        const renderContext = { canvasContext: pdfCtx, viewport: viewport };
+
+        // Prepare rendering context
+        const renderContext = {
+            canvasContext: pdfCtx,
+            viewport: viewport
+        };
+
+        // Start rendering task
         const renderTask = page.render(renderContext);
-        await renderTask.promise;
-        console.log(`Page ${num} rendered.`);
+        await renderTask.promise; // Wait for rendering to complete
+        // console.log(`Page ${num} rendered successfully.`);
+
     } catch (error) {
          console.error(`Error rendering page ${num}:`, error);
-          if (pdfCtx) {
-               pdfCtx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height);
+          // Display error message on the canvas if possible
+          if (pdfCtx && pdfCanvas) {
+               pdfCtx.clearRect(0, 0, pdfCanvas.width, pdfCanvas.height); // Clear previous content
                pdfCtx.fillStyle = 'red';
                pdfCtx.font = '16px sans-serif';
                pdfCtx.textAlign = 'center';
-               pdfCtx.fillText(`Error rendering page ${num}.`, pdfCanvas.width / 2, pdfCanvas.height / 2);
+               pdfCtx.fillText(`Error rendering page ${num}. See console.`, pdfCanvas.width / 2, pdfCanvas.height / 2);
           }
     } finally {
-        pdfPageRendering = false;
+        pdfPageRendering = false; // Reset rendering flag
+        // Check if another page was queued while rendering
         if (pdfPageNumPending !== null) {
-            renderPdfPage(pdfPageNumPending);
-            pdfPageNumPending = null;
+            const pendingPage = pdfPageNumPending;
+            pdfPageNumPending = null; // Clear pending flag
+            renderPdfPage(pendingPage); // Render the queued page
         }
     }
- }
-function queueRenderPage(num) { if (pdfPageRendering) pdfPageNumPending = num; else renderPdfPage(num); }
+}
+
+// Helper function to queue page rendering if needed
+function queueRenderPage(num) {
+    if (pdfPageRendering) {
+        pdfPageNumPending = num;
+    } else {
+        renderPdfPage(num);
+    }
+}
 
 // MODIFIED: Update progress on page change only if not viewer
 function onPrevPage() {
-    if (pdfPageNum <= 1) return;
+    if (pdfPageNum <= 1) return; // Already on the first page
     pdfPageNum--;
+    // Check if user is enrolled and not a viewer before updating progress
     const progress = userCourseProgressMap.get(currentCourseIdInternal);
-    if (progress?.enrollmentMode !== 'viewer') {
-        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress if not viewer
+    if (progress && progress.enrollmentMode !== 'viewer') {
+        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress (includes saving and study check)
     }
-    queueRenderPage(pdfPageNum);
+    queueRenderPage(pdfPageNum); // Render the new page
 }
+
 function onNextPage() {
-    if (!pdfDoc || pdfPageNum >= pdfDoc.numPages) return;
+    // Ensure pdfDoc is loaded and not on the last page
+     if (!pdfDoc || pdfPageNum >= pdfTotalPages) return; // Use stored total pages
     pdfPageNum++;
+     // Check if user is enrolled and not a viewer before updating progress
      const progress = userCourseProgressMap.get(currentCourseIdInternal);
-     if (progress?.enrollmentMode !== 'viewer') {
-        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress if not viewer
+     if (progress && progress.enrollmentMode !== 'viewer') {
+        updatePdfProgressAndCheckCompletion(pdfPageNum); // Update progress (includes saving and study check)
     }
-    queueRenderPage(pdfPageNum);
+    queueRenderPage(pdfPageNum); // Render the new page
 }
 
 // NEW: Helper to update PDF progress state and check completion
 async function updatePdfProgressAndCheckCompletion(newPageNum) {
-     if (!currentUser || !currentCourseIdInternal || !currentChapterNumber) return;
+      // Basic validation
+      if (!currentUser || !currentCourseIdInternal || !currentChapterNumber) {
+          console.warn("updatePdfProgress: Missing user/course/chapter context.");
+          return;
+      }
      const progress = userCourseProgressMap.get(currentCourseIdInternal);
-     // Do nothing if viewer mode
-     if (!progress || progress.enrollmentMode === 'viewer') return;
 
+     // Do nothing if viewer mode or progress data missing
+     if (!progress || progress.enrollmentMode === 'viewer') {
+          console.log("Viewer mode or no progress data, skipping PDF progress update.");
+          return;
+     }
+
+     // Ensure nested structure exists
      progress.pdfProgress = progress.pdfProgress || {};
      progress.pdfProgress[currentChapterNumber] = progress.pdfProgress[currentChapterNumber] || { currentPage: 0, totalPages: pdfTotalPages || 0 };
 
-     // Only update if the page number is higher than the current stored page
-     const currentStoredPage = progress.pdfProgress[currentChapterNumber].currentPage || 0;
+     const currentProgressData = progress.pdfProgress[currentChapterNumber];
+     const currentStoredPage = currentProgressData.currentPage || 0;
+     let progressChanged = false;
+
+     // Update currentPage only if the new page number is higher (representing forward progress)
      if (newPageNum > currentStoredPage) {
-         progress.pdfProgress[currentChapterNumber].currentPage = newPageNum;
-         // Ensure total pages is set correctly
-         if (progress.pdfProgress[currentChapterNumber].totalPages !== pdfTotalPages && pdfTotalPages > 0) {
-              progress.pdfProgress[currentChapterNumber].totalPages = pdfTotalPages;
-         }
+         currentProgressData.currentPage = newPageNum;
+         progressChanged = true;
+     }
 
-         console.log(`Updating PDF progress for Ch ${currentChapterNumber}: Page ${newPageNum} / ${pdfTotalPages}`);
-         updateUserCourseProgress(currentCourseIdInternal, progress); // Update local state
+     // Update totalPages if it has changed (e.g., PDF loaded for the first time or changed)
+     if (pdfTotalPages > 0 && currentProgressData.totalPages !== pdfTotalPages) {
+          currentProgressData.totalPages = pdfTotalPages;
+          progressChanged = true;
+     }
 
-         // Save to Firestore and then check for completion
+     // Only save and check completion if progress actually changed
+     if (progressChanged) {
+         console.log(`Updating PDF progress for Ch ${currentChapterNumber}: Page ${currentProgressData.currentPage} / ${currentProgressData.totalPages}`);
+         updateUserCourseProgress(currentCourseIdInternal, { pdfProgress: progress.pdfProgress }); // Update local state
+
          try {
-             await saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress);
-             console.log("PDF progress saved.");
-             await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber); // Check combined progress
+             await saveUserCourseProgress(currentUser.uid, currentCourseIdInternal, progress); // Save to Firestore
+             console.log("PDF progress saved successfully.");
+             // After saving, check if this update makes the chapter studied
+             await checkAndMarkChapterStudied(currentCourseIdInternal, currentChapterNumber);
          } catch (error) {
               console.error("Failed to save PDF progress:", error);
+              // Optionally notify the user or implement retry logic
          }
      } else {
-          console.log(`PDF Page ${newPageNum} not higher than stored page ${currentStoredPage}. No progress update needed.`);
+          // console.log(`PDF Page ${newPageNum} not higher than stored page ${currentStoredPage} and total pages unchanged. No progress update needed.`);
      }
 }
+
 
 
 export async function handlePdfSnapshotForAI() {
-     if (!pdfCanvas || !currentChapterNumber) { alert("Context missing for AI request."); return; }
+      if (!pdfCanvas || !currentChapterNumber || !pdfPageNum) {
+         alert("Cannot ask AI: PDF context (canvas, chapter, page number) missing.");
+         return;
+      }
+     // Prompt user for their question about the current page
      const userQuestion = prompt(`Ask a question about the current PDF page (Chapter ${currentChapterNumber}, Page ${pdfPageNum}):`);
+     // Exit if user cancels or enters empty question
      if (!userQuestion || userQuestion.trim() === "") return;
-     showLoading("Generating AI explanation...");
-     const explanationArea = document.getElementById('ai-explanation-area');
-     const explanationContent = document.getElementById('ai-explanation-content');
-     if (!explanationArea || !explanationContent) { hideLoading(); return; }
 
-     // Clear previous history when asking about a new snapshot
+     showLoading("Generating AI explanation for PDF page...");
+     const explanationArea = document.getElementById('ai-explanation-area');
+     const explanationContent = document.getElementById('ai-explanation-content'); // Target inner content div
+
+     // Ensure UI elements for displaying the explanation exist
+     if (!explanationArea || !explanationContent) {
+         console.error("AI Explanation UI elements not found (#ai-explanation-area, #ai-explanation-content).");
+         hideLoading();
+         return;
+     }
+
+     // Clear previous history when asking about a *new* snapshot/page
      currentPdfExplanationHistory = [];
 
-     explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Generating explanation...</p></div>`;
-     explanationArea.classList.remove('hidden');
+     // Show loading indicator in the AI panel
+     explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2 p-4"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm text-muted">Capturing page and generating explanation...</p></div>`;
+     explanationArea.classList.remove('hidden'); // Make panel visible
+
      try {
-          const imageDataUrl = pdfCanvas.toDataURL('image/jpeg', 0.85);
-          const base64ImageData = imageDataUrl.split(',')[1];
-          if (!base64ImageData) throw new Error("Failed to capture image data.");
-          const context = `PDF page ${pdfPageNum} for Chapter ${currentChapterNumber}.`;
+          // Capture current canvas content as JPEG data URL
+          const imageDataUrl = pdfCanvas.toDataURL('image/jpeg', 0.85); // Use JPEG for smaller size, adjust quality (0.85)
+          const base64ImageData = imageDataUrl.split(',')[1]; // Extract base64 data
+          if (!base64ImageData) throw new Error("Failed to capture image data from canvas.");
 
-          // Call AI explanation function (assume it doesn't use history for snapshot yet)
-          // TODO: Modify getExplanationForPdfSnapshot to handle history like generateExplanation if follow-up is needed here too
-          const explanationHtml = await getExplanationForPdfSnapshot(userQuestion, base64ImageData, context);
+          // Provide context to the AI
+          const context = `User is asking about PDF page ${pdfPageNum} for Chapter ${currentChapterNumber}.`;
 
-          explanationContent.innerHTML = explanationHtml; // Initial explanation
-          await renderMathIn(explanationContent);
+          console.log(`Sending snapshot of Ch ${currentChapterNumber} Pg ${pdfPageNum} to AI.`);
+          // Call AI function (assuming it now manages history internally)
+          const result = await getExplanationForPdfSnapshot(userQuestion, base64ImageData, context, []); // Start with empty history
 
-          // Add follow-up input if desired for snapshot explanations
+          currentPdfExplanationHistory = result.history; // Store the returned history
+          explanationContent.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Display initial explanation
+          await renderMathIn(explanationContent); // Render any MathJax
+
+          // Remove any existing follow-up input before adding a new one
+          explanationArea.querySelector('.pdf-follow-up-container')?.remove();
+
+          // Add follow-up input area
            const followUpInputHtml = `
-               <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
-                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+               <div class="pdf-follow-up-container flex gap-2 mt-2 pt-2 border-t dark:border-gray-600 p-2 flex-shrink-0">
+                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm p-1 border rounded dark:bg-gray-700 dark:border-gray-600" placeholder="Ask a follow-up...">
                    <button onclick="window.askPdfFollowUp()" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
                </div>`;
-           explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
+           explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml); // Append to the main AI area div
 
-          hideLoading();
+          hideLoading(); // Hide global loading indicator
      } catch(error) {
           hideLoading();
           console.error("Error getting PDF snapshot explanation:", error);
-          explanationContent.innerHTML = `<p class="text-danger text-sm">Error generating explanation: ${error.message}</p>`;
+          explanationContent.innerHTML = `<p class="text-danger text-sm p-3">Error generating explanation: ${error.message}</p>`;
+          // Optionally hide the panel again on error or keep it open with the error message
+          // explanationArea.classList.add('hidden');
      }
 }
-// MODIFIED: Renamed original function to Internal
-async function handleExplainSelectionInternal(selectedText, context, source) { // source: 'transcription' or 'pdf'
+
+// Internal function to handle text explanation requests
+async function handleExplainSelectionInternal(selectedText, context, source, historyContainer) { // source: 'transcription' or 'pdf_text'
     const explanationArea = document.getElementById('ai-explanation-area');
-    const explanationContent = document.getElementById('ai-explanation-content');
-    if (!explanationArea || !explanationContent) return;
+    const explanationContent = document.getElementById('ai-explanation-content'); // Target inner content div
+    if (!explanationArea || !explanationContent) {
+        console.error("AI Explanation UI elements not found.");
+        return;
+    }
 
-    // Reset history based on source
-    if(source === 'transcription') currentTranscriptionExplanationHistory = [];
-    // else if (source === 'pdf') // PDF text selection not implemented yet
+    // Reset the specified history container (passed by reference)
+    historyContainer.length = 0; // Clear the array directly
 
-    explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Generating explanation...</p></div>`;
+    // Show loading in the AI panel
+    explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2 p-4"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm text-muted">Generating explanation...</p></div>`;
     explanationArea.classList.remove('hidden');
 
     try {
-        // Initial call, empty history
-        const result = await explainStudyMaterialSnippet(selectedText, context, []);
+        console.log(`Requesting explanation for ${source}: "${selectedText.substring(0, 50)}..."`);
+        // Initial call, pass empty history (which is historyContainer)
+        const result = await explainStudyMaterialSnippet(selectedText, context, historyContainer);
+
+        // The historyContainer array should now be populated by explainStudyMaterialSnippet
+        // No need to reassign: historyContainer = result.history;
+
         explanationContent.innerHTML = `<div class="ai-chat-turn">${result.explanationHtml}</div>`; // Wrap initial response
-        await renderMathIn(explanationContent);
+        await renderMathIn(explanationContent); // Render MathJax if any
 
-        // Store history for this source
-         if(source === 'transcription') currentTranscriptionExplanationHistory = result.history;
+        // Remove any existing follow-up input before adding a new one
+        explanationArea.querySelector('.text-follow-up-container')?.remove();
 
-        // Add follow-up input
+        // Add follow-up input, passing the source type to the handler
         const followUpInputHtml = `
-            <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
-                 <input type="text" id="text-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+            <div class="text-follow-up-container flex gap-2 mt-2 pt-2 border-t dark:border-gray-600 p-2 flex-shrink-0">
+                 <input type="text" id="text-follow-up-input" class="flex-grow text-sm p-1 border rounded dark:bg-gray-700 dark:border-gray-600" placeholder="Ask a follow-up...">
                  <button onclick="window.askTextFollowUp('${source}')" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
             </div>`;
         explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
 
-
     } catch (error) {
-        console.error("Error getting explanation:", error);
-        explanationContent.innerHTML = `<p class="text-danger text-sm">Error: ${error.message}</p>`;
+        console.error("Error getting text explanation:", error);
+        explanationContent.innerHTML = `<p class="text-danger text-sm p-3">Error generating explanation: ${error.message}</p>`;
     }
 }
-// MODIFIED: Wrapper function
+
+// Wrapper function called by UI for explaining selected transcription text
 export function handleExplainSelection(sourceType) {
-    if (sourceType !== 'transcription') {
-        // Currently only supporting transcription selection
-        alert("Text selection explanation is only available for transcriptions currently.");
+     if (sourceType !== 'transcription') {
+        alert("Text selection explanation is currently only available for transcriptions.");
         return;
     }
     let selectedText = window.getSelection()?.toString().trim();
@@ -1056,227 +1482,330 @@ export function handleExplainSelection(sourceType) {
         alert("Please select text from the transcription to explain.");
         return;
     }
+    // Ensure context is available
     if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) {
         alert("Cannot explain: Transcription context missing.");
         return;
     }
+    // Provide context for the AI
     const context = `From Transcription for Chapter ${currentChapterNumber}.`;
+    // Include the full transcription text for better context (limit length)
     const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' ');
-    handleExplainSelectionInternal(selectedText, `Context: ${context}\nFull Transcription Text (for context): ${fullTranscriptionText.substring(0, 5000)}...`, 'transcription');
+    const fullContext = `Context: ${context}\n\nFull Transcription Text (for context):\n${fullTranscriptionText.substring(0, 5000)}${fullTranscriptionText.length > 5000 ? '...' : ''}`;
+
+    // Call internal handler, passing the specific history array for transcriptions
+    handleExplainSelectionInternal(selectedText, fullContext, 'transcription', currentTranscriptionExplanationHistory);
 }
-// MODIFIED: Wrapper function
+
+// Wrapper function called by UI for asking a question about the transcription
 export function askQuestionAboutTranscription() {
-     if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) { alert("Cannot ask question: Transcription context missing."); return; }
+      // Ensure context is available
+      if (!currentTranscriptionData || currentTranscriptionData.length === 0 || !currentChapterNumber) { alert("Cannot ask question: Transcription context missing."); return; }
+
+     // Prompt user for their question
      const userQuestion = prompt(`Ask a question about the transcription for Chapter ${currentChapterNumber}:`);
-     if (!userQuestion || userQuestion.trim() === "") return;
+     if (!userQuestion || userQuestion.trim() === "") return; // Exit if cancelled or empty
+
+     // Provide context for the AI
+     const context = `About the Transcription for Chapter ${currentChapterNumber}.`;
+     // Include the full transcription text for better context (limit length)
      const fullTranscriptionText = currentTranscriptionData.map(e => e.text).join(' ');
-     handleExplainSelectionInternal(userQuestion, `Context: Chapter ${currentChapterNumber} Transcription.\nFull Text (for context): ${fullTranscriptionText.substring(0, 8000)}...`, 'transcription');
+     const fullContext = `Context: ${context}\n\nFull Transcription Text (for context):\n${fullTranscriptionText.substring(0, 8000)}${fullTranscriptionText.length > 8000 ? '...' : ''}`;
+
+     // Call internal handler with the user's question as the "snippet"
+     // Pass the specific history array for transcriptions
+     handleExplainSelectionInternal(userQuestion, fullContext, 'transcription', currentTranscriptionExplanationHistory);
 }
-// NEW: Follow-up function for text explanations
+
+// Follow-up function for text explanations (Transcription or potentially PDF Text)
 window.askTextFollowUp = async (source) => {
     const inputElement = document.getElementById('text-follow-up-input');
     const explanationArea = document.getElementById('ai-explanation-area');
     const explanationContent = explanationArea?.querySelector('#ai-explanation-content'); // Target specific content area
-    let history = (source === 'transcription') ? currentTranscriptionExplanationHistory : []; // Add logic for PDF later if needed
 
-    if (!inputElement || !explanationContent || !history) return;
+    // Determine which history array to use based on the source
+    let history = (source === 'transcription') ? currentTranscriptionExplanationHistory : []; // Add logic for PDF text later if needed
+
+    if (!inputElement || !explanationContent || !history) {
+        console.error("askTextFollowUp: Missing input, content area, or history array.");
+        return;
+    }
 
     const followUpText = inputElement.value.trim();
-    if (!followUpText) return;
+    if (!followUpText) return; // Ignore empty input
 
+    // Disable input while processing
     inputElement.disabled = true;
-    const askButton = inputElement.nextElementSibling;
+    const askButton = inputElement.nextElementSibling; // Assuming button is next sibling
     if (askButton) askButton.disabled = true;
 
-    // Append user follow-up
-    explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
-
-    // Append loading indicator
-    const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
+    // Display user's follow-up question immediately
+    explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
+    // Add loading indicator for AI response
+    const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
     explanationContent.insertAdjacentHTML('beforeend', loadingHtml);
-    explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container
+    explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container to bottom
 
     try {
-        // Call API using history
+        console.log(`Sending text follow-up for ${source}: "${followUpText.substring(0, 50)}..."`);
+        // Call API using the existing history
+        // The history array reference is passed and will be updated by the function
         const result = await explainStudyMaterialSnippet(followUpText, null, history); // Pass follow-up as snippet, null context, use history
 
-        // Update history
-        if(source === 'transcription') currentTranscriptionExplanationHistory = result.history;
+        // History array (e.g., currentTranscriptionExplanationHistory) is updated automatically
 
+        // Remove loader and display AI response
         explanationContent.querySelector('.ai-loading')?.remove(); // Remove loader
-        explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
-        inputElement.value = '';
-        await renderMathIn(explanationContent);
-        explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container
+        explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+        inputElement.value = ''; // Clear input field
+        await renderMathIn(explanationContent); // Render MathJax
+        explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll main container to bottom
 
     } catch (error) {
-        console.error("Error asking follow-up:", error);
+        console.error("Error asking text follow-up:", error);
         explanationContent.querySelector('.ai-loading')?.remove();
-        explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+        explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2 p-1">Error getting follow-up: ${error.message}</p>`);
     } finally {
+        // Re-enable input
         inputElement.disabled = false;
         if (askButton) askButton.disabled = false;
+        inputElement.focus(); // Set focus back to input
     }
 };
-// NEW: Follow-up function for PDF Snapshot explanations
+
+// Follow-up function for PDF Snapshot explanations
 window.askPdfFollowUp = async () => {
      const inputElement = document.getElementById('pdf-follow-up-input');
      const explanationArea = document.getElementById('ai-explanation-area');
      const explanationContent = explanationArea?.querySelector('#ai-explanation-content'); // Target specific content area
      let history = currentPdfExplanationHistory; // Use PDF specific history
 
-     if (!inputElement || !explanationContent || !history) return;
+     if (!inputElement || !explanationContent || !history) {
+         console.error("askPdfFollowUp: Missing input, content area, or history array.");
+         return;
+     }
 
      const followUpText = inputElement.value.trim();
-     if (!followUpText) return;
+     if (!followUpText) return; // Ignore empty input
 
+     // Disable input while processing
      inputElement.disabled = true;
      const askButton = inputElement.nextElementSibling;
      if (askButton) askButton.disabled = true;
 
-     explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
-     const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
+     // Display user's follow-up question
+     explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-gray-700 dark:text-gray-300">You:</p><div class="prose prose-sm dark:prose-invert max-w-none">${escapeHtml(followUpText)}</div></div>`);
+     // Add loading indicator
+     const loadingHtml = `<div class="ai-chat-turn ai-loading mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p><div class="flex items-center space-x-2 mt-1"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-xs text-muted">Thinking...</p></div></div>`;
      explanationContent.insertAdjacentHTML('beforeend', loadingHtml);
-     explanationArea.scrollTop = explanationArea.scrollHeight;
+     explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll down
 
      try {
-          // Re-call the snapshot explanation function, passing history
-          // NOTE: getExplanationForPdfSnapshot needs modification to accept/use history
-          // For now, let's simulate by just sending the follow-up text as a new query.
-          // This won't have memory of the image, which is a limitation.
-          // A true implementation requires modifying getExplanationForPdfSnapshot AND the Vision API call structure.
-          console.warn("PDF Follow-up Limitation: AI currently lacks memory of the previous image snapshot in follow-up questions.");
-          const result = await explainStudyMaterialSnippet(followUpText, "Follow-up question regarding previous PDF page image.", history); // Simulate
+          console.log(`Sending PDF follow-up: "${followUpText.substring(0, 50)}..."`);
+          // Re-call the snapshot explanation function, passing the *existing* history.
+          // The function should handle appending the new user message and getting the AI response.
+          // We pass null for image data on follow-up, as the context is maintained in the history.
+          const result = await getExplanationForPdfSnapshot(followUpText, null, `Follow-up on Chapter ${currentChapterNumber}, Page ${pdfPageNum}`, history);
 
-          currentPdfExplanationHistory = result.history; // Update history
+          // History (currentPdfExplanationHistory) is updated automatically by reference
 
+          // Remove loader and display AI response
           explanationContent.querySelector('.ai-loading')?.remove();
-          explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-purple-200 dark:border-purple-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
-          inputElement.value = '';
-          await renderMathIn(explanationContent);
-          explanationArea.scrollTop = explanationArea.scrollHeight;
+          explanationContent.insertAdjacentHTML('beforeend', `<div class="ai-chat-turn mt-3 pt-3 border-t border-gray-200 dark:border-gray-600"><p class="text-sm font-medium text-purple-700 dark:text-purple-300">AI Tutor:</p>${result.explanationHtml}</div>`);
+          inputElement.value = ''; // Clear input
+          await renderMathIn(explanationContent); // Render MathJax
+          explanationArea.scrollTop = explanationArea.scrollHeight; // Scroll down
 
      } catch (error) {
           console.error("Error asking PDF follow-up:", error);
           explanationContent.querySelector('.ai-loading')?.remove();
-          explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2">Error getting follow-up: ${error.message}</p>`);
+          explanationContent.insertAdjacentHTML('beforeend', `<p class="text-danger text-sm mt-2 p-1">Error getting follow-up: ${error.message}</p>`);
      } finally {
+          // Re-enable input
           inputElement.disabled = false;
           if (askButton) askButton.disabled = false;
+          inputElement.focus(); // Set focus back
      }
 };
 
 
 // MODIFIED: Use USER specific load/save
 export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate = false) {
-    if (!currentUser) {
+     if (!currentUser) {
         console.error("Cannot display formula sheet: User not logged in");
+        alert("Please log in to view formula sheets.");
         return;
     }
     if (!courseId || !chapterNum) {
         console.error("Missing courseId or chapterNum for formula sheet");
+        alert("Cannot display formula sheet: Course or chapter context missing.");
         return;
     }
 
-    // --- MODIFICATION: Check required UI elements ---
     const formulaArea = document.getElementById('formula-sheet-area');
     const formulaContent = document.getElementById('formula-sheet-content');
     const downloadBtn = document.getElementById('download-formula-pdf-btn');
+    const regenerateBtn = document.querySelector('#formula-sheet-area button[onclick*="true"]'); // Find regenerate button
 
-    if (!formulaArea || !formulaContent || !downloadBtn) {
-        console.error("Missing UI elements for formula sheet display (formula-sheet-area, formula-sheet-content, download-formula-pdf-btn). Cannot proceed.");
-        // Attempt to show error in main area if possible
-        const mainContentArea = document.getElementById('course-dashboard-area');
+
+    // Ensure UI elements exist
+    if (!formulaArea || !formulaContent || !downloadBtn || !regenerateBtn) {
+        console.error("Missing UI elements for formula sheet display. Cannot proceed.");
+        // Attempt to add an error message to the main content area if possible
+        const mainContentArea = document.getElementById('study-material-content-area') || document.getElementById('course-dashboard-area');
         if (mainContentArea) {
-            mainContentArea.innerHTML += `<p class="text-red-500 p-4 text-center">Error: UI components for formula sheet are missing.</p>`;
+            mainContentArea.insertAdjacentHTML('beforeend', `<p class="text-red-500 p-4 text-center">Error: UI components for formula sheet are missing.</p>`);
         }
         return;
     }
-    // --- END MODIFICATION ---
 
-    formulaArea.classList.remove('hidden'); // Make the container visible
+    // Show the area, set loading state
+    formulaArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden'); // Hide download initially
+    regenerateBtn.disabled = true; // Disable regenerate during load/generation
     formulaContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Formula Sheet...</p></div>`;
 
-    // --- Check USER cache ---
     let cachedSheet = null;
+    // Try loading from cache unless forceRegenerate is true
     if (!forceRegenerate) {
         try {
-            console.log(`Attempting to load cached formula sheet for course ${courseId}, chapter ${chapterNum}`);
+            console.log(`Attempting to load cached formula sheet for user ${currentUser.uid}, course ${courseId}, chapter ${chapterNum}`);
             cachedSheet = await loadUserFormulaSheet(currentUser.uid, courseId, chapterNum);
         } catch (error) {
+            // Log error but proceed to generate if cache load fails
             console.error("Error loading cached user formula sheet:", error);
         }
     } else {
-        console.log("Force regenerate flag set, skipping cache check");
+        console.log("Force regenerate flag set, skipping cache check for formula sheet.");
     }
 
+    // If cached sheet found, display it
     if (cachedSheet) {
-        console.log("Using cached user formula sheet from Firestore");
+        console.log("Using cached user formula sheet from Firestore.");
         formulaContent.innerHTML = cachedSheet;
-        await renderMathIn(formulaContent);
-        downloadBtn.classList.remove('hidden');
-        return;
+        try {
+            await renderMathIn(formulaContent); // Render MathJax
+            downloadBtn.classList.remove('hidden'); // Show download button
+        } catch (renderError) {
+             console.error("Error rendering MathJax in cached formula sheet:", renderError);
+             formulaContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
+        }
+        regenerateBtn.disabled = false; // Re-enable regenerate button
+        return; // Stop here, no need to generate
     }
 
-    // --- Generate if not cached or forced ---
+    // If no cache or forceRegenerate, generate a new one
     console.log(`Generating new formula sheet for course ${courseId}, chapter ${chapterNum}`);
     try {
         const sheetHtml = await generateFormulaSheet(courseId, chapterNum);
-        formulaContent.innerHTML = sheetHtml;
-        await renderMathIn(formulaContent);
+        formulaContent.innerHTML = sheetHtml; // Display generated content
 
-        // Only save and enable download if generation was successful
-        if (!sheetHtml.includes('Error generating') &&
-            !sheetHtml.includes('No text content available') &&
-            !sheetHtml.includes('bigger than the model')) {
-            downloadBtn.classList.remove('hidden');
-            try {
+        // Check if generation seemed successful before enabling download/saving
+        const generationFailed = sheetHtml.includes('Error generating') ||
+                                 sheetHtml.includes('No text content available') ||
+                                 sheetHtml.includes('bigger than the model');
+
+        if (!generationFailed) {
+             try {
+                await renderMathIn(formulaContent); // Render MathJax
+                downloadBtn.classList.remove('hidden'); // Show download button
+                // Attempt to save the newly generated sheet to user's cache
                 await saveUserFormulaSheet(currentUser.uid, courseId, chapterNum, sheetHtml);
-                console.log("Successfully saved generated formula sheet to user document");
-            } catch (saveError) {
-                console.error("Failed to save generated formula sheet:", saveError);
+                console.log("Successfully saved generated formula sheet to user document.");
+            } catch (saveOrRenderError) {
+                 if (saveOrRenderError.message.includes('MathJax')) {
+                     console.error("Error rendering MathJax in generated formula sheet:", saveOrRenderError);
+                     formulaContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
+                 } else {
+                    console.error("Failed to save generated formula sheet:", saveOrRenderError);
+                    // Optionally notify user of save failure
+                 }
+                // Still allow download even if save/render fails? Maybe hide download button.
+                 downloadBtn.classList.add('hidden');
             }
         } else {
-            console.warn("AI generation indicated an issue, not caching or enabling download");
-            downloadBtn.classList.add('hidden');
+            console.warn("AI generation indicated an issue, not caching or enabling download for formula sheet.");
+            downloadBtn.classList.add('hidden'); // Ensure download is hidden if generation failed
         }
     } catch (error) {
-        console.error("Error displaying formula sheet:", error);
+        console.error("Error generating/displaying formula sheet:", error);
+        // Display error message and retry button
         formulaContent.innerHTML = `
             <div class="p-4 text-center">
                 <p class="text-danger mb-2">Error generating formula sheet: ${error.message || 'Unknown error'}</p>
-                <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum}, true)"
+                <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum}, true)"
                         class="btn-secondary-small">
                     Retry Generation
                 </button>
             </div>
         `;
-        downloadBtn.classList.add('hidden');
+        downloadBtn.classList.add('hidden'); // Ensure download is hidden on error
+    } finally {
+        regenerateBtn.disabled = false; // Always re-enable regenerate button at the end
     }
 }
-window.displayFormulaSheet = displayFormulaSheet; // Assign to window
+// Wrapper function for window scope
+window.displayFormulaSheetWrapper = (courseId, chapterNum, forceRegenerate = false) => {
+    displayFormulaSheet(courseId, chapterNum, forceRegenerate);
+};
+
 
 export async function downloadFormulaSheetPdf() {
-    const formulaContentElement = document.getElementById('formula-sheet-content');
-    if (!formulaContentElement || !currentChapterNumber || !currentCourseIdInternal) { alert("Cannot download: Formula sheet content or context missing."); return; }
+     const formulaContentElement = document.getElementById('formula-sheet-content');
+    if (!formulaContentElement || !currentChapterNumber || !currentCourseIdInternal) {
+         alert("Cannot download: Formula sheet content or course/chapter context missing.");
+         return;
+     }
+    // Get course name for filename, default if needed
     const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
-    const filename = `Formula_Sheet_${courseName.replace(/\s+/g, '_')}_Ch${currentChapterNumber}`;
+    // Generate filename
+    const filename = `Formula_Sheet_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`; // Sanitize name
+
     showLoading(`Generating ${filename}.pdf...`);
     try {
-        // Get HTML from the content area (which should be populated from cache or generation)
         let sheetHtml = formulaContentElement.innerHTML;
+        // Basic validation of content before proceeding
         if (!sheetHtml || sheetHtml.includes('Error generating') || sheetHtml.includes('No text content available') || sheetHtml.includes('Loading Formula Sheet...')) {
-            throw new Error("Valid formula sheet content not available for download.");
+            throw new Error("Valid formula sheet content not available for PDF generation.");
         }
-        // Wrap in printable HTML
-        const printHtml = ` <!DOCTYPE html><html><head><title>${filename}</title> <style> body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; } .prose { max-width: none; } mjx-container {display: inline-block !important; margin: 0.1em 0 !important; } mjx-container > svg { vertical-align: -0.15ex !important; } </style> </head><body> <h2 style="text-align: center;">Formula Sheet - Chapter ${currentChapterNumber}</h2> ${sheetHtml} </body></html>`;
+        // Prepare HTML for PDF generation (basic structure + content)
+        const printHtml = `<!DOCTYPE html>
+        <html>
+        <head>
+            <title>${escapeHtml(filename)}</title>
+            <meta charset="UTF-8">
+            <script>
+                MathJax = {
+                    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+                    svg: { fontCache: 'global' }
+                };
+            </script>
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
+                .prose { max-width: none; } /* Ensure prose doesn't limit width */
+                /* Improve MathJax SVG alignment if needed */
+                mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
+                h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
+                /* Add any other print-specific styles here */
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align: center;">Formula Sheet - Chapter ${currentChapterNumber}</h2>
+            <div class="prose">
+                ${sheetHtml}
+            </div>
+        </body>
+        </html>`;
+
+        // Call the PDF generation utility
         await generateAndDownloadPdfWithMathJax(printHtml, filename);
+
     } catch (error) {
         console.error("Error generating formula sheet PDF:", error);
         alert(`Failed to generate PDF for formula sheet: ${error.message}`);
     } finally {
-        hideLoading();
+        hideLoading(); // Ensure loading indicator is hidden
     }
 }
 window.downloadFormulaSheetPdf = downloadFormulaSheetPdf; // Assign to window
@@ -1285,106 +1814,161 @@ window.downloadFormulaSheetPdf = downloadFormulaSheetPdf; // Assign to window
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
     if (!currentUser) {
         console.error("Cannot display chapter summary: User not logged in");
+         alert("Please log in to view chapter summaries.");
         return;
     }
     if (!courseId || !chapterNum) {
         console.error("Missing courseId or chapterNum for chapter summary");
+         alert("Cannot display summary: Course or chapter context missing.");
         return;
     }
 
-    // --- MODIFICATION: Check required UI elements ---
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
+    const regenerateBtn = document.querySelector('#chapter-summary-area button[onclick*="true"]'); // Find regenerate button
 
-    if (!summaryArea || !summaryContent || !downloadBtn) {
-        console.error("Missing UI elements for chapter summary display (chapter-summary-area, chapter-summary-content, download-summary-pdf-btn). Cannot proceed.");
-        const mainContentArea = document.getElementById('course-dashboard-area');
+
+    // Ensure UI elements exist
+    if (!summaryArea || !summaryContent || !downloadBtn || !regenerateBtn) {
+        console.error("Missing UI elements for chapter summary display. Cannot proceed.");
+        const mainContentArea = document.getElementById('study-material-content-area') || document.getElementById('course-dashboard-area');
         if (mainContentArea) {
-            mainContentArea.innerHTML += `<p class="text-red-500 p-4 text-center">Error: UI components for chapter summary are missing.</p>`;
+            mainContentArea.insertAdjacentHTML('beforeend', `<p class="text-red-500 p-4 text-center">Error: UI components for chapter summary are missing.</p>`);
         }
         return;
     }
-    // --- END MODIFICATION ---
 
-    summaryArea.classList.remove('hidden'); // Make the container visible
+    // Show area, set loading state
+    summaryArea.classList.remove('hidden');
     downloadBtn.classList.add('hidden'); // Hide download initially
+    regenerateBtn.disabled = true; // Disable regenerate during load
     summaryContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Chapter Summary...</p></div>`;
 
-    // --- Check USER cache ---
     let cachedSummary = null;
+    // Try loading cache unless forced
     if (!forceRegenerate) {
         try {
-            console.log(`Attempting to load cached chapter summary for course ${courseId}, chapter ${chapterNum}`);
+            console.log(`Attempting to load cached chapter summary for user ${currentUser.uid}, course ${courseId}, chapter ${chapterNum}`);
             cachedSummary = await loadUserChapterSummary(currentUser.uid, courseId, chapterNum);
         } catch (error) {
             console.error("Error loading cached user chapter summary:", error);
+            // Proceed to generate if cache fails
         }
     } else {
-        console.log("Force regenerate flag set, skipping cache check");
+        console.log("Force regenerate flag set, skipping cache check for chapter summary.");
     }
 
+    // Display cached summary if found
     if (cachedSummary) {
-        console.log("Using cached user chapter summary from Firestore");
+        console.log("Using cached user chapter summary from Firestore.");
         summaryContent.innerHTML = cachedSummary;
-        await renderMathIn(summaryContent);
-        downloadBtn.classList.remove('hidden');
-        return;
+        try {
+            await renderMathIn(summaryContent); // Render MathJax
+            downloadBtn.classList.remove('hidden'); // Show download
+        } catch (renderError) {
+            console.error("Error rendering MathJax in cached summary:", renderError);
+            summaryContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
+        }
+        regenerateBtn.disabled = false; // Re-enable regenerate
+        return; // Stop here
     }
 
-    // --- Generate if not cached or forced ---
+    // Generate new summary if no cache or forced
     console.log(`Generating new chapter summary for course ${courseId}, chapter ${chapterNum}`);
     try {
         const summaryHtml = await generateChapterSummary(courseId, chapterNum);
         summaryContent.innerHTML = summaryHtml;
-        await renderMathIn(summaryContent);
 
-        // Only save and enable download if generation was successful
-        if (!summaryHtml.includes('Error generating') &&
-            !summaryHtml.includes('No text content available') &&
-            !summaryHtml.includes('bigger than the model')) {
-            downloadBtn.classList.remove('hidden');
-            try {
-                await saveUserChapterSummary(currentUser.uid, courseId, chapterNum, summaryHtml);
-                console.log("Successfully saved generated chapter summary to user document");
-            } catch (saveError) {
-                console.error("Failed to save generated chapter summary:", saveError);
-            }
+        // Check for generation errors before enabling download/saving
+        const generationFailed = summaryHtml.includes('Error generating') ||
+                                 summaryHtml.includes('No text content available') ||
+                                 summaryHtml.includes('bigger than the model');
+
+        if (!generationFailed) {
+             try {
+                 await renderMathIn(summaryContent); // Render MathJax
+                 downloadBtn.classList.remove('hidden'); // Show download
+                 // Attempt to save the new summary to user cache
+                 await saveUserChapterSummary(currentUser.uid, courseId, chapterNum, summaryHtml);
+                 console.log("Successfully saved generated chapter summary to user document.");
+             } catch (saveOrRenderError) {
+                  if (saveOrRenderError.message.includes('MathJax')) {
+                      console.error("Error rendering MathJax in generated summary:", saveOrRenderError);
+                      summaryContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
+                  } else {
+                     console.error("Failed to save generated chapter summary:", saveOrRenderError);
+                  }
+                 downloadBtn.classList.add('hidden'); // Hide download on save/render error
+             }
         } else {
-            console.warn("AI generation indicated an issue, not caching or enabling download");
+            console.warn("AI generation indicated an issue, not caching or enabling download for chapter summary.");
             downloadBtn.classList.add('hidden');
         }
     } catch (error) {
-        console.error("Error displaying chapter summary:", error);
+        console.error("Error generating/displaying chapter summary:", error);
         summaryContent.innerHTML = `
             <div class="p-4 text-center">
                 <p class="text-danger mb-2">Error generating summary: ${error.message || 'Unknown error'}</p>
-                <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum}, true)"
+                <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum}, true)"
                         class="btn-secondary-small">
                     Retry Generation
                 </button>
             </div>
         `;
         downloadBtn.classList.add('hidden');
+    } finally {
+        regenerateBtn.disabled = false; // Always re-enable regenerate button
     }
 }
-window.displayChapterSummary = displayChapterSummary; // Assign to window
+// Wrapper function for window scope
+window.displayChapterSummaryWrapper = (courseId, chapterNum, forceRegenerate = false) => {
+    displayChapterSummary(courseId, chapterNum, forceRegenerate);
+};
 
 
 export async function downloadChapterSummaryPdf() {
-    const summaryContentElement = document.getElementById('chapter-summary-content');
-    if (!summaryContentElement || !currentChapterNumber || !currentCourseIdInternal) { alert("Cannot download: Summary content or context missing."); return; }
+     const summaryContentElement = document.getElementById('chapter-summary-content');
+     if (!summaryContentElement || !currentChapterNumber || !currentCourseIdInternal) {
+         alert("Cannot download: Summary content or course/chapter context missing.");
+         return;
+     }
     const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
-    const filename = `Chapter_Summary_${courseName.replace(/\s+/g, '_')}_Ch${currentChapterNumber}`;
+    const filename = `Chapter_Summary_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`; // Sanitize
+
     showLoading(`Generating ${filename}.pdf...`);
     try {
-        // Get HTML from the content area
         let summaryHtml = summaryContentElement.innerHTML;
          if (!summaryHtml || summaryHtml.includes('Error generating') || summaryHtml.includes('No text content available') || summaryHtml.includes('Loading Chapter Summary...')) {
-            throw new Error("Valid summary content not available for download.");
+            throw new Error("Valid summary content not available for PDF generation.");
         }
-        // Wrap in printable HTML
-        const printHtml = ` <!DOCTYPE html><html><head><title>${filename}</title> <style> body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; } .prose { max-width: none; } mjx-container {display: inline-block !important; margin: 0.1em 0 !important; } mjx-container > svg { vertical-align: -0.15ex !important; } </style> </head><body> <h2 style="text-align: center;">Chapter Summary - Chapter ${currentChapterNumber}</h2> ${summaryHtml} </body></html>`;
+        // Prepare HTML for PDF
+        const printHtml = `<!DOCTYPE html>
+        <html>
+        <head>
+            <title>${escapeHtml(filename)}</title>
+             <meta charset="UTF-8">
+            <script>
+                MathJax = {
+                    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
+                    svg: { fontCache: 'global' }
+                };
+            </script>
+            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+            <style>
+                 body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
+                 .prose { max-width: none; } /* Ensure prose doesn't limit width */
+                 mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
+                 h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
+            </style>
+        </head>
+        <body>
+            <h2 style="text-align: center;">Chapter Summary - Chapter ${currentChapterNumber}</h2>
+             <div class="prose">
+                 ${summaryHtml}
+             </div>
+        </body>
+        </html>`;
         await generateAndDownloadPdfWithMathJax(printHtml, filename);
     } catch (error) {
         console.error("Error generating summary PDF:", error);
@@ -1396,91 +1980,181 @@ export async function downloadChapterSummaryPdf() {
 window.downloadChapterSummaryPdf = downloadChapterSummaryPdf; // Assign to window
 
 export function navigateChapterMaterial(courseId, chapterNum) {
-     const courseDef = globalCourseDataMap.get(courseId); if (!courseDef || chapterNum < 1 || chapterNum > courseDef.totalChapters) { console.warn(`Navigation blocked: Invalid chapter ${chapterNum}`); return; } showCourseStudyMaterial(courseId, chapterNum);
+      const courseDef = globalCourseDataMap.get(courseId);
+      // Basic validation
+      if (!courseDef || chapterNum < 1 || chapterNum > courseDef.totalChapters) {
+          console.warn(`Navigation blocked: Invalid chapter ${chapterNum} for course ${courseId}. Max chapters: ${courseDef?.totalChapters}`);
+          return;
+      }
+      // Call the main function to display the target chapter
+      showCourseStudyMaterial(courseId, chapterNum);
 }
 
 // --- NEW: Switch Video Function ---
 async function switchVideo(newIndex) {
-    if (!currentCourseIdInternal || !currentChapterNumber || !chapterLectureVideos) return;
+    // Ensure context is valid
+     if (!currentCourseIdInternal || !currentChapterNumber || !chapterLectureVideos) {
+         console.warn("switchVideo called without valid context.");
+         return;
+     }
+     // Ensure new index is within bounds
     if (newIndex >= 0 && newIndex < chapterLectureVideos.length) {
-        // Save progress for the *current* video before switching (only if not viewer)
+        // Save progress for the *current* video before switching
         const progress = userCourseProgressMap.get(currentCourseIdInternal);
+        // Only save if not in viewer mode and player exists
         if (progress?.enrollmentMode !== 'viewer') {
             const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
             const currentPlayerState = ytPlayers[currentPlayerElementId];
             if (currentPlayerState && currentPlayerState.player) {
-                await saveVideoWatchProgress(currentPlayerState.videoId); // Await saving
+                // Await saving to ensure it completes before navigating away
+                try {
+                     await saveVideoWatchProgress(currentPlayerState.videoId);
+                     console.log(`Saved progress for video ${currentPlayerState.videoId} before switching.`);
+                } catch (saveError) {
+                     console.error("Error saving video progress before switching:", saveError);
+                     // Decide if you want to proceed with switching even if save failed
+                }
             }
         }
-        // Navigate to the new video within the same chapter view
+        // Navigate to the new video within the same chapter view by recalling showCourseStudyMaterial
+        console.log(`Switching to video index ${newIndex} in Chapter ${currentChapterNumber}`);
         showCourseStudyMaterial(currentCourseIdInternal, currentChapterNumber, newIndex);
+    } else {
+         console.warn(`Attempted to switch to invalid video index: ${newIndex}`);
     }
 }
 window.switchVideo = switchVideo; // Assign to window scope
 
 // --- NEW: Helper to fetch video durations ---
 async function fetchVideoDurationsIfNeeded(videoIds) {
-    const idsToFetch = videoIds.filter(id => videoDurationMap[id] === undefined);
-    if (idsToFetch.length === 0) return;
+    // Filter out IDs that are already cached (value is not undefined)
+     const idsToFetch = videoIds.filter(id => videoDurationMap[id] === undefined);
+    if (idsToFetch.length === 0) {
+        // console.log("All required video durations already cached.");
+        return; // Nothing to fetch
+    }
+
     console.log(`Fetching durations for ${idsToFetch.length} videos...`);
     const apiKey = YOUTUBE_API_KEY; // Use imported key
-    if (!apiKey || apiKey === "YOUR_API_KEY_HERE" || apiKey === "AIzaSyB8v1IX_H3USSmBCJjee6kQBONAdTjmSuA" /* Avoid using potentially revoked key */ ) {
-        console.warn("YouTube API Key not configured or invalid. Cannot fetch video durations.");
+
+    // Check if API key is configured
+    if (!apiKey || apiKey === "REPLACE_WITH_YOUR_YOUTUBE_API_KEY" || apiKey.startsWith("AIzaSyB8v1IX")) { // Added check for placeholder/potentially bad key
+        console.warn("YouTube API Key not configured or potentially invalid. Cannot fetch video durations.");
+        // Mark IDs as null in the cache so we don't try fetching them again immediately
         idsToFetch.forEach(id => videoDurationMap[id] = null);
         return;
      }
-    const MAX_IDS_PER_REQUEST = 50;
+
+    const MAX_IDS_PER_REQUEST = 50; // YouTube API limit
     try {
+        // Fetch durations in chunks
         for (let i = 0; i < idsToFetch.length; i += MAX_IDS_PER_REQUEST) {
             const chunkIds = idsToFetch.slice(i, i + MAX_IDS_PER_REQUEST);
             const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${chunkIds.join(',')}&key=${apiKey}`;
             const response = await fetch(apiUrl);
-            if (!response.ok) { const errorData = await response.json(); console.error("YouTube API Error fetching durations:", errorData); throw new Error(`YouTube API Error: ${response.status}`); }
-            const data = await response.json(); const fetchedDurationsInChunk = {};
+            if (!response.ok) {
+                 const errorData = await response.json();
+                 console.error("YouTube API Error fetching durations:", response.status, errorData);
+                 // Throw error to stop fetching further chunks
+                 throw new Error(`YouTube API Error: ${response.status} ${errorData?.error?.message || 'Failed'}`);
+            }
+            const data = await response.json();
+            const fetchedDurationsInChunk = {};
+            // Process successful response
             data.items?.forEach(item => {
-                const durationStr = item.contentDetails?.duration; if (durationStr && item.id) { const durationRegex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/; const matches = durationStr.match(durationRegex); if (matches) { const hours = parseInt(matches[1] || '0'); const minutes = parseInt(matches[2] || '0'); const seconds = parseInt(matches[3] || '0'); videoDurationMap[item.id] = hours * 3600 + minutes * 60 + seconds; fetchedDurationsInChunk[item.id] = videoDurationMap[item.id]; } else { console.warn(`Could not parse duration string "${durationStr}" for video ${item.id}`); videoDurationMap[item.id] = null; } } else { videoDurationMap[item.id] = null; }
-            }); console.log("Fetched durations for chunk:", fetchedDurationsInChunk);
+                const durationStr = item.contentDetails?.duration; // ISO 8601 duration (e.g., PT1M30S)
+                if (durationStr && item.id) {
+                    // Parse ISO 8601 duration string
+                    const durationRegex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
+                    const matches = durationStr.match(durationRegex);
+                    if (matches) {
+                        const hours = parseInt(matches[1] || '0');
+                        const minutes = parseInt(matches[2] || '0');
+                        const seconds = parseInt(matches[3] || '0');
+                        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                        videoDurationMap[item.id] = totalSeconds; // Cache the duration
+                        fetchedDurationsInChunk[item.id] = totalSeconds; // For logging
+                    } else {
+                         console.warn(`Could not parse duration string "${durationStr}" for video ${item.id}`);
+                         videoDurationMap[item.id] = null; // Cache null if parsing failed
+                    }
+                } else {
+                    // Cache null if duration or ID is missing in the response item
+                     videoDurationMap[item.id] = null;
+                }
+            });
+            console.log("Fetched durations for chunk:", fetchedDurationsInChunk);
         }
-        idsToFetch.forEach(id => { if (videoDurationMap[id] === undefined) videoDurationMap[id] = null; });
-    } catch (error) { console.error("Error fetching video durations:", error); idsToFetch.forEach(id => videoDurationMap[id] = null); }
+        // Ensure all initially requested IDs have *some* entry (even if null) after successful fetch loops
+         idsToFetch.forEach(id => { if (videoDurationMap[id] === undefined) videoDurationMap[id] = null; });
+    } catch (error) {
+         console.error("Error fetching video durations:", error);
+         // Mark all IDs in the current fetch attempt as null on error to prevent repeated failed attempts
+         idsToFetch.forEach(id => videoDurationMap[id] = null);
+    }
 }
+
 
 // --- NEW: Ask AI about the entire PDF ---
 async function askAboutFullPdf() {
-     if (!pdfDoc || !currentCourseIdInternal || !currentChapterNumber) {
-         alert("PDF document or course context is not available.");
+      // Requires pdfDoc to be loaded (implicitly means path was valid)
+      if (!pdfDoc || !currentCourseIdInternal || !currentChapterNumber) {
+         alert("PDF document or course context is not available to ask about.");
          return;
      }
-     const userQuestion = prompt(`Ask a question about the entire Chapter ${currentChapterNumber} PDF document:`);
+
+     // Prompt user for question
+     const userQuestion = prompt(`Ask a question about the entire Chapter ${currentChapterNumber} PDF document (this may take a moment to analyze):`);
      if (!userQuestion || userQuestion.trim() === "") return;
 
+     // Get UI elements for displaying response
      const explanationArea = document.getElementById('ai-explanation-area');
-     const explanationContent = document.getElementById('ai-explanation-content');
-     if (!explanationArea || !explanationContent) return;
+     const explanationContent = document.getElementById('ai-explanation-content'); // Target inner content div
+     if (!explanationArea || !explanationContent) {
+         console.error("AI Explanation UI elements not found.");
+         return;
+     }
 
-     // Clear previous history for PDF questions
+     // Clear previous PDF explanation history
      currentPdfExplanationHistory = [];
 
-     explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm">Analyzing full PDF and generating explanation...</p></div>`;
-     explanationArea.classList.remove('hidden');
+     // Show loading state in AI panel
+     explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2 p-4"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm text-muted">Analyzing full PDF and generating explanation...</p></div>`;
+     explanationArea.classList.remove('hidden'); // Show panel
 
      try {
+          // Determine the PDF path again (needed by the AI function)
           const courseDef = globalCourseDataMap.get(currentCourseIdInternal);
-          const chapterResources = courseDef?.chapterResources?.[currentChapterNumber] || {};
-          const pdfPath = chapterResources.pdfPath || courseDef?.pdfPathPattern?.replace('{num}', currentChapterNumber);
-          if (!pdfPath) throw new Error("PDF path not found for this chapter.");
+          if (!courseDef) throw new Error("Course definition not found.");
+          const courseDirName = courseDef.courseDirName;
+          if (!courseDirName) throw new Error("Course directory name missing in definition.");
 
-          // Use the imported function from ai_integration.js
-          const explanationResult = await askAboutPdfDocument(userQuestion, pdfPath, currentCourseIdInternal, currentChapterNumber); // Assuming askAboutPdfDocument now returns { explanationHtml, history }
+          const chapterResources = courseDef.chapterResources?.[currentChapterNumber] || {};
+          const pdfOverride = chapterResources.pdfPath;
+          const pdfPath = pdfOverride
+                ? pdfOverride
+                : `${COURSE_BASE_PATH}/${courseDirName}/${DEFAULT_COURSE_PDF_FOLDER}/chapter${currentChapterNumber}.pdf`;
 
-          currentPdfExplanationHistory = explanationResult.history; // Store history
-          explanationContent.innerHTML = `<div class="ai-chat-turn">${explanationResult.explanationHtml}</div>`; // Wrap initial response
-          await renderMathIn(explanationContent);
+           if (!pdfPath || !pdfPath.toLowerCase().endsWith('.pdf')) {
+                throw new Error("Could not determine a valid PDF path for AI analysis.");
+           }
 
-          // Add follow-up input
+          console.log(`Asking AI about full PDF: ${pdfPath}`);
+          // Call the imported AI function that handles full PDF analysis
+          // Pass the dynamically determined pdfPath
+          const explanationResult = await askAboutPdfDocument(userQuestion, pdfPath, currentCourseIdInternal, currentChapterNumber);
+
+          currentPdfExplanationHistory = explanationResult.history; // Store history returned by AI function
+          explanationContent.innerHTML = `<div class="ai-chat-turn">${explanationResult.explanationHtml}</div>`; // Display AI response
+          await renderMathIn(explanationContent); // Render MathJax
+
+          // Remove any existing follow-up input before adding a new one
+          explanationArea.querySelector('.pdf-follow-up-container')?.remove();
+
+          // Add follow-up input area (using the same function as snapshot follow-up)
            const followUpInputHtml = `
-               <div class="flex gap-2 mt-2 pt-2 border-t dark:border-gray-600">
-                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm" placeholder="Ask a follow-up question...">
+               <div class="pdf-follow-up-container flex gap-2 mt-2 pt-2 border-t dark:border-gray-600 p-2 flex-shrink-0">
+                   <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm p-1 border rounded dark:bg-gray-700 dark:border-gray-600" placeholder="Ask a follow-up...">
                    <button onclick="window.askPdfFollowUp()" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
                </div>`;
            explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
@@ -1488,7 +2162,7 @@ async function askAboutFullPdf() {
 
      } catch (error) {
           console.error("Error asking about PDF document:", error);
-          explanationContent.innerHTML = `<p class="text-danger text-sm">Error processing request: ${error.message}. PDF might be unscannable or too large.</p>`;
+          explanationContent.innerHTML = `<p class="text-danger text-sm p-3">Error processing request: ${error.message}. PDF might be unscannable or too large.</p>`;
      }
 }
 window.askAboutFullPdf = askAboutFullPdf;
@@ -1498,283 +2172,396 @@ window.askAboutFullPdf = askAboutFullPdf;
  * Displays the study material (videos, PDF, transcription) for a specific chapter.
  * @param {string} courseId - The ID of the course.
  * @param {number} chapterNum - The chapter number to display.
- * @param {number} [initialVideoIndex=0] - The index of the video to show initially.
+ * @param {number} [initialVideoIndex=0] - The index of the video to show initially within the chapter.
  */
-// *** ADDED EXPORT KEYWORD ***
 export async function showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex = 0) {
-     cleanupPdfViewer(); // Clean up previous PDF instance
-     window.cleanupYouTubePlayers(); // Clean up previous players
-     currentCourseIdInternal = courseId; currentChapterNumber = chapterNum;
-     // Update the context for the notes panel
-     setLastViewedChapterForNotes(chapterNum);
+     console.log(`Showing study material for Course: ${courseId}, Chapter: ${chapterNum}, Video Index: ${initialVideoIndex}`);
+     // 1. Cleanup previous state
+     cleanupPdfViewer(); // Cleanup PDF state first
+     window.cleanupYouTubePlayers(); // Then cleanup YT players
+
+     // 2. Update internal state
+     currentCourseIdInternal = courseId;
+     currentChapterNumber = chapterNum;
+     currentVideoIndex = initialVideoIndex; // Set current video index
+     setLastViewedChapterForNotes(chapterNum); // Update notes panel context
+
+     // 3. Set sidebar link and show loading state
      setActiveSidebarLink('sidebar-study-material-link', 'sidebar-course-nav');
      displayContent(`<div id="study-material-content-area" class="animate-fade-in"><div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4 text-sm text-muted">Loading Chapter ${chapterNum} materials...</p></div></div>`, 'course-dashboard-area');
      const contentArea = document.getElementById('study-material-content-area');
-     const courseDef = globalCourseDataMap.get(courseId);
-     if (!courseDef) { contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course definition not found.</p>'; return; }
-     const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`;
-     const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
-     chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
-     const pdfPath = chapterResources.pdfPath || courseDef.pdfPathPattern?.replace('{num}', chapterNum);
-     // *** MODIFICATION START: Log PDF Path Determination ***
-     console.log(`[PDF Path Debug] Chapter ${chapterNum}: pdfPath determined as: "${pdfPath}". Source values: chapterResources.pdfPath="${chapterResources.pdfPath}", courseDef.pdfPathPattern="${courseDef.pdfPathPattern}"`);
-     // *** MODIFICATION END ***
 
+     // 4. Get Course Definition and Check Validity
+     const courseDef = globalCourseDataMap.get(courseId);
+     if (!courseDef) {
+         contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course definition not found.</p>';
+         return;
+     }
+     const courseDirName = courseDef.courseDirName; // Essential for resource paths
+     if (!courseDirName) {
+         console.error(`Course definition for ${courseId} is missing 'courseDirName'. Cannot determine resource paths.`);
+         contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course configuration incomplete (missing directory name). Cannot load resources.</p>';
+         return;
+     }
+     console.log(`[Study Material] Using courseDirName: ${courseDirName}`);
+
+     // 5. Get Chapter Specific Data
+     // *** MODIFIED: Get Chapter Title from courseDef ***
+     // Assumes courseDef.chapters is an array of titles populated during course load
+     const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`; // Default if title missing
+
+     const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
+     // Ensure lectureUrls exists and is an array before filtering/mapping
+     chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
+                             .filter(lec => typeof lec === 'object' && lec.url && lec.title);
+     const totalVideos = chapterLectureVideos.length;
+
+     // 6. Determine PDF Path
+     const pdfOverride = chapterResources.pdfPath; // Check for chapter-specific override
+     // Construct default path if no override
+     const defaultPdfPath = `${COURSE_BASE_PATH}/${courseDirName}/${DEFAULT_COURSE_PDF_FOLDER}/chapter${chapterNum}.pdf`;
+     const pdfPath = pdfOverride ? pdfOverride : defaultPdfPath;
+     console.log(`[Study Material Path Debug] Chapter ${chapterNum}: PDF path determined as: "${pdfPath}". Override value: "${pdfOverride}"`);
+     // Validate the final path looks like a PDF
+     const isPdfPathValid = pdfPath && pdfPath.toLowerCase().endsWith('.pdf');
+     if (!isPdfPathValid) {
+          console.warn(`[Study Material] Invalid PDF path determined: "${pdfPath}". PDF viewer will show an error or 'not available'.`);
+          // pdfPath will be used later, let the initPdfViewer handle display
+     }
+
+     // 7. Determine Video and Transcription Details for the *current* video index
      const currentVideo = chapterLectureVideos[initialVideoIndex];
      const videoId = currentVideo ? getYouTubeVideoId(currentVideo.url) : null;
-     const totalVideos = chapterLectureVideos.length;
-     currentVideoIndex = initialVideoIndex;
-     currentTranscriptionData = []; // Reset transcription
+     currentTranscriptionData = []; // Reset transcription data for the new video
 
-     // --- Determine SRT Filename ---
      let srtFilename = null;
      if (currentVideo) {
-         // Prioritize pre-defined srtFilename from the course data object
-         if (currentVideo.srtFilename && typeof currentVideo.srtFilename === 'string' && currentVideo.srtFilename.trim() !== '') {
-             srtFilename = currentVideo.srtFilename.trim();
-             console.log(`[SRT Filename] Using pre-defined srtFilename from course data: "${srtFilename}"`);
+         // Prioritize pre-defined srtFilename from chapterResources override first
+         if (chapterResources.lectureUrls?.[initialVideoIndex]?.srtFilename) {
+             srtFilename = chapterResources.lectureUrls[initialVideoIndex].srtFilename.trim();
+              console.log(`[SRT Filename] Using chapterResources override srtFilename: "${srtFilename}"`);
          } else {
-             // Fallback: Generate filename from video title
-             srtFilename = getSrtFilenameFromTitle(currentVideo.title);
-              console.log(`[SRT Filename] Generated srtFilename from title "${currentVideo.title}": "${srtFilename}"`);
+             // Fallback: Generate filename from video title using imported util
+             srtFilename = getSrtFilenameFromTitle(currentVideo.title); // Utility handles logging
          }
      }
-
-     // --- Determine Transcription Base Path ---
-     let transcriptionBasePath = COURSE_TRANSCRIPTION_BASE_PATH; // Default to global path from config.js
-     if (courseDef && courseDef.transcriptionPathPattern && typeof courseDef.transcriptionPathPattern === 'string' && courseDef.transcriptionPathPattern.trim() !== '') {
-         transcriptionBasePath = courseDef.transcriptionPathPattern.trim();
-         console.log(`[SRT Path] Using course-specific transcriptionPathPattern: "${transcriptionBasePath}"`);
-     } else {
-         console.warn(`[SRT Path] Course-specific transcriptionPathPattern not found or invalid for course "${courseId}". Falling back to global path: "${COURSE_TRANSCRIPTION_BASE_PATH}"`);
-         // transcriptionBasePath is already defaulted to the global path
-     }
-     // Ensure the base path ends with a forward slash
-     if (!transcriptionBasePath.endsWith('/')) {
-         transcriptionBasePath += '/';
-         console.log(`[SRT Path] Added trailing slash to base path: "${transcriptionBasePath}"`);
-     }
-
-     // --- Construct Final SRT Path ---
+     // Construct transcription path
+     const transcriptionBasePath = `${COURSE_BASE_PATH}/${courseDirName}/${DEFAULT_COURSE_TRANSCRIPTION_FOLDER}/`;
      const srtPath = srtFilename ? `${transcriptionBasePath}${srtFilename}` : null;
-     console.log('[SRT Load] Determined final SRT Path:', srtPath); // Log the final path being used
+     console.log('[SRT Load] Determined final SRT Path to fetch:', srtPath);
 
-     // --- Continue with other variables ---
-     const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+     // 8. Get User Progress Context
      const progress = userCourseProgressMap.get(courseId);
      const isViewer = progress?.enrollmentMode === 'viewer';
 
-     // --- Fetch necessary data ---
+     // 9. Fetch necessary data (Transcription, Video Durations)
      if (srtPath) {
-        // *** Use fetchAndParseSrt to load and parse the file ***
-        currentTranscriptionData = await fetchAndParseSrt(srtPath);
-        if(currentTranscriptionData.length === 0) {
-            console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path, permissions, and file content.`);
+        try {
+             currentTranscriptionData = await fetchAndParseSrt(srtPath); // Call with the full, final path
+             if(currentTranscriptionData.length === 0 && srtFilename) { // Check filename existed
+                 console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path, permissions, and file content.`);
+             } else if (currentTranscriptionData.length > 0) {
+                 console.log(`Successfully loaded ${currentTranscriptionData.length} transcription entries.`);
+             }
+        } catch (fetchError) {
+             console.error(`Error fetching or parsing SRT file ${srtPath}:`, fetchError);
+             // No need to reset currentTranscriptionData, it's already []
         }
      } else if (currentVideo) {
-         // Adjusted warning message if srtPath couldn't be constructed
-         console.warn(`Could not determine SRT path for video: ${currentVideo.title}. Filename might be missing, invalid, or generation failed.`);
+         console.log(`Could not determine SRT path for video: "${currentVideo.title}". Transcription will not be available.`);
      }
-     await fetchVideoDurationsIfNeeded(videoIdsForChapter);
-     // --- End Fetching ---
+     // Fetch durations for *all* videos in the chapter if needed
+     const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
+     await fetchVideoDurationsIfNeeded(videoIdsForChapter); // Updates global videoDurationMap
 
+     // 10. Build HTML Structure
+     // Video Navigation (if multiple videos)
      let videoNavHtml = '';
      if (totalVideos > 1) {
           videoNavHtml = `<div class="flex justify-between items-center mt-2 mb-1 text-sm">`;
-          if (initialVideoIndex > 0) videoNavHtml += `<button onclick="window.switchVideo(${initialVideoIndex - 1})" class="btn-secondary-small text-xs">← Previous Video</button>`;
-          else videoNavHtml += `<span></span>`; // Placeholder for spacing
+          // Previous Button
+          videoNavHtml += (initialVideoIndex > 0)
+              ? `<button onclick="window.switchVideo(${initialVideoIndex - 1})" class="btn-secondary-small text-xs flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" /></svg> Prev</button>`
+              : `<span class="w-16"></span>`; // Placeholder for spacing
+          // Count
           videoNavHtml += `<span class="text-muted font-medium">${initialVideoIndex + 1} / ${totalVideos}</span>`;
-          if (initialVideoIndex < totalVideos - 1) videoNavHtml += `<button onclick="window.switchVideo(${initialVideoIndex + 1})" class="btn-secondary-small text-xs">Next Video →</button>`;
-          else videoNavHtml += `<span></span>`; // Placeholder for spacing
+          // Next Button
+          videoNavHtml += (initialVideoIndex < totalVideos - 1)
+              ? `<button onclick="window.switchVideo(${initialVideoIndex + 1})" class="btn-secondary-small text-xs flex items-center gap-1">Next <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 1 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg></button>`
+              : `<span class="w-16"></span>`; // Placeholder for spacing
           videoNavHtml += `</div>`;
      }
-     const videoContainerId = `ytplayer-${chapterNum}-${initialVideoIndex}`;
+     const videoContainerId = `ytplayer-${chapterNum}-${initialVideoIndex}`; // Unique ID for YT player div
      const videoHtml = currentVideo ? `
         <div class="mb-4">
-             <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">${initialVideoIndex+1}. ${escapeHtml(currentVideo.title)}</h4>
+             <h4 class="text-md font-semibold mb-1 text-gray-800 dark:text-gray-300">${initialVideoIndex+1}. ${escapeHtml(currentVideo.title)}</h4>
             ${videoNavHtml}
-             <div id="${videoContainerId}" class="aspect-video bg-black rounded-lg overflow-hidden">
-                <!-- YouTube player will be embedded here -->
-                 <div class="flex items-center justify-center h-full"><p class="text-gray-400">Loading video...</p></div>
+             <div id="${videoContainerId}" class="aspect-video bg-black rounded-lg overflow-hidden shadow-inner">
+                 <div class="flex items-center justify-center h-full"><p class="text-gray-400 italic text-sm">Loading video...</p></div>
              </div>
-        </div>` : '<p class="text-muted text-center">No primary video available for this chapter part.</p>';
+        </div>` : '<p class="text-muted text-center p-4 bg-gray-100 dark:bg-gray-700 rounded">No primary video available for this chapter part.</p>';
 
-     // Modified Transcription HTML to provide better feedback if SRT path exists but data is empty
+     // Transcription Section
      const transcriptionHtml = currentVideo ? `
         <div class="mt-4 border-t pt-3 dark:border-gray-700">
              <h4 class="text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Transcription</h4>
-             <div id="transcription-content" class="text-xs leading-relaxed max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-600 scroll-smooth">
-                 <!-- Transcription lines will be rendered here by JS -->
-                 ${!srtPath ? '<p class="text-sm text-muted italic p-1">No transcription file determined for this video.</p>' : ''}
+             <div id="transcription-content" class="text-xs leading-relaxed max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-600 scroll-smooth transition-all duration-300 ease-in-out">
+                 ${!srtPath ? '<p class="text-sm text-muted italic p-1">No transcription file determined for this video.</p>' : (currentTranscriptionData.length === 0 ? '<p class="text-sm text-muted italic p-1">Loading transcription or none available...</p>' : '')}
+                 ${/* Lines will be rendered by renderTranscriptionLines */ ''}
              </div>
+             ${/* Only show toggle button if there's a valid SRT path */ ''}
              ${srtPath ? `<button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>` : ''}
          </div>` : '';
 
-     // Define pdfHtml here, potentially updated later
-     let pdfHtml = pdfPath ? `
-        <div class="mb-4 border-t pt-4 dark:border-gray-700">
-            <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
-            <div id="pdf-controls" class="mb-2 hidden items-center gap-3 justify-center">
-                 <button id="pdf-prev" class="btn-secondary-small text-xs">Prev</button>
-                 <span class="text-xs">Page <span id="pdf-page-num">1</span> / <span id="pdf-page-count">?</span></span>
-                 <button id="pdf-next" class="btn-secondary-small text-xs">Next</button>
-                 <button id="pdf-explain-button" onclick="window.handlePdfSnapshotForAI()" class="btn-secondary-small text-xs ml-auto" disabled title="Ask AI about the current page view">Ask AI (Page)</button>
-                 <button onclick="window.askAboutFullPdf()" class="btn-secondary-small text-xs" title="Ask AI about the entire PDF document">Ask AI (Doc)</button>
-            </div>
-            <div id="pdf-viewer-container" class="h-[70vh] relative overflow-auto border dark:border-gray-600 rounded bg-gray-200 dark:bg-gray-700">
-                <!-- PDF will be rendered here -->
-                <p class="text-center p-4 text-muted">Loading PDF...</p>
-            </div>
-        </div>` : '<p class="text-muted text-center">No PDF available for this chapter.</p>';
-
-     // *** MODIFICATION START: Check PDF Path Validity before init ***
+     // PDF Section (HTML structure, initialization happens later if path is valid)
+     let pdfHtml = '';
      let pdfInitializationNeeded = false;
-     if (!pdfPath || !pdfPath.toLowerCase().endsWith('.pdf')) {
-         console.error(`[PDF Path Error] Invalid PDF path determined for Chapter ${chapterNum}: "${pdfPath}". PDF Viewer will not be initialized.`);
-         pdfHtml = `<div class="mb-4 border-t pt-4 dark:border-gray-700"><h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4><p class="text-red-500 p-4 text-center bg-red-50 dark:bg-red-900/30 rounded border border-red-200 dark:border-red-700">Error: Could not determine a valid PDF file path for this chapter. Please check the course configuration. Path provided: "${escapeHtml(pdfPath || 'None')}"</p></div>`;
-         pdfInitializationNeeded = false; // Ensure it's false
+     if (isPdfPathValid) { // Check if the determined path is likely valid
+         pdfHtml = `
+            <div class="mb-4 border-t pt-4 dark:border-gray-700">
+                <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
+                <div id="pdf-controls" class="mb-2 hidden items-center gap-3 justify-center">
+                     <button id="pdf-prev" class="btn-secondary-small text-xs">Prev</button>
+                     <span class="text-xs">Page <span id="pdf-page-num">1</span> / <span id="pdf-page-count">?</span></span>
+                     <button id="pdf-next" class="btn-secondary-small text-xs">Next</button>
+                     <button id="pdf-explain-button" onclick="window.handlePdfSnapshotForAI()" class="btn-secondary-small text-xs ml-auto" disabled title="Ask AI about the current page view">Ask AI (Page)</button>
+                     <button onclick="window.askAboutFullPdf()" class="btn-secondary-small text-xs" disabled title="Ask AI about the entire PDF document">Ask AI (Doc)</button>
+                </div>
+                <div id="pdf-viewer-container" class="h-[70vh] relative overflow-auto border dark:border-gray-600 rounded bg-gray-200 dark:bg-gray-700">
+                    <p class="text-center p-4 text-muted">Loading PDF...</p>
+                </div>
+            </div>`;
+         pdfInitializationNeeded = true; // Mark for initialization
      } else {
-         pdfInitializationNeeded = true; // Path looks okay, mark for initialization
+         // Display message if PDF path is invalid or not found
+         pdfHtml = `<div class="mb-4 border-t pt-4 dark:border-gray-700"><h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4><p class="text-muted text-center p-4 bg-gray-100 dark:bg-gray-700 rounded">${pdfPath ? `Error: Invalid path configured: <code>${escapeHtml(pdfPath)}</code>` : 'No PDF available for this chapter.'}</p></div>`;
+         pdfInitializationNeeded = false;
      }
-     // *** MODIFICATION END ***
 
+     // AI Explanation Floating Panel
      const aiExplanationHtml = `
-         <div id="ai-explanation-area" class="fixed bottom-4 right-4 w-80 max-h-[60vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 hidden flex flex-col z-50 animate-fade-in">
-             <div class="flex justify-between items-center p-2 border-b dark:border-gray-600 flex-shrink-0">
+        <div id="ai-explanation-area" class="fixed bottom-4 right-4 w-80 max-w-[90vw] max-h-[60vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 hidden flex flex-col z-50 animate-fade-in">
+             <div class="flex justify-between items-center p-2 border-b dark:border-gray-600 flex-shrink-0 bg-gray-50 dark:bg-gray-700 rounded-t-lg">
                  <h5 class="text-sm font-semibold text-purple-700 dark:text-purple-300">AI Tutor</h5>
-                 <button onclick="this.closest('#ai-explanation-area').classList.add('hidden'); this.closest('#ai-explanation-area').innerHTML = '';" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">×</button>
+                 <button onclick="this.closest('#ai-explanation-area').classList.add('hidden'); this.closest('#ai-explanation-area').querySelector('#ai-explanation-content').innerHTML='';" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" title="Close AI Tutor">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" /></svg>
+                 </button>
              </div>
              <div id="ai-explanation-content" class="p-3 overflow-y-auto text-sm flex-grow">
                  <!-- AI content loads here -->
              </div>
              <!-- Follow-up input will be added dynamically -->
          </div>`;
-     const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
-     const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGeneration('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
 
-     // Assemble main content using potentially updated pdfHtml
+     // Skip Exam Button (only if not viewer)
+     const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
+     const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGenerationWrapper('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
+
+     // Assemble full page content
+     // *** MODIFIED: Use chapterTitle in H2 ***
      contentArea.innerHTML = `
         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
-             <div class="flex gap-2">
+             <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200" title="Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
+             <div class="flex gap-2 items-center">
                 ${skipExamButtonHtml}
-                 <button onclick="window.showCurrentCourseDashboard('${courseId}')" class="btn-secondary-small text-xs">Back to Dashboard</button>
+                 <button onclick="window.showCurrentCourseDashboardWrapper('${courseId}')" class="btn-secondary-small text-xs">Back to Menu</button>
             </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
              <!-- Left Column: Video & Transcription -->
-             <div> ${videoHtml} ${transcriptionHtml} </div>
+             <div class="space-y-4"> ${videoHtml} ${transcriptionHtml} </div>
+
              <!-- Right Column: PDF & Quick Actions -->
-             <div> ${pdfHtml}
-                  <div class="mt-4 border-t pt-4 dark:border-gray-700">
-                      <h4 class="text-md font-medium mb-2">Chapter Tools</h4>
+             <div class="space-y-4"> ${pdfHtml}
+                  <div class="border-t pt-4 dark:border-gray-700">
+                      <h4 class="text-md font-medium mb-2 text-gray-800 dark:text-gray-300">Chapter Tools</h4>
                       <div class="flex flex-wrap gap-2">
                            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
                            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
-                           <!-- MODIFICATION START: Added Formula Sheet and Chapter Summary buttons here -->
-                           <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI)">Formulas</button>
-                           <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI)">Summary</button>
-                           <!-- MODIFICATION END -->
+                           <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI Generated)">Formulas</button>
+                           <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI Generated)">Summary</button>
                       </div>
                   </div>
-                  <!-- Note: The hidden areas for Formula Sheet and Summary are KEPT here, as they are targeted by the display functions -->
-                  <div id="formula-sheet-area" class="mt-4 border-t pt-4 dark:border-gray-700 hidden">
-                       <div class="flex justify-between items-center mb-2">
-                           <h4 class="text-md font-medium">Formula Sheet</h4>
+                  <div id="formula-sheet-area" class="border-t pt-4 dark:border-gray-700 hidden">
+                       <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+                           <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Formula Sheet</h4>
                            <div class="flex gap-2">
-                               <button onclick="window.displayFormulaSheet('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Formula Sheet">Regenerate</button>
-                               <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-primary-small text-xs hidden" title="Download Formula Sheet as PDF">Download PDF</button>
+                               <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Formula Sheet">Regen</button>
+                               <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-primary-small text-xs hidden" title="Download Formula Sheet as PDF">PDF</button>
                            </div>
                        </div>
-                       <div id="formula-sheet-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600">Loading...</div>
+                       <div id="formula-sheet-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
                   </div>
-                  <div id="chapter-summary-area" class="mt-4 border-t pt-4 dark:border-gray-700 hidden">
-                       <div class="flex justify-between items-center mb-2">
-                            <h4 class="text-md font-medium">Chapter Summary</h4>
+                  <div id="chapter-summary-area" class="border-t pt-4 dark:border-gray-700 hidden">
+                       <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+                            <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Chapter Summary</h4>
                             <div class="flex gap-2">
-                                <button onclick="window.displayChapterSummary('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Chapter Summary">Regenerate</button>
-                                <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-primary-small text-xs hidden" title="Download Summary as PDF">Download PDF</button>
+                                <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Chapter Summary">Regen</button>
+                                <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-primary-small text-xs hidden" title="Download Summary as PDF">PDF</button>
                             </div>
                        </div>
-                       <div id="chapter-summary-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600">Loading...</div>
+                       <div id="chapter-summary-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
                   </div>
             </div>
         </div>
         ${aiExplanationHtml}
      `;
 
-     if (videoId) createYTPlayer(videoContainerId, videoId);
-     // Only call renderTranscriptionLines if we expect data or need to show the 'no transcription' message based on srtPath attempt
-     if (currentVideo) renderTranscriptionLines(); // Render initial transcription state (will show msg if no data/path)
-
-     // *** MODIFICATION START: Call initPdfViewer only if needed ***
-     if (pdfInitializationNeeded) {
-         await initPdfViewer(pdfPath); // Initialize PDF viewer
+     // 11. Initialize Dynamic Components
+     // Initialize YouTube Player if videoId exists
+     if (videoId) {
+         createYTPlayer(videoContainerId, videoId); // YT API handles queueing if not ready
      }
-     // *** MODIFICATION END ***
+     // Render transcription lines if data was loaded
+     if (currentVideo) {
+         renderTranscriptionLines(); // Render initial transcription state
+         highlightTranscriptionLine(); // Initial highlight attempt
+     }
 
-     highlightTranscriptionLine(); // Initial highlight attempt
-     checkAndMarkChapterStudied(courseId, chapterNum); // Check status on load
+     // Initialize PDF Viewer if path was valid
+     if (pdfInitializationNeeded) {
+         // Use await here to ensure PDF is attempted to load before potentially checking study status
+         await initPdfViewer(pdfPath);
+     } else {
+         hideLoading(); // Hide loading if no PDF to initialize
+     }
+
+     // Check study status after content is potentially loaded (PDF/Video)
+     // This relies on durations being available, might need adjustment if durations load late.
+     checkAndMarkChapterStudied(courseId, chapterNum);
+
 }
-// Assign to window scope for onclick handlers
-window.showCourseStudyMaterial = showCourseStudyMaterial;
-window.handlePdfSnapshotForAI = handlePdfSnapshotForAI; // Ensure PDF snapshot button works
-window.handleExplainSelection = handleExplainSelection; // Ensure text selection works
-window.askQuestionAboutTranscription = askQuestionAboutTranscription; // Ensure Ask AI (Transcript) works
-// displayFormulaSheet and displayChapterSummary are assigned within their definitions now
+// Assign wrappers to window scope for onclick handlers
+window.showCourseStudyMaterialWrapper = (courseId, chapterNum, initialVideoIndex = 0) => showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex);
+window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;
+window.handleExplainSelection = handleExplainSelection;
+window.askQuestionAboutTranscription = askQuestionAboutTranscription;
+window.showCurrentCourseDashboardWrapper = (courseId) => showCurrentCourseDashboard(courseId);
 
-// MODIFIED: Define triggerSkipExamGeneration within this module
+
+/**
+ * MODIFIED: triggerSkipExamGeneration
+ * Generates and starts a skip exam for a chapter using existing MCQs from the subject's Markdown file.
+ * @param {string} courseId - The ID of the course.
+ * @param {number} chapterNum - The chapter number for the skip exam.
+ */
 export async function triggerSkipExamGeneration(courseId, chapterNum) {
-     if (!currentUser) { alert("Log in required."); return; }
-     if (!confirm(`Generate and start a Skip Exam for Chapter ${chapterNum}? Passing this exam will mark the chapter as studied.`)) return;
-     showLoading(`Generating Skip Exam for Chapter ${chapterNum}...`);
+     if (!currentUser || !data) { alert("Log in and load data required."); return; }
+     const courseDef = globalCourseDataMap.get(courseId);
+     if (!courseDef) { alert("Course definition not found."); return; }
+
+     const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
+     if (!confirm(`Generate and start a Skip Exam for Chapter ${chapterNum} using existing chapter questions?\nPassing this exam (${skipExamThreshold}%) will mark the chapter as studied.`)) return;
+
+     showLoading(`Preparing Skip Exam for Chapter ${chapterNum}...`);
+
      try {
-          // 1. Generate the raw exam text (MCQs only from AI)
-          const rawMcqText = await generateSkipExam(courseId, chapterNum);
-          if (!rawMcqText) throw new Error("AI failed to generate MCQ content.");
+         // 1. Get Subject Context and Markdown Filename
+         const relatedSubjectId = courseDef.relatedSubjectId;
+         if (!relatedSubjectId) throw new Error("Course definition is missing the related subject ID.");
+         const subject = data.subjects?.[relatedSubjectId];
+         if (!subject) throw new Error(`Subject data not found for ID: ${relatedSubjectId}`);
+         const subjectMdFilename = subject.fileName;
+         if (!subjectMdFilename) throw new Error(`Markdown filename not found for subject: ${subject.name}`);
 
-          // 2. Parse the raw text to get structured MCQs and answers
-          const { questions: parsedMcqs, answers: mcqAnswers } = parseSkipExamText(rawMcqText, chapterNum);
-          if (!parsedMcqs || parsedMcqs.length === 0) {
-               throw new Error("Failed to parse valid MCQs from the generated text. AI output might be malformed.");
-          }
-          console.log(`Parsed ${parsedMcqs.length} MCQs for skip exam.`);
+         // 2. Fetch the Subject's Markdown Content
+         let mdContent;
+         try {
+             const response = await fetch(`./${subjectMdFilename}?cacheBust=${Date.now()}`);
+             if (!response.ok) {
+                 throw new Error(`HTTP error ${response.status} fetching ${subjectMdFilename}`);
+             }
+             mdContent = await response.text();
+             if (!mdContent) throw new Error(`Markdown file "${subjectMdFilename}" is empty or could not be read.`);
+             console.log(`Fetched MD content for ${subjectMdFilename}`);
+         } catch (fetchError) {
+             console.error("Error fetching subject Markdown:", fetchError);
+             throw new Error(`Could not load questions file: ${subjectMdFilename}. ${fetchError.message}`);
+         }
 
-          // 3. Prepare the online test state
-          const examId = `${courseId}-skip-ch${chapterNum}-${Date.now()}`;
-          const onlineTestState = {
-               examId: examId,
-               questions: parsedMcqs, // Use only parsed MCQs for skip exam
-               correctAnswers: mcqAnswers,
-               userAnswers: {},
-               allocation: null, // No complex allocation for skip exam
-               startTime: Date.now(),
-               timerInterval: null,
-               currentQuestionIndex: 0,
-               status: 'active',
-               // Shorter duration for skip exam (e.g., 1.5 min per MCQ)
-               durationMinutes: Math.max(15, Math.min(60, parsedMcqs.length * 1.5)),
-               courseContext: {
-                    isCourseActivity: true, // It's part of the course flow
-                    courseId: courseId,
-                    activityType: 'skip_exam',
-                    activityId: `chapter${chapterNum}`, // Unique identifier
-                    chapterNum: chapterNum,
-                    isSkipExam: true // Explicit flag
-               }
-          };
-          setCurrentOnlineTestState(onlineTestState);
+         // 3. Get Available Questions for the Chapter
+         const chapterData = subject.chapters?.[chapterNum];
+         const availableQNumbers = chapterData?.available_questions;
+         if (!availableQNumbers || availableQNumbers.length === 0) {
+             throw new Error(`No MCQs available for Chapter ${chapterNum} in subject "${subject.name}". Check the Markdown file and data state.`);
+         }
+         console.log(`Available MCQs for Ch ${chapterNum}: ${availableQNumbers.join(', ')}`);
 
-          hideLoading();
-          launchOnlineTestUI();
+         // 4. Select Random MCQs
+         const skipExamMcqCount = EXAM_QUESTION_COUNTS.skip_exam || 20; // Get count from config
+         if (availableQNumbers.length < skipExamMcqCount) {
+             console.warn(`Chapter ${chapterNum} has only ${availableQNumbers.length} available MCQs, less than the desired ${skipExamMcqCount}. Using all available.`);
+         }
+
+         // --- Fisher-Yates Shuffle ---
+         const shuffledNumbers = [...availableQNumbers]; // Create a copy
+         for (let i = shuffledNumbers.length - 1; i > 0; i--) {
+             const j = Math.floor(Math.random() * (i + 1));
+             [shuffledNumbers[i], shuffledNumbers[j]] = [shuffledNumbers[j], shuffledNumbers[i]];
+         }
+         // --- End Shuffle ---
+
+         const selectedNumbersList = shuffledNumbers.slice(0, skipExamMcqCount);
+         if (selectedNumbersList.length === 0) {
+            throw new Error(`Failed to select any MCQs for Chapter ${chapterNum}.`);
+         }
+         console.log(`Selected ${selectedNumbersList.length} MCQs for Skip Exam: ${selectedNumbersList.join(', ')}`);
+
+         // 5. Create Selection Map and Extract Questions
+         const selectedMcqMap = { [chapterNum]: selectedNumbersList };
+         const extracted = extractQuestionsFromMarkdown(mdContent, selectedMcqMap);
+
+         if (!extracted || !extracted.questions || extracted.questions.length === 0) {
+             console.error("Extraction Map:", selectedMcqMap);
+             throw new Error(`Failed to extract the selected MCQs (${selectedNumbersList.join(', ')}) from "${subjectMdFilename}". Check Markdown formatting.`);
+         }
+         if (extracted.questions.length < selectedNumbersList.length) {
+             console.warn(`Extraction Warning: Requested ${selectedNumbersList.length} MCQs, but only extracted ${extracted.questions.length}. Some might be missing/malformed in the MD file.`);
+         }
+         console.log(`Successfully extracted ${extracted.questions.length} MCQs for skip exam.`);
+
+         // 6. Prepare Online Test State
+         const examId = `${courseId}-skip-ch${chapterNum}-${Date.now()}`;
+         // Use skip exam duration from config or calculate based on extracted count
+         const durationMinutes = EXAM_DURATIONS_MINUTES.skip_exam || Math.max(15, Math.min(60, Math.round(extracted.questions.length * 1.5)));
+
+         const onlineTestState = {
+             examId: examId,
+             questions: extracted.questions, // Use the extracted MCQs
+             correctAnswers: extracted.answers, // Use answers from extraction
+             userAnswers: {},
+             allocation: null, // No allocation map needed for single-chapter skip exam
+             startTime: Date.now(),
+             timerInterval: null,
+             currentQuestionIndex: 0,
+             status: 'active',
+             durationMinutes: durationMinutes,
+             subjectId: relatedSubjectId, // Store the related subject ID
+             // Updated Course Context
+             courseContext: {
+                 isCourseActivity: true,
+                 courseId: courseId,
+                 activityType: 'skip_exam', // Correct type
+                 activityId: `chapter${chapterNum}`,
+                 chapterNum: chapterNum,
+                 isSkipExam: true // Explicit flag
+             }
+         };
+
+         // 7. Set state and launch UI
+         setCurrentOnlineTestState(onlineTestState);
+         hideLoading();
+         launchOnlineTestUI();
 
      } catch (error) {
           hideLoading();
-          console.error(`Error generating/starting Skip Exam for Chapter ${chapterNum}:`, error);
+          console.error(`Error preparing Skip Exam for Chapter ${chapterNum}:`, error);
           alert(`Could not start Skip Exam: ${error.message}`);
      }
 }
-window.triggerSkipExamGeneration = triggerSkipExamGeneration; // Assign to window scope
-window.showCurrentCourseDashboard = showCurrentCourseDashboard; // Ensure Back button works
+// Wrapper for window scope
+window.triggerSkipExamGenerationWrapper = (courseId, chapterNum) => triggerSkipExamGeneration(courseId, chapterNum);
+// Ensure Back button (showCurrentCourseDashboard) is available if needed
+window.showCurrentCourseDashboard = showCurrentCourseDashboard;
 
 // --- END OF FILE ui_course_study_material.js ---

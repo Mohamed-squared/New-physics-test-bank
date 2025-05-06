@@ -17,6 +17,18 @@ let replyingToMessageId = null;
 let replyingToSenderName = null;
 let replyingToPreview = null;
 
+// --- NEW: Module-level variables for mention suggestions ---
+let mentionSuggestions = [];
+let activeSuggestionIndex = -1;
+let currentMentionQuery = '';
+let currentMentionTriggerPosition = -1; // Start index of the '@' symbol
+let mentionPopup = null; // To hold the dynamically created popup element
+let mentionListElement = null; // To hold the UL element within the popup
+let isFetchingSuggestions = false; // Debounce flag
+let suggestionFetchTimeout = null; // For debouncing
+// --- END NEW ---
+
+
 /**
  * Converts specific Markdown patterns within escaped HTML text to HTML tags.
  * MUST be applied *after* initial HTML escaping.
@@ -777,6 +789,7 @@ export function showGlobalChat() {
                  unsubscribeChat();
                  unsubscribeChat = null;
             }
+             hideMentionSuggestions(); // Hide suggestions if modal is force-removed
         }
         // Wait a short moment for the close animation/cleanup before recreating
         setTimeout(() => createAndShowChatModal(), 100);
@@ -798,7 +811,7 @@ function createAndShowChatModal() {
      // *** MODIFIED: Added "View Pinned" button in the header ***
      const modalHtml = `
         <div id="global-chat-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 dark:bg-opacity-75 flex items-center justify-center z-50 p-0 animate-fade-in">
-            <div class="bg-white dark:bg-gray-800 shadow-xl w-full h-full flex flex-col">
+            <div class="bg-white dark:bg-gray-800 shadow-xl w-full h-full flex flex-col relative"> <!-- Added relative for popup positioning -->
                 <!-- Header -->
                 <div class="flex justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
                     <div class="flex items-center gap-2">
@@ -843,6 +856,10 @@ function createAndShowChatModal() {
                         </button>
                     </form>
                 </div>
+                <!-- NEW: Mention Suggestion Popup (initially hidden) -->
+                <div id="mention-suggestion-popup" class="hidden">
+                    <ul></ul>
+                </div>
             </div>
         </div>
     `;
@@ -854,8 +871,16 @@ function createAndShowChatModal() {
     const sendForm = document.getElementById('chat-send-form');
     const closeButton = document.getElementById('close-chat-btn');
     const chatModalElement = document.getElementById('global-chat-modal');
-    // *** MODIFIED: Get reference to the new button ***
     const viewPinnedButton = document.getElementById('view-pinned-btn');
+
+    // --- NEW: Get mention popup elements ---
+    mentionPopup = document.getElementById('mention-suggestion-popup');
+    if (mentionPopup) {
+        mentionListElement = mentionPopup.querySelector('ul');
+    } else {
+        console.error("Failed to find #mention-suggestion-popup in the DOM.");
+    }
+    // --- END NEW ---
 
     // Auto-resize textarea
     const adjustTextareaHeight = () => {
@@ -872,14 +897,25 @@ function createAndShowChatModal() {
             sendButton.classList.toggle('self-center', newHeight <= 45);
          }
     };
-    chatInputElement.addEventListener('input', adjustTextareaHeight);
-    requestAnimationFrame(adjustTextareaHeight);
+    // --- MODIFIED: chatInputElement listeners ---
+    if (chatInputElement) {
+        chatInputElement.addEventListener('input', handleChatInput);
+        chatInputElement.addEventListener('keydown', handleChatKeyDown);
+        chatInputElement.addEventListener('blur', () => {
+             // Delay hiding to allow click on suggestion item
+            setTimeout(hideMentionSuggestions, 150);
+        });
+        requestAnimationFrame(adjustTextareaHeight); // Initial height adjustment
+    }
+    // --- END MODIFICATION ---
+
 
     let handleEscKeyListener = null;
 
     const closeChat = () => {
         console.log("[closeChat] Function called.");
         cancelReply();
+        hideMentionSuggestions(); // --- NEW: Hide suggestions on close ---
         if (unsubscribeChat) {
             console.log("[closeChat] Unsubscribing from chat messages.");
             unsubscribeChat();
@@ -922,29 +958,16 @@ function createAndShowChatModal() {
         setTimeout(adjustTextareaHeight, 0);
     });
 
-    chatInputElement.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendForm.requestSubmit();
-            setTimeout(adjustTextareaHeight, 0);
-        } else if (e.key === 'Enter' && e.shiftKey) {
-             setTimeout(adjustTextareaHeight, 0);
-        }
-        setTimeout(adjustTextareaHeight, 0);
-    });
-
     if (closeButton) {
         closeButton.addEventListener('click', closeChat);
     } else {
         console.error("[createAndShowChatModal] Critical Error: Close button not found!");
     }
 
-    // *** MODIFIED: Add event listener for the "View Pinned" button ***
     if (viewPinnedButton) {
-        // Remove inline handler if accidentally added
         viewPinnedButton.onclick = null;
         viewPinnedButton.addEventListener('click', () => {
-            showPinnedMessages(); // Call the placeholder function
+            showPinnedMessages();
         });
          console.log("[createAndShowChatModal] Added listener to 'View Pinned' button.");
     } else {
@@ -953,6 +976,13 @@ function createAndShowChatModal() {
 
     handleEscKeyListener = (event) => {
         // Check if modal exists and if the event target is inside the modal
+        // --- MODIFIED: If suggestion popup is open, Esc closes it first ---
+        if (event.key === 'Escape' && mentionPopup && !mentionPopup.classList.contains('hidden')) {
+            event.preventDefault();
+            hideMentionSuggestions();
+            return;
+        }
+        // --- END MODIFICATION ---
         if (event.key === 'Escape' && chatModalElement && chatModalElement.contains(event.target)) {
             console.log("[handleEscKey] Escape key pressed inside modal, closing chat.");
             closeChat();
@@ -977,15 +1007,363 @@ function createAndShowChatModal() {
         console.log("[createAndShowChatModal] Added chat logo style container (styles in styles.css).");
     }
 
-    // *** MODIFIED: Expose new functions globally ***
     window.deleteChatMessage = deleteChatMessage;
     window.startReply = startReply;
     window.cancelReply = cancelReply;
-    window.togglePinMessage = togglePinMessage; // Added
-    window.showPinnedMessages = showPinnedMessages; // Added
+    window.togglePinMessage = togglePinMessage;
+    window.showPinnedMessages = showPinnedMessages;
 
     console.log("[createAndShowChatModal] Chat modal setup complete.");
 }
+
+// --- NEW: Mention Suggestion Functions ---
+
+/**
+ * Fetches user suggestions based on the query.
+ * @param {string} query - The text after '@' to search for.
+ */
+async function fetchUserSuggestions(query) {
+    if (!db) {
+        console.warn("[fetchUserSuggestions] Firestore not initialized.");
+        return [];
+    }
+    if (typeof query !== 'string') {
+        console.warn("[fetchUserSuggestions] Invalid query type.");
+        return [];
+    }
+
+    isFetchingSuggestions = true;
+    const queryLower = query.toLowerCase();
+    console.log(`[fetchUserSuggestions] Fetching for query: "${queryLower}"`);
+
+    try {
+        const usersRef = db.collection('users');
+        let firestoreQuery;
+
+        if (queryLower === '') { // If query is empty (e.g., just "@"), don't fetch specific users yet.
+            // Potentially fetch recent/frequent mentions here, or just return empty.
+            // For now, return empty to avoid overwhelming with all users.
+            console.log("[fetchUserSuggestions] Empty query, returning no suggestions for now.");
+            mentionSuggestions = [];
+            renderMentionSuggestions(); // This will hide if empty
+            isFetchingSuggestions = false;
+            return [];
+        }
+
+        // Search by username (case-insensitive prefix)
+        firestoreQuery = usersRef
+            .where('username', '>=', queryLower)
+            .where('username', '<=', queryLower + '\uf8ff')
+            .limit(10);
+
+        const snapshot = await firestoreQuery.get();
+        const suggestions = [];
+        snapshot.forEach(doc => {
+            const userData = doc.data();
+            // Ensure essential fields exist, especially username
+            if (userData.username) {
+                 suggestions.push({
+                    id: doc.id,
+                    username: userData.username, // Use the actual username from DB
+                    displayName: userData.displayName || userData.username,
+                    photoURL: userData.photoURL || DEFAULT_PROFILE_PIC_URL
+                });
+            }
+        });
+        
+        // Add "@everyone" as a fixed suggestion if query matches "every" or similar
+        if ("everyone".startsWith(queryLower) && queryLower.length > 0) {
+            const everyoneExists = suggestions.some(s => s.username.toLowerCase() === "everyone");
+            if (!everyoneExists) {
+                suggestions.unshift({ // Add to the beginning
+                    id: "everyone_virtual",
+                    username: "everyone",
+                    displayName: "Everyone",
+                    photoURL: DEFAULT_PROFILE_PIC_URL // Or a specific icon
+                });
+            }
+        }
+
+
+        console.log(`[fetchUserSuggestions] Found ${suggestions.length} suggestions.`);
+        mentionSuggestions = suggestions;
+        renderMentionSuggestions(); // Update UI with new suggestions
+
+        isFetchingSuggestions = false;
+        return suggestions;
+
+    } catch (error) {
+        console.error("[fetchUserSuggestions] Error fetching user suggestions:", error);
+        mentionSuggestions = [];
+        renderMentionSuggestions(); // Hide UI on error
+        isFetchingSuggestions = false;
+        return [];
+    }
+}
+
+/**
+ * Renders the mention suggestions in the popup.
+ */
+function renderMentionSuggestions() {
+    if (!mentionPopup || !mentionListElement) {
+        console.warn("[renderMentionSuggestions] Popup or list element not found.");
+        return;
+    }
+
+    const chatInputElement = document.getElementById('global-chat-input');
+    if (!chatInputElement || document.activeElement !== chatInputElement) {
+        // If input not focused, don't show suggestions
+        hideMentionSuggestions();
+        return;
+    }
+
+    mentionListElement.innerHTML = ''; // Clear previous suggestions
+    activeSuggestionIndex = -1;
+
+    if (mentionSuggestions.length === 0) {
+        hideMentionSuggestions();
+        return;
+    }
+
+    mentionSuggestions.forEach((user, index) => {
+        const li = document.createElement('li');
+        li.dataset.username = user.username; // Store username for selection
+
+        const img = document.createElement('img');
+        img.src = user.photoURL;
+        img.alt = user.displayName;
+        // Tailwind classes can be added here or via CSS: "w-5 h-5 rounded-full mr-2"
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = user.displayName;
+        nameSpan.classList.add('font-medium'); // From styles.css
+
+        const usernameSpan = document.createElement('span');
+        usernameSpan.textContent = `@${user.username}`;
+        usernameSpan.classList.add('text-xs', 'ml-2'); // From styles.css
+
+        li.appendChild(img);
+        li.appendChild(nameSpan);
+        li.appendChild(usernameSpan);
+
+        li.addEventListener('mouseover', () => {
+            if (activeSuggestionIndex !== -1 && mentionListElement.children[activeSuggestionIndex]) {
+                mentionListElement.children[activeSuggestionIndex].classList.remove('active');
+            }
+            activeSuggestionIndex = index;
+            li.classList.add('active');
+        });
+        li.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent blur if any
+            selectMentionSuggestion(user.username);
+        });
+        mentionListElement.appendChild(li);
+    });
+
+    // Position and show popup (above input)
+    const inputRect = chatInputElement.getBoundingClientRect();
+    const modalRect = document.getElementById('global-chat-modal').firstElementChild.getBoundingClientRect(); // Get the inner modal div
+
+    mentionPopup.style.bottom = `${modalRect.height - inputRect.top + modalRect.top + 8}px`; // 8px spacing
+    mentionPopup.style.left = `${inputRect.left - modalRect.left}px`;
+    mentionPopup.style.minWidth = `${inputRect.width}px`; // Match input width
+    mentionPopup.classList.remove('hidden');
+}
+
+/**
+ * Hides the mention suggestion popup.
+ */
+function hideMentionSuggestions() {
+    if (mentionPopup) {
+        mentionPopup.classList.add('hidden');
+    }
+    mentionSuggestions = [];
+    activeSuggestionIndex = -1;
+    currentMentionQuery = '';
+    currentMentionTriggerPosition = -1;
+}
+
+/**
+ * Updates the active suggestion based on arrow key navigation.
+ * @param {number} direction - 1 for down, -1 for up.
+ */
+function updateActiveSuggestion(direction) {
+    if (mentionSuggestions.length === 0 || !mentionListElement) return;
+
+    const children = mentionListElement.children;
+    if (activeSuggestionIndex !== -1 && children[activeSuggestionIndex]) {
+        children[activeSuggestionIndex].classList.remove('active');
+    }
+
+    activeSuggestionIndex += direction;
+
+    if (activeSuggestionIndex < 0) {
+        activeSuggestionIndex = mentionSuggestions.length - 1;
+    } else if (activeSuggestionIndex >= mentionSuggestions.length) {
+        activeSuggestionIndex = 0;
+    }
+
+    if (children[activeSuggestionIndex]) {
+        children[activeSuggestionIndex].classList.add('active');
+        // Scroll into view
+        children[activeSuggestionIndex].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+}
+
+/**
+ * Inserts the selected mention into the chat input.
+ * @param {string} [selectedUsername] - The username to insert. If null, uses current active suggestion.
+ */
+function selectMentionSuggestion(selectedUsername) {
+    const chatInputElement = document.getElementById('global-chat-input');
+    if (!chatInputElement) return;
+
+    let usernameToInsert = selectedUsername;
+    if (!usernameToInsert && activeSuggestionIndex !== -1 && mentionSuggestions[activeSuggestionIndex]) {
+        usernameToInsert = mentionSuggestions[activeSuggestionIndex].username;
+    }
+
+    if (!usernameToInsert) return;
+
+    const currentText = chatInputElement.value;
+    const cursorPos = chatInputElement.selectionStart;
+
+    // Ensure currentMentionTriggerPosition is valid
+    if (currentMentionTriggerPosition === -1) {
+        console.warn("[selectMentionSuggestion] Trigger position not set.");
+        hideMentionSuggestions();
+        return;
+    }
+
+    const textBeforeMention = currentText.substring(0, currentMentionTriggerPosition);
+    // The text after the part we are replacing (e.g. user typed "@jo" and cursor is after "o")
+    // currentMentionTriggerPosition is index of '@'
+    // currentMentionQuery is "jo"
+    // The part to remove is "@" + currentMentionQuery
+    const textAfterMentionOriginal = currentText.substring(currentMentionTriggerPosition + 1 + currentMentionQuery.length);
+
+    chatInputElement.value = textBeforeMention + "@" + usernameToInsert + " " + textAfterMentionOriginal;
+    
+    const newCursorPos = currentMentionTriggerPosition + 1 + usernameToInsert.length + 1; // after @username and space
+    chatInputElement.focus();
+    chatInputElement.setSelectionRange(newCursorPos, newCursorPos);
+
+    hideMentionSuggestions();
+    setTimeout(() => { // Adjust height after DOM update
+        const adjustTextareaHeightEvent = new Event('input');
+        chatInputElement.dispatchEvent(adjustTextareaHeightEvent);
+    }, 0);
+}
+
+/**
+ * Handles the 'input' event on the chat textarea for mentions.
+ */
+function handleChatInput(event) {
+    const inputElement = event.target;
+    const text = inputElement.value;
+    const cursorPos = inputElement.selectionStart;
+
+    // Call adjustTextareaHeight directly from here as well
+    const adjustTextareaHeight = () => {
+        if (!inputElement) return;
+        inputElement.style.height = 'auto';
+        const maxHeight = 120;
+        const scrollHeight = inputElement.scrollHeight;
+        const newHeight = Math.min(scrollHeight, maxHeight);
+        inputElement.style.height = `${newHeight}px`;
+        inputElement.style.overflowY = newHeight >= maxHeight ? 'auto' : 'hidden';
+        const sendButton = document.getElementById('send-chat-btn');
+         if (sendButton) {
+            sendButton.classList.toggle('self-end', newHeight > 45);
+            sendButton.classList.toggle('self-center', newHeight <= 45);
+         }
+    };
+    adjustTextareaHeight(); // Call height adjustment
+
+    // Regex to find the start of a mention trigger up to the cursor
+    // Looks for "@" followed by word characters, not preceded by a non-space character.
+    // Example: "hello @joh" - `text.substring(0, cursorPos)` gives "hello @joh"
+    // Regex `(?:^|\s)@(\w*)$` on this substring.
+    const textBeforeCursor = text.substring(0, cursorPos);
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([a-zA-Z0-9_]*)$/);
+
+    if (mentionMatch) {
+        currentMentionTriggerPosition = textBeforeCursor.lastIndexOf('@');
+        currentMentionQuery = mentionMatch[1]; // The text after "@"
+
+        // Debounce fetching
+        clearTimeout(suggestionFetchTimeout);
+        if (currentMentionQuery.length > 0) { // Only fetch if query has content
+             suggestionFetchTimeout = setTimeout(() => {
+                if (!isFetchingSuggestions) {
+                    fetchUserSuggestions(currentMentionQuery);
+                }
+            }, 250); // 250ms debounce
+        } else { // If just "@" is typed, or "@ "
+             // Optionally show all users or recent, for now hide.
+             hideMentionSuggestions();
+        }
+
+    } else {
+        hideMentionSuggestions();
+    }
+}
+
+/**
+ * Handles 'keydown' events on the chat textarea for mention navigation and selection.
+ */
+function handleChatKeyDown(event) {
+    const inputElement = event.target;
+     // Call adjustTextareaHeight for Shift+Enter case early
+    if (event.key === 'Enter' && event.shiftKey) {
+        setTimeout(() => { // Adjust height after DOM update from newline
+            const adjustTextareaHeightEvent = new Event('input');
+            inputElement.dispatchEvent(adjustTextareaHeightEvent);
+        }, 0);
+    }
+    
+    if (mentionPopup && !mentionPopup.classList.contains('hidden') && mentionSuggestions.length > 0) {
+        switch (event.key) {
+            case 'ArrowUp':
+                event.preventDefault();
+                updateActiveSuggestion(-1);
+                break;
+            case 'ArrowDown':
+                event.preventDefault();
+                updateActiveSuggestion(1);
+                break;
+            case 'Enter':
+            case 'Tab':
+                if (activeSuggestionIndex !== -1) {
+                    event.preventDefault();
+                    selectMentionSuggestion();
+                } else { // If no suggestion selected, allow Enter to send message
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault();
+                        document.getElementById('chat-send-form')?.requestSubmit();
+                         setTimeout(() => { // Adjust height after send
+                            const adjustTextareaHeightEvent = new Event('input');
+                            inputElement.dispatchEvent(adjustTextareaHeightEvent);
+                        }, 0);
+                    }
+                }
+                break;
+            case 'Escape':
+                event.preventDefault();
+                hideMentionSuggestions();
+                break;
+        }
+    } else if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault(); // Prevent newline if suggestions are not showing
+        document.getElementById('chat-send-form')?.requestSubmit();
+        setTimeout(() => { // Adjust height after send
+            const adjustTextareaHeightEvent = new Event('input');
+            inputElement.dispatchEvent(adjustTextareaHeightEvent);
+        }, 0);
+    }
+}
+
+// --- END NEW Mention Suggestion Functions ---
 
 
 // Make top-level functions globally accessible if needed by other parts of the app

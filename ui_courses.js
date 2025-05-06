@@ -1,14 +1,53 @@
 // --- START OF FILE ui_courses.js ---
 
+// --- START OF FILE ui_courses.js ---
+
 // ui_courses.js
 import { currentUser, db, userCourseProgressMap, globalCourseDataMap, activeCourseId, setActiveCourseId, updateGlobalCourseData } from './state.js';
-import { ADMIN_UID, FOP_COURSE_ID, FOP_COURSE_DEFINITION } from './config.js'; // Import FoP constants
+// *** MODIFIED: Import new path constants ***
+import { ADMIN_UID, FOP_COURSE_ID, FOP_COURSE_DEFINITION, COURSE_BASE_PATH, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER } from './config.js'; // Import FoP constants & PATHS
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
 import { showCourseEnrollment } from './ui_course_enrollment.js';
-import { updateCourseDefinition } from './firebase_firestore.js';
+// MODIFIED: Import relevant functions from firebase_firestore.js (Removed reportCourseInFirestore)
+import { addCourseToFirestore, updateCourseDefinition } from './firebase_firestore.js';
 // Import navigateToCourseDashboard from ui_course_dashboard
 import { navigateToCourseDashboard } from './ui_course_dashboard.js';
+// *** NEW: Import filename utility ***
+import { cleanTextForFilename } from './filename_utils.js'; // Assuming this exists elsewhere
+
+
+// --- Helper Function to Construct Dynamic Paths ---
+function getDynamicCoursePath(courseData, resourceType, chapterNum = null) {
+    if (!courseData || !courseData.courseDirName) {
+        console.warn(`Cannot generate dynamic path: Missing courseData or courseDirName for course ID ${courseData?.id}`);
+        return null;
+    }
+    const basePath = COURSE_BASE_PATH;
+    const dirName = courseData.courseDirName;
+
+    switch (resourceType) {
+        case 'pdf':
+            if (chapterNum === null) return null; // Need chapter number for specific PDF
+            // Check for override first
+            const pdfOverride = courseData.chapterResources?.[chapterNum]?.pdfPath;
+            if (pdfOverride) {
+                console.log(`[Path Util] Using PDF override path for Ch ${chapterNum}: ${pdfOverride}`);
+                return pdfOverride;
+            }
+            // Construct dynamic path
+            return `${basePath}/${dirName}/${DEFAULT_COURSE_PDF_FOLDER}/chapter${chapterNum}.pdf`;
+        case 'transcription_base':
+            // Construct dynamic base path for transcriptions
+            return `${basePath}/${dirName}/${DEFAULT_COURSE_TRANSCRIPTION_FOLDER}/`;
+        // Add cases for 'problems_base', 'problem_text_mcq', etc. if needed later
+        default:
+            console.warn(`[Path Util] Unknown resource type: ${resourceType}`);
+            return null;
+    }
+}
+// --- End Helper Function ---
+
 
 // --- Course Data Functions (Firestore interaction) ---
 async function fetchCourses(searchTerm = '', searchTag = '') {
@@ -27,49 +66,55 @@ async function fetchCourses(searchTerm = '', searchTag = '') {
         let courses = [];
         snapshot.forEach(doc => {
             const courseData = { id: doc.id, ...doc.data() };
-            // Ensure necessary fields are present, especially playlist URLs array
+            // Ensure necessary fields are present
             if (!courseData.youtubePlaylistUrls && courseData.youtubePlaylistUrl) {
                 courseData.youtubePlaylistUrls = [courseData.youtubePlaylistUrl];
             } else {
                 courseData.youtubePlaylistUrls = courseData.youtubePlaylistUrls || [];
             }
             courseData.chapterResources = courseData.chapterResources || {};
-            // --- NEW: Initialize Image URLs ---
             courseData.imageUrl = courseData.imageUrl || null;
             courseData.coverUrl = courseData.coverUrl || null;
-            // --- End NEW ---
+            courseData.courseDirName = courseData.courseDirName || null; // Ensure courseDirName exists
+            // --- MODIFIED: Ensure prereqs/coreqs are arrays of strings ---
+            courseData.prerequisites = Array.isArray(courseData.prerequisites)
+                                       ? courseData.prerequisites.filter(item => typeof item === 'string')
+                                       : [];
+            courseData.corequisites = Array.isArray(courseData.corequisites)
+                                      ? courseData.corequisites.filter(item => typeof item === 'string')
+                                      : [];
+            // --- End MODIFICATION ---
             courses.push(courseData);
         });
 
-        // --- START: FoP Injection Logic (If *still* not found after Firestore check in loadGlobalCourseDefinitions) ---
-        // This logic primarily helps if loadGlobalCourseDefinitions failed or hasn't run yet.
+        // FoP Injection Logic (If *still* not found after Firestore check)
         const fopInList = courses.some(c => c.id === FOP_COURSE_ID);
         const fopInGlobalMap = globalCourseDataMap.has(FOP_COURSE_ID);
 
         if (!fopInList && !fopInGlobalMap) {
-             // This scenario should be rare if loadGlobalCourseDefinitions ran correctly and created FoP if missing.
-             // Add FoP from local config as a last resort for display in this list.
              console.warn(`FoP course ${FOP_COURSE_ID} not found in fetched courses or global map. Adding from local config for display.`);
             const fopDef = {
                 ...FOP_COURSE_DEFINITION,
-                id: FOP_COURSE_ID, // Ensure ID is set
-                status: 'approved' // Treat as approved locally
+                id: FOP_COURSE_ID,
+                status: 'approved'
             };
-             // Ensure expected fields are present like in Firestore fetch
-             if (!fopDef.youtubePlaylistUrls && fopDef.youtubePlaylistUrl) {
-                 fopDef.youtubePlaylistUrls = [fopDef.youtubePlaylistUrl];
-             } else {
-                 fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || [];
-             }
+             // Ensure structure matches Firestore fetch
+             if (!fopDef.youtubePlaylistUrls && fopDef.youtubePlaylistUrl) fopDef.youtubePlaylistUrls = [fopDef.youtubePlaylistUrl];
+             else fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || [];
              fopDef.chapterResources = fopDef.chapterResources || {};
-             fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0); // Ensure totalChapters exists
-             // --- NEW: Initialize Image URLs for FoP injection ---
+             fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
              fopDef.imageUrl = fopDef.imageUrl || null;
              fopDef.coverUrl = fopDef.coverUrl || null;
-             // --- End NEW ---
+             fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID; // Ensure courseDirName
+             // --- MODIFIED: Ensure prereqs/coreqs for FoP from config are arrays of strings ---
+             fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
+                                    ? fopDef.prerequisites.filter(item => typeof item === 'string')
+                                    : [];
+             fopDef.corequisites = Array.isArray(fopDef.corequisites)
+                                   ? fopDef.corequisites.filter(item => typeof item === 'string')
+                                   : [];
+             // --- End MODIFICATION ---
 
-
-            // Check if the manually added FoP matches the search term (if any)
             const lowerSearchTerm = searchTerm.toLowerCase();
             const matchesSearch = (!searchTerm ||
                                   fopDef.name?.toLowerCase().includes(lowerSearchTerm) ||
@@ -79,15 +124,11 @@ async function fetchCourses(searchTerm = '', searchTag = '') {
 
             if (matchesSearch) {
                 courses.push(fopDef);
-                // Re-sort if FoP added manually to maintain order
                 courses.sort((a, b) => a.name.localeCompare(b.name));
-                 // Also update the global map if it was missing there too
                 updateGlobalCourseData(FOP_COURSE_ID, fopDef);
             }
         } else if (!fopInList && fopInGlobalMap) {
-             // If FoP is in the global map but not in the filtered list (e.g., admin view excluded 'rejected' if it got set that way), add it back from the map.
              const fopFromMap = globalCourseDataMap.get(FOP_COURSE_ID);
-              // Check if it matches the search term
              const lowerSearchTerm = searchTerm.toLowerCase();
              const matchesSearch = (!searchTerm ||
                                   fopFromMap.name?.toLowerCase().includes(lowerSearchTerm) ||
@@ -100,9 +141,8 @@ async function fetchCourses(searchTerm = '', searchTag = '') {
                  console.log(`FoP course ${FOP_COURSE_ID} added back to list from global map.`);
              }
         }
-        // --- END: FoP Injection Logic ---
 
-        // Filter by search term (applied after potentially adding FoP)
+        // Filter by search term
         if (searchTerm) {
             const lowerSearchTerm = searchTerm.toLowerCase();
             courses = courses.filter(course =>
@@ -113,21 +153,28 @@ async function fetchCourses(searchTerm = '', searchTag = '') {
             );
         }
 
-        // Update global state map with fetched/filtered courses (redundant if loadGlobal already did it, but safe)
+        // Update global state map
         courses.forEach(course => {
-            // Only update if status is NOT rejected (or if admin viewing) OR if it's FoP
             if (course.status !== 'rejected' || currentUser?.uid === ADMIN_UID || course.id === FOP_COURSE_ID) {
+                // Ensure courseDirName exists before updating cache
+                course.courseDirName = course.courseDirName || cleanTextForFilename(course.name) || course.id;
+                // --- MODIFIED: Ensure prereqs/coreqs in cache are arrays of strings ---
+                course.prerequisites = Array.isArray(course.prerequisites)
+                                       ? course.prerequisites.filter(item => typeof item === 'string')
+                                       : [];
+                course.corequisites = Array.isArray(course.corequisites)
+                                      ? course.corequisites.filter(item => typeof item === 'string')
+                                      : [];
+                // --- End MODIFICATION ---
                 updateGlobalCourseData(course.id, course);
             } else {
-                // Ensure rejected courses are removed from non-admin view's cache
                 if (globalCourseDataMap.has(course.id)) {
                     globalCourseDataMap.delete(course.id);
                 }
             }
         });
 
-        // Filter out rejected courses for non-admins AFTER updating cache for admins
-        // This filter might remove FoP if its status somehow became 'rejected' and user is not admin.
+        // Final filter for non-admins
         if (currentUser?.uid !== ADMIN_UID) {
              courses = courses.filter(course => course.status !== 'rejected');
         }
@@ -138,28 +185,32 @@ async function fetchCourses(searchTerm = '', searchTag = '') {
 
 /**
  * Fetches course details, prioritizing Firestore, then cache, then local config for FoP.
- * **MODIFIED:** Implements the Firestore-first strategy for FoP.
- * **MODIFIED:** Ensures imageUrl and coverUrl are initialized.
+ * Ensures courseDirName, image URLs, prerequisites (string array), and corequisites (string array) are initialized.
  */
 async function fetchCourseDetails(courseId) {
-    // 1. Check cache first (for potential immediate return)
+    // 1. Check cache first
     if (globalCourseDataMap.has(courseId)) {
         const cachedCourse = globalCourseDataMap.get(courseId);
-        // Access control check
         if (currentUser?.uid !== ADMIN_UID && cachedCourse.status !== 'approved' && courseId !== FOP_COURSE_ID) {
-            console.warn(`Access denied from cache for non-admin to view course ${courseId} with status ${cachedCourse.status}`);
-            // Don't return yet, try Firestore in case cache is stale regarding status
+            // Try Firestore if cached is not approved and user is not admin (unless it's FoP)
         } else {
              console.log(`Returning course ${courseId} details from cache.`);
-             // Ensure structure consistency before returning from cache
+             // Ensure structure consistency
              if (!cachedCourse.youtubePlaylistUrls && cachedCourse.youtubePlaylistUrl) cachedCourse.youtubePlaylistUrls = [cachedCourse.youtubePlaylistUrl];
              else cachedCourse.youtubePlaylistUrls = cachedCourse.youtubePlaylistUrls || [];
              cachedCourse.chapterResources = cachedCourse.chapterResources || {};
              cachedCourse.totalChapters = cachedCourse.totalChapters ?? (Array.isArray(cachedCourse.chapters) ? cachedCourse.chapters.length : 0);
-             // --- NEW: Ensure Image URLs ---
              cachedCourse.imageUrl = cachedCourse.imageUrl || null;
              cachedCourse.coverUrl = cachedCourse.coverUrl || null;
-             // --- End NEW ---
+             cachedCourse.courseDirName = cachedCourse.courseDirName || cleanTextForFilename(cachedCourse.name) || courseId; // Ensure courseDirName
+             // --- MODIFIED: Ensure prereqs/coreqs from cache are arrays of strings ---
+             cachedCourse.prerequisites = Array.isArray(cachedCourse.prerequisites)
+                                          ? cachedCourse.prerequisites.filter(item => typeof item === 'string')
+                                          : [];
+             cachedCourse.corequisites = Array.isArray(cachedCourse.corequisites)
+                                         ? cachedCourse.corequisites.filter(item => typeof item === 'string')
+                                         : [];
+             // --- End MODIFICATION ---
              return cachedCourse;
         }
     }
@@ -173,10 +224,9 @@ async function fetchCourseDetails(courseId) {
         if (doc.exists) {
             console.log(`Course ${courseId} found in Firestore.`);
             const courseData = { id: doc.id, ...doc.data() };
-            // Access control check
             if (currentUser?.uid !== ADMIN_UID && courseData.status !== 'approved' && courseId !== FOP_COURSE_ID) {
                 console.warn(`Access denied for non-admin to view course ${courseId} with status ${courseData.status} from Firestore`);
-                return null; // Deny access based on Firestore status
+                return null;
             }
             // Ensure expected fields exist & update cache
             courseData.chapterResources = courseData.chapterResources || {};
@@ -185,45 +235,53 @@ async function fetchCourseDetails(courseId) {
             courseData.chapters = courseData.chapters || [];
             courseData.midcourseChapters = courseData.midcourseChapters || [];
             courseData.totalChapters = courseData.totalChapters ?? (Array.isArray(courseData.chapters) ? courseData.chapters.length : 0);
-            // --- NEW: Ensure Image URLs ---
             courseData.imageUrl = courseData.imageUrl || null;
             courseData.coverUrl = courseData.coverUrl || null;
-            // --- End NEW ---
+            courseData.courseDirName = courseData.courseDirName || cleanTextForFilename(courseData.name) || courseId; // Ensure courseDirName
+            // --- MODIFIED: Ensure prereqs/coreqs from Firestore are arrays of strings ---
+            courseData.prerequisites = Array.isArray(courseData.prerequisites)
+                                       ? courseData.prerequisites.filter(item => typeof item === 'string')
+                                       : [];
+            courseData.corequisites = Array.isArray(courseData.corequisites)
+                                      ? courseData.corequisites.filter(item => typeof item === 'string')
+                                      : [];
+            // --- End MODIFICATION ---
 
             updateGlobalCourseData(courseId, courseData);
             return courseData;
         } else {
              console.log(`Course ${courseId} not found in Firestore.`);
-            // Document doesn't exist in Firestore
             if (courseId === FOP_COURSE_ID) {
-                // 3. Fallback to local config ONLY for FoP if not found in Firestore
                 console.warn(`Course ${courseId} (FoP) not found in Firestore, using local config fallback.`);
                 const fopDef = {...FOP_COURSE_DEFINITION};
-                // Ensure consistent structure when loading from config
-                fopDef.id = FOP_COURSE_ID;
-                fopDef.status = 'approved'; // Treat as approved when falling back
+                fopDef.id = FOP_COURSE_ID; fopDef.status = 'approved';
                 fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
                 fopDef.chapterResources = fopDef.chapterResources || {};
                 fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
                 fopDef.chapters = fopDef.chapters || [];
                 fopDef.midcourseChapters = fopDef.midcourseChapters || [];
-                // --- NEW: Ensure Image URLs for FoP fallback ---
                 fopDef.imageUrl = fopDef.imageUrl || null;
                 fopDef.coverUrl = fopDef.coverUrl || null;
-                // --- End NEW ---
-                updateGlobalCourseData(courseId, fopDef); // Update cache with config data
+                fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID; // Ensure courseDirName
+                // --- MODIFIED: Ensure prereqs/coreqs for FoP fallback are arrays of strings ---
+                fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
+                                       ? fopDef.prerequisites.filter(item => typeof item === 'string')
+                                       : [];
+                fopDef.corequisites = Array.isArray(fopDef.corequisites)
+                                      ? fopDef.corequisites.filter(item => typeof item === 'string')
+                                      : [];
+                // --- End MODIFICATION ---
+
+                updateGlobalCourseData(courseId, fopDef);
                 return fopDef;
             } else {
-                // If not FoP and not in Firestore, it doesn't exist
-                console.log(`No course document found for ID: ${courseId}`);
-                 // Remove from cache if it somehow existed there but not in FS
+                 console.log(`No course document found for ID: ${courseId}`);
                  if (globalCourseDataMap.has(courseId)) { globalCourseDataMap.delete(courseId); }
                 return null;
             }
         }
     } catch (error) {
         console.error(`Error fetching course details for ${courseId} from Firestore:`, error);
-         // Handle potential error during fetch, maybe fallback for FoP?
          if (courseId === FOP_COURSE_ID) {
              console.warn(`Error fetching FoP from Firestore (${error.message}), using local config fallback.`);
              const fopDef = {...FOP_COURSE_DEFINITION};
@@ -233,146 +291,21 @@ async function fetchCourseDetails(courseId) {
              fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
              fopDef.chapters = fopDef.chapters || [];
              fopDef.midcourseChapters = fopDef.midcourseChapters || [];
-             // --- NEW: Ensure Image URLs for FoP error fallback ---
              fopDef.imageUrl = fopDef.imageUrl || null;
              fopDef.coverUrl = fopDef.coverUrl || null;
-             // --- End NEW ---
+             fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID; // Ensure courseDirName
+             // --- MODIFIED: Ensure prereqs/coreqs for FoP fallback are arrays of strings ---
+             fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
+                                     ? fopDef.prerequisites.filter(item => typeof item === 'string')
+                                     : [];
+             fopDef.corequisites = Array.isArray(fopDef.corequisites)
+                                    ? fopDef.corequisites.filter(item => typeof item === 'string')
+                                    : [];
+             // --- End MODIFICATION ---
              updateGlobalCourseData(courseId, fopDef); return fopDef;
          }
-         return null; // Error fetching non-FoP course
+         return null;
     }
-}
-
-
-// Modified to enforce role-based field inclusion and status setting
-async function addCourseToFirestore(courseData) {
-    if (!currentUser) return { success: false, message: "User not logged in." };
-
-    const isAdmin = currentUser.uid === ADMIN_UID;
-    const finalStatus = isAdmin ? 'approved' : 'pending'; // Determine status based on current user role
-
-    // Prepare the data object to be saved, enforcing role restrictions
-    let dataToSave = {
-        name: courseData.name || 'Untitled Course',
-        description: courseData.description || null,
-        majorTag: courseData.majorTag || null,
-        subjectTag: courseData.subjectTag || null,
-        youtubePlaylistUrls: courseData.youtubePlaylistUrls || [],
-        creatorUid: currentUser.uid,
-        creatorName: currentUser.displayName || currentUser.email,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        status: finalStatus, // Use the definitively calculated status
-        reportedBy: [],
-        reportReason: null,
-        chapterResources: {}, // Always initialize as empty for new courses
-        // --- NEW: Add Image URLs (can be set by anyone initially, maybe review later) ---
-        imageUrl: courseData.imageUrl || null,
-        coverUrl: courseData.coverUrl || null,
-        // --- End NEW ---
-    };
-
-    let finalTotalChapters = 0;
-    let finalChapters = [];
-    let finalRelatedSubjectId = null;
-    let finalPdfPathPattern = null;
-    let finalTransPathPattern = null;
-
-    if (isAdmin) {
-        // Admin can set these fields based on validated input from courseData
-        finalTotalChapters = parseInt(courseData.totalChapters) || 0; // Use provided value, default 0 if invalid
-         if (isNaN(finalTotalChapters) || finalTotalChapters < 0) finalTotalChapters = 0; // Ensure it's a non-negative number
-        finalChapters = finalTotalChapters > 0
-            ? Array.from({ length: finalTotalChapters }, (_, i) => `Chapter ${i + 1}`)
-            : [];
-        finalRelatedSubjectId = courseData.relatedSubjectId || null; // Use provided value (already validated in submitNewCourse)
-        finalPdfPathPattern = courseData.pdfPathPattern || null;
-        finalTransPathPattern = courseData.transcriptionPathPattern || null;
-    } else {
-        // Non-admin: Force defaults, ignore any passed values for these fields
-        finalTotalChapters = 0;
-        finalChapters = [];
-        finalRelatedSubjectId = null;
-        finalPdfPathPattern = null;
-        finalTransPathPattern = null;
-        // Status is already set to 'pending'
-    }
-
-    // Add the role-dependent fields to the data object
-    dataToSave.totalChapters = finalTotalChapters;
-    dataToSave.chapters = finalChapters;
-    dataToSave.relatedSubjectId = finalRelatedSubjectId;
-    dataToSave.pdfPathPattern = finalPdfPathPattern;
-    dataToSave.transcriptionPathPattern = finalTransPathPattern;
-
-    try {
-        const docRef = await db.collection('courses').add(dataToSave);
-
-        // Prepare data for local state update (use the actual data saved)
-        // Firestore timestamp needs conversion for immediate use
-        // Note: Using a client-side date for the local cache is an approximation.
-        const localStateData = {
-             id: docRef.id,
-             name: dataToSave.name,
-             description: dataToSave.description,
-             majorTag: dataToSave.majorTag,
-             subjectTag: dataToSave.subjectTag,
-             relatedSubjectId: dataToSave.relatedSubjectId,
-             totalChapters: dataToSave.totalChapters,
-             chapters: dataToSave.chapters,
-             creatorUid: dataToSave.creatorUid,
-             creatorName: dataToSave.creatorName,
-             createdAt: new Date(), // Approximation for local state
-             status: dataToSave.status,
-             reportedBy: dataToSave.reportedBy,
-             reportReason: dataToSave.reportReason,
-             youtubePlaylistUrls: dataToSave.youtubePlaylistUrls,
-             pdfPathPattern: dataToSave.pdfPathPattern,
-             transcriptionPathPattern: dataToSave.transcriptionPathPattern,
-             chapterResources: dataToSave.chapterResources,
-             // --- NEW: Add Image URLs to local state ---
-             imageUrl: dataToSave.imageUrl,
-             coverUrl: dataToSave.coverUrl,
-             // --- End NEW ---
-        };
-
-        // Add to global map only if it's not rejected (which it won't be on creation)
-        updateGlobalCourseData(docRef.id, localStateData);
-
-        return { success: true, id: docRef.id, status: finalStatus }; // Return the actual status set
-    } catch (error) {
-        console.error("Error adding course:", error);
-        return { success: false, message: error.message };
-    }
-}
-
-
-async function reportCourseInFirestore(courseId, reason) {
-     if (!currentUser || !courseId) return false;
-     // Prevent reporting FoP
-     if (courseId === FOP_COURSE_ID) {
-        alert("The Fundamentals of Physics course cannot be reported.");
-        return false;
-     }
-     const courseRef = db.collection('courses').doc(courseId);
-     try {
-         await courseRef.update({
-             status: 'reported', reportReason: reason || 'No reason provided.',
-             reportedBy: firebase.firestore.FieldValue.arrayUnion(currentUser.uid)
-         });
-         // Update local cache ONLY if admin, otherwise non-admins shouldn't see reported state usually
-         if (currentUser.uid === ADMIN_UID) {
-             const currentData = globalCourseDataMap.get(courseId);
-             if (currentData) {
-                 updateGlobalCourseData(courseId, { ...currentData, status: 'reported', reportReason: reason });
-             }
-         } else {
-             // If non-admin reported, remove from their view if cached
-             if (globalCourseDataMap.has(courseId)) {
-                 globalCourseDataMap.delete(courseId);
-             }
-         }
-         return true;
-     } catch (error) { console.error("Error reporting course:", error); return false; }
 }
 
 // --- UI Functions ---
@@ -387,13 +320,13 @@ export function showBrowseCourses() {
             <div class="flex flex-wrap gap-4 mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border dark:border-gray-600">
                 <div class="flex-grow"><label for="course-search" class="sr-only">Search Courses</label><input type="search" id="course-search" placeholder="Search by name, tag, description..." class="w-full"></div>
                 <button onclick="window.handleCourseSearch()" class="btn-secondary flex-shrink-0">Search</button>
-                ${currentUser ? // Only show add/suggest if logged in
+                ${currentUser ?
                     (currentUser.uid === ADMIN_UID ?
                         `<button onclick="window.showAddCourseForm()" class="btn-primary flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" /></svg>Add Course</button>`
                     :
                         `<button onclick="window.showAddCourseForm()" class="btn-secondary flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clip-rule="evenodd" /></svg>Suggest Course</button>`
                     )
-                : '' // Don't show button if not logged in
+                : ''
                 }
             </div>
             <!-- Course List -->
@@ -423,18 +356,14 @@ function renderCourseList(courses, container) {
     const enrolledCourseIds = Array.from(userCourseProgressMap.keys());
 
     container.innerHTML = courses.map(course => {
-        // Only render if course has an ID and name (basic sanity check)
         if (!course || !course.id || !course.name) return '';
-
-        // Skip rejected courses entirely unless admin (FoP won't be rejected due to fetch logic unless manually set)
         if (course.status === 'rejected' && !isAdmin) return '';
 
-        // FoP is always treated as approved for display purposes regarding borders/status text unless admin
         const displayStatus = (course.id === FOP_COURSE_ID && !isAdmin) ? 'approved' : course.status;
         const statusClass = displayStatus === 'pending' ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/30'
                           : displayStatus === 'reported' ? 'border-red-400 bg-red-50 dark:bg-red-900/30'
                           : displayStatus === 'rejected' ? 'border-gray-400 bg-gray-100 dark:bg-gray-800/50 opacity-60'
-                          : 'border-gray-200 dark:border-gray-600'; // Approved or FoP default
+                          : 'border-gray-200 dark:border-gray-600';
         const statusText = displayStatus === 'pending' ? 'Pending Approval'
                          : displayStatus === 'reported' ? 'Reported'
                          : displayStatus === 'rejected' ? 'Rejected' : '';
@@ -442,17 +371,13 @@ function renderCourseList(courses, container) {
         const numChapters = course.totalChapters ?? (Array.isArray(course.chapters) ? course.chapters.length : 0);
         let actionButtonHtml = '';
         if (isEnrolled) { actionButtonHtml = `<button onclick="window.navigateToCourseDashboard('${course.id}')" class="btn-success-small">Go to Course</button>`; }
-        // *** MODIFIED: Allow enrollment only if approved OR it's the FoP course ***
         else if (course.status === 'approved' || course.id === FOP_COURSE_ID) { actionButtonHtml = `<button onclick="window.showCourseEnrollment('${course.id}')" class="btn-primary-small">Enroll</button>`; }
         else { actionButtonHtml = `<button class="btn-secondary-small" disabled>Unavailable</button>`; }
 
-        // Admin Actions: Show based on *actual* course status (from Firestore or injected 'approved' for FoP if not in FS)
         const showAdminActions = isAdmin && course.id !== FOP_COURSE_ID && (course.status === 'pending' || course.status === 'reported' || course.status === 'rejected');
-        // Admin actions for FoP: Edit always shown, Clear Report/Delete shown only if reported/rejected
         const showFopAdminActions = isAdmin && course.id === FOP_COURSE_ID;
 
-        // --- NEW: Thumbnail HTML ---
-        const thumbnailUrl = course.imageUrl; // Get URL from course data
+        const thumbnailUrl = course.imageUrl;
         const thumbnailHtml = thumbnailUrl ? `
             <img src="${escapeHtml(thumbnailUrl)}"
                  alt="${escapeHtml(course.name || 'Course')} thumbnail"
@@ -465,23 +390,21 @@ function renderCourseList(courses, container) {
                 </svg>
             </div>
             `;
-        // --- End NEW ---
 
         return `
-        <div class="course-card border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${statusClass} overflow-hidden"> <!-- Added overflow-hidden for float containment -->
+        <div class="course-card border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${statusClass} overflow-hidden">
             <div class="flex flex-col sm:flex-row justify-between items-start gap-3">
                  <div class="flex-grow min-w-0">
-                     <!-- NEW: Insert Thumbnail -->
                      ${thumbnailHtml}
-                     <!-- End NEW -->
                      <h3 class="text-lg font-semibold text-primary-600 dark:text-primary-400 hover:underline cursor-pointer" onclick="window.showCourseDetails('${course.id}')">
                         ${escapeHtml(course.name || 'Unnamed Course')} ${isEnrolled ? '<span class="text-xs text-green-600 dark:text-green-400">(Enrolled)</span>': ''}
                      </h3>
                      <p class="text-sm text-muted mt-1">${escapeHtml(course.description || 'No description available.')}</p>
-                     <div class="text-xs mt-2 space-x-2 clear-left"> <!-- Added clear-left -->
+                     <div class="text-xs mt-2 space-x-2 clear-left">
                          ${course.majorTag ? `<span class="inline-block bg-blue-100 text-blue-800 dark:bg-blue-700 dark:text-blue-200 px-2 py-0.5 rounded-full">${escapeHtml(course.majorTag)}</span>` : ''}
                          ${course.subjectTag ? `<span class="inline-block bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-200 px-2 py-0.5 rounded-full">${escapeHtml(course.subjectTag)}</span>` : ''}
                          <span class="inline-block bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200 px-2 py-0.5 rounded-full">${numChapters} Chapters</span>
+                         <!-- *** REMOVED: courseDirName tag span removed here *** -->
                     </div>
                     ${isAdmin ? `<p class="text-xs text-muted mt-2">ID: ${escapeHtml(course.id)} | Creator: ${escapeHtml(course.creatorName || 'Unknown')} | Status: ${escapeHtml(course.status || 'N/A')}</p>` : ''}
                  </div>
@@ -492,7 +415,7 @@ function renderCourseList(courses, container) {
                  </div>
             </div>
              ${showAdminActions ? `
-                <div class="mt-3 pt-3 border-t dark:border-gray-600 text-right space-x-2 clear-left"> <!-- Added clear-left -->
+                <div class="mt-3 pt-3 border-t dark:border-gray-600 text-right space-x-2 clear-left">
                     ${course.status === 'pending' ? `<button onclick="window.handleCourseApproval('${course.id}', true)" class="btn-success-small">Approve</button><button onclick="window.handleCourseApproval('${course.id}', false)" class="btn-danger-small">Reject</button>` : ''}
                     ${course.status === 'reported' ? `<button onclick="window.handleCourseApproval('${course.id}', true)" class="btn-success-small">Clear Report</button><button type="button" onclick="alert('Report Reason: ${escapeHtml(course.reportReason || 'None provided')}')" class="btn-warning-small">View Report</button><button onclick="window.handleCourseApproval('${course.id}', false, true)" class="btn-danger-small">Delete Course</button>` : ''}
                     ${course.status === 'rejected' ? `<button onclick="window.handleCourseApproval('${course.id}', true)" class="btn-success-small">Approve</button><button onclick="window.handleCourseApproval('${course.id}', false, true)" class="btn-danger-small">Delete Course</button>` : ''}
@@ -500,7 +423,7 @@ function renderCourseList(courses, container) {
                 </div>
              ` : ''}
              ${showFopAdminActions ? `
-                 <div class="mt-3 pt-3 border-t dark:border-gray-600 text-right space-x-2 clear-left"> <!-- Added clear-left -->
+                 <div class="mt-3 pt-3 border-t dark:border-gray-600 text-right space-x-2 clear-left">
                       <button onclick="window.showEditCourseForm('${course.id}')" class="btn-secondary-small">Edit FoP</button>
                       ${course.status === 'reported' ? `
                           <button onclick="window.handleCourseApproval('${course.id}', true)" class="btn-success-small">Clear Report</button>
@@ -520,9 +443,11 @@ function renderCourseList(courses, container) {
 }
 
 
-// Modified to allow non-admins access but hide specific fields
+/**
+ * Shows the form to add a new course (or suggest one for non-admins).
+ * MODIFIED: Includes fields for prerequisites and corequisites using Subject Tags.
+ */
 export function showAddCourseForm() {
-    // Check if user is logged in, as adding needs a creator UID.
     if (!currentUser) {
         alert("Please log in to suggest a course.");
         displayContent('<p class="text-center text-muted p-6">Please log in to suggest a new course.</p>');
@@ -530,7 +455,7 @@ export function showAddCourseForm() {
     }
 
     setActiveSidebarLink('showBrowseCourses');
-    const isAdmin = currentUser?.uid === ADMIN_UID; // Use this flag for conditional rendering
+    const isAdmin = currentUser?.uid === ADMIN_UID;
 
     const html = `
     <div class="max-w-lg mx-auto animate-fade-in">
@@ -542,13 +467,29 @@ export function showAddCourseForm() {
               <div><label for="course-subject-tag">Subject Tag</label><input id="course-subject-tag" type="text" placeholder="e.g., Quantum Mechanics"></div>
 
               ${isAdmin ? `
+                <div><label for="course-dir-name">Course Directory Name (for Paths)</label><input id="course-dir-name" type="text"><p class="form-help-text">Cleaned version of name or ID used in file paths. Auto-generated if blank.</p></div>
                 <div><label for="course-subject-id">Related Subject ID (for Questions)</label><input id="course-subject-id" type="text" placeholder="e.g., 1" required><p class="form-help-text">Links to Subject ID in User Data for question bank.</p></div>
                 <div><label for="course-total-chapters">Total Chapters</label><input id="course-total-chapters" type="number" min="1" required><p class="form-help-text">Number of chapters in the course.</p></div>
               ` : `
-                <!-- Non-admins don't set these directly, hidden inputs provide default values -->
-                <input type="hidden" id="course-subject-id" value=""> <!-- addCourseToFirestore will set to null for non-admins -->
-                <input type="hidden" id="course-total-chapters" value="0"> <!-- addCourseToFirestore will set to 0 for non-admins -->
+                <!-- Non-admins don't set these directly -->
+                <input type="hidden" id="course-dir-name" value="">
+                <input type="hidden" id="course-subject-id" value="">
+                <input type="hidden" id="course-total-chapters" value="0">
               `}
+
+              <hr class="my-4 dark:border-gray-600"/>
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Course Relationships (Optional)</p>
+              <div>
+                <label for="course-prerequisites">Prerequisites (Subject Tags)</label>
+                <textarea id="course-prerequisites" rows="2" placeholder="Enter comma-separated Subject Tags..."></textarea>
+                <p class="form-help-text">Enter the Subject Tags required before taking this one (e.g., algebra, calculus_1).</p>
+              </div>
+              <div>
+                <label for="course-corequisites">Corequisites (Subject Tags)</label>
+                <textarea id="course-corequisites" rows="2" placeholder="Enter comma-separated Subject Tags..."></textarea>
+                <p class="form-help-text">Enter the Subject Tags that must be taken concurrently.</p>
+              </div>
+
 
               <hr class="my-4 dark:border-gray-600"/>
               <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Image URLs (Optional)</p>
@@ -561,14 +502,8 @@ export function showAddCourseForm() {
 
               ${isAdmin ? `
                 <hr class="my-4 dark:border-gray-600"/>
-                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Resource Path Patterns (Admin Only)</p>
-                <div><label for="course-pdf-pattern">PDF Path Pattern</label><input id="course-pdf-pattern" type="text" placeholder="./Course PDFs/chapter{num}.pdf"><p class="form-help-text">Use '{num}' as placeholder for chapter number.</p></div>
-                <div><label for="course-trans-pattern">Transcription Base Path</label><input id="course-trans-pattern" type="text" placeholder="./Course Transcriptions/"><p class="form-help-text">Path to folder containing .srt files named after video titles.</p></div>
-              ` : `
-                <!-- Non-admins don't set these directly -->
-                <input type="hidden" id="course-pdf-pattern" value=""> <!-- addCourseToFirestore will set to null -->
-                <input type="hidden" id="course-trans-pattern" value=""> <!-- addCourseToFirestore will set to null -->
-              `}
+                <p class="text-xs text-muted">Note: Chapter-specific resource overrides (like PDF paths) can be set via Admin->Playlist Assignment after the course is created.</p>
+              ` : ``}
 
               <div class="pt-4 mt-2 border-t dark:border-gray-700"><button type="submit" class="btn-primary w-full">${isAdmin ? 'Submit Course' : 'Submit Suggestion'}</button><button type="button" onclick="window.showBrowseCourses()" class="btn-secondary w-full mt-2">Cancel</button></div>
          </form>
@@ -577,19 +512,24 @@ export function showAddCourseForm() {
     displayContent(html);
 }
 
-
+/**
+ * Shows the form to edit an existing course (Admin only).
+ * MODIFIED: Includes fields for prerequisites and corequisites using Subject Tags.
+ * MODIFIED: Removed deprecated path pattern fields.
+ */
 export async function showEditCourseForm(courseId) {
     if (currentUser?.uid !== ADMIN_UID) { alert("Permission denied."); return; }
     setActiveSidebarLink('showBrowseCourses');
     showLoading("Loading course data for editing...");
-    // Use fetchCourseDetails to prioritize Firestore, handle FoP fallback, etc.
     let course = await fetchCourseDetails(courseId);
-
     hideLoading();
     if (!course) { displayContent('<p class="text-red-500 p-4">Could not load course details for editing.</p><button onclick="window.showBrowseCourses()" class="btn-secondary mt-2">Back to Courses</button>'); return; }
 
-    // Join playlist URLs into a string for the textarea
     const playlistUrlsString = (course.youtubePlaylistUrls || []).join('\n');
+    // --- MODIFIED: Join Subject Tag arrays for display ---
+    const prereqsString = (course.prerequisites || []).join(', ');
+    const coreqsString = (course.corequisites || []).join(', ');
+    // --- End MODIFICATION ---
     const isFoPCourse = courseId === FOP_COURSE_ID;
 
     const html = `
@@ -601,8 +541,22 @@ export async function showEditCourseForm(courseId) {
               <div><label for="edit-course-desc">Description</label><textarea id="edit-course-desc" rows="3">${escapeHtml(course.description || '')}</textarea></div>
               <div><label for="edit-course-major-tag">Major Tag</label><input id="edit-course-major-tag" type="text" value="${escapeHtml(course.majorTag || '')}"></div>
               <div><label for="edit-course-subject-tag">Subject Tag</label><input id="edit-course-subject-tag" type="text" value="${escapeHtml(course.subjectTag || '')}"></div>
+              <div><label for="edit-course-dir-name">Course Directory Name (for Paths)</label><input id="edit-course-dir-name" type="text" value="${escapeHtml(course.courseDirName || '')}"><p class="form-help-text">Cleaned name used in file paths. Changing this may break existing links if files aren't moved.</p></div>
               <div><label for="edit-course-subject-id">Related Subject ID</label><input id="edit-course-subject-id" type="text" required value="${escapeHtml(course.relatedSubjectId || '')}"><p class="form-help-text">Links to Subject ID in User Data for question bank.</p></div>
               <div><label for="edit-course-total-chapters">Total Chapters</label><input id="edit-course-total-chapters" type="number" min="0" required value="${course.totalChapters ?? 0}"><p class="form-help-text">Number of chapters (can be 0).</p></div>
+
+               <hr class="my-4 dark:border-gray-600"/>
+              <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Course Relationships</p>
+              <div>
+                  <label for="edit-course-prerequisites">Prerequisites (Subject Tags)</label>
+                  <textarea id="edit-course-prerequisites" rows="2" placeholder="Enter comma-separated Subject Tags...">${escapeHtml(prereqsString)}</textarea>
+                  <p class="form-help-text">Enter the Subject Tags required before taking this one (e.g., algebra, calculus_1).</p>
+              </div>
+              <div>
+                  <label for="edit-course-corequisites">Corequisites (Subject Tags)</label>
+                  <textarea id="edit-course-corequisites" rows="2" placeholder="Enter comma-separated Subject Tags...">${escapeHtml(coreqsString)}</textarea>
+                  <p class="form-help-text">Enter the Subject Tags that must be taken concurrently.</p>
+              </div>
 
               <hr class="my-4 dark:border-gray-600"/>
               <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Image URLs</p>
@@ -612,8 +566,9 @@ export async function showEditCourseForm(courseId) {
               <hr class="my-4 dark:border-gray-600"/>
               <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Resource URLs & Paths</p>
               <div><label for="edit-course-playlist-urls">YouTube Playlist URL(s)</label><textarea id="edit-course-playlist-urls" rows="2" placeholder="Enter one URL per line...">${escapeHtml(playlistUrlsString)}</textarea><p class="form-help-text">Enter full playlist URLs, one per line.</p></div>
-              <div><label for="edit-course-pdf-pattern">PDF Path Pattern</label><input id="edit-course-pdf-pattern" type="text" value="${escapeHtml(course.pdfPathPattern || '')}" placeholder="./Course PDFs/chapter{num}.pdf"><p class="form-help-text">Use '{num}' as placeholder for chapter number.</p></div>
-              <div><label for="edit-course-trans-pattern">Transcription Base Path</label><input id="edit-course-trans-pattern" type="text" value="${escapeHtml(course.transcriptionPathPattern || '')}" placeholder="./Course Transcriptions/"><p class="form-help-text">Path to folder containing .srt files named after video titles.</p></div>
+
+              <!-- *** REMOVED: Deprecated Resource Path Pattern section removed *** -->
+
               <p class="text-xs text-muted">(Editing specific chapter resource overrides via Admin->Playlist Assignment)</p>
               <div class="pt-4 mt-2 border-t dark:border-gray-700"><button type="submit" class="btn-primary w-full">Save Changes</button><button type="button" onclick="window.showBrowseCourses()" class="btn-secondary w-full mt-2">Cancel</button></div>
          </form>
@@ -621,7 +576,10 @@ export async function showEditCourseForm(courseId) {
     displayContent(html);
 }
 
-// Modified to prepare data and call addCourseToFirestore, which handles status/fields based on role.
+/**
+ * Handles submitting a new course or suggestion.
+ * MODIFIED: Parses prerequisites and corequisites from input as Subject Tags (strings).
+ */
 export async function submitNewCourse(event) {
     event.preventDefault();
     if (!currentUser) {
@@ -630,24 +588,32 @@ export async function submitNewCourse(event) {
     }
     const isAdmin = currentUser.uid === ADMIN_UID;
 
+    // --- MODIFIED: Helper function to parse Subject Tags ---
+    const parseSubjectTags = (inputId) => {
+        const inputString = document.getElementById(inputId)?.value.trim() || '';
+        if (!inputString) return [];
+        return inputString.split(',')
+                          .map(tag => tag.trim()) // Trim each tag
+                          .filter(tag => tag); // Remove empty strings resulting from extra commas or spaces
+    };
+    // --- End MODIFICATION ---
+
     const playlistUrlsText = document.getElementById('course-playlist-urls')?.value.trim() || '';
     const playlistUrls = playlistUrlsText ? playlistUrlsText.split('\n').map(url => url.trim()).filter(url => url) : [];
 
-    // Get values based on form inputs (including hidden ones for non-admins)
     const nameValue = document.getElementById('course-name')?.value.trim();
     const descValue = document.getElementById('course-desc')?.value.trim() || null;
     const majorTagValue = document.getElementById('course-major-tag')?.value.trim() || null;
     const subjectTagValue = document.getElementById('course-subject-tag')?.value.trim() || null;
-    // Values below might come from visible (admin) or hidden (non-admin) inputs
+    const courseDirNameValue = isAdmin ? document.getElementById('course-dir-name')?.value.trim() : null;
     const subjectIdValue = document.getElementById('course-subject-id')?.value.trim() || null;
     const totalChaptersValue = document.getElementById('course-total-chapters')?.value;
-    const pdfPatternValue = document.getElementById('course-pdf-pattern')?.value.trim() || null;
-    const transPatternValue = document.getElementById('course-trans-pattern')?.value.trim() || null;
-    // --- NEW: Get Image URLs ---
     const imageUrlValue = document.getElementById('course-image-url')?.value.trim() || null;
     const coverUrlValue = document.getElementById('course-cover-url')?.value.trim() || null;
-    // --- End NEW ---
-
+    // --- MODIFIED: Parse prereqs/coreqs using Subject Tag helper ---
+    const prerequisitesValue = parseSubjectTags('course-prerequisites');
+    const corequisitesValue = parseSubjectTags('course-corequisites');
+    // --- End MODIFICATION ---
 
     // --- Validation ---
     if (!nameValue) {
@@ -660,56 +626,44 @@ export async function submitNewCourse(event) {
     if (isNaN(totalChaptersNum)) {
          alert("Invalid input for 'Total Chapters'. Please enter a valid number.");
          document.getElementById('course-total-chapters')?.focus();
-         return; // Stop execution if totalChapters is NaN
+         return;
     }
-     // Ensure totalChapters is not negative (though min="1" should prevent this for admins usually)
      if (totalChaptersNum < 0) {
         alert("Total Chapters cannot be negative.");
         document.getElementById('course-total-chapters')?.focus();
         return;
      }
 
-
-    // Admins also require relatedSubjectId and usually totalChapters > 0 for a meaningful course.
-    // Non-admins will submit '0' or '' for these from hidden fields, failing this check correctly if required.
-    if (isAdmin && (!subjectIdValue /*|| totalChaptersNum <= 0*/)) { // Allowing 0 chapters for admin flexibility initially
-        alert("Admin requires: Course Name and Related Subject ID."); // Removed chapter requirement check here, handled by form `min`
+    if (isAdmin && (!subjectIdValue)) {
+        alert("Admin requires: Course Name and Related Subject ID.");
         if (!subjectIdValue) document.getElementById('course-subject-id')?.focus();
-        // else document.getElementById('course-total-chapters')?.focus(); // No longer need focus on chapters here
         return;
     }
     // --- End Validation ---
 
-
-    // Construct the courseData object to pass to addCourseToFirestore
-    // addCourseToFirestore will handle setting the correct status ('approved'/'pending')
-    // and ensure fields like totalChapters, chapters, relatedSubjectId are set correctly based on role.
     const courseData = {
         name: nameValue,
         description: descValue,
         majorTag: majorTagValue,
         subjectTag: subjectTagValue,
-        relatedSubjectId: subjectIdValue, // Pass value from form ('0' or admin input)
-        totalChapters: totalChaptersNum, // Pass parsed number (0 or admin input)
+        courseDirName: courseDirNameValue,
+        relatedSubjectId: subjectIdValue,
+        totalChapters: totalChaptersNum,
         youtubePlaylistUrls: playlistUrls,
-        pdfPathPattern: pdfPatternValue, // Pass value from form ('' or admin input)
-        transcriptionPathPattern: transPatternValue, // Pass value from form ('' or admin input)
-        // --- NEW: Pass Image URLs ---
         imageUrl: imageUrlValue,
         coverUrl: coverUrlValue,
-        // --- End NEW ---
-        // chapters and chapterResources will be initialized in addCourseToFirestore
-        // status will be determined in addCourseToFirestore
+        // --- MODIFIED: Add parsed Subject Tag arrays ---
+        prerequisites: prerequisitesValue,
+        corequisites: corequisitesValue,
+        // --- End MODIFICATION ---
     };
 
     showLoading(isAdmin ? "Submitting course..." : "Submitting suggestion...");
 
-    // Pass the prepared data object. addCourseToFirestore determines final status and fields.
-    const result = await addCourseToFirestore(courseData);
+    const result = await addCourseToFirestore(courseData); // Use imported function
     hideLoading();
 
     if (result.success) {
-        // Use the status returned by addCourseToFirestore which reflects the actual status set
         const finalStatusMessage = result.status === 'approved' ? 'added and approved' : 'suggested and pending review';
         alert(`Course "${courseData.name}" ${finalStatusMessage} successfully!`);
         showBrowseCourses();
@@ -719,143 +673,149 @@ export async function submitNewCourse(event) {
 }
 
 /**
- * Handles updating course details, including FoP.
- * **MODIFIED:** Ensures updateCourseDefinition is called without special FoP handling.
- * **MODIFIED:** Includes imageUrl and coverUrl fields.
+ * Handles updating course details, including courseDirName, prereqs/coreqs (Subject Tags), and removing path patterns.
+ * MODIFIED: Removes deprecated path pattern fields from updates.
  */
 export async function handleUpdateCourse(event, courseId) {
     event.preventDefault();
     if (currentUser?.uid !== ADMIN_UID) { alert("Permission denied."); return; }
 
+    // --- MODIFIED: Helper function to parse Subject Tags ---
+    const parseSubjectTags = (inputId) => {
+        const inputString = document.getElementById(inputId)?.value.trim() || '';
+        if (!inputString) return [];
+        return inputString.split(',')
+                          .map(tag => tag.trim()) // Trim each tag
+                          .filter(tag => tag); // Remove empty strings
+    };
+    // --- End MODIFICATION ---
+
     const playlistUrlsText = document.getElementById('edit-course-playlist-urls')?.value.trim() || '';
     const playlistUrls = playlistUrlsText ? playlistUrlsText.split('\n').map(url => url.trim()).filter(url => url) : [];
+
+    // Clean the directory name input
+    let cleanedDirName = cleanTextForFilename(document.getElementById('edit-course-dir-name')?.value.trim());
+    if (!cleanedDirName) {
+        // Fallback if admin clears it or it becomes empty after cleaning
+        cleanedDirName = cleanTextForFilename(document.getElementById('edit-course-name')?.value.trim()) || courseId;
+        alert("Course Directory Name cannot be empty. It has been reset based on the course name or ID.");
+    }
+
 
     const updates = {
         name: document.getElementById('edit-course-name')?.value.trim(),
         description: document.getElementById('edit-course-desc')?.value.trim() || null,
         majorTag: document.getElementById('edit-course-major-tag')?.value.trim() || null,
         subjectTag: document.getElementById('edit-course-subject-tag')?.value.trim() || null,
+        courseDirName: cleanedDirName, // Use cleaned directory name
         relatedSubjectId: document.getElementById('edit-course-subject-id')?.value.trim(),
         totalChapters: parseInt(document.getElementById('edit-course-total-chapters')?.value || '0'),
-        youtubePlaylistUrls: playlistUrls, // Use parsed array
-        pdfPathPattern: document.getElementById('edit-course-pdf-pattern')?.value.trim() || null,
-        transcriptionPathPattern: document.getElementById('edit-course-trans-pattern')?.value.trim() || null,
-        // --- NEW: Add Image URLs ---
+        youtubePlaylistUrls: playlistUrls,
         imageUrl: document.getElementById('edit-course-image-url')?.value.trim() || null,
         coverUrl: document.getElementById('edit-course-cover-url')?.value.trim() || null,
-        // --- End NEW ---
+        // --- MODIFIED: Parse and add Subject Tag arrays ---
+        prerequisites: parseSubjectTags('edit-course-prerequisites'),
+        corequisites: parseSubjectTags('edit-course-corequisites'),
+        // --- End MODIFICATION ---
+        // REMOVE old path patterns - Explicitly delete if needed and if firebase namespace is available
+        // pdfPathPattern: firebase.firestore.FieldValue.delete(),
+        // transcriptionPathPattern: firebase.firestore.FieldValue.delete(),
     };
 
-    // --- Add NaN check ---
+     // Check if firebase.firestore.FieldValue.delete is available and use it if needed
+     if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined' && typeof firebase.firestore.FieldValue !== 'undefined') {
+         updates.pdfPathPattern = firebase.firestore.FieldValue.delete();
+         updates.transcriptionPathPattern = firebase.firestore.FieldValue.delete();
+         console.log("Including FieldValue.delete() for deprecated path patterns.");
+     } else {
+         console.warn("firebase.firestore.FieldValue.delete() not available. Deprecated fields might not be explicitly removed.");
+     }
+
+
     if (isNaN(updates.totalChapters)) {
         alert("Invalid input for 'Total Chapters'. Please enter a valid number.");
         document.getElementById('edit-course-total-chapters')?.focus();
-        return; // Stop execution if totalChapters is NaN
+        return;
     }
-    // --- End NaN check ---
-     // Ensure totalChapters is not negative
      if (updates.totalChapters < 0) {
         alert("Total Chapters cannot be negative.");
         document.getElementById('edit-course-total-chapters')?.focus();
         return;
      }
 
-
-     if (!updates.name || !updates.relatedSubjectId /* || updates.totalChapters <= 0 */ ) { // Allow 0 chapters
-         alert("Course Name and Related Subject ID are required.");
-         if (!updates.name) document.getElementById('edit-course-name')?.focus();
-         else if (!updates.relatedSubjectId) document.getElementById('edit-course-subject-id')?.focus();
-         // else document.getElementById('edit-course-total-chapters')?.focus();
+     if (!updates.name || !updates.relatedSubjectId || !updates.courseDirName ) {
+         alert("Course Name, Related Subject ID, and Course Directory Name are required.");
+         // Add focus logic if needed
          return;
      }
 
-    // Fetch current data JUST BEFORE update to compare chapter count accurately
+    // Fetch current data to compare chapter count
     let currentTotalChapters = 0;
     let currentChaptersArrayExists = false;
-    let currentDocData = null; // Store current data
+    let currentDocData = null;
     try {
-        // Use fetchCourseDetails to leverage caching and FoP fallback logic
         const currentCourse = await fetchCourseDetails(courseId);
         if (currentCourse) {
-             currentDocData = currentCourse; // Use data from cache/FS/config
+             currentDocData = currentCourse;
              currentTotalChapters = currentCourse.totalChapters || 0;
              currentChaptersArrayExists = Array.isArray(currentCourse.chapters);
         }
-    } catch (fetchError) {
-        console.error("Could not fetch current course data before update:", fetchError);
-        // Proceed with caution, might overwrite chapters array unnecessarily
-    }
+    } catch (fetchError) { console.error("Could not fetch current course data before update:", fetchError); }
 
-    // Check if totalChapters changed OR chapters array doesn't exist or is wrong length
-    // Only create new chapter names if the count *changes* or if the array is missing/malformed.
-    // Preserve existing names if count is the same.
     let currentChapterNames = currentDocData?.chapters || [];
     if (updates.totalChapters !== currentTotalChapters || !currentChaptersArrayExists || currentChapterNames.length !== currentTotalChapters) {
          updates.chapters = Array.from({ length: updates.totalChapters }, (_, i) => `Chapter ${i + 1}`);
          console.log(`Chapter count changed or chapters array missing/mismatched. Updating chapters array for course ${courseId}. New count: ${updates.totalChapters}`);
     } else {
-         // If chapter count is the same and chapters array exists and matches count, don't overwrite it.
          console.log(`Chapter count unchanged (${updates.totalChapters}). Preserving existing chapters array structure for course ${courseId}.`);
-         // No need to add `updates.chapters = currentChapterNames;` because Firestore `set` with `merge: true` only updates fields present in `updates`.
-         // If `updates.chapters` is not set, the existing `chapters` array in Firestore remains untouched.
     }
 
-    // If editing FoP, we update Firestore if it exists. The message clarifies.
     const isFoP = courseId === FOP_COURSE_ID;
     let messageAction = isFoP ? "FoP course data" : `course "${updates.name}"`;
 
-
-    // --- Add Logging ---
     console.log(`Attempting to update ${messageAction} (${courseId}) in Firestore with data:`, JSON.stringify(updates, null, 2));
-    // --- End Logging ---
-
     showLoading(`Updating ${messageAction}...`);
-    // Call updateCourseDefinition - it handles both regular courses and FoP the same way now (set merge)
-    const success = await updateCourseDefinition(courseId, updates);
+    const success = await updateCourseDefinition(courseId, updates); // updateCourseDefinition uses set merge
     hideLoading();
     if (success) {
         alert(`${isFoP ? 'FoP course data' : `Course "${updates.name}"`} updated successfully in Firestore!`);
-        // Force refresh details from Firestore after update by clearing local cache entry
+        // Force refresh of local cache by removing old entry before browsing
         globalCourseDataMap.delete(courseId);
-        showBrowseCourses(); // Refresh the list view
+        showBrowseCourses();
+    } else {
+        // updateCourseDefinition already shows an alert on failure
     }
-    // No else needed, updateCourseDefinition shows an alert on failure
 }
 
-
+/**
+ * Displays the details of a specific course.
+ * MODIFIED: Displays prerequisites and corequisites as Subject Tags (strings).
+ */
 export async function showCourseDetails(courseId) {
      setActiveSidebarLink('showBrowseCourses', 'sidebar-standard-nav');
      setActiveCourseId(null);
      showLoading("Loading course details...");
-     // Use fetchCourseDetails which prioritizes Firestore, then cache, then config for FoP
      const course = await fetchCourseDetails(courseId);
      hideLoading();
-     // Handle case where non-admin tries to view non-approved course (already handled in fetchCourseDetails)
      if (!course) {
          displayContent('<p class="text-red-500 p-4">Could not load course details or access denied.</p><button onclick="window.showBrowseCourses()" class="btn-secondary mt-2">Back to Courses</button>'); return;
      }
      const isAdmin = currentUser?.uid === ADMIN_UID;
      const isEnrolled = userCourseProgressMap.has(courseId);
-     // FoP cannot be reported
      const canReport = currentUser && currentUser.uid !== course.creatorUid && course.status === 'approved' && course.id !== FOP_COURSE_ID;
-     // *** MODIFIED: Allow enrollment if approved OR it's FoP ***
      const canEnroll = currentUser && !isEnrolled && (course.status === 'approved' || course.id === FOP_COURSE_ID);
      const numChapters = course.totalChapters ?? (Array.isArray(course.chapters) ? course.chapters.length : 0);
 
-     // Determine display status (FoP always shows as approved for non-admins unless status is reported/rejected in FS)
      const displayStatus = (course.id === FOP_COURSE_ID && !isAdmin && course.status !== 'reported' && course.status !== 'rejected') ? 'approved' : course.status;
      const displayStatusText = displayStatus ? displayStatus.charAt(0).toUpperCase() + displayStatus.slice(1) : 'N/A';
 
      let chaptersHtml = '';
      if (numChapters > 0 && Array.isArray(course.chapters) && course.chapters.length > 0) {
-         // Use actual chapter names if available and match totalChapters count, otherwise generate generic ones
-         const chapterTitles = (course.chapters.length === numChapters && course.chapters.every(ch => typeof ch === 'string' || (typeof ch === 'object' && ch !== null && ch.name))) // Check for simple string array or object array with name
-             ? course.chapters.map(ch => (typeof ch === 'string' ? ch : ch.name)) // Extract name if object
+         const chapterTitles = (course.chapters.length === numChapters && course.chapters.every(ch => typeof ch === 'string' || (typeof ch === 'object' && ch !== null && ch.name)))
+             ? course.chapters.map(ch => (typeof ch === 'string' ? ch : ch.name))
              : Array.from({ length: numChapters }, (_, i) => `Chapter ${i + 1}`);
-
          chaptersHtml = `<ol class="list-decimal list-inside space-y-1 text-sm max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600">` + chapterTitles.map((title, index) => `<li>${escapeHtml(title || `Chapter ${index + 1}`)}</li>`).join('') + `</ol>`;
      } else if (numChapters > 0) {
-         // Fallback if chapters array is missing/empty but totalChapters > 0
          chaptersHtml = `<ol class="list-decimal list-inside space-y-1 text-sm max-h-60 overflow-y-auto bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600">` + Array.from({ length: numChapters }, (_, i) => `<li>Chapter ${i + 1}</li>`).join('') + `</ol>`;
      } else {
          chaptersHtml = `<p class="text-sm text-muted italic">Chapter list not available or course has 0 chapters.</p>`;
@@ -864,23 +824,46 @@ export async function showCourseDetails(courseId) {
       if (isEnrolled) { actionButtonHtml = `<button onclick="window.navigateToCourseDashboard('${course.id}')" class="btn-success w-full mt-4">Go to Course Dashboard</button>`; }
       else if (canEnroll) { actionButtonHtml = `<button onclick="window.showCourseEnrollment('${course.id}')" class="btn-primary w-full mt-4">Enroll in Course</button>`; }
       else if (!currentUser) { actionButtonHtml = `<p class="text-center text-muted mt-4">Log in to enroll.</p>`; }
-      // *** MODIFIED: Show unavailable message only if NOT approved AND NOT FoP ***
       else if (course.status !== 'approved' && course.id !== FOP_COURSE_ID) { actionButtonHtml = `<p class="text-center text-muted mt-4">This course is not currently available for enrollment (${escapeHtml(course.status || 'N/A')}).</p>`; }
-      // Added case: if logged in, not enrolled, but cannot enroll (e.g., already enrolled or FoP if status isn't approved but user IS admin?)
-      // This case should be rare now due to the canEnroll logic covering FoP.
 
-     // Admin Actions: Show based on *actual* course status, with special handling for FoP
      const showAdminActions = isAdmin && course.id !== FOP_COURSE_ID && (course.status === 'pending' || course.status === 'reported' || course.status === 'rejected');
-      // FoP Admin Actions: Edit always shown. Clear Report/Delete shown only if status is reported/rejected.
      const showFopAdminActions = isAdmin && course.id === FOP_COURSE_ID;
+
+     // Show courseDirName for admin
+     const adminDetailsHtml = isAdmin ? `
+        <p class="text-xs text-muted mt-1">Course ID: ${escapeHtml(course.id)}</p>
+        <p class="text-xs text-muted">Directory Name: <code class="text-purple-600 dark:text-purple-400">${escapeHtml(course.courseDirName || 'N/A')}</code></p>
+     ` : '';
+
+    // --- MODIFIED: Display Prerequisites/Corequisites as Subject Tags ---
+     const renderReqList = (reqTags, type) => {
+        if (!reqTags || reqTags.length === 0) return '';
+        const listItems = reqTags.map(tag => {
+            // Simply display the tag string
+            return `<li class="text-gray-700 dark:text-gray-300">${escapeHtml(tag)} <span class="text-xs text-muted italic">(Subject Tag)</span></li>`;
+        }).join('');
+        return `
+            <div class="mt-4">
+                <h4 class="text-md font-semibold mb-1 text-gray-600 dark:text-gray-400">${type}:</h4>
+                <ul class="list-disc list-inside space-y-0.5 text-sm ml-2">
+                    ${listItems}
+                </ul>
+            </div>
+        `;
+     };
+     const prereqsHtml = renderReqList(course.prerequisites, 'Prerequisites');
+     const coreqsHtml = renderReqList(course.corequisites, 'Corequisites');
+     // --- End MODIFICATION ---
 
      const html = `
         <div class="animate-fade-in space-y-6">
             <div class="flex flex-wrap justify-between items-center gap-2"><h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">${escapeHtml(course.name || 'Unnamed Course')}</h2><button onclick="window.showBrowseCourses()" class="btn-secondary-small flex-shrink-0">Back to Courses</button></div>
             <div class="content-card">
-                 <div class="flex justify-between items-start mb-4 pb-4 border-b dark:border-gray-600"><div><p class="text-sm text-muted">Major: <span class="font-medium text-gray-700 dark:text-gray-300">${escapeHtml(course.majorTag || 'N/A')}</span></p>${course.subjectTag ? `<p class="text-sm text-muted">Subject: <span class="font-medium text-gray-700 dark:text-gray-300">${escapeHtml(course.subjectTag)}</span></p>` : ''}<p class="text-xs text-muted mt-1">Created by: ${escapeHtml(course.creatorName || 'Unknown')} ${course.createdAt?.toDate ? `on ${new Date(course.createdAt.toDate()).toLocaleDateString()}` : (course.id === FOP_COURSE_ID ? '(Built-in/Config)' : '')}</p></div><div class="text-right"><span class="text-sm font-semibold px-2 py-1 rounded ${displayStatus === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-200' : displayStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200' : displayStatus === 'reported' ? 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-200' : displayStatus === 'rejected' ? 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}">${escapeHtml(displayStatusText)}</span>${course.status === 'reported' && isAdmin ? `<p class="text-xs text-red-500 cursor-pointer hover:underline mt-1" onclick="alert('Report Reason: ${escapeHtml(course.reportReason || 'None provided')}')">(View Report)</p>` : ''}</div></div>
+                 <div class="flex justify-between items-start mb-4 pb-4 border-b dark:border-gray-600"><div><p class="text-sm text-muted">Major: <span class="font-medium text-gray-700 dark:text-gray-300">${escapeHtml(course.majorTag || 'N/A')}</span></p>${course.subjectTag ? `<p class="text-sm text-muted">Subject: <span class="font-medium text-gray-700 dark:text-gray-300">${escapeHtml(course.subjectTag)}</span></p>` : ''}<p class="text-xs text-muted mt-1">Created by: ${escapeHtml(course.creatorName || 'Unknown')} ${course.createdAt?.toDate ? `on ${new Date(course.createdAt.toDate()).toLocaleDateString()}` : (course.id === FOP_COURSE_ID ? '(Built-in/Config)' : '')}</p>${adminDetailsHtml}</div><div class="text-right"><span class="text-sm font-semibold px-2 py-1 rounded ${displayStatus === 'approved' ? 'bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-200' : displayStatus === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-200' : displayStatus === 'reported' ? 'bg-red-100 text-red-800 dark:bg-red-700 dark:text-red-200' : displayStatus === 'rejected' ? 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-600 dark:text-gray-200'}">${escapeHtml(displayStatusText)}</span>${course.status === 'reported' && isAdmin ? `<p class="text-xs text-red-500 cursor-pointer hover:underline mt-1" onclick="alert('Report Reason: ${escapeHtml(course.reportReason || 'None provided')}')">(View Report)</p>` : ''}</div></div>
                 <p class="text-base mb-4">${escapeHtml(course.description || 'No description.')}</p>
-                <h3 class="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">Course Chapters (${numChapters})</h3>
+                ${prereqsHtml}
+                ${coreqsHtml}
+                <h3 class="text-lg font-semibold mb-2 mt-4 text-gray-700 dark:text-gray-300">Course Chapters (${numChapters})</h3>
                 ${chaptersHtml}
                 ${actionButtonHtml}
                  <div class="mt-6 pt-4 border-t dark:border-gray-600 flex flex-wrap justify-end gap-3">
@@ -913,6 +896,9 @@ export async function showCourseDetails(courseId) {
      displayContent(html);
 }
 
+/**
+ * MODIFIED: Handles reporting a course by updating its status using updateCourseDefinition.
+ */
 export async function handleReportCourse(courseId) {
     if (!currentUser) { alert("Please log in to report."); return; }
     if (courseId === FOP_COURSE_ID) {
@@ -921,19 +907,60 @@ export async function handleReportCourse(courseId) {
     }
     const reason = prompt(`Please provide a brief reason for reporting this course (ID: ${courseId}):`);
     if (reason === null) return; // User cancelled
-    if (!reason.trim()) { alert("A reason is required to report."); return; } // Require a reason
+    if (!reason.trim()) { alert("A reason is required to report."); return; }
+
     showLoading("Submitting report...");
-    const success = await reportCourseInFirestore(courseId, reason.trim()); hideLoading();
-    if (success) { alert("Course reported successfully."); showCourseDetails(courseId); } else { alert("Failed to submit report."); }
+    try {
+        let reportedByUpdate;
+        // Check if firebase namespace is available for FieldValue
+        if (typeof firebase !== 'undefined' && typeof firebase.firestore !== 'undefined' && typeof firebase.firestore.FieldValue !== 'undefined') {
+            reportedByUpdate = firebase.firestore.FieldValue.arrayUnion(currentUser.uid);
+        } else {
+             console.warn("firebase.firestore.FieldValue.arrayUnion not available. Storing only current user ID for report.");
+             // Fallback: Store only the current user's ID in a new array or overwrite existing
+             reportedByUpdate = [currentUser.uid];
+             // Or, if you need to append reliably without FieldValue, fetch existing, append, then update.
+             // const existingCourse = await fetchCourseDetails(courseId);
+             // const existingReportedBy = existingCourse?.reportedBy || [];
+             // if (!existingReportedBy.includes(currentUser.uid)) {
+             //     reportedByUpdate = [...existingReportedBy, currentUser.uid];
+             // } else {
+             //     reportedByUpdate = existingReportedBy; // Avoid duplicates
+             // }
+        }
+
+        const updates = {
+            status: 'reported',
+            reportReason: reason.trim(),
+            reportedBy: reportedByUpdate
+        };
+        // Use updateCourseDefinition to set the reported status and reason
+        const success = await updateCourseDefinition(courseId, updates);
+        hideLoading();
+
+        if (success) {
+            alert("Course reported successfully.");
+            // Refresh the course list view instead of showing details again
+            showBrowseCourses();
+        } else {
+            // updateCourseDefinition should show its own alert on failure
+            console.error(`Failed to report course ${courseId} via updateCourseDefinition.`);
+        }
+    } catch (error) {
+        hideLoading();
+        console.error(`Error reporting course ${courseId}:`, error);
+        alert(`Failed to submit report: ${error.message}`);
+    }
 }
 
-// MODIFIED handleCourseApproval
+
+// MODIFIED handleCourseApproval (logic mostly the same, message clarification)
 export async function handleCourseApproval(courseId, approve, deleteCourse = false) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Action requires admin privileges."); return; }
 
-    // Prevent approve/reject actions on FoP, but allow clear report and delete.
     if (courseId === FOP_COURSE_ID) {
-         const isClearingReport = approve && (globalCourseDataMap.get(courseId)?.status === 'reported');
+         const currentCourse = globalCourseDataMap.get(courseId); // Get current status from cache
+         const isClearingReport = approve && (currentCourse?.status === 'reported');
          if (!deleteCourse && !isClearingReport) {
              alert("The Fundamentals of Physics course status cannot be directly approved or rejected. Edit its config, clear reports, or delete the Firestore record if applicable.");
              return;
@@ -942,30 +969,25 @@ export async function handleCourseApproval(courseId, approve, deleteCourse = fal
 
     let actionText = '';
     let newStatus = null;
-    let updates = {}; // Object to hold Firestore updates
+    let updates = {};
 
-    // Fetch current details to get name and current status for confirmation message
-    const courseData = await fetchCourseDetails(courseId); // Prioritizes FS, falls back for FoP
-    if (!courseData && !deleteCourse) { // Allow deletion even if fetch fails (might be deleting a non-existent FS record)
+    const courseData = await fetchCourseDetails(courseId); // Fetch latest data before action
+    if (!courseData && !deleteCourse) {
          alert(`Error: Could not find course data for ID: ${courseId} to perform status change.`); return;
     }
 
-
-    // Determine action text and new status based on parameters
     if (deleteCourse) {
         actionText = 'delete';
-        if(courseId === FOP_COURSE_ID) actionText = 'delete the Firestore record for'; // Clarify for FoP
+        if(courseId === FOP_COURSE_ID) actionText = 'delete the Firestore record for';
     } else if (approve) {
-        actionText = 'approve'; // Base text
-        if (courseData?.status === 'reported') {
-             actionText = 'approve (clear report)'; // More specific text
-        }
+        actionText = 'approve';
+        if (courseData?.status === 'reported') actionText = 'approve (clear report)';
         newStatus = 'approved';
-        updates = { status: newStatus, reportReason: null, reportedBy: [] };
-    } else { // reject case (approve is false, deleteCourse is false)
+        updates = { status: newStatus, reportReason: null, reportedBy: [] }; // Clear report info on approval
+    } else {
         actionText = 'reject';
         newStatus = 'rejected';
-        updates = { status: newStatus, reportReason: null, reportedBy: [] }; // Clear report details on reject too
+        updates = { status: newStatus, reportReason: null, reportedBy: [] }; // Clear report info on rejection too
     }
 
     const confirmationMessage = `Are you sure you want to ${actionText} course "${courseData?.name || courseId}"?` + (deleteCourse ? '\n\nTHIS ACTION IS PERMANENT AND CANNOT BE UNDONE.' : '');
@@ -978,82 +1000,47 @@ export async function handleCourseApproval(courseId, approve, deleteCourse = fal
     try {
         if (deleteCourse) {
             await courseRef.delete();
-            globalCourseDataMap.delete(courseId); // Remove from local cache
+            globalCourseDataMap.delete(courseId);
             success = true;
              alert(`Course record ${courseId} deleted successfully from Firestore.`);
-            hideLoading(); // Hide loading before navigating
-            // If FoP deleted, load it back from config immediately for consistency
+            hideLoading();
             if(courseId === FOP_COURSE_ID) {
                 console.log("FoP Firestore record deleted. Reloading from local config into cache.");
                  const fopDef = {...FOP_COURSE_DEFINITION};
-                 fopDef.id = FOP_COURSE_ID; fopDef.status = 'approved'; // Treat as approved when falling back
+                 fopDef.id = FOP_COURSE_ID; fopDef.status = 'approved';
                  fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
                  fopDef.chapterResources = fopDef.chapterResources || {};
                  fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
                  fopDef.chapters = fopDef.chapters || [];
                  fopDef.midcourseChapters = fopDef.midcourseChapters || [];
-                 // --- NEW: Initialize Image URLs ---
                  fopDef.imageUrl = fopDef.imageUrl || null;
                  fopDef.coverUrl = fopDef.coverUrl || null;
-                 // --- End NEW ---
+                 fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID; // Ensure courseDirName
+                 // Ensure prereqs/coreqs are arrays of strings
+                 fopDef.prerequisites = Array.isArray(fopDef.prerequisites) ? fopDef.prerequisites.filter(item => typeof item === 'string') : [];
+                 fopDef.corequisites = Array.isArray(fopDef.corequisites) ? fopDef.corequisites.filter(item => typeof item === 'string') : [];
                  updateGlobalCourseData(courseId, fopDef);
             }
-            showBrowseCourses(); // Go back to list after deletion
-            return; // Exit early after deletion
+            showBrowseCourses();
+            return;
         }
         else {
-            // Use the updates object prepared earlier (sets status, clears report fields)
-            await courseRef.update(updates);
-
-            // Update local cache based on the new status
-            // Fetch the full data after update to ensure cache is correct
-            const updatedDoc = await courseRef.get();
-            if (updatedDoc.exists) {
-                 const updatedData = { id: courseId, ...updatedDoc.data() };
-                 // Ensure structure consistency after fetch
-                 if (!updatedData.youtubePlaylistUrls && updatedData.youtubePlaylistUrl) updatedData.youtubePlaylistUrls = [updatedData.youtubePlaylistUrl];
-                 else updatedData.youtubePlaylistUrls = updatedData.youtubePlaylistUrls || [];
-                 updatedData.chapterResources = updatedData.chapterResources || {};
-                 updatedData.totalChapters = updatedData.totalChapters ?? (Array.isArray(updatedData.chapters) ? updatedData.chapters.length : 0);
-                 updatedData.chapters = updatedData.chapters || [];
-                 updatedData.midcourseChapters = updatedData.midcourseChapters || [];
-                 // --- NEW: Initialize Image URLs ---
-                 updatedData.imageUrl = updatedData.imageUrl || null;
-                 updatedData.coverUrl = updatedData.coverUrl || null;
-                 // --- End NEW ---
-
-                 updateGlobalCourseData(courseId, updatedData); // Update cache with latest Firestore data
+            // Use updateCourseDefinition instead of direct update
+            // It handles admin checks and local state update
+            success = await updateCourseDefinition(courseId, updates);
+            if (success) {
+                alert(`Course ${courseId} ${actionText}d successfully.`);
             } else {
-                 // If deleted or somehow missing after update, remove from cache
-                 globalCourseDataMap.delete(courseId);
-                 // If FoP was somehow deleted during update, reload from config
-                 if(courseId === FOP_COURSE_ID) {
-                      console.warn("FoP Firestore record missing after update attempt. Reloading from local config.");
-                      const fopDef = {...FOP_COURSE_DEFINITION};
-                      fopDef.id = FOP_COURSE_ID; fopDef.status = 'approved';
-                      fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
-                      fopDef.chapterResources = fopDef.chapterResources || {};
-                      fopDef.totalChapters = fopDef.totalChapters ?? (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
-                      fopDef.chapters = fopDef.chapters || [];
-                      fopDef.midcourseChapters = fopDef.midcourseChapters || [];
-                      // --- NEW: Initialize Image URLs ---
-                      fopDef.imageUrl = fopDef.imageUrl || null;
-                      fopDef.coverUrl = fopDef.coverUrl || null;
-                      // --- End NEW ---
-                      updateGlobalCourseData(courseId, fopDef);
-                 }
+                // updateCourseDefinition shows its own error alert
+                 console.error(`Failed to ${actionText} course ${courseId} via updateCourseDefinition.`);
             }
-
-
-            success = true;
-            // Use actionText which might be 'approve (clear report)'
-            alert(`Course ${courseId} ${actionText}d successfully.`);
         }
-        hideLoading(); // Ensure loading is hidden after operation (unless deleted, which hides earlier)
+        hideLoading();
 
-        if (success && !deleteCourse) { // Don't refresh if deleted, already navigated
-            // Refresh the browse list after approval/rejection/clear-report
-            showBrowseCourses();
+        if (success && !deleteCourse) {
+             showBrowseCourses(); // Refresh list after status change
+        } else if (success && deleteCourse) {
+             // Already handled showing browse courses
         }
     } catch (error) {
         console.error(`Error ${actionText}ing course ${courseId}:`, error);
@@ -1063,7 +1050,7 @@ export async function handleCourseApproval(courseId, approve, deleteCourse = fal
 }
 
 
-// Make functions accessible globally in the browser window
+// Make functions accessible globally
 window.showBrowseCourses = showBrowseCourses;
 window.handleCourseSearch = handleCourseSearch;
 window.showAddCourseForm = showAddCourseForm;
@@ -1073,7 +1060,7 @@ window.handleUpdateCourse = handleUpdateCourse;
 window.showCourseDetails = showCourseDetails;
 window.handleReportCourse = handleReportCourse;
 window.handleCourseApproval = handleCourseApproval;
-window.showCourseEnrollment = showCourseEnrollment; // From ui_course_enrollment.js via import
-window.navigateToCourseDashboard = navigateToCourseDashboard; // From ui_course_dashboard.js via import
+window.showCourseEnrollment = showCourseEnrollment;
+window.navigateToCourseDashboard = navigateToCourseDashboard;
 
 // --- END OF FILE ui_courses.js ---

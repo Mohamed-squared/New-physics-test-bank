@@ -4,9 +4,20 @@
 
 import { showLoading, hideLoading } from './utils.js'; // Assuming utils are needed somewhere, maybe not here directly
 
+/**
+ * Updates the chapter data within a subject object based on parsed Markdown content.
+ * Compares parsed data with existing data, updates total questions, resets available questions
+ * if totals change, and preserves existing progress data where possible.
+ * Adds the chapter 'title' property if found in the Markdown.
+ * @param {object} subject - The subject object containing the chapters data.
+ * @param {string} mdContent - The Markdown content for the subject.
+ * @returns {boolean} - True if any chapter data was changed, false otherwise.
+ */
 export function updateChaptersFromMarkdown(subject, mdContent) {
+    // --- THIS FUNCTION IS FOR TESTGEN BANK - NOT COURSE EXAMS ---
+    // It updates the central 'data.subjects' state based on the main subject MD file.
     if (!subject) { console.error("updateChaptersFromMarkdown: Subject undefined"); return false; }
-    const parsedChapters = parseChaptersFromMarkdown(mdContent);
+    const parsedChapters = parseChaptersFromMarkdown(mdContent); // Parses main MD
     const existingChapters = subject.chapters || {};
     const updatedChapters = {};
     const allKnownChapterNumbers = new Set([...Object.keys(existingChapters), ...Object.keys(parsedChapters)]);
@@ -16,238 +27,311 @@ export function updateChaptersFromMarkdown(subject, mdContent) {
         const parsedChapData = parsedChapters[chapNum];
         const existingChapData = existingChapters[chapNum];
         const newTotal = parsedChapData?.total_questions ?? 0;
-        let currentChapterData = {}; let chapterChanged = false;
+        const newTitle = parsedChapData?.title;
+
+        let currentChapterData = {};
+        let chapterChanged = false;
 
         if (existingChapData) {
             currentChapterData = { ...existingChapData };
             if (parsedChapData) {
+                if (currentChapterData.title !== newTitle) {
+                    currentChapterData.title = newTitle; chapterChanged = true;
+                    // console.log(`Ch ${chapNum}: Title updated to "${newTitle}".`);
+                }
                 if (currentChapterData.total_questions !== newTotal) {
-                    console.log(`Ch ${chapNum}: Total Qs changed ${currentChapterData.total_questions} -> ${newTotal}. Resetting available.`);
+                    // console.log(`Ch ${chapNum}: Total Qs changed ${currentChapterData.total_questions} -> ${newTotal}. Resetting available.`);
                     currentChapterData.total_questions = newTotal;
                     currentChapterData.available_questions = Array.from({ length: newTotal }, (_, j) => j + 1);
                     chapterChanged = true;
                 } else {
-                    // Retain existing total_questions if it matches or if parsedChapData didn't specify one
                     currentChapterData.total_questions = newTotal > 0 ? newTotal : currentChapterData.total_questions;
                     const initialAvailable = currentChapterData.available_questions || [];
-                    // Filter based on the potentially updated total_questions
                     currentChapterData.available_questions = [...new Set( (initialAvailable).filter(q => typeof q === 'number' && q > 0 && q <= currentChapterData.total_questions) )].sort((a, b) => a - b);
                     if (JSON.stringify(initialAvailable.sort((a,b)=>a-b)) !== JSON.stringify(currentChapterData.available_questions)) {
-                         console.log(`Ch ${chapNum}: Available Qs list cleaned or updated based on total.`); chapterChanged = true;
+                         // console.log(`Ch ${chapNum}: Available Qs list cleaned or updated based on total.`);
+                         chapterChanged = true;
                     }
                 }
-            } else { // Exists in data, not MD
+            } else {
                  if (currentChapterData.total_questions !== 0 || currentChapterData.available_questions?.length > 0) {
-                    console.warn(`Ch ${chapNum} not found in MD. Resetting questions.`);
-                    currentChapterData.total_questions = 0; currentChapterData.available_questions = []; chapterChanged = true;
+                    // console.warn(`Ch ${chapNum} not found in MD. Resetting questions and title.`);
+                    currentChapterData.total_questions = 0;
+                    currentChapterData.available_questions = [];
+                    currentChapterData.title = null;
+                    chapterChanged = true;
                  }
             }
-        } else if (parsedChapData) { // Exists only in MD
-            console.log(`Ch ${chapNum}: Found new chapter in MD (${newTotal} Qs).`);
-            currentChapterData = { total_questions: newTotal, total_attempted: 0, total_wrong: 0, available_questions: Array.from({ length: newTotal }, (_, j) => j + 1), mistake_history: [], consecutive_mastery: 0 };
+        } else if (parsedChapData) {
+            // console.log(`Ch ${chapNum}: Found new chapter in MD (Title: "${newTitle}", Qs: ${newTotal}).`);
+            currentChapterData = {
+                title: newTitle,
+                total_questions: newTotal,
+                total_attempted: 0, total_wrong: 0, // Defaults for TestGen stats
+                available_questions: Array.from({ length: newTotal }, (_, j) => j + 1),
+                mistake_history: [], consecutive_mastery: 0
+            };
             chapterChanged = true;
         }
 
-        // Ensure essential fields exist, defaulting values if missing after merge/creation
+        currentChapterData.title = currentChapterData.title ?? null;
         currentChapterData.total_attempted = currentChapterData.total_attempted ?? 0;
         currentChapterData.total_wrong = currentChapterData.total_wrong ?? 0;
         currentChapterData.mistake_history = currentChapterData.mistake_history ?? [];
         currentChapterData.consecutive_mastery = currentChapterData.consecutive_mastery ?? 0;
-        // Ensure available_questions is an array, even if total_questions is 0
         currentChapterData.available_questions = currentChapterData.available_questions ?? [];
-        // Set total_questions if it wasn't set (e.g., only existing data without parsed data)
         currentChapterData.total_questions = currentChapterData.total_questions ?? 0;
 
-
-        // Only keep chapter if it has questions or existing data structure elements
-        if (Object.keys(currentChapterData).length > 0 && (currentChapterData.total_questions > 0 || Object.keys(existingChapters).includes(chapNum))) {
+        if (Object.keys(currentChapterData).length > 0 && (currentChapterData.total_questions > 0 || existingChapters[chapNum] || parsedChapters[chapNum])) {
              updatedChapters[chapNum] = currentChapterData;
-        } else if (newTotal > 0) {
-             updatedChapters[chapNum] = currentChapterData; // Keep if newly added from MD
         }
-
         if (chapterChanged) { changesMade = true; }
     });
-    subject.chapters = updatedChapters; return changesMade;
+    subject.chapters = updatedChapters;
+    return changesMade;
 }
 
+/**
+ * Parses Markdown content to extract chapter numbers, titles, and total question counts.
+ * @param {string} mdContent - The Markdown content.
+ * @returns {object} - An object where keys are chapter numbers (string) and values are
+ *                     objects containing { total_questions: number, title: string | null }.
+ */
 export function parseChaptersFromMarkdown(mdContent) {
-    console.log("--- Parsing MD for Chapters ---");
-    if (!mdContent) { console.error("parseChaptersFromMarkdown: null mdContent."); return {}; }
-    const chapters = {}; let currentChapterNum = null; let questionCount = 0;
+    // console.log("--- Parsing MD for Chapters & Titles ---");
+    if (!mdContent) { console.warn("parseChaptersFromMarkdown: null mdContent."); return {}; }
+    const chapters = {};
+    let currentChapterNum = null;
+    let questionCount = 0;
     const lines = mdContent.split('\n');
-    // Match "### Chapter <num>[: optional title]"
-    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i;
-    // Match question start: optional space, number, dot or paren, space, text
+    const chapterRegex = /^###\s+Chapter\s+(\d+)\s*[:\-]?\s*(.*?)\s*$/i;
     const questionRegex = /^\s*\d+[\.\)]\s+.+/;
+
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i]; const trimmedLine = line.trim();
         const chapterMatch = trimmedLine.match(chapterRegex);
+
         if (chapterMatch) {
-            // Finalize count for previous chapter before starting new one
             if (currentChapterNum !== null) {
-                 if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
-                 chapters[currentChapterNum].total_questions = questionCount;
-             }
-            // Start new chapter
+                if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
+                chapters[currentChapterNum].total_questions = questionCount;
+            }
             currentChapterNum = chapterMatch[1];
-            questionCount = 0; // Reset question count for the new chapter
-            if (!chapters[currentChapterNum]) { chapters[currentChapterNum] = { total_questions: 0 }; }
-            // console.log(`Found Chapter ${currentChapterNum}`);
+            const chapterTitle = chapterMatch[2] ? chapterMatch[2].trim() : null;
+            questionCount = 0;
+            if (!chapters[currentChapterNum]) chapters[currentChapterNum] = { total_questions: 0, title: chapterTitle };
+            else chapters[currentChapterNum].title = chapterTitle;
         } else if (currentChapterNum !== null && questionRegex.test(line)) {
-            // Increment question count if line matches question pattern and we are inside a chapter
             questionCount++;
         }
     }
-    // Finalize count for the last chapter
     if (currentChapterNum !== null) {
-         if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
-         chapters[currentChapterNum].total_questions = questionCount;
+        if (!chapters[currentChapterNum]) chapters[currentChapterNum] = {};
+        chapters[currentChapterNum].total_questions = questionCount;
     }
-    if (Object.keys(chapters).length === 0) { console.error("ERROR: No chapters parsed. Check MD format (e.g., '### Chapter 1: Title')."); }
-    else { console.log(`Parsed ${Object.keys(chapters).length} chapters.`); }
-    console.log("--- Finished Parsing MD for Chapters ---");
+    // if (Object.keys(chapters).length === 0 && mdContent.length > 10) console.warn("Parsing Warning: No chapters found in MD. Check format.");
+    // else console.log(`Parsed ${Object.keys(chapters).length} chapters definitions from MD.`);
+    // console.log("--- Finished Parsing MD for Chapters & Titles ---");
     return chapters;
 }
 
-export function extractQuestionsFromMarkdown(mdContent, selectedQuestionsMap) {
-    const extracted = { questions: [] };
-    if (!mdContent || !selectedQuestionsMap || Object.keys(selectedQuestionsMap).length === 0) { console.error("Invalid args for extractQuestionsFromMarkdown."); return extracted; }
-    const lines = mdContent.split('\n'); let currentChapter = null; let currentQuestion = null; let processingState = 'seeking_chapter';
-    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i; const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/; const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/; const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i; const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
+
+/**
+ * Extracts specific MCQs from Markdown content, filtering by chapter scope.
+ * @param {string} mdContent - The full Markdown text.
+ * @param {Array<number>} chapterScope - Array of chapter numbers to extract questions from.
+ * @param {string} [sourceType='unknown'] - Identifier for the source file (e.g., 'text_mcq'), used for generating IDs.
+ * @returns {object} - { questions: Array<QuestionObject>, answers: { questionId: correctAnswer } }
+ */
+export function extractQuestionsFromMarkdown(mdContent, chapterScope, sourceType = 'unknown') {
+    const extracted = { questions: [], answers: {} };
+    // *** MODIFIED: Handle potentially empty/null mdContent gracefully ***
+    if (!mdContent || !chapterScope || chapterScope.length === 0) {
+        // console.warn("extractQuestionsFromMarkdown: Invalid args or empty content/scope.");
+        return extracted;
+    }
+    const lines = mdContent.split('\n');
+    let currentChapter = null;
+    let currentQuestion = null;
+    let processingState = 'seeking_chapter';
+
+    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i;
+    const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/;
+    const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/;
+    const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i;
+    const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
+
+    // Convert chapterScope numbers to strings for easier comparison
+    const chapterScopeStrings = chapterScope.map(String);
 
     function finalizeQuestion() {
         if (currentQuestion && currentChapter) {
-            const questionId = `c${currentChapter}q${currentQuestion.number}`; let rawText = currentQuestion.textLines.join('\n').trim(); let answer = null; let imageUrl = null;
+            // *** MODIFIED ID to include sourceType ***
+            const questionId = `c${currentChapter}q${currentQuestion.number}-${sourceType}`;
+            let rawText = currentQuestion.textLines.join('\n').trim();
+            let answer = null;
+            let imageUrl = null;
+
             if (currentQuestion.answerLine) {
                 const m = currentQuestion.answerLine.match(answerRegex);
                 if (m) answer = m[1].toUpperCase();
                 if (currentQuestion.textLines.length > 0 && currentQuestion.textLines[currentQuestion.textLines.length - 1]?.trim() === currentQuestion.answerLine) {
-                     currentQuestion.textLines.pop();
-                     rawText = currentQuestion.textLines.join('\n').trim();
-                 }
+                    currentQuestion.textLines.pop();
+                    rawText = currentQuestion.textLines.join('\n').trim();
+                }
             }
-            const imgMatch = rawText.match(/!\[.*?\]\((.*?)\)/); if (imgMatch) { imageUrl = imgMatch[1]; rawText = rawText.replace(imageMarkdownRegex, '').trim(); }
-            const formattedOptions = currentQuestion.options.map(opt => ({ letter: opt.letter, text: opt.text.trim() }));
+
+            const imgMatch = rawText.match(/!\[.*?\]\((.*?)\)/);
+            if (imgMatch) {
+                imageUrl = imgMatch[1];
+                rawText = rawText.replace(imageMarkdownRegex, '').trim();
+            }
+
+            const formattedOptions = currentQuestion.options.map(opt => ({
+                letter: opt.letter, text: opt.text.trim()
+            }));
+
             extracted.questions.push({
                 id: questionId,
-                chapter: currentChapter,
+                chapter: currentChapter, // Keep as string
                 number: currentQuestion.number,
                 text: rawText,
                 options: formattedOptions,
                 image: imageUrl,
-                correctAnswer: answer,
+                correctAnswer: answer, // Stored here for review UI
                 isProblem: false
-             });
-            if (!answer) console.warn(`Answer missing for Q ${questionId}.`);
+            });
+            if (answer) {
+                extracted.answers[questionId] = answer; // Populate answers map for scoring
+            } else {
+                 console.warn(`Answer missing or unparsed for Q ${questionId}. Check MD format.`);
+            }
         }
         currentQuestion = null;
     }
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i]; const trimmedLine = line.trim();
-        const chapterMatch = trimmedLine.match(chapterRegex); const questionMatch = line.match(questionStartRegex); const optionMatch = trimmedLine.match(optionRegex); const isPotentialAnswerLine = answerRegex.test(trimmedLine);
-        if (chapterMatch) { finalizeQuestion(); currentChapter = chapterMatch[1]; processingState = 'seeking_question'; continue; }
-        if (processingState === 'seeking_chapter') continue;
-        if (questionMatch) {
-            finalizeQuestion(); const qNum = parseInt(questionMatch[1], 10); const firstLineText = questionMatch[2]; const chapterKey = String(currentChapter);
-            if (selectedQuestionsMap[chapterKey]?.includes(qNum)) { currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null }; processingState = 'in_question_text'; }
-            else { processingState = 'seeking_question'; currentQuestion = null; } continue;
+        const chapterMatch = trimmedLine.match(chapterRegex);
+
+        if (chapterMatch) {
+            finalizeQuestion();
+            const chapterNumStr = chapterMatch[1];
+            // *** MODIFIED: Only process chapters within the scope ***
+            if (chapterScopeStrings.includes(chapterNumStr)) {
+                currentChapter = chapterNumStr;
+                processingState = 'seeking_question';
+                // console.log(`Extracting from Chapter ${currentChapter} (${sourceType})`);
+            } else {
+                currentChapter = null; // Not in scope
+                processingState = 'seeking_chapter';
+            }
+            continue;
         }
+
+        // Skip lines if chapter is not in scope
+        if (!currentChapter) continue;
+
+        const questionMatch = line.match(questionStartRegex);
+        if (questionMatch) {
+            finalizeQuestion();
+            const qNum = parseInt(questionMatch[1], 10);
+            const firstLineText = questionMatch[2];
+            // Check if question number is valid
+            if (!isNaN(qNum) && qNum > 0) {
+                 currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
+                 processingState = 'in_question_text';
+            } else {
+                 console.warn(`Invalid question number found in Ch ${currentChapter}, Line: ${line}`);
+                 currentQuestion = null; // Skip this potential question block
+                 processingState = 'seeking_question';
+            }
+            continue;
+        }
+
         if (currentQuestion) {
-            if (optionMatch) { processingState = 'in_options'; currentQuestion.options.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2] }); continue; }
-             if (isPotentialAnswerLine) {
-                  let nextLineIndex = i + 1; let nextSignificantLine = null; while(nextLineIndex < lines.length) { nextSignificantLine = lines[nextLineIndex].trim(); if(nextSignificantLine !== '') break; nextLineIndex++; }
-                  const nextIsNewQ = nextSignificantLine && /^\s*\d+[\.\)]\s+.*/.test(nextSignificantLine); const nextIsNewChapter = nextSignificantLine && /^###\s+Chapter\s+\d+:?.*?$/i.test(nextSignificantLine); const isLastLine = nextLineIndex >= lines.length;
-                 if (nextSignificantLine === null || nextIsNewQ || nextIsNewChapter || isLastLine) { currentQuestion.answerLine = trimmedLine; processingState = 'found_answer'; }
-                 else { if (processingState === 'in_options' && currentQuestion.options.length > 0) { currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line; } else { currentQuestion.textLines.push(line); } } continue;
-             }
-             if (processingState === 'in_options' && currentQuestion.options.length > 0) { currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line; }
-             else if (processingState !== 'found_answer') { currentQuestion.textLines.push(line); }
+            const optionMatch = trimmedLine.match(optionRegex);
+            if (optionMatch) {
+                processingState = 'in_options';
+                currentQuestion.options.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2] });
+                continue;
+            }
+
+            const isPotentialAnswerLine = answerRegex.test(trimmedLine);
+            if (isPotentialAnswerLine) {
+                let nextLineIndex = i + 1; let nextSignificantLine = null;
+                while(nextLineIndex < lines.length) { nextSignificantLine = lines[nextLineIndex].trim(); if(nextSignificantLine !== '') break; nextLineIndex++; }
+                const nextIsNewQ = nextSignificantLine && /^\s*\d+[\.\)]\s+.*/.test(nextSignificantLine);
+                const nextIsNewChapter = nextSignificantLine && /^###\s+Chapter\s+\d+:?.*?$/i.test(nextSignificantLine);
+                const isLastLine = nextLineIndex >= lines.length;
+
+                if (nextSignificantLine === null || nextIsNewQ || nextIsNewChapter || isLastLine) {
+                    currentQuestion.answerLine = trimmedLine;
+                    processingState = 'found_answer';
+                    continue;
+                }
+            }
+
+            if (processingState === 'in_options' && currentQuestion.options.length > 0) {
+                currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line;
+            } else if (processingState !== 'found_answer') {
+                currentQuestion.textLines.push(line);
+            }
         }
     }
-    finalizeQuestion();
-    console.log(`Extraction finished. Found ${extracted.questions.length} questions.`);
-    const totalSelectedCount = Object.values(selectedQuestionsMap).reduce((sum, arr) => sum + (arr?.length || 0), 0);
-    if (extracted.questions.length < totalSelectedCount && totalSelectedCount > 0) { console.warn(`Extraction Warning: Selected ${totalSelectedCount} but only extracted ${extracted.questions.length}. Check MD formatting for selected questions.`); }
-    return { questions: extracted.questions };
+    finalizeQuestion(); // Finalize last question
+
+    // console.log(`Markdown Extraction (${sourceType}) finished. Found ${extracted.questions.length} questions in scope.`);
+    return extracted;
 }
 
 
-// --- Skip Exam Text Parser (Improved Robustness) ---
+// --- Skip Exam Text Parser (AI Output) ---
+// This remains unchanged as it parses a different format (AI output)
 export function parseSkipExamText(rawText, chapterNum) {
-    if (!rawText || !chapterNum) { console.error("parseSkipExamText: Missing args."); return { questions: [], answers: {} }; } // Return empty structure on error
-    console.log(`Parsing Skip Exam Text for Chapter ${chapterNum}...`);
-    const extracted = { questions: [], answers: {} }; // Keep answers map here for skip exam specific flow if needed downstream, though less necessary now
+    if (!rawText || !chapterNum) { console.error("parseSkipExamText: Missing args."); return { questions: [], answers: {} }; }
+    // console.log(`Parsing Skip Exam Text for Chapter ${chapterNum}...`);
+    const extracted = { questions: [], answers: {} };
     const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-    let currentQuestion = null; let questionNumFromText = 0; let questionTextBuffer = []; let optionsBuffer = []; let answerLineBuffer = null;
-
+    let questionNumFromText = 0; let questionTextBuffer = []; let optionsBuffer = []; let answerLineBuffer = null;
     const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/i;
     const optionRegex = /^\s*([A-Ea-e])\s*[\.\)]\s*(.*)/i;
-    const answerRegex = /^\s*(?:ans|answer)\s*:\s*([A-Ea-e])\s*$/i; // Allow A-E
+    const answerRegex = /^\s*(?:ans|answer)\s*:\s*([A-Ea-e])\s*$/i;
 
     function finalizeCurrentQuestion() {
         if (questionNumFromText > 0 && questionTextBuffer.length > 0 && optionsBuffer.length >= 2 && answerLineBuffer) {
             const answerMatch = answerLineBuffer.match(answerRegex);
             const answer = answerMatch ? answerMatch[1].toUpperCase() : null;
             if (answer) {
-                 const questionId = `c${chapterNum}q${questionNumFromText}-skip`;
-                 extracted.questions.push({
-                    id: questionId,
-                    chapter: String(chapterNum),
-                    number: questionNumFromText,
+                const questionId = `c${chapterNum}q${questionNumFromText}-skip`;
+                extracted.questions.push({
+                    id: questionId, chapter: String(chapterNum), number: questionNumFromText,
                     text: questionTextBuffer.join(' ').trim(),
                     options: optionsBuffer.map(opt => ({ letter: opt.letter, text: opt.text.trim() })),
-                    image: null,
-                    correctAnswer: answer, // Use correctAnswer
-                    isProblem: false,
-                    type: 'mcq-skip'
-                 });
-                 extracted.answers[questionId] = answer; // Keep this map for skip exam flow if useful
-            } else {
-                 console.warn(`Skipping Skip MCQ block ending near line buffer: Invalid or missing answer. Q#${questionNumFromText}`);
-            }
-        } else if (questionNumFromText > 0) {
-             console.warn(`Discarding incomplete Skip MCQ block for question number ${questionNumFromText}. Missing text, options (<2), or answer.`);
-        }
-        currentQuestion = null; questionNumFromText = 0; questionTextBuffer = []; optionsBuffer = []; answerLineBuffer = null;
+                    image: null, correctAnswer: answer, isProblem: false, type: 'mcq-skip'
+                });
+                extracted.answers[questionId] = answer;
+            } else console.warn(`Skipping Skip MCQ block near "${answerLineBuffer}": Invalid answer format. Q#${questionNumFromText}`);
+        } else if (questionNumFromText > 0) console.warn(`Discarding incomplete Skip MCQ block Q#${questionNumFromText}.`);
+        questionNumFromText = 0; questionTextBuffer = []; optionsBuffer = []; answerLineBuffer = null;
     }
 
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const questionMatch = line.match(questionStartRegex);
-        const optionMatch = line.match(optionRegex);
-        const answerMatch = line.match(answerRegex);
-
-        if (questionMatch) {
-            finalizeCurrentQuestion();
-            questionNumFromText = parseInt(questionMatch[1]);
-            questionTextBuffer = [questionMatch[2].trim()];
-        } else if (optionMatch && questionNumFromText > 0) {
-            optionsBuffer.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2].trim() });
-            answerLineBuffer = null;
-        } else if (answerMatch && questionNumFromText > 0 && optionsBuffer.length > 0) {
-            answerLineBuffer = line;
-        } else if (questionNumFromText > 0) {
-            if (optionsBuffer.length > 0 && !answerLineBuffer) {
-                optionsBuffer[optionsBuffer.length - 1].text += ' ' + line;
-            } else if (optionsBuffer.length === 0 && !answerLineBuffer) {
-                questionTextBuffer.push(line);
-            }
+        const line = lines[i]; const questionMatch = line.match(questionStartRegex);
+        const optionMatch = line.match(optionRegex); const answerMatch = line.match(answerRegex);
+        if (questionMatch) { finalizeCurrentQuestion(); questionNumFromText = parseInt(questionMatch[1]); questionTextBuffer = [questionMatch[2].trim()]; }
+        else if (optionMatch && questionNumFromText > 0) { optionsBuffer.push({ letter: optionMatch[1].toUpperCase(), text: optionMatch[2].trim() }); answerLineBuffer = null; }
+        else if (answerMatch && questionNumFromText > 0 && optionsBuffer.length > 0) { answerLineBuffer = line; }
+        else if (questionNumFromText > 0) {
+            if (optionsBuffer.length > 0 && !answerLineBuffer) optionsBuffer[optionsBuffer.length - 1].text += ' ' + line;
+            else if (optionsBuffer.length === 0 && !answerLineBuffer) questionTextBuffer.push(line);
         }
     }
     finalizeCurrentQuestion();
-
-    console.log(`Parsed ${extracted.questions.length} potentially valid MCQs from Skip Exam text.`);
-    if (extracted.questions.length === 0 && lines.length > 5) {
-        console.error("Parsing failed: Extracted 0 MCQs. Check AI output format against expected structure (Num. Text \\n A. Text \\n ... \\n ans: X).");
-        // Return empty structure on failure
-        return { questions: [], answers: {} };
-    } else if (extracted.questions.length < 10 && lines.length > 50) {
-        console.warn(`Parsed only ${extracted.questions.length} MCQs. AI might not have generated the full requested amount or format was inconsistent.`);
-    }
-
-    return extracted; // Return MCQs parsed from this text
+    // console.log(`Parsed ${extracted.questions.length} potentially valid MCQs from Skip Exam text.`);
+    if (extracted.questions.length === 0 && lines.length > 5) console.error("Skip Exam Parsing failed: Extracted 0 MCQs. Check AI output format.");
+    else if (extracted.questions.length < 10 && lines.length > 50) console.warn(`Parsed only ${extracted.questions.length} Skip MCQs. AI output might be incomplete/inconsistent.`);
+    return extracted;
 }
 
 
