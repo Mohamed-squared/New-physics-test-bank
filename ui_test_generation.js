@@ -19,7 +19,7 @@ import {
     DEFAULT_ONLINE_TEST_DURATION_MINUTES,
     DEFAULT_MAX_QUESTIONS,
     COURSE_BASE_PATH,
-    DEFAULT_COURSE_QUESTIONS_FOLDER,
+    SUBJECT_RESOURCE_FOLDER, // MODIFIED: Was DEFAULT_COURSE_QUESTIONS_FOLDER
     DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME
  } from './config.js';
 // Import filename utility
@@ -54,7 +54,8 @@ async function getCurrentSubjectMarkdown() {
     // Sanitize the MCQ filename itself using cleanTextForFilename for consistency
     const safeMcqFileNameForPath = cleanTextForFilename(mcqFileName); 
 
-    const url = `${COURSE_BASE_PATH}/${derivedCourseDirName}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${safeMcqFileNameForPath}?t=${new Date().getTime()}`;
+    // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in path construction ***
+    const url = `${COURSE_BASE_PATH}/${derivedCourseDirName}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileNameForPath}?t=${new Date().getTime()}`;
 
     console.log(`Fetching main subject Markdown (for MCQs) from: ${url}`);
     try {
@@ -90,7 +91,8 @@ export function showTestGenerationDashboard() {
           // This might happen if the initial parse failed or the MD file was empty/malformed
           const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
           const mcqFile = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'Not Specified';
-          const expectedPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFile}`;
+          // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in expected path ***
+          const expectedPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFile}`;
           displayContent(`<p class="text-yellow-500 p-4">The current subject '${escapeHtml(currentSubject.name)}' has no chapters loaded. This could be due to a missing or incorrectly formatted Markdown file. Expected path for MCQs: <code>${escapeHtml(expectedPath)}</code>. Please check the subject setup and file.</p><button onclick="window.initializeApp()" class="btn-secondary mt-2">Reload Data</button>`);
          setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
           return;
@@ -139,8 +141,9 @@ export function promptChapterSelectionForTest() {
         const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
         const mcqFile = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'MCQ file not specified';
         const problemFile = currentSubject.problemsFileName ? cleanTextForFilename(currentSubject.problemsFileName) : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
-        const expectedMCQPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFile}`;
-        const expectedProblemPath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${problemFile}`;
+        // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in expected paths ***
+        const expectedMCQPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFile}`;
+        const expectedProblemPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemFile}`;
 
         displayContent(`<p class="text-red-500 p-4">No chapters with available MCQs or Problems (from default source) found in this subject. Check Markdown files and ensure they are parsed correctly. Expected paths:</p>
         <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
@@ -333,7 +336,8 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
         ? cleanTextForFilename(currentSubject.problemsFileName)
         : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME; // Fallback to global default
 
-    const problemsFilePath = `${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${problemsFileToUse}`;
+    // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in problemsFilePath ***
+    const problemsFilePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToUse}`;
     console.log(`Attempting to parse problems from: ${problemsFilePath} (Subject: ${currentSubject.id}, Source: ${problemSourceType})`);
 
     // This function updates window.subjectProblemCache
@@ -384,14 +388,20 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
      // 5. Exit if no questions or problems available
      if (totalAvailableMcqsInScope === 0 && totalAvailableProblemsInScope === 0) {
          hideLoading();
-         const mcqFileMsg = currentSubject.fileName ? `MCQ file: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/${mcqFileUsedDisplay}</code>` : "MCQ file not specified in subject config.";
-         const problemFileMsg = `Problem file: <code>${problemsFilePath}</code>`;
-         displayContent(`<p class="text-yellow-500 p-4">Could not generate test: No available MCQs or Problems found in the selected scope. Check that the following files exist, are not empty, and are correctly formatted:</p>
+         // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in error message paths ***
+         const mcqFileMsg = currentSubject.fileName ? `MCQ file: <code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFileUsedDisplay}</code>` : "MCQ file not specified in subject config.";
+         const problemFileMsg = `Problem file: <code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToUse}</code>`; // `problemsFilePath` could also be used here
+         const generalFolderMsg = `<code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/</code>`;
+
+         displayContent(`<p class="text-red-500 p-4 font-semibold">Test Generation Failed.</p><p class="text-yellow-600 dark:text-yellow-400 p-4">Could not generate any questions or problems. This might be because:</p>
          <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
-             <li>${mcqFileMsg}</li>
-             <li>${problemFileMsg}</li>
+             <li>No MCQs or Problems were available in the selected chapter scope.</li>
+             <li>The required Markdown definition files (e.g., "${escapeHtml(mcqFileUsedDisplay)}" for MCQs or "${escapeHtml(problemsFileToUse)}" for Problems) were missing, empty, or could not be loaded from the subject's resource folder: ${generalFolderMsg}.</li>
+             <li>There was an error during the question selection process.</li>
          </ul>
-         <button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
+         <p class="text-xs mt-2">Expected MCQ path: ${mcqFileMsg}</p>
+         <p class="text-xs">Expected Problem path: ${problemFileMsg}</p>
+         <button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-4">Back to Test Setup</button>`);
          setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
          return;
      }
@@ -575,13 +585,20 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
         const problemFileUsedDisplay = (currentSubject.problemsFileName && currentSubject.problemsFileName.trim() !== '')
             ? cleanTextForFilename(currentSubject.problemsFileName)
             : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
+        
+        // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in error message paths ***
+        const mcqFileMsg = currentSubject.fileName ? `MCQ file: <code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFileUsedDisplay}</code>` : "MCQ file not specified in subject config.";
+        const problemFileMsg = `Problem file: <code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemFileUsedDisplay}</code>`;
+        const generalFolderMsg = `<code>${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/</code>`;
 
         displayContent(`<p class="text-red-500 p-4 font-semibold">Test Generation Failed.</p><p class="text-yellow-600 dark:text-yellow-400 p-4">Could not generate any questions or problems. This might be because:</p>
         <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
             <li>No MCQs or Problems were available in the selected chapter scope.</li>
-            <li>The required Markdown definition files (e.g., "${escapeHtml(mcqFileUsedDisplay)}" for MCQs or "${escapeHtml(problemFileUsedDisplay)}" for Problems) were missing, empty, or could not be loaded from the subject's 'Questions' folder: <code>${COURSE_BASE_PATH}/${courseDir}/${DEFAULT_COURSE_QUESTIONS_FOLDER}/</code>.</li>
+            <li>The required Markdown definition files (e.g., "${escapeHtml(mcqFileUsedDisplay)}" for MCQs or "${escapeHtml(problemFileUsedDisplay)}" for Problems) were missing, empty, or could not be loaded from the subject's resource folder: ${generalFolderMsg}.</li>
             <li>There was an error during the question selection process.</li>
         </ul>
+        <p class="text-xs mt-2">Expected MCQ path: ${mcqFileMsg}</p>
+        <p class="text-xs">Expected Problem path: ${problemFileMsg}</p>
         <button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-4">Back to Test Setup</button>`);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;

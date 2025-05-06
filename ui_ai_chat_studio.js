@@ -5,6 +5,7 @@ import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 import { callGeminiTextAPI } from './ai_integration.js';
 import { DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
+import { saveChatSession, loadUserChatSessionsFromFirestore, deleteChatSessionFromFirestore } from './firebase_firestore.js';
 
 // Module-level variables
 let chatSessions = new Map(); // Stores { sessionId: { name: string, history: Array<MessageObject>, createdAt: number, systemPromptKey: string, lastModified: number } }
@@ -20,7 +21,7 @@ const defaultSystemPromptKey = 'aiChatStudioDefault';
  * }
  */
 
-export function showAiChatStudio() {
+export async function showAiChatStudio() {
     setActiveSidebarLink('showAiChatStudio', 'sidebar-standard-nav');
     displayContent(generateChatStudioHtml(), 'content'); // Display basic structure
 
@@ -30,7 +31,6 @@ export function showAiChatStudio() {
         handleSendMessage();
     });
     
-    // Textarea auto-resize
     const chatInput = document.getElementById('ai-chat-studio-input');
     if (chatInput) {
         chatInput.addEventListener('input', autoResizeTextarea);
@@ -42,11 +42,57 @@ export function showAiChatStudio() {
         });
     }
     
-    // TODO: Load chatSessions from Firestore in the future
-    // For now, if chatSessions is empty, perhaps create a default one or show welcome.
-    loadChatSessionsList();
+    await loadUserChatSessions();
     renderActiveChatInterface(); // Render based on current activeChatSessionId
 }
+
+async function loadUserChatSessions() {
+    if (!currentUser || !db) {
+        console.warn("Cannot load chat sessions: User or DB not available.");
+        chatSessions.clear(); // Clear local cache if we can't load
+        loadChatSessionsList();
+        renderActiveChatInterface();
+        return;
+    }
+    showLoading("Loading chat sessions...");
+    try {
+        const sessionsArray = await loadUserChatSessionsFromFirestore(currentUser.uid);
+        chatSessions.clear();
+        sessionsArray.forEach(sessionDoc => {
+            const sessionData = { ...sessionDoc };
+            // Ensure history is an array
+            sessionData.history = Array.isArray(sessionData.history) ? sessionData.history : [];
+            
+            // Convert Firestore Timestamps if they exist (toMillis handles both cases)
+            if (sessionData.createdAt && typeof sessionData.createdAt.toMillis === 'function') {
+                sessionData.createdAt = sessionData.createdAt.toMillis();
+            } else if (typeof sessionData.createdAt === 'number') {
+                // Already a number, use as is
+            } else {
+                sessionData.createdAt = Date.now(); // Fallback
+            }
+
+            if (sessionData.lastModified && typeof sessionData.lastModified.toMillis === 'function') {
+                sessionData.lastModified = sessionData.lastModified.toMillis();
+            } else if (typeof sessionData.lastModified === 'number') {
+                // Already a number, use as is
+            } else {
+                sessionData.lastModified = sessionData.createdAt; // Fallback, use the (potentially just set) createdAt
+            }
+            chatSessions.set(sessionDoc.id, sessionData);
+        });
+        console.log(`Loaded ${chatSessions.size} chat sessions from Firestore.`);
+    } catch (error) {
+        console.error("Error loading chat sessions from Firestore:", error);
+        // Keep potentially stale local chatSessions or clear them? For now, clear.
+        chatSessions.clear(); 
+    } finally {
+        hideLoading();
+        loadChatSessionsList();
+        renderActiveChatInterface(); // Ensure UI updates even if load fails or is empty
+    }
+}
+
 
 function generateChatStudioHtml() {
     return `
@@ -94,7 +140,6 @@ function autoResizeTextarea(event) {
     textarea.style.height = `${newHeight}px`;
     textarea.style.overflowY = newHeight >= maxHeight ? 'auto' : 'hidden';
 
-    // Adjust send button alignment
     const sendButton = document.getElementById('ai-send-chat-message-btn');
     if (sendButton) {
         sendButton.classList.toggle('self-end', newHeight > parseInt(getComputedStyle(textarea).lineHeight, 10) * 1.5);
@@ -107,14 +152,13 @@ function loadChatSessionsList() {
     const listElement = document.getElementById('ai-chat-sessions-list');
     if (!listElement) return;
 
-    listElement.innerHTML = ''; // Clear existing items
+    listElement.innerHTML = ''; 
 
     if (chatSessions.size === 0) {
         listElement.innerHTML = `<li class="text-sm text-gray-500 dark:text-gray-400 p-2 text-center">No chat sessions yet.</li>`;
         return;
     }
 
-    // Sort sessions by lastModified (descending) or createdAt if lastModified is not available
     const sortedSessions = Array.from(chatSessions.entries()).sort(([, a], [, b]) => {
         const timeA = a.lastModified || a.createdAt;
         const timeB = b.lastModified || b.createdAt;
@@ -123,14 +167,72 @@ function loadChatSessionsList() {
 
     sortedSessions.forEach(([sessionId, sessionData]) => {
         const li = document.createElement('li');
-        li.className = `p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm truncate ${sessionId === activeChatSessionId ? 'bg-primary-100 dark:bg-primary-700 text-primary-700 dark:text-primary-200 font-semibold' : 'text-gray-700 dark:text-gray-300'}`;
-        li.textContent = sessionData.name || `Chat ${sessionId.slice(-4)}`;
-        li.title = sessionData.name || `Chat ${sessionId.slice(-4)}`;
+        li.className = `group p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm flex items-center justify-between ${sessionId === activeChatSessionId ? 'bg-primary-100 dark:bg-primary-700 text-primary-700 dark:text-primary-200 font-semibold' : 'text-gray-700 dark:text-gray-300'}`;
         li.setAttribute('role', 'button');
         li.addEventListener('click', () => handleSwitchChat(sessionId));
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'truncate flex-grow';
+        nameSpan.textContent = sessionData.name || `Chat ${sessionId.slice(-4)}`;
+        nameSpan.title = sessionData.name || `Chat ${sessionId.slice(-4)}`;
+        li.appendChild(nameSpan);
+
+        const deleteButton = document.createElement('button');
+        const sessionDisplayName = escapeHtml(sessionData.name || `Chat ${sessionId.slice(-4)}`);
+        deleteButton.className = "ml-auto p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-700/50 text-red-500 dark:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0";
+        deleteButton.title = "Delete Chat";
+        deleteButton.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>`;
+        deleteButton.onclick = (event) => {
+            event.stopPropagation(); // Prevent li click event
+            // Call the globally exposed function
+            window.deleteChatSessionUI(sessionId, sessionDisplayName);
+        };
+        li.appendChild(deleteButton);
+        
         listElement.appendChild(li);
     });
 }
+
+async function deleteChatSessionUI(sessionId, sessionName) {
+    if (!currentUser || !db) {
+        alert("Error: Cannot delete session. User not logged in or database unavailable.");
+        return;
+    }
+
+    const confirmation = confirm(`Are you sure you want to delete the chat session "${sessionName}"? This action cannot be undone.`);
+    if (!confirmation) return;
+
+    showLoading("Deleting chat session...");
+    try {
+        await deleteChatSessionFromFirestore(currentUser.uid, sessionId);
+        chatSessions.delete(sessionId);
+
+        if (activeChatSessionId === sessionId) {
+            activeChatSessionId = null;
+            // Optionally, select the next newest chat or clear the view
+            const remainingSessions = Array.from(chatSessions.values()).sort((a,b) => (b.lastModified || b.createdAt) - (a.lastModified || a.createdAt));
+            if (remainingSessions.length > 0) {
+                 // Find the ID of the first remaining session.
+                 const firstRemainingSessionEntry = Array.from(chatSessions.entries()).find(entry => entry[1] === remainingSessions[0]);
+                 if (firstRemainingSessionEntry) {
+                     activeChatSessionId = firstRemainingSessionEntry[0];
+                 }
+            }
+        }
+        
+        loadChatSessionsList();
+        renderActiveChatInterface();
+        alert(`Chat session "${sessionName}" deleted successfully.`);
+    } catch (error) {
+        console.error("Error deleting chat session:", error);
+        alert(`Failed to delete chat session: ${error.message}`);
+    } finally {
+        hideLoading();
+    }
+}
+// Expose to window for inline HTML onclick
+window.deleteChatSessionUI = deleteChatSessionUI;
+
 
 function renderActiveChatInterface() {
     const messagesContainer = document.getElementById('ai-chat-studio-messages-container');
@@ -156,22 +258,23 @@ function renderActiveChatInterface() {
     }
 }
 
-function handleNewChat() {
+async function handleNewChat() {
+    if (!currentUser) {
+        alert("Please log in to create a new chat.");
+        return;
+    }
     const sessionNameInput = prompt("Enter a name for the new chat session (optional):", `Chat ${chatSessions.size + 1}`);
-    // If user cancels prompt, sessionNameInput will be null. If they enter nothing, it's "".
     const sessionName = (sessionNameInput === null) ? null : (sessionNameInput.trim() || `Chat ${chatSessions.size + 1}`);
     
-    if (sessionName === null) return; // User cancelled
+    if (sessionName === null) return;
 
     const sessionId = `aics_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     
-    // Get the default system prompt text
     const systemPromptText = (userAiChatSettings.customSystemPrompts[defaultSystemPromptKey] ||
                              globalAiSystemPrompts[defaultSystemPromptKey] ||
                              DEFAULT_AI_SYSTEM_PROMPTS[defaultSystemPromptKey] ||
                              "You are a helpful AI assistant.");
 
-    // Initialize history with system prompt and a standard AI acknowledgement
     const initialHistory = [
         { role: 'user', parts: [{ text: systemPromptText }], timestamp: Date.now() -1 }, // System prompt as first user message
         { role: 'model', parts: [{ text: "Okay, I'm ready to help! How can I assist you today?" }], timestamp: Date.now() } // AI's acknowledgement
@@ -188,21 +291,30 @@ function handleNewChat() {
     chatSessions.set(sessionId, newSessionData);
     activeChatSessionId = sessionId;
 
+    try {
+        await saveChatSession(currentUser.uid, sessionId, newSessionData);
+        console.log("New chat session saved to Firestore.");
+    } catch (error) {
+        console.error("Error saving new chat session to Firestore:", error);
+        alert("Failed to save new chat session. It will be available locally but may be lost if you refresh before sending a message.");
+        // Optionally, remove from local chatSessions if save fails critically
+        // chatSessions.delete(sessionId);
+        // activeChatSessionId = null;
+    }
+
     loadChatSessionsList();
     renderActiveChatInterface();
     
     const chatInput = document.getElementById('ai-chat-studio-input');
     if (chatInput) chatInput.focus();
-
-    // TODO: Save new session metadata to Firestore
 }
 
 function handleSwitchChat(sessionId) {
-    if (sessionId === activeChatSessionId) return; // Already active
+    if (sessionId === activeChatSessionId) return;
 
     activeChatSessionId = sessionId;
-    loadChatSessionsList(); // To update active highlight
-    renderActiveChatInterface();
+    loadChatSessionsList(); // Highlight the new active session
+    renderActiveChatInterface(); // Render messages for the new active session
     
     const chatInput = document.getElementById('ai-chat-studio-input');
     if (chatInput) chatInput.focus();
@@ -215,49 +327,53 @@ function renderChatMessage(message, isLastUserMessage = false) {
 
     const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
-    // For system prompt (first user message) and AI's first ack, style them less prominently if desired
-    const isSystemSetupMessage = (message === chatSessions.get(activeChatSessionId)?.history[0] && isUser) ||
-                                 (message === chatSessions.get(activeChatSessionId)?.history[1] && !isUser);
+    // Check if this message is part of the initial system setup exchange
+    const isActiveSessionPresent = activeChatSessionId && chatSessions.has(activeChatSessionId);
+    const activeSessionHistory = isActiveSessionPresent ? chatSessions.get(activeChatSessionId).history : [];
+    
+    const isSystemSetupMessage = activeSessionHistory.length > 0 &&
+                                 ((message === activeSessionHistory[0] && isUser) || 
+                                  (message === activeSessionHistory[1] && !isUser)); 
+
+    if (isSystemSetupMessage) {
+        return ''; // Hide these initial system prompt and AI acknowledgement messages
+    }
 
     const bubbleClasses = isUser
         ? 'bg-primary-500 text-white self-end rounded-br-none'
         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 self-start rounded-bl-none';
     
-    const systemMessageClasses = isSystemSetupMessage ? 'opacity-70 italic text-xs' : '';
-
-    const copyButtonHtml = !isUser && !isSystemSetupMessage ? `
+    const copyButtonHtml = !isUser ? `
         <button class="copy-ai-message-btn absolute top-1 right-1 p-1 bg-gray-300 dark:bg-gray-600 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity" title="Copy text">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
         </button>
     ` : '';
 
-    // Apply Markdown for model messages
-    // For user messages, just escape HTML. For model, escape then apply markdown.
     let formattedText = escapeHtml(textContent);
+    // Apply rich formatting only to model messages
     if (!isUser) {
-        // Basic Markdown (subset for now, can expand)
-        // Code Blocks (```...```) - Must run first
+        // Code blocks (```...```)
         formattedText = formattedText.replace(/```([\s\S]*?)```/g, (match, codeContent) => {
             return `<pre class="bg-gray-100 dark:bg-gray-900 p-2 rounded text-sm my-1 overflow-x-auto whitespace-pre-wrap"><code class="font-mono">${escapeHtml(codeContent.trim())}</code></pre>`;
         });
-        // Inline Code (`...`)
+        // Inline code (`)
         formattedText = formattedText.replace(/`([^`]+?)`/g, '<code class="bg-gray-200 dark:bg-gray-900 px-1 rounded text-sm font-mono">$1</code>');
         // Bold (**...**)
         formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Italic (*...*)
+        // Italic (*...*) - make sure not to conflict with bold
         formattedText = formattedText.replace(/(?<!\*)\*(?!\*)(\S(?:.*?\S)?)\*(?!\*)/g, '<em>$1</em>');
-        // Newlines to <br> (outside pre)
-        const parts = formattedText.split(/(<pre[\s\S]*?<\/pre>)/);
-        formattedText = parts.map((part, index) => {
-            if (index % 2 === 1) return part; // It's a <pre> block
-            return part.replace(/\n/g, '<br>');
+        
+        // Handle newlines, but preserve them within <pre> blocks
+        const textParts = formattedText.split(/(<pre[\s\S]*?<\/pre>)/);
+        formattedText = textParts.map((part, index) => {
+            if (index % 2 === 1) return part; // This is a <pre> block, return as is
+            return part.replace(/\n/g, '<br>'); // Not in <pre>, replace \n with <br>
         }).join('');
     }
 
-
     return `
         <div class="flex flex-col ${isUser ? 'items-end' : 'items-start'} group">
-            <div class="message-bubble max-w-xl lg:max-w-2xl px-3 py-2 rounded-lg shadow relative ${bubbleClasses} ${systemMessageClasses}">
+            <div class="message-bubble max-w-xl lg:max-w-2xl px-3 py-2 rounded-lg shadow relative ${bubbleClasses}">
                 <div class="prose prose-sm dark:prose-invert max-w-none message-content">${formattedText}</div>
                 ${copyButtonHtml}
             </div>
@@ -280,19 +396,15 @@ async function renderActiveChatMessages() {
     messagesContainer.querySelectorAll('.copy-ai-message-btn').forEach(button => {
         button.addEventListener('click', (e) => {
             const messageContentElement = e.currentTarget.closest('.message-bubble').querySelector('.message-content');
-            // We need the raw text, not the HTML. The raw text is in sessionData.history.
-            // Find the corresponding message in history. This is a bit tricky.
-            // A simpler way: store raw text on the button or message element.
-            // For now, let's try to get it from the HTML, then remove HTML for a simpler copy.
+            // Create a temporary div to convert <br> to \n for copying
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = messageContentElement.innerHTML.replace(/<br\s*\/?>/gi, '\n'); // Convert <br> back to newlines
-            // Remove pre/code for cleaner copy if needed, or copy as is.
-            // For now, copy with potential HTML structure for code blocks.
+            tempDiv.innerHTML = messageContentElement.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+            // TODO: More sophisticated HTML to plain text conversion might be needed for complex content
             navigator.clipboard.writeText(tempDiv.textContent || tempDiv.innerText || "")
                 .then(() => {
-                    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`; // Checkmark
+                    button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>`;
                     setTimeout(() => {
-                         button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`; // Original icon
+                         button.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`;
                     }, 1500);
                 })
                 .catch(err => console.error('Failed to copy text: ', err));
@@ -300,58 +412,68 @@ async function renderActiveChatMessages() {
     });
 
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
-    await renderMathIn(messagesContainer);
+    await renderMathIn(messagesContainer); // Render LaTeX if any
 }
 
 async function handleSendMessage() {
     const inputElement = document.getElementById('ai-chat-studio-input');
     const sendButton = document.getElementById('ai-send-chat-message-btn');
-    if (!inputElement || !activeChatSessionId || !chatSessions.has(activeChatSessionId)) return;
+    if (!inputElement || !activeChatSessionId || !chatSessions.has(activeChatSessionId) || !currentUser) {
+        if (!currentUser) alert("Please log in to send messages.");
+        return;
+    }
 
     const messageText = inputElement.value.trim();
     if (!messageText) return;
 
     const sessionData = chatSessions.get(activeChatSessionId);
 
-    // Disable input and button
     inputElement.disabled = true;
     if(sendButton) sendButton.disabled = true;
     
-    // Add user message to UI immediately (optimistic update)
     const userMessage = { role: 'user', parts: [{ text: messageText }], timestamp: Date.now() };
     sessionData.history.push(userMessage);
-    sessionData.lastModified = Date.now();
-    await renderActiveChatMessages(); // Update UI with user message
-    inputElement.value = ''; // Clear input
-    autoResizeTextarea({target: inputElement}); // Reset textarea height
+    sessionData.lastModified = Date.now(); // Update last modified time for the user message
+    await renderActiveChatMessages(); // Render user message immediately
+    inputElement.value = '';
+    autoResizeTextarea({target: inputElement});
 
     showLoading("Lyra is thinking...");
+    let errorOccurred = false;
 
     try {
-        // The history already includes the system prompt (as first user + model turn)
-        // We send the entire history leading up to the *new* user message (which is `messageText`)
-        // So, `callGeminiTextAPI`'s `history` param should be `sessionData.history.slice(0, -1)`
-        // and `prompt` param should be `messageText`.
-        const historyForApi = sessionData.history.slice(0, -1); // All messages *before* the current user's input
+        // Pass history excluding the latest user message for context
+        const historyForApi = sessionData.history.slice(0, -1); 
         const aiResponseText = await callGeminiTextAPI(messageText, historyForApi);
 
         const aiMessage = { role: 'model', parts: [{ text: aiResponseText }], timestamp: Date.now() };
         sessionData.history.push(aiMessage);
-        sessionData.lastModified = Date.now();
+        sessionData.lastModified = Date.now(); // Update last modified for AI response
+        await saveChatSession(currentUser.uid, activeChatSessionId, sessionData);
 
     } catch (error) {
         console.error("Error calling AI:", error);
         const errorMessage = { role: 'model', parts: [{ text: `Sorry, I encountered an error: ${error.message}` }], timestamp: Date.now() };
         sessionData.history.push(errorMessage);
-        sessionData.lastModified = Date.now(); // Also update lastModified on error
+        sessionData.lastModified = Date.now(); // Update last modified for error message
+        errorOccurred = true; 
+        // Note: saveChatSession for error state will be handled in finally block as per prompt
     } finally {
+        if (errorOccurred) {
+            try {
+                console.log("Attempting to save chat session with error message in finally block.");
+                await saveChatSession(currentUser.uid, activeChatSessionId, sessionData);
+            } catch (saveError) {
+                console.error("Failed to save chat session with error in finally block:", saveError);
+                alert("There was an issue calling the AI, and the chat session with the error might not have been saved.");
+            }
+        }
         hideLoading();
         inputElement.disabled = false;
         if(sendButton) sendButton.disabled = false;
         inputElement.focus();
-        await renderActiveChatMessages(); // Update UI with AI message or error
-        loadChatSessionsList(); // Update session list order by lastModified
-        // TODO: Save messages to Firestore
+        await renderActiveChatMessages(); // Render AI response or error message
+        loadChatSessionsList(); // Refresh session list (e.g., for lastModified order)
     }
 }
 

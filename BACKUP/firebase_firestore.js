@@ -3,28 +3,29 @@
 import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
-    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser // Added setCurrentUser
 } from './state.js';
-import { showLoading, hideLoading, getFormattedDate } from './utils.js';
+import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
 // Import ALL needed config values
 import { 
     initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
-    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER
-} from './config.js';
-import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
+    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER // MODIFIED: Renamed DEFAULT_COURSE_QUESTIONS_FOLDER to SUBJECT_RESOURCE_FOLDER
+} from './config.js'; // Added SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER
+import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js'; // Added fetchAndUpdateUserInfo
 import { showOnboardingUI } from './ui_onboarding.js';
+// *** MODIFIED: Import calculateTotalMark, getLetterGrade ***
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
+// *** NEW: Import filename utility ***
 import { cleanTextForFilename } from './filename_utils.js';
 
 // --- Constants ---
 const userFormulaSheetSubCollection = "userFormulaSheets";
 const userSummarySubCollection = "userChapterSummaries";
 const sharedNotesCollection = "sharedCourseNotes";
-const adminTasksCollection = "adminTasks";
-const userCreditLogSubCollection = "creditLog";
-const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Chat
+const adminTasksCollection = "adminTasks"; // NEW: Collection name for admin tasks
+const userCreditLogSubCollection = "creditLog"; // NEW: For credit transactions
 
 // --- Utilities ---
 /**
@@ -44,10 +45,13 @@ async function fetchMarkdownForSubject(subject) {
         return null;
     }
 
+    // subject.fileName should be the base name of the MCQ file.
+    // Use cleanTextForFilename for subject.fileName for safety, and provide a fallback.
     const safeBaseFileName = subject.fileName 
         ? cleanTextForFilename(subject.fileName) 
-        : 'default_mcqs.md'; 
+        : 'default_mcqs.md'; // Fallback filename if not specified
 
+    // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in path construction ***
     const url = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${safeBaseFileName}?t=${new Date().getTime()}`;
 
     console.log(`Fetching Markdown from: ${url}`);
@@ -56,7 +60,7 @@ async function fetchMarkdownForSubject(subject) {
         if (!response.ok) {
             if (response.status === 404) {
                 console.warn(`Markdown file not found: ${url}. Subject: ${subject.name} (ID: ${subject.id})`);
-                return null; 
+                return null; // File not found is acceptable here
             }
             throw new Error(`HTTP error fetching markdown! status: ${response.status} for ${url}`);
         }
@@ -65,7 +69,7 @@ async function fetchMarkdownForSubject(subject) {
         return mdContent;
     } catch (error) {
         console.error(`Error fetching Markdown for subject ${subject.name} (ID: ${subject.id}) (${url}):`, error);
-        return null; 
+        return null; // Indicate fetch failure
     }
 }
 
@@ -86,29 +90,40 @@ export async function saveUserData(uid, appDataToSave = data) {
     }
     const userRef = db.collection('users').doc(uid);
     try {
+        // Only save the 'appData' part (subjects, history, settings etc.)
+        // Ensure data is serializable (no undefined values, classes etc.)
         const cleanData = JSON.parse(JSON.stringify(appDataToSave));
 
+        // --- Validation/Cleanup before save ---
         if (cleanData && cleanData.subjects) {
              Object.values(cleanData.subjects).forEach(subject => {
                  if (subject && subject.chapters) {
                       Object.values(subject.chapters).forEach(chap => {
+                          // Ensure numeric fields are numbers, default to 0
                           chap.total_questions = Number(chap.total_questions) || 0;
                           chap.total_attempted = Number(chap.total_attempted) || 0;
                           chap.total_wrong = Number(chap.total_wrong) || 0;
                           chap.consecutive_mastery = Number(chap.consecutive_mastery) || 0;
+                          // Ensure arrays are arrays, default to empty
                           chap.available_questions = Array.isArray(chap.available_questions) ? chap.available_questions : [];
                           chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
                       });
                  }
+                 // Ensure arrays exist at subject level
                  subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
                  subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams : [];
-                 subject.status = subject.status || 'approved'; 
-                 subject.creatorUid = subject.creatorUid || ADMIN_UID; 
-                 subject.creatorName = subject.creatorName || 'System'; 
-                 subject.createdAt = subject.createdAt || new Date(0).toISOString(); 
+                 // exam_history is deprecated here
+
+                 // MODIFIED: Ensure subject status and creator fields exist
+                 subject.status = subject.status || 'approved'; // Default to approved if missing
+                 subject.creatorUid = subject.creatorUid || ADMIN_UID; // Default to admin if missing
+                 subject.creatorName = subject.creatorName || 'System'; // Default to system if missing
+                 subject.createdAt = subject.createdAt || new Date(0).toISOString(); // Default to epoch if missing
              });
         }
-        
+        // --- End Validation ---
+
+        // *** MODIFIED: Add detailed logging before update ***
         console.log(`[saveUserData] Attempting to update appData for UID: ${uid}. Current auth UID: ${firebaseAuth?.currentUser?.uid}`);
         console.log(`[saveUserData] Data keys in appDataToSave: ${Object.keys(appDataToSave || {}).join(', ')}`);
         try {
@@ -123,9 +138,12 @@ export async function saveUserData(uid, appDataToSave = data) {
         
         await userRef.update({
             appData: cleanData
+            // Consider adding a lastAppDataUpdate timestamp here if needed
+            // lastAppDataUpdate: firebase.firestore.FieldValue.serverTimestamp()
         });
         console.log("User appData saved successfully.");
     } catch (error) {
+        // *** MODIFIED: Add detailed logging for the error object ***
         console.error("Error saving user appData to Firestore. UID:", uid, "Error Name:", error.name, "Error Code:", error.code, "Error Message:", error.message, "Full Error:", error);
         alert("Error saving progress: " + error.message);
     }
@@ -147,20 +165,26 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
     }
     const progressRef = db.collection('userCourseProgress').doc(uid).collection('courses').doc(courseId);
     try {
+        // Deep clone to avoid modifying original and ensure plain object for Firestore
         const dataToSave = JSON.parse(JSON.stringify(progressData));
 
+        // *** MODIFIED: Refined Date Handling ***
+        // Convert JS Dates to Timestamps IF they exist and are not already special Firestore values
+        // Enrollment Date Handling
         if (dataToSave.enrollmentDate) {
-             if (dataToSave.enrollmentDate instanceof Date) { 
+             if (dataToSave.enrollmentDate instanceof Date) { // Is it a JS Date?
                 try {
                     dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dataToSave.enrollmentDate);
                     console.log("Converted enrollmentDate (JS Date) to Timestamp for saving.");
                 } catch (e) {
                     console.error("Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
-                    delete dataToSave.enrollmentDate; 
+                    delete dataToSave.enrollmentDate; // Remove if conversion fails
                 }
              } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate?._methodName === 'serverTimestamp') {
+                 // It's already a serverTimestamp placeholder, leave it alone
                  console.log("enrollmentDate is already serverTimestamp, keeping as is.");
              } else {
+                 // Handle potential string/number representation if necessary (e.g., from direct JSON modification)
                  try {
                      const dateObj = new Date(dataToSave.enrollmentDate);
                      if (!isNaN(dateObj)) {
@@ -177,8 +201,9 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
              }
         }
 
+        // Completion Date Handling (similar logic, check for null)
          if (dataToSave.completionDate) {
-             if (dataToSave.completionDate instanceof Date) { 
+             if (dataToSave.completionDate instanceof Date) { // Is it a JS Date?
                 try {
                     dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
                     console.log("Converted completionDate (JS Date) to Timestamp for saving.");
@@ -186,7 +211,7 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
                     console.error("Error converting completionDate JS Date to Timestamp:", e, dataToSave.completionDate);
                     delete dataToSave.completionDate;
                 }
-             } else { 
+             } else { // It's not a JS Date (could be string, number, or null if previously saved)
                  try {
                      const dateObj = new Date(dataToSave.completionDate);
                      if (!isNaN(dateObj)) {
@@ -194,7 +219,7 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
                          console.log("Converted completionDate (String/Number) to Timestamp for saving.");
                      } else {
                          console.warn("Invalid completionDate value during save, setting to null:", dataToSave.completionDate);
-                         dataToSave.completionDate = null; 
+                         dataToSave.completionDate = null; // Set to null if unparseable
                      }
                  } catch (e) {
                      console.warn("Error processing non-Date completionDate during save, setting to null:", e, dataToSave.completionDate);
@@ -202,13 +227,17 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
                  }
              }
         } else if (dataToSave.completionDate === undefined) {
+             // Ensure it's null if undefined
              dataToSave.completionDate = null;
         }
 
+
+        // Always overwrite lastActivityDate with a new server timestamp on save
         dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
         console.log("Setting lastActivityDate to serverTimestamp for save.");
 
-        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; 
+        // Ensure arrays/objects are properly formatted for Firestore
+        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; // MODIFIED: Default to full
         dataToSave.courseStudiedChapters = dataToSave.courseStudiedChapters || [];
         dataToSave.watchedVideoUrls = dataToSave.watchedVideoUrls || {};
         dataToSave.watchedVideoDurations = dataToSave.watchedVideoDurations || {};
@@ -220,8 +249,9 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
         dataToSave.weeklyExamScores = dataToSave.weeklyExamScores || {};
         dataToSave.midcourseExamScores = dataToSave.midcourseExamScores || {};
         if (dataToSave.finalExamScores === undefined) { dataToSave.finalExamScores = null; }
+        // Ensure dailyProgress sub-objects are initialized if needed
         Object.keys(dataToSave.dailyProgress).forEach(dateStr => {
-            dataToSave.dailyProgress[dateStr] = dataToSave.dailyProgress[dateStr] || {}; 
+            dataToSave.dailyProgress[dateStr] = dataToSave.dailyProgress[dateStr] || {}; // Ensure day object exists
             dataToSave.dailyProgress[dateStr].chaptersStudied = dataToSave.dailyProgress[dateStr].chaptersStudied || [];
             dataToSave.dailyProgress[dateStr].skipExamsPassed = dataToSave.dailyProgress[dateStr].skipExamsPassed || [];
             dataToSave.dailyProgress[dateStr].assignmentCompleted = dataToSave.dailyProgress[dateStr].assignmentCompleted ?? false;
@@ -255,33 +285,36 @@ export async function loadAllUserCourseProgress(uid) {
         if (!snapshot.empty) {
             snapshot.forEach(doc => {
                 const progressData = doc.data();
-                progressData.enrollmentMode = progressData.enrollmentMode || 'full'; 
+                // Basic validation/defaults for structure consistency
+                progressData.enrollmentMode = progressData.enrollmentMode || 'full'; // MODIFIED: Load enrollmentMode
                 progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
                 progressData.dailyProgress = progressData.dailyProgress || {};
                 progressData.assignmentScores = progressData.assignmentScores || {};
                 progressData.weeklyExamScores = progressData.weeklyExamScores || {};
                 progressData.midcourseExamScores = progressData.midcourseExamScores || {};
-                progressData.finalExamScores = progressData.finalExamScores === undefined ? null : progressData.finalExamScores; 
+                progressData.finalExamScores = progressData.finalExamScores === undefined ? null : progressData.finalExamScores; // Handle null/array
                 progressData.watchedVideoUrls = progressData.watchedVideoUrls || {};
                 progressData.watchedVideoDurations = progressData.watchedVideoDurations || {};
                 progressData.pdfProgress = progressData.pdfProgress || {};
                 progressData.skipExamAttempts = progressData.skipExamAttempts || {};
                 progressData.lastSkipExamScore = progressData.lastSkipExamScore || {};
                 progressData.status = progressData.status || 'enrolled';
+                 // Ensure dailyProgress sub-objects are initialized if needed
                 Object.keys(progressData.dailyProgress).forEach(dateStr => {
-                    progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {}; 
+                    progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {}; // Ensure day object exists
                     progressData.dailyProgress[dateStr].chaptersStudied = progressData.dailyProgress[dateStr].chaptersStudied || [];
                     progressData.dailyProgress[dateStr].skipExamsPassed = progressData.dailyProgress[dateStr].skipExamsPassed || [];
                     progressData.dailyProgress[dateStr].assignmentCompleted = progressData.dailyProgress[dateStr].assignmentCompleted ?? false;
                     progressData.dailyProgress[dateStr].assignmentScore = progressData.dailyProgress[dateStr].assignmentScore ?? null;
                 });
 
+                // Convert Timestamps to Dates for client-side use
                 if (progressData.enrollmentDate?.toDate) {
                     progressData.enrollmentDate = progressData.enrollmentDate.toDate();
-                } else if (progressData.enrollmentDate) { 
+                } else if (progressData.enrollmentDate) { // Handle potential string/number timestamp
                      try { progressData.enrollmentDate = new Date(progressData.enrollmentDate); } catch(e){ console.warn(`Could not parse enrollmentDate for course ${doc.id}`); progressData.enrollmentDate = new Date(); }
                 } else {
-                     progressData.enrollmentDate = new Date(); 
+                     progressData.enrollmentDate = new Date(); // Fallback
                 }
 
                  if (progressData.completionDate?.toDate) {
@@ -290,12 +323,14 @@ export async function loadAllUserCourseProgress(uid) {
                  if (progressData.lastActivityDate?.toDate) {
                     progressData.lastActivityDate = progressData.lastActivityDate.toDate();
                 } else {
-                     progressData.lastActivityDate = new Date(); 
+                     progressData.lastActivityDate = new Date(); // Fallback if missing
                 }
 
 
+                // Determine today's objective based on loaded progress and course definition
                 const courseDef = globalCourseDataMap.get(doc.id);
                 if (courseDef) {
+                     // MODIFIED: Pass enrollmentMode if needed
                      progressData.currentDayObjective = determineTodaysObjective(progressData, courseDef);
                 } else {
                      console.warn(`Course definition missing for course ${doc.id} when calculating objective.`);
@@ -308,10 +343,10 @@ export async function loadAllUserCourseProgress(uid) {
         } else {
             console.log("No enrolled courses found for user.");
         }
-        setUserCourseProgressMap(newProgressMap); 
+        setUserCourseProgressMap(newProgressMap); // Update state
     } catch (error) {
         console.error("Error loading user course progress:", error);
-        throw error; 
+        throw error; // Re-throw
     }
 }
 
@@ -354,24 +389,29 @@ export async function loadGlobalCourseDefinitions() {
     let fopFoundInFirestore = false;
 
     try {
+        // Fetch all courses (approved or not) so admin can see them
         const snapshot = await coursesRef.get();
         snapshot.forEach(doc => {
             const courseData = doc.data();
-            let finalCourseData = { ...courseData, id: doc.id }; 
+            let finalCourseData = { ...courseData, id: doc.id }; // Ensure ID is included
 
+            // Ensure essential fields exist and have correct types
             finalCourseData.chapterResources = typeof finalCourseData.chapterResources === 'object' ? finalCourseData.chapterResources : {};
             finalCourseData.youtubePlaylistUrls = Array.isArray(finalCourseData.youtubePlaylistUrls) ? finalCourseData.youtubePlaylistUrls : (finalCourseData.youtubePlaylistUrl ? [finalCourseData.youtubePlaylistUrl] : []);
             finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
             finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
-            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || (Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters.length : 0); 
+            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || (Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters.length : 0); // Recalculate if 0
+            // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) ---
             finalCourseData.imageUrl = finalCourseData.imageUrl || null;
             finalCourseData.coverUrl = finalCourseData.coverUrl || null;
+            // Ensure prereqs/coreqs are arrays of strings, default to empty array
             finalCourseData.prerequisites = Array.isArray(finalCourseData.prerequisites)
                                             ? finalCourseData.prerequisites.filter(item => typeof item === 'string')
                                             : [];
             finalCourseData.corequisites = Array.isArray(finalCourseData.corequisites)
                                            ? finalCourseData.corequisites.filter(item => typeof item === 'string')
                                            : [];
+            // --- End MODIFICATION ---
 
             updateGlobalCourseData(doc.id, finalCourseData);
             console.log(`Loaded global course definition: ${finalCourseData.name} (${doc.id}), Status: ${finalCourseData.status || 'N/A'}`);
@@ -382,16 +422,19 @@ export async function loadGlobalCourseDefinitions() {
             }
         });
 
+        // --- MODIFIED: Create FoP in Firestore if it wasn't found ---
         if (!fopFoundInFirestore) {
             console.log(`FOP course ${FOP_COURSE_ID} not found in Firestore. Creating it from local config...`);
-            const fopDef = {...FOP_COURSE_DEFINITION}; 
-            fopDef.id = FOP_COURSE_ID; 
-            fopDef.status = 'approved'; 
+            const fopDef = {...FOP_COURSE_DEFINITION}; // Clone local definition
+            fopDef.id = FOP_COURSE_ID; // Ensure ID is correct
+            fopDef.status = 'approved'; // Set initial status
+            // Ensure structural consistency (already done in the loop above, repeat here for clarity)
             fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {};
             fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
             fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
             fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
             fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
+            // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) for FoP creation ---
             fopDef.imageUrl = fopDef.imageUrl || null;
             fopDef.coverUrl = fopDef.coverUrl || null;
             fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
@@ -400,22 +443,28 @@ export async function loadGlobalCourseDefinitions() {
             fopDef.corequisites = Array.isArray(fopDef.corequisites)
                                   ? fopDef.corequisites.filter(item => typeof item === 'string')
                                   : [];
+            // --- End MODIFICATION ---
 
+            // Add createdAt timestamp (or set it during creation)
             fopDef.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            fopDef.creatorUid = ADMIN_UID; 
+            fopDef.creatorUid = ADMIN_UID; // Attribute creation to admin
             fopDef.creatorName = 'System (Config)';
 
             try {
+                // Use set with merge:true to be safe, although it shouldn't exist
                 await db.collection('courses').doc(FOP_COURSE_ID).set(fopDef, { merge: true });
                 console.log(`Successfully created FOP course ${FOP_COURSE_ID} document in Firestore.`);
+                // Fetch it back to ensure we get the server timestamp correctly for the cache
                 const createdDoc = await db.collection('courses').doc(FOP_COURSE_ID).get();
                 if (createdDoc.exists) {
                     const createdData = { id: FOP_COURSE_ID, ...createdDoc.data() };
+                     // Re-apply consistency checks just in case
                     createdData.chapterResources = typeof createdData.chapterResources === 'object' ? createdData.chapterResources : {};
                     createdData.youtubePlaylistUrls = Array.isArray(createdData.youtubePlaylistUrls) ? createdData.youtubePlaylistUrls : (createdData.youtubePlaylistUrl ? [createdData.youtubePlaylistUrl] : []);
                     createdData.chapters = Array.isArray(createdData.chapters) ? createdData.chapters : [];
                     createdData.midcourseChapters = Array.isArray(createdData.midcourseChapters) ? createdData.midcourseChapters : [];
                     createdData.totalChapters = Number(createdData.totalChapters) || (Array.isArray(createdData.chapters) ? createdData.chapters.length : 0);
+                    // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) on refetch ---
                     createdData.imageUrl = createdData.imageUrl || null;
                     createdData.coverUrl = createdData.coverUrl || null;
                     createdData.prerequisites = Array.isArray(createdData.prerequisites)
@@ -424,22 +473,26 @@ export async function loadGlobalCourseDefinitions() {
                     createdData.corequisites = Array.isArray(createdData.corequisites)
                                                 ? createdData.corequisites.filter(item => typeof item === 'string')
                                                 : [];
-                    updateGlobalCourseData(FOP_COURSE_ID, createdData); 
+                    // --- End MODIFICATION ---
+                    updateGlobalCourseData(FOP_COURSE_ID, createdData); // Update map with created data
                 } else {
                     console.error(`Failed to fetch FOP course ${FOP_COURSE_ID} immediately after creation.`);
-                     updateGlobalCourseData(FOP_COURSE_ID, { ...fopDef, createdAt: new Date() }); 
+                    // Fallback to updating map with local data if fetch fails
+                    updateGlobalCourseData(FOP_COURSE_ID, { ...fopDef, createdAt: new Date() }); // Use client time as approximation
                 }
             } catch (creationError) {
                 console.error(`Error creating FOP course ${FOP_COURSE_ID} document in Firestore:`, creationError);
+                // Optionally update map with local config as a last resort
                  updateGlobalCourseData(FOP_COURSE_ID, { ...fopDef, createdAt: new Date() });
             }
         }
 
     } catch (error) {
         console.error("Error loading global course definitions:", error);
+         // Attempt fallback loading for FoP from config if the entire fetch fails
         if (!globalCourseDataMap.has(FOP_COURSE_ID)) {
              console.log(`Firestore fetch failed, attempting to load FOP ${FOP_COURSE_ID} from local config as fallback.`);
-             const fopDef = {...FOP_COURSE_DEFINITION}; 
+             const fopDef = {...FOP_COURSE_DEFINITION}; // Clone
              fopDef.id = FOP_COURSE_ID;
              fopDef.status = 'approved';
              fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
@@ -447,6 +500,7 @@ export async function loadGlobalCourseDefinitions() {
              fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
              fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
              fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
+             // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) for FoP fallback ---
              fopDef.imageUrl = fopDef.imageUrl || null;
              fopDef.coverUrl = fopDef.coverUrl || null;
              fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
@@ -455,6 +509,7 @@ export async function loadGlobalCourseDefinitions() {
              fopDef.corequisites = Array.isArray(fopDef.corequisites)
                                    ? fopDef.corequisites.filter(item => typeof item === 'string')
                                    : [];
+             // --- End MODIFICATION ---
              updateGlobalCourseData(FOP_COURSE_ID, fopDef);
         }
     }
@@ -482,19 +537,34 @@ export async function loadUserData(uid) {
             let loadedAppData = userData.appData;
             console.log("User appData loaded from Firestore.");
 
+            // --- MODIFICATION: Pass isAdmin and credits to setCurrentUser via fetchAndUpdateUserInfo ---
+            // This happens because fetchAndUpdateUserInfo is called from setupAuthListener
+            // which gets the full userData object (including isAdmin and credits if they exist).
+            // fetchAndUpdateUserInfo itself will call setCurrentUser with this comprehensive object.
+            // No direct change needed here in loadUserData, but this confirms the flow.
+            // Ensure `credits` is loaded and passed.
             const userProfileForState = {
                 uid: uid,
                 email: userData.email || firebaseAuth?.currentUser?.email,
                 displayName: userData.displayName || firebaseAuth?.currentUser?.displayName,
                 photoURL: userData.photoURL || firebaseAuth?.currentUser?.photoURL,
                 username: userData.username || null,
+                // MODIFIED: Correctly determine isAdmin based on Firestore or primary admin
                 isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : (uid === ADMIN_UID),
-                credits: userData.credits !== undefined ? Number(userData.credits) : 0, 
+                credits: userData.credits !== undefined ? Number(userData.credits) : 0, // MODIFIED: Load credits, default to 0
                 onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
             };
-            setCurrentUser(userProfileForState); 
+            setCurrentUser(userProfileForState); // Update central state immediately
+            // *** MODIFIED: Add logging after setCurrentUser ***
             console.log("[loadUserData] setCurrentUser called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
+            // Call fetchAndUpdateUserInfo to update UI elements like header, this might be redundant
+            // if setupAuthListener also calls it, but ensures UI consistency.
+            // We might want to rely on the call from setupAuthListener after login.
+            // For direct loads (e.g. refresh), this ensures the UI is populated.
+            // await fetchAndUpdateUserInfo(firebaseAuth.currentUser); // This might be redundant if auth listener handles it
+            // --- END MODIFICATION ---
 
+            // --- appData Initialization/Validation ---
             if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
                 console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
                 loadedAppData = JSON.parse(JSON.stringify(initialSubjectData));
@@ -503,27 +573,35 @@ export async function loadUserData(uid) {
              if (userData.photoURL === undefined) {
                 console.log("Initializing top-level photoURL.");
                  const authUser = firebaseAuth?.currentUser;
+                // Use update to avoid overwriting other fields if initializeUserData runs later
                 await userRef.update({ photoURL: authUser?.photoURL || DEFAULT_PROFILE_PIC_URL }).catch(e => console.error("Error setting initial photoURL:", e));
              }
              if (userData.completedCourseBadges === undefined) {
                   console.log("Initializing completedCourseBadges array.");
                   await userRef.update({ completedCourseBadges: [] }).catch(e => console.error("Error setting initial completedCourseBadges:", e));
              }
-              if (userData.userNotes === undefined) {
+              // Ensure userNotes structure exists
+             if (userData.userNotes === undefined) {
                   console.log("Initializing userNotes map.");
                   await userRef.update({ userNotes: {} }).catch(e => console.error("Error setting initial userNotes:", e));
              }
+              // --- MODIFICATION: Ensure isAdmin field exists, defaulting based on ADMIN_UID ---
              if (userData.isAdmin === undefined) {
                  console.log(`Initializing isAdmin field for user ${uid}.`);
                  await userRef.update({ isAdmin: (uid === ADMIN_UID) }).catch(e => console.error("Error setting initial isAdmin field:", e));
              }
+             // --- MODIFICATION: Ensure credits field exists, defaulting to 0. ---
              if (userData.credits === undefined) {
                 console.log(`Initializing credits field for user ${uid}.`);
                 await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
              }
 
-            setData(loadedAppData); 
 
+            // --- End appData Initialization ---
+
+            setData(loadedAppData); // Update state
+
+            // Sync appData with Markdown
             console.log("Syncing loaded subject appData with Markdown files...");
              let appDataWasModifiedBySync = false;
              if (data && data.subjects) {
@@ -531,6 +609,7 @@ export async function loadUserData(uid) {
                      const subject = data.subjects[subjectId];
                      if (!subject) continue;
 
+                     // MODIFIED: Only sync for 'approved' subjects or if admin
                      if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
                          const subjectMarkdown = await fetchMarkdownForSubject(subject);
                          if (subjectMarkdown !== null) {
@@ -539,31 +618,37 @@ export async function loadUserData(uid) {
                          } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing or could not be fetched from expected path.`); }
                      } else {
                          console.log(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) due to status '${subject.status}' and user role.`);
+                         // Ensure chapters object exists even if not synced
                          subject.chapters = subject.chapters || {};
                      }
                  }
                  if (appDataWasModifiedBySync) { needsAppDataSaveAfterLoad = true; }
              } else { console.warn("Cannot sync appData with Markdown - state.data.subjects is missing."); }
 
+             // Validate/Repair appData Structure
               if (data && data.subjects) {
                  for (const subjectId in data.subjects) {
                      const subject = data.subjects[subjectId];
                      if (!subject) continue;
+                     // Subject fields
                      if (!subject.name) { subject.name = `Subject ${subjectId}`; needsAppDataSaveAfterLoad = true; }
-                     if (!subject.fileName) { subject.fileName = `${cleanTextForFilename(subject.name || `subject_${subjectId}`)}.md`; needsAppDataSaveAfterLoad = true; } 
+                     if (!subject.fileName) { subject.fileName = `${cleanTextForFilename(subject.name || `subject_${subjectId}`)}.md`; needsAppDataSaveAfterLoad = true; } // Ensure clean filename
                      subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
                      subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
+                     // Ensure numeric defaults for ratio/duration/maxQ
                      subject.mcqProblemRatio = typeof subject.mcqProblemRatio === 'number' ? subject.mcqProblemRatio : 0.5;
                      subject.defaultTestDurationMinutes = Number(subject.defaultTestDurationMinutes) || 120;
                      subject.max_questions_per_test = Number(subject.max_questions_per_test) || 42;
 
+                     // MODIFIED: Validate subject status and creator fields
                      subject.status = subject.status || 'approved';
-                     subject.creatorUid = subject.creatorUid || ADMIN_UID; 
+                     subject.creatorUid = subject.creatorUid || ADMIN_UID; // Default if old data
                      subject.creatorName = subject.creatorName || 'System';
                      subject.createdAt = subject.createdAt || new Date(0).toISOString();
 
 
                      subject.chapters = typeof subject.chapters === 'object' ? subject.chapters : {};
+                     // Chapter fields (only if subject is approved or user is admin, otherwise they might be empty)
                      if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
                          for (const chapNum in subject.chapters) {
                             const chap = subject.chapters[chapNum];
@@ -573,6 +658,7 @@ export async function loadUserData(uid) {
                             chap.total_wrong = Number(chap.total_wrong) ?? 0;
                             chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
                             chap.consecutive_mastery = Number(chap.consecutive_mastery) ?? 0;
+                            // Validate available_questions
                             const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
                             const currentAvailableSet = new Set(Array.isArray(chap.available_questions) ? chap.available_questions : []);
                             const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
@@ -587,43 +673,48 @@ export async function loadUserData(uid) {
               } else { console.warn("Cannot validate/repair appData - state.data.subjects is missing."); }
 
 
+            // Save appData if modified
             if (needsAppDataSaveAfterLoad) {
                  console.log("Saving appData after load/sync/validation/repair...");
-                 await saveUserData(uid); 
+                 await saveUserData(uid); // Save the entire updated 'data' object
             }
 
+            // Select Default Subject
             if (data && data.subjects) {
                 const subjectKeys = Object.keys(data.subjects);
                 let subjectToSelectId = null;
-                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') { 
+                // Prioritize currently selected if valid, otherwise first in list
+                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') { // MODIFIED: Check status
                      subjectToSelectId = currentSubject.id;
-                 } else if (userData.lastSelectedSubjectId && data.subjects[userData.lastSelectedSubjectId] && data.subjects[userData.lastSelectedSubjectId].status === 'approved') { 
+                 } else if (userData.lastSelectedSubjectId && data.subjects[userData.lastSelectedSubjectId] && data.subjects[userData.lastSelectedSubjectId].status === 'approved') { // MODIFIED: Check status
                      subjectToSelectId = userData.lastSelectedSubjectId;
-                 } else { 
+                 } else { // Find first approved subject
                      subjectToSelectId = subjectKeys.find(key => data.subjects[key].status === 'approved') || null;
                  }
                 setCurrentSubject(subjectToSelectId ? data.subjects[subjectToSelectId] : null);
                 updateSubjectInfo();
+                // Save the newly selected subject ID back to the user doc for persistence
                 if (subjectToSelectId && subjectToSelectId !== userData.lastSelectedSubjectId) {
                      await userRef.update({ lastSelectedSubjectId: subjectToSelectId }).catch(e => console.error("Error saving lastSelectedSubjectId:", e));
                 }
             } else { setCurrentSubject(null); updateSubjectInfo(); }
 
+            // Load User Course Progress AFTER potentially saving appData
             await loadAllUserCourseProgress(uid);
 
-            await checkOnboarding(uid); 
+            await checkOnboarding(uid); // Check onboarding last
 
         } else {
              console.log("User document not found for UID:", uid, "- Initializing data.");
              const currentUserDetails = firebaseAuth?.currentUser;
              if (!currentUserDetails) { throw new Error("Cannot initialize data: Current user details unavailable."); }
              await initializeUserData(uid, currentUserDetails.email, (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]), currentUserDetails.displayName, currentUserDetails.photoURL);
-             await loadUserData(uid); 
+             await loadUserData(uid); // Reload after initialization
              return;
         }
     } catch (error) {
         console.error("Error in loadUserData:", error);
-        throw error; 
+        throw error; // Re-throw
     }
 }
 
@@ -637,38 +728,50 @@ export async function initializeUserData(uid, email, username, displayName = nul
     if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) { console.error("Error checking user existence:", e); } }
     const usernameLower = username ? username.toLowerCase() : (existingUserData?.username || null);
 
-    let initialIsAdmin = (uid === ADMIN_UID); 
+    // --- MODIFICATION: Determine isAdmin status ---
+    let initialIsAdmin = (uid === ADMIN_UID); // Default to true only for the primary admin
+    // Preserve existing isAdmin on forceReset if it exists (unlikely scenario, but safe)
     if (docExists && forceReset && typeof existingUserData.isAdmin === 'boolean') {
         initialIsAdmin = existingUserData.isAdmin;
     }
+    // --- END MODIFICATION ---
+
+    // --- MODIFICATION: Initialize credits ---
     let initialCredits = 0;
+    // Preserve existing credits on forceReset if it exists
     if (docExists && forceReset && typeof existingUserData.credits === 'number') {
         initialCredits = existingUserData.credits;
     }
+    // --- END MODIFICATION ---
 
     if (!docExists || forceReset) {
         console.log(`Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}`);
         let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
 
-        const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); 
+        // MODIFIED: For initial subjects, set creator to current user if not admin, or keep admin if user is admin
+        // This is for *newly initialized users*. initialSubjectData already has ADMIN_UID as creator.
+        // If the new user is NOT admin, their initial subjects should reflect their pending status.
+        const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); // Check if the user being initialized is the admin
         Object.values(defaultAppData.subjects).forEach(subject => {
             if (!isCurrentUserInitializingAdmin) {
-                subject.status = 'pending'; 
+                subject.status = 'pending'; // If new user is not admin, their initial subjects are pending
                 subject.creatorUid = uid;
                 subject.creatorName = displayName || username || email?.split('@')[0];
                 subject.createdAt = new Date().toISOString();
             } else {
+                // If the new user *is* the admin, initial subjects are pre-approved and by system/admin
                 subject.status = 'approved';
-                subject.creatorUid = ADMIN_UID; 
-                subject.creatorName = 'System'; 
-                subject.createdAt = new Date(0).toISOString(); 
+                subject.creatorUid = ADMIN_UID; // Or 'uid' if admin should "own" them
+                subject.creatorName = 'System'; // Or admin's display name
+                subject.createdAt = new Date(0).toISOString(); // Keep as default for admin
             }
         });
 
 
         for (const subjectId in defaultAppData.subjects) {
             const defaultSubject = defaultAppData.subjects[subjectId];
-            if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { 
+            // *** MODIFICATION: fetchMarkdownForSubject call uses updated path logic via the function itself ***
+            if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { // Only fetch MD for approved or if admin
                  const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
                  if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
             }
@@ -682,8 +785,8 @@ export async function initializeUserData(uid, email, username, displayName = nul
              appData: defaultAppData,
              completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
-             isAdmin: initialIsAdmin, 
-             credits: initialCredits, 
+             isAdmin: initialIsAdmin, // --- MODIFICATION: Set isAdmin field ---
+             credits: initialCredits, // --- MODIFICATION: Set credits field ---
         };
         try {
             await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
@@ -700,12 +803,16 @@ export async function initializeUserData(uid, email, username, displayName = nul
         if (existingUserData && existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
         if (existingUserData && !existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
         if (existingUserData && !existingUserData.userNotes) { updatesNeeded.userNotes = {}; }
+        // --- MODIFICATION: Ensure isAdmin field is initialized if missing ---
         if (existingUserData && existingUserData.isAdmin === undefined) {
-            updatesNeeded.isAdmin = (uid === ADMIN_UID); 
+            updatesNeeded.isAdmin = (uid === ADMIN_UID); // Default to true only for primary admin, false for others
         }
+        // --- END MODIFICATION ---
+        // --- MODIFICATION: Ensure credits field is initialized if missing ---
         if (existingUserData && existingUserData.credits === undefined) {
             updatesNeeded.credits = 0;
         }
+        // --- END MODIFICATION ---
          if (Object.keys(updatesNeeded).length > 0) {
              console.log(`Updating missing fields for ${uid}:`, Object.keys(updatesNeeded));
              try {
@@ -737,6 +844,7 @@ export async function checkOnboarding(uid) {
 export async function submitFeedback(feedbackData, user) {
     if (!db || !user) { console.error("Cannot submit feedback: DB/User missing."); alert("Error: User not identified."); return false; }
     if (!feedbackData.feedbackText) { console.error("Feedback text missing."); alert("Error: Feedback text cannot be empty."); return false; }
+    // Choose collection based on context
     const collectionName = feedbackData.context?.toLowerCase().includes('exam issue report') ? 'examIssues' : 'feedback';
     const feedbackRef = db.collection(collectionName).doc();
     try {
@@ -747,7 +855,7 @@ export async function submitFeedback(feedbackData, user) {
 
 // --- Inbox/Messaging ---
 export async function sendAdminReply(recipientUid, subject, body, adminUser) {
-     if (!db || !adminUser || !adminUser.isAdmin) { 
+     if (!db || !adminUser || !adminUser.isAdmin) { // MODIFIED: Check adminUser.isAdmin instead of specific UID
          console.error("Unauthorized admin reply. Admin privileges required.");
          alert("Error: Admin privileges required.");
          return false;
@@ -766,6 +874,11 @@ export async function markMessageAsRead(messageId, user) {
       catch (error) { console.error(`Error marking message ${messageId} read:`, error); return false; }
 }
 
+// --- START MODIFICATION: Send Welcome Guide Message ---
+/**
+ * Sends a welcome message with a link to the guide.pdf to a new user's inbox.
+ * @param {string} userId - The ID of the new user.
+ */
 export async function sendWelcomeGuideMessage(userId) {
     if (!db) {
         console.error("Firestore DB not initialized. Cannot send welcome message.");
@@ -775,7 +888,11 @@ export async function sendWelcomeGuideMessage(userId) {
         console.error("User ID is missing. Cannot send welcome message.");
         return false;
     }
+
+    // Construct the full URL to the guide.pdf
+    // Assumes guide.pdf is in ./assets/documents/ relative to index.html
     const guideUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/assets/documents/guide.pdf`;
+
     const subject = "Welcome to Lyceum! Quick Start Guide";
     const body = `
         <p>Hello and welcome to Lyceum!</p>
@@ -793,6 +910,7 @@ export async function sendWelcomeGuideMessage(userId) {
         <p>Happy learning!</p>
         <p>The Lyceum Team</p>
     `;
+
     const messageData = {
         senderId: 'system',
         senderName: 'Lyceum Guide',
@@ -801,20 +919,28 @@ export async function sendWelcomeGuideMessage(userId) {
         body: body,
         isRead: false
     };
+
     try {
         await db.collection('users').doc(userId).collection('inbox').add(messageData);
         console.log(`Welcome guide message sent to user ${userId}.`);
         return true;
     } catch (error) {
         console.error(`Error sending welcome guide message to user ${userId}:`, error);
+        // Optionally, you might want to retry or log this for manual follow-up
         return false;
     }
 }
+// --- END MODIFICATION ---
 
 
 // --- Admin Function to Update Course Definition ---
+/**
+ * Updates or creates a course definition in Firestore.
+ * Handles prerequisites and corequisites as arrays of strings (Subject Tags).
+ * Ensures FoP can be updated.
+ */
 export async function updateCourseDefinition(courseId, updates) {
-     if (!db || !currentUser || !currentUser.isAdmin) { 
+     if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check currentUser.isAdmin
          console.error("Permission denied: Admin privileges required.");
          alert("Permission denied. Admin required.");
          return false;
@@ -827,11 +953,13 @@ export async function updateCourseDefinition(courseId, updates) {
      const courseRef = db.collection('courses').doc(courseId);
      console.log(`Admin attempting to update/set course ${courseId} with:`, updates);
      try {
+         // --- MODIFIED: Ensure prereqs/coreqs are arrays of strings ---
          if (updates.prerequisites !== undefined) {
              if (!Array.isArray(updates.prerequisites)) {
                  console.warn("Correcting prerequisites to empty array in update because it wasn't an array.");
                  updates.prerequisites = [];
              } else {
+                 // Ensure all elements are strings and non-empty after trimming
                  updates.prerequisites = updates.prerequisites
                                             .filter(tag => typeof tag === 'string')
                                             .map(tag => tag.trim())
@@ -844,6 +972,7 @@ export async function updateCourseDefinition(courseId, updates) {
                    console.warn("Correcting corequisites to empty array in update because it wasn't an array.");
                    updates.corequisites = [];
               } else {
+                  // Ensure all elements are strings and non-empty after trimming
                   updates.corequisites = updates.corequisites
                                             .filter(tag => typeof tag === 'string')
                                             .map(tag => tag.trim())
@@ -851,21 +980,27 @@ export async function updateCourseDefinition(courseId, updates) {
                    console.log(`Cleaned corequisites:`, updates.corequisites);
               }
          }
+         // --- End MODIFICATION ---
 
+         // Use set with merge to handle nested updates correctly and create if non-existent.
          await courseRef.set(updates, { merge: true });
          console.log(`Course definition for ${courseId} updated/created successfully.`);
 
+         // Update local state map after successful save
          const updatedDoc = await courseRef.get();
          if (updatedDoc.exists) {
              const currentData = globalCourseDataMap.get(courseId) || {};
              const updatedDataFromFS = { id: courseId, ...updatedDoc.data() };
-             const mergedData = { ...currentData, ...updatedDataFromFS }; 
+
+             // Perform deep merge locally as well
+             const mergedData = { ...currentData, ...updatedDataFromFS }; // Prioritize FS data
+             // Deep merge chapterResources if present in both FS data and updates
              if (updatedDataFromFS.chapterResources && updates.chapterResources) {
-                 mergedData.chapterResources = { ...(currentData.chapterResources || {}) }; 
+                 mergedData.chapterResources = { ...(currentData.chapterResources || {}) }; // Start with current local
                  for (const chapNum in updates.chapterResources) {
                      mergedData.chapterResources[chapNum] = {
-                         ...(currentData.chapterResources?.[chapNum] || {}), 
-                         ...(updates.chapterResources[chapNum]) 
+                         ...(currentData.chapterResources?.[chapNum] || {}), // Existing chapter data
+                         ...(updates.chapterResources[chapNum]) // Apply updates
                      };
                  }
              } else if (updatedDataFromFS.chapterResources) {
@@ -874,10 +1009,12 @@ export async function updateCourseDefinition(courseId, updates) {
                  mergedData.chapterResources = updates.chapterResources;
              }
 
+             // Ensure other fields from FS are prioritized and initialized
              mergedData.youtubePlaylistUrls = Array.isArray(updatedDataFromFS.youtubePlaylistUrls) ? updatedDataFromFS.youtubePlaylistUrls : [];
              mergedData.chapters = Array.isArray(updatedDataFromFS.chapters) ? updatedDataFromFS.chapters : [];
              mergedData.midcourseChapters = Array.isArray(updatedDataFromFS.midcourseChapters) ? updatedDataFromFS.midcourseChapters : [];
              mergedData.totalChapters = Number(updatedDataFromFS.totalChapters) || (Array.isArray(mergedData.chapters) ? mergedData.chapters.length : 0);
+             // --- MODIFIED: Initialize Image URLs, Prereqs (String Array), Coreqs (String Array) after update ---
              mergedData.imageUrl = updatedDataFromFS.imageUrl || null;
              mergedData.coverUrl = updatedDataFromFS.coverUrl || null;
              mergedData.prerequisites = Array.isArray(updatedDataFromFS.prerequisites)
@@ -886,11 +1023,13 @@ export async function updateCourseDefinition(courseId, updates) {
              mergedData.corequisites = Array.isArray(updatedDataFromFS.corequisites)
                                        ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string')
                                        : [];
-             updateGlobalCourseData(courseId, mergedData); 
+             // --- End MODIFICATION ---
+
+             updateGlobalCourseData(courseId, mergedData); // Update local state map
              console.log("Local course definition map updated after Firestore save.");
          } else {
               console.warn(`Course ${courseId} not found after update/set operation. Local cache might be stale.`);
-              globalCourseDataMap.delete(courseId); 
+              globalCourseDataMap.delete(courseId); // Remove potentially incorrect cache entry
          }
          return true;
      } catch (error) {
@@ -900,13 +1039,19 @@ export async function updateCourseDefinition(courseId, updates) {
      }
 }
 
+/**
+ * Adds a new course to Firestore.
+ * MODIFIED: Includes prerequisites and corequisites as arrays of strings (Subject Tags).
+ * MODIFIED: Awards credits if a non-admin user suggests a course (status='pending').
+ */
 export async function addCourseToFirestore(courseData) {
     if (!currentUser) return { success: false, message: "User not logged in." };
 
-    const isAdminUser = currentUser.isAdmin; 
+    const isAdminUser = currentUser.isAdmin; // MODIFIED: Use currentUser.isAdmin
 
     const finalStatus = isAdminUser ? 'approved' : 'pending';
 
+    // Generate courseDirName
     let courseDirName = courseData.courseDirName ? cleanTextForFilename(courseData.courseDirName)
                        : cleanTextForFilename(courseData.name);
     if (!courseDirName) {
@@ -930,19 +1075,21 @@ export async function addCourseToFirestore(courseData) {
         imageUrl: courseData.imageUrl || null,
         coverUrl: courseData.coverUrl || null,
         courseDirName: courseDirName,
+        // --- MODIFIED: Add prereqs/coreqs (expecting arrays of strings) ---
         prerequisites: Array.isArray(courseData.prerequisites)
-                       ? courseData.prerequisites.filter(item => typeof item === 'string' && item.trim()) 
+                       ? courseData.prerequisites.filter(item => typeof item === 'string' && item.trim()) // Ensure strings
                        : [],
         corequisites: Array.isArray(courseData.corequisites)
-                      ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) 
+                      ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) // Ensure strings
                       : [],
+        // --- End MODIFICATION ---
     };
 
     let finalTotalChapters = 0;
     let finalChapters = [];
     let finalRelatedSubjectId = null;
 
-    if (isAdminUser) { 
+    if (isAdminUser) { // Only admin can set these directly during creation
         finalTotalChapters = parseInt(courseData.totalChapters) || 0;
         if (isNaN(finalTotalChapters) || finalTotalChapters < 0) finalTotalChapters = 0;
         finalChapters = finalTotalChapters > 0
@@ -961,18 +1108,23 @@ export async function addCourseToFirestore(courseData) {
 
     try {
         const docRef = await db.collection('courses').add(dataToSet);
+        // Create local data copy, convert server timestamp placeholder
         const savedData = { ...dataToSet, id: docRef.id };
-        delete savedData.createdAt; 
-        savedData.createdAt = new Date(); 
+        delete savedData.createdAt; // Remove placeholder
+        savedData.createdAt = new Date(); // Add approximate client date
 
+        // --- MODIFIED: Ensure arrays are present in local state data too ---
         savedData.prerequisites = Array.isArray(savedData.prerequisites) ? savedData.prerequisites : [];
         savedData.corequisites = Array.isArray(savedData.corequisites) ? savedData.corequisites : [];
+        // --- End MODIFICATION ---
 
         updateGlobalCourseData(docRef.id, savedData);
 
+        // --- MODIFIED: Award credits if user suggested a course (status is 'pending') ---
         if (finalStatus === 'pending' && !isAdminUser) {
             await updateUserCredits(currentUser.uid, 50, `Suggested Course: ${savedData.name.substring(0, 50)}`);
         }
+        // --- END MODIFICATION ---
 
         return { success: true, id: docRef.id, status: finalStatus };
     } catch (error) {
@@ -1004,38 +1156,43 @@ export async function markChapterStudiedInCourse(uid, courseId, chapterNum, meth
         console.log(`Chapter ${chapterNumInt} marked as studied locally for course ${courseId} via ${method}.`);
     }
 
-    const todayStr = getFormattedDate(); 
+    // Update daily progress log regardless of whether it was already in the main list
+    const todayStr = getFormattedDate(); // Use utility function
     progress.dailyProgress = progress.dailyProgress || {};
     progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
 
-    if (method === "skip_exam_pass" || method === "skip_exam_passed") { 
+    if (method === "skip_exam_pass" || method === "skip_exam_passed") { // Handle both potential strings
         if (!progress.dailyProgress[todayStr].skipExamsPassed.includes(chapterNumInt)) {
             progress.dailyProgress[todayStr].skipExamsPassed.push(chapterNumInt);
             progress.dailyProgress[todayStr].skipExamsPassed.sort((a, b) => a - b);
-            changed = true; 
+            changed = true; // Mark as changed if added to daily log
             console.log(`Logged skip exam pass for Ch ${chapterNumInt} on ${todayStr}`);
         }
-    } else { 
+    } else { // Assume standard study completion
         if (!progress.dailyProgress[todayStr].chaptersStudied.includes(chapterNumInt)) {
             progress.dailyProgress[todayStr].chaptersStudied.push(chapterNumInt);
             progress.dailyProgress[todayStr].chaptersStudied.sort((a, b) => a - b);
-            changed = true; 
+            changed = true; // Mark as changed if added to daily log
             console.log(`Logged chapter study for Ch ${chapterNumInt} on ${todayStr}`);
         }
     }
 
 
     if (changed) {
-        updateUserCourseProgress(courseId, progress); 
-        return await saveUserCourseProgress(uid, courseId, progress); 
+        updateUserCourseProgress(courseId, progress); // Update local state map immediately
+        return await saveUserCourseProgress(uid, courseId, progress); // Save updated progress to Firestore
     } else {
         console.log(`No changes needed for Chapter ${chapterNumInt} study status for course ${courseId}.`);
-        return true; 
+        return true; // Indicate success even if no change was made
     }
 }
 
 // --- Admin Function to Update User Course Status ---
+/**
+ * Allows an admin to mark a course as completed for a user and set the final grade/mark.
+ */
 export async function updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus) {
+    // MODIFIED: Check currentUser.isAdmin for general admin access
     if (!currentUser || !currentUser.isAdmin) {
         console.error("Permission Denied: Admin required for updateCourseStatusForUser.");
         alert("Admin privileges required.");
@@ -1067,39 +1224,48 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
 
             const progressUpdates = {
                 status: newStatus,
+                // Use server timestamp for lastActivityDate update within the transaction
                 lastActivityDate: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             let finalGrade = null;
             if (finalMark !== null && finalMark !== undefined) {
-                progressUpdates.totalMark = Number(finalMark); 
+                progressUpdates.totalMark = Number(finalMark); // Ensure it's a number
                 finalGrade = getLetterGrade(progressUpdates.totalMark);
                 progressUpdates.grade = finalGrade;
             } else if (newStatus !== 'enrolled') {
-                 const calculatedMark = calculateTotalMark(progressData); 
+                 // If mark not provided, attempt calculation only if marking complete/failed
+                 const calculatedMark = calculateTotalMark(progressData); // Ensure progressData has needed fields
                  const calculatedGrade = getLetterGrade(calculatedMark);
                  progressUpdates.totalMark = calculatedMark;
                  progressUpdates.grade = calculatedGrade;
-                 finalGrade = calculatedGrade; 
+                 finalGrade = calculatedGrade; // Use calculated grade for badge logic
                  console.log(`Calculated final mark: ${calculatedMark}, Grade: ${calculatedGrade}`);
             }
 
+            // Use server timestamp for completionDate only when status changes to completed/failed
             if ((newStatus === 'completed' || newStatus === 'failed') && progressData.status !== newStatus) {
                 progressUpdates.completionDate = firebase.firestore.FieldValue.serverTimestamp();
             } else if (newStatus === 'enrolled') {
-                 progressUpdates.completionDate = null; 
+                 progressUpdates.completionDate = null; // Reset completion date if moving back to enrolled
             } else {
+                // If status is already completed/failed and not changing, don't overwrite completionDate
+                // If finalMark is being updated but status remains the same, keep existing completionDate
                  progressUpdates.completionDate = progressData.completionDate || null;
             }
 
             let badges = userData.completedCourseBadges || [];
+            // Remove existing badge for this course regardless of status change
             badges = badges.filter(b => b.courseId !== courseId);
 
+            // Add badge ONLY if status is 'completed' and grade is passing
             if (newStatus === 'completed' && finalGrade && finalGrade !== 'F' && courseDef) {
+                 // **CORRECTED:** Use Timestamp.now() for the array element
                 badges.push({
                     courseId: courseId,
                     courseName: courseDef.name || 'Unknown Course',
                     grade: finalGrade,
+                    // Use Timestamp.now() for storing in an array field
                     completionDate: firebase.firestore.Timestamp.now()
                 });
                 console.log(`Adding badge for course ${courseId}, grade ${finalGrade}`);
@@ -1113,16 +1279,19 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
 
         console.log(`Successfully updated status/grade for course ${courseId}, user ${targetUserId}.`);
 
+        // Update local map ONLY if it belongs to the currently logged-in user.
         if (currentUser && userCourseProgressMap.has(courseId) && targetUserId === currentUser.uid) {
-             const updatedProgressDoc = await progressRef.get(); 
+             const updatedProgressDoc = await progressRef.get(); // Re-fetch after transaction
              if (updatedProgressDoc.exists) {
                  const updatedProgressData = updatedProgressDoc.data();
+                 // Convert Timestamps back AFTER the transaction is complete
                  if (updatedProgressData.enrollmentDate?.toDate) updatedProgressData.enrollmentDate = updatedProgressData.enrollmentDate.toDate();
                  if (updatedProgressData.completionDate?.toDate) updatedProgressData.completionDate = updatedProgressData.completionDate.toDate();
                  if (updatedProgressData.lastActivityDate?.toDate) updatedProgressData.lastActivityDate = updatedProgressData.lastActivityDate.toDate();
 
                  const courseDef = globalCourseDataMap.get(courseId);
                  if (courseDef) {
+                      // MODIFIED: Pass enrollmentMode if needed
                       updatedProgressData.currentDayObjective = determineTodaysObjective(updatedProgressData, courseDef);
                  }
                  updateUserCourseProgress(courseId, updatedProgressData);
@@ -1140,8 +1309,11 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
     }
 }
 
+/**
+ * Handles adding a new badge via admin action.
+ */
 export async function handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate) {
-     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } 
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } // MODIFIED
      showLoading("Adding badge...");
      const userRef = db.collection('users').doc(userId);
      try {
@@ -1166,8 +1338,11 @@ export async function handleAddBadgeForUser(userId, courseId, courseName, grade,
      } catch (error) { hideLoading(); console.error("Error adding badge:", error); alert(`Failed to add badge: ${error.message}`); }
 }
 
+/**
+ * Handles removing a badge via admin action.
+ */
 export async function handleRemoveBadgeForUser(userId, courseId) {
-     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } 
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } // MODIFIED
      showLoading("Removing badge...");
      const userRef = db.collection('users').doc(userId);
      try {
@@ -1183,9 +1358,16 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
 }
 
 // --- NEW: Admin Update Username ---
+/**
+ * Admin function to update a user's username and manage the username registry.
+ * @param {string} userId - The ID of the user to update.
+ * @param {string|null} oldUsername - The user's current username (can be null/empty).
+ * @param {string} newUsername - The desired new username (will be lowercased).
+ * @returns {Promise<boolean>} - True on success, false or throws error on failure.
+ */
 export async function adminUpdateUsername(userId, oldUsername, newUsername) {
     console.log(`Admin attempting to change username for user ${userId} from "${oldUsername}" to "${newUsername}"`);
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check currentUser.isAdmin
         console.error("Permission denied: Admin privileges required for username update.");
         throw new Error("Permission denied: Admin privileges required.");
     }
@@ -1194,6 +1376,7 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
         throw new Error("Internal Error: Missing required user or username data.");
     }
 
+    // Validate new username format (same as client-side)
     const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
     if (!usernameRegex.test(newUsername)) {
         console.error("Invalid new username format:", newUsername);
@@ -1205,7 +1388,7 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
 
     if (oldUsernameLower === newUsernameLower) {
         console.log("New username is the same as the old one (case-insensitive). No change needed.");
-        return true; 
+        return true; // No actual change needed
     }
 
     const usersRef = db.collection('users');
@@ -1215,6 +1398,7 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
     const oldUsernameDocRef = oldUsernameLower ? usernamesRef.doc(oldUsernameLower) : null;
 
     try {
+        // Check if the new username is already taken
         console.log(`Checking if username "${newUsernameLower}" is taken...`);
         const newUsernameDoc = await newUsernameDocRef.get();
         if (newUsernameDoc.exists) {
@@ -1222,12 +1406,15 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
             throw new Error(`Username "${newUsername}" is already taken.`);
         }
 
+        // Perform the update in a batch write
         console.log("Preparing batch write for username update...");
         const batch = db.batch();
 
+        // 1. Update the username field in the user's document
         console.log(`Batch: Updating username field in users/${userId} to "${newUsernameLower}"`);
         batch.update(userDocRef, { username: newUsernameLower });
 
+        // 2. Delete the old username document if it exists
         if (oldUsernameDocRef) {
             console.log(`Batch: Deleting old username document usernames/${oldUsernameLower}`);
             batch.delete(oldUsernameDocRef);
@@ -1235,9 +1422,11 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
             console.log("No old username document to delete.");
         }
 
+        // 3. Create the new username document
         console.log(`Batch: Creating new username document usernames/${newUsernameLower} linked to ${userId}`);
         batch.set(newUsernameDocRef, { userId: userId });
 
+        // Commit the batch
         console.log("Committing batch write...");
         await batch.commit();
         console.log(`Successfully updated username for user ${userId} to "${newUsernameLower}"`);
@@ -1245,8 +1434,9 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
 
     } catch (error) {
         console.error(`Error updating username for user ${userId} to "${newUsernameLower}":`, error);
+        // Rethrow specific errors or a generic one
         if (error.message.includes("already taken")) {
-            throw error; 
+            throw error; // Keep the specific error message
         }
         throw new Error(`Failed to update username: ${error.message}`);
     }
@@ -1255,6 +1445,7 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
 
 // --- User-Specific Shared Data (Formula Sheets, Summaries, Notes) ---
 
+// USER FORMULA SHEETS
 export async function saveUserFormulaSheet(userId, courseId, chapterNum, htmlContent) {
     if (!db || !userId) {
         console.error("Cannot save formula sheet: DB or userId missing");
@@ -1305,6 +1496,7 @@ export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
     }
 }
 
+// USER CHAPTER SUMMARIES
 export async function saveUserChapterSummary(userId, courseId, chapterNum, htmlContent) {
     if (!db || !userId) {
         console.error("Cannot save chapter summary: DB or userId missing");
@@ -1355,17 +1547,20 @@ export async function loadUserChapterSummary(userId, courseId, chapterNum) {
     }
 }
 
+// USER NOTES (Stored within user document's `userNotes` map for privacy)
 export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
      if (!db || !userId) return false;
      const userRef = db.collection('users').doc(userId);
-     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; 
+     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; // Use combined key for map
      try {
+         // Ensure notesArray is serializable (convert Timestamps if any, though we use Date.now())
          const notesToSave = JSON.parse(JSON.stringify(notesArray));
          await userRef.update({ [fieldPath]: notesToSave });
          console.log(`Saved user notes for ${courseId} Ch ${chapterNum} to map key ${fieldPath}`);
          return true;
      } catch (error) {
          console.error(`Error saving user notes for ${courseId} Ch ${chapterNum} using update:`, error);
+         // Attempt to set if update fails (e.g., path doesn't exist)
          try {
              console.log(`Attempting set with merge for user notes: ${fieldPath}`);
              await userRef.set({ userNotes: { [fieldPath]: notesArray } }, { merge: true });
@@ -1382,12 +1577,13 @@ export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
 export async function loadUserNotes(userId, courseId, chapterNum) {
      if (!db || !userId) return [];
      const userRef = db.collection('users').doc(userId);
-     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; 
+     const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; // Use combined key
      try {
          const docSnap = await userRef.get();
          if (docSnap.exists) {
-             const notes = docSnap.data()?.userNotes?.[fieldPath] || []; 
+             const notes = docSnap.data()?.userNotes?.[fieldPath] || []; // Access using combined key
              console.log(`Loaded ${notes.length} user notes for ${courseId} Ch ${chapterNum} from map key ${fieldPath}`);
+             // Ensure timestamps are numbers (Date.now() is used for new notes)
              return notes.map(n => ({ ...n, timestamp: Number(n.timestamp) || Date.now() }));
          }
          return [];
@@ -1397,14 +1593,16 @@ export async function loadUserNotes(userId, courseId, chapterNum) {
      }
 }
 
+// SHARED NOTES (Stored in a separate global collection)
 export async function saveSharedNote(courseId, chapterNum, noteData, user) {
      if (!db || !user) return false;
+     // Consider a more robust ID generation if needed
      const docId = `shared_${courseId}_ch${chapterNum}_${Date.now()}`;
      try {
          await db.collection(sharedNotesCollection).doc(docId).set({
              courseId: courseId,
              chapterNum: Number(chapterNum),
-             originalNoteId: noteData.id, 
+             originalNoteId: noteData.id, // Link to original user note if applicable
              title: noteData.title,
              content: noteData.content,
              type: noteData.type,
@@ -1430,7 +1628,7 @@ export async function loadSharedNotes(courseId, chapterNum) {
                            .where('courseId', '==', courseId)
                            .where('chapterNum', '==', Number(chapterNum))
                            .orderBy('timestamp', 'desc')
-                           .limit(50) 
+                           .limit(50) // Limit results
                            .get();
 
         const notes = [];
@@ -1439,6 +1637,7 @@ export async function loadSharedNotes(courseId, chapterNum) {
              notes.push({
                  id: doc.id,
                  ...data,
+                 // Convert timestamp for display
                  timestamp: data.timestamp?.toDate ? data.timestamp.toDate().getTime() : Date.now()
              });
          });
@@ -1452,7 +1651,7 @@ export async function loadSharedNotes(courseId, chapterNum) {
 
 // --- Admin Functions for Generated Content Deletion ---
 export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete formula sheet: Admin privileges required");
         return false;
     }
@@ -1477,7 +1676,7 @@ export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
 }
 
 export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete chapter summary: Admin privileges required");
         return false;
     }
@@ -1501,19 +1700,20 @@ export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
     }
 }
 
+// --- NEW: Delete All Feedback Messages ---
 export async function deleteAllFeedbackMessages() {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         throw new Error("Permission denied: Admin privileges required.");
     }
     console.log("Admin: Deleting all feedback messages...");
     try {
         const snapshot = await db.collection('feedback')
-                               .limit(500) 
+                               .limit(500) // Process in batches if needed for large collections
                                .get();
 
         if (snapshot.empty) {
             console.log("No feedback messages to delete.");
-            return 0; 
+            return 0; // No messages to delete
         }
 
         const batch = db.batch();
@@ -1528,19 +1728,20 @@ export async function deleteAllFeedbackMessages() {
     }
 }
 
+// --- NEW: Delete All Exam Issues ---
 export async function deleteAllExamIssues() {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         throw new Error("Permission denied: Admin privileges required.");
     }
     console.log("Admin: Deleting all exam issues...");
     try {
         const snapshot = await db.collection('examIssues')
-                               .limit(500) 
+                               .limit(500) // Process in batches if needed
                                .get();
 
         if (snapshot.empty) {
              console.log("No exam issues to delete.");
-            return 0; 
+            return 0; // No issues to delete
         }
 
         const batch = db.batch();
@@ -1555,14 +1756,16 @@ export async function deleteAllExamIssues() {
     }
 }
 
+// --- NEW: Delete Inbox Message ---
 export async function deleteInboxMessage(userId, messageId) {
-    if (!db || !userId || !messageId || !currentUser) { 
+    // Allow admin or owner to delete inbox messages
+    if (!db || !userId || !messageId || !currentUser) { // MODIFIED
         console.error("Cannot delete inbox message: Missing DB, userId, messageId, or auth info");
         return false;
     }
 
     const currentUid = currentUser.uid;
-    const isAdminUser = currentUser.isAdmin; 
+    const isAdminUser = currentUser.isAdmin; // MODIFIED
     const isOwner = currentUid === userId;
 
     if (!isAdminUser && !isOwner) {
@@ -1584,8 +1787,10 @@ export async function deleteInboxMessage(userId, messageId) {
     }
 }
 
+// --- NEW: Delete Course Activity Progress ---
 export async function deleteCourseActivityProgress(userId, courseId, activityType, activityId) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    // Only admin can delete specific progress items
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Cannot delete course activity progress: Admin privileges required");
         alert("Permission denied.");
         return false;
@@ -1610,8 +1815,9 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
             const updates = {};
             let scoreMap = null;
             let mapKey = null;
-            let valueToDelete = null; 
+            let valueToDelete = null; // Used for specific types if needed
 
+            // Determine the correct score map and key based on activity type
             switch (activityType) {
                 case 'assignment':
                     scoreMap = progressData.assignmentScores || {};
@@ -1629,68 +1835,74 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
                     valueToDelete = activityId;
                     break;
                 case 'final':
+                    // Final exams are stored in an array (or null)
                     let finalScores = progressData.finalExamScores || [];
+                    // activityId might be 'final1', 'final2' etc. -> map to index 0, 1
                     const finalIndex = parseInt(activityId.replace('final', '')) - 1;
                     if (Array.isArray(finalScores) && finalIndex >= 0 && finalIndex < finalScores.length) {
-                        finalScores[finalIndex] = null; 
+                        finalScores[finalIndex] = null; // Nullify the score at the specific index
                         updates.finalExamScores = finalScores;
                     } else {
                         console.warn(`Invalid final exam index or score array for ${activityId}`);
+                        // Don't throw, just log and don't update if invalid
                     }
-                    mapKey = null; 
+                    mapKey = null; // Handled separately above
                     break;
-                 case 'skip_exam': 
+                 case 'skip_exam': // Deleting skip exam attempts/scores
                     mapKey = 'skipExamAttempts';
-                    valueToDelete = activityId; 
+                    valueToDelete = activityId; // activityId is the chapter number string
                     const attemptsMap = progressData.skipExamAttempts || {};
                     const scoresMap = progressData.lastSkipExamScore || {};
                     if (attemptsMap.hasOwnProperty(valueToDelete)) delete attemptsMap[valueToDelete];
                     if (scoresMap.hasOwnProperty(valueToDelete)) delete scoresMap[valueToDelete];
                     updates.skipExamAttempts = attemptsMap;
                     updates.lastSkipExamScore = scoresMap;
-                    mapKey = null; 
+                    mapKey = null; // Handled separately
                     break;
-                case 'video': 
+                case 'video': // Deleting watched video progress
                      mapKey = 'watchedVideoUrls';
-                     valueToDelete = activityId; 
+                     valueToDelete = activityId; // activityId is the video URL
                      const urlsMap = progressData.watchedVideoUrls || {};
                      const durationsMap = progressData.watchedVideoDurations || {};
                      if (urlsMap.hasOwnProperty(valueToDelete)) delete urlsMap[valueToDelete];
                      if (durationsMap.hasOwnProperty(valueToDelete)) delete durationsMap[valueToDelete];
                      updates.watchedVideoUrls = urlsMap;
                      updates.watchedVideoDurations = durationsMap;
-                     mapKey = null; 
+                     mapKey = null; // Handled separately
                      break;
-                case 'pdf': 
+                case 'pdf': // Deleting PDF progress
                      mapKey = 'pdfProgress';
-                     valueToDelete = activityId; 
+                     valueToDelete = activityId; // activityId is the PDF URL
                      const pdfMap = progressData.pdfProgress || {};
                      if (pdfMap.hasOwnProperty(valueToDelete)) delete pdfMap[valueToDelete];
                      updates.pdfProgress = pdfMap;
-                     mapKey = null; 
+                     mapKey = null; // Handled separately
                      break;
-                 case 'daily': 
+                 case 'daily': // Deleting a specific daily progress entry
                      mapKey = 'dailyProgress';
-                     valueToDelete = activityId; 
+                     valueToDelete = activityId; // activityId is the date string YYYY-MM-DD
                      const dailyMap = progressData.dailyProgress || {};
                      if (dailyMap.hasOwnProperty(valueToDelete)) delete dailyMap[valueToDelete];
                      updates.dailyProgress = dailyMap;
-                     mapKey = null; 
+                     mapKey = null; // Handled separately
                      break;
 
                 default:
                     throw new Error(`Invalid activity type for deletion: ${activityType}`);
             }
 
+            // Handle map-based deletion
             if (mapKey && valueToDelete !== null) {
+                 // Ensure the map exists before trying to delete
                 if (progressData[mapKey] && progressData[mapKey].hasOwnProperty(valueToDelete)) {
-                    delete progressData[mapKey][valueToDelete]; 
-                    updates[mapKey] = progressData[mapKey]; 
+                    delete progressData[mapKey][valueToDelete]; // Delete the specific key from the score map
+                    updates[mapKey] = progressData[mapKey]; // Assign the modified map to updates
                 } else {
                     console.warn(`Activity ID "${valueToDelete}" not found in map "${mapKey}" for deletion.`);
                 }
             }
 
+            // Only update if there are changes
             if (Object.keys(updates).length > 0) {
                  console.log(`Updating Firestore with changes:`, updates);
                  transaction.update(progressRef, updates);
@@ -1703,13 +1915,17 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
         return true;
     } catch (error) {
         console.error(`Error deleting course activity progress:`, error);
-        alert(`Error deleting progress: ${error.message}`); 
+        alert(`Error deleting progress: ${error.message}`); // Show error to admin
         return false;
     }
 }
 
 // --- NEW: Admin Tasks Management ---
 
+/**
+ * Fetches all tasks from the adminTasks collection, ordered by creation date.
+ * @returns {Promise<Array<object>>} - An array of task objects { id, text, status, createdAt }.
+ */
 export async function fetchAdminTasks() {
     if (!db) {
         console.error("Firestore DB not initialized");
@@ -1718,7 +1934,7 @@ export async function fetchAdminTasks() {
     console.log("Fetching admin tasks...");
     try {
         const snapshot = await db.collection(adminTasksCollection)
-                           .orderBy('createdAt', 'desc') 
+                           .orderBy('createdAt', 'desc') // Show newest first
                            .get();
         const tasks = [];
         snapshot.forEach(doc => {
@@ -1727,19 +1943,24 @@ export async function fetchAdminTasks() {
                 id: doc.id,
                 text: data.text,
                 status: data.status,
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null 
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null // Convert timestamp
             });
         });
         console.log(`Successfully fetched ${tasks.length} admin tasks.`);
         return tasks;
     } catch (error) {
         console.error("Error fetching admin tasks:", error);
-        return []; 
+        return []; // Return empty array on error
     }
 }
 
+/**
+ * Adds a new task to the adminTasks collection. Requires admin privileges.
+ * @param {string} taskText - The text content of the task.
+ * @returns {Promise<string|null>} - The ID of the newly created task, or null on failure.
+ */
 export async function addAdminTask(taskText) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to add task.");
         alert("Permission denied: Admin privileges required.");
         return null;
@@ -1754,7 +1975,7 @@ export async function addAdminTask(taskText) {
     try {
         const docRef = await db.collection(adminTasksCollection).add({
             text: taskText.trim(),
-            status: 'pending', 
+            status: 'pending', // Default status
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         console.log(`Successfully added admin task with ID: ${docRef.id}`);
@@ -1766,8 +1987,14 @@ export async function addAdminTask(taskText) {
     }
 }
 
+/**
+ * Updates the status of an existing admin task. Requires admin privileges.
+ * @param {string} taskId - The ID of the task document to update.
+ * @param {'pending' | 'done'} newStatus - The new status for the task.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
 export async function updateAdminTaskStatus(taskId, newStatus) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to update task status.");
         alert("Permission denied: Admin privileges required.");
         return false;
@@ -1791,8 +2018,13 @@ export async function updateAdminTaskStatus(taskId, newStatus) {
     }
 }
 
+/**
+ * Deletes an admin task document, *only if* its status is 'done'. Requires admin privileges.
+ * @param {string} taskId - The ID of the task document to delete.
+ * @returns {Promise<boolean>} - True on success, false on failure or if status is not 'done'.
+ */
 export async function deleteAdminTask(taskId) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED
         console.error("Permission denied: Admin privileges required to delete task.");
         alert("Permission denied: Admin privileges required.");
         return false;
@@ -1806,6 +2038,7 @@ export async function deleteAdminTask(taskId) {
     console.log(`Admin attempting to delete task ${taskId}`);
     const taskRef = db.collection(adminTasksCollection).doc(taskId);
     try {
+        // Fetch the document first to check its status
         const docSnap = await taskRef.get();
 
         if (!docSnap.exists) {
@@ -1821,6 +2054,7 @@ export async function deleteAdminTask(taskId) {
             return false;
         }
 
+        // Status is 'done', proceed with deletion
         await taskRef.delete();
         console.log(`Successfully deleted admin task ${taskId} (status was 'done').`);
         return true;
@@ -1832,8 +2066,14 @@ export async function deleteAdminTask(taskId) {
 }
 
 // --- NEW: Toggle User Admin Status ---
+/**
+ * Toggles the isAdmin status for a target user. Only callable by the primary admin.
+ * @param {string} targetUserId - The UID of the user whose admin status is to be toggled.
+ * @param {boolean} currentIsAdmin - The current isAdmin status of the target user.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
 export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
-    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { 
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { // Only primary admin can toggle
         console.error("Permission denied: Only the primary admin can toggle admin status.");
         throw new Error("Permission denied: Only the primary admin can perform this action.");
     }
@@ -1860,8 +2100,17 @@ export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
     }
 }
 
+// MODIFIED: New function for admin to update another user's subject status
+/**
+ * Admin function to update the status of a subject for a specific user.
+ * @param {string} adminUid - The UID of the admin performing the action.
+ * @param {string} targetUserId - The UID of the user whose subject status is to be updated.
+ * @param {string} subjectId - The ID of the subject within the target user's appData.
+ * @param {'pending' | 'approved' | 'rejected'} newStatus - The new status for the subject.
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
 export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subjectId, newStatus) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
+    if (!db || !currentUser || !currentUser.isAdmin) { // MODIFIED: Check current logged-in user's admin status
         console.error("Permission denied: Admin privileges required for this action.");
         alert("Permission denied. Admin privileges required.");
         return false;
@@ -1894,8 +2143,12 @@ export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subje
             return false;
         }
 
+        // Create a deep copy to modify, then update the whole appData
         const newAppData = JSON.parse(JSON.stringify(userData.appData));
         newAppData.subjects[subjectId].status = newStatus;
+        // Optionally, if approving, admin could be noted as approver
+        // newAppData.subjects[subjectId].approvedBy = adminUid;
+        // newAppData.subjects[subjectId].approvedAt = new Date().toISOString();
 
         await targetUserRef.update({ appData: newAppData });
         console.log(`Successfully updated status for subject ${subjectId} of user ${targetUserId} to ${newStatus}.`);
@@ -1908,6 +2161,13 @@ export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subje
 }
 
 // --- START: User Credit System ---
+/**
+ * Updates a user's credit balance atomically and logs the transaction.
+ * @param {string} userId - The UID of the user.
+ * @param {number} creditChange - The amount to change credits by (positive or negative).
+ * @param {string} reason - A brief description for the credit change (e.g., "Completed Assignment").
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
 export async function updateUserCredits(userId, creditChange, reason) {
     if (!db || !userId || typeof creditChange !== 'number' || !reason) {
         console.error("updateUserCredits: Invalid parameters.", { userId, creditChange, reason });
@@ -1915,11 +2175,11 @@ export async function updateUserCredits(userId, creditChange, reason) {
     }
     if (creditChange === 0) {
         console.log("updateUserCredits: creditChange is 0, no update needed.");
-        return true; 
+        return true; // No change, but not an error.
     }
 
     const userRef = db.collection('users').doc(userId);
-    const creditLogRef = userRef.collection(userCreditLogSubCollection).doc(); 
+    const creditLogRef = userRef.collection(userCreditLogSubCollection).doc(); // Auto-generate ID for log
 
     try {
         await db.runTransaction(async (transaction) => {
@@ -1930,32 +2190,42 @@ export async function updateUserCredits(userId, creditChange, reason) {
             const currentCredits = userDoc.data().credits || 0;
             const newCredits = currentCredits + creditChange;
 
+            // Update user's credit balance
             transaction.update(userRef, {
                 credits: firebase.firestore.FieldValue.increment(creditChange)
             });
 
+            // Log the transaction
             transaction.set(creditLogRef, {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 change: creditChange,
-                newBalance: newCredits, 
+                newBalance: newCredits, // Store the calculated new balance for the log
                 reason: reason,
+                // *** MODIFIED: Use currentUser from state ***
                 performedBy: currentUser ? currentUser.uid : 'system' 
             });
         });
 
         console.log(`Successfully updated credits for user ${userId} by ${creditChange}. Reason: ${reason}`);
         
+        // If the current user is being updated, refresh their local state
         if (currentUser && currentUser.uid === userId) {
             const oldCredits = currentUser.credits || 0;
             const newLocalCredits = oldCredits + creditChange;
+            // *** MODIFIED: setCurrentUser and log updated currentUser ***
             const updatedCurrentUser = { ...currentUser, credits: newLocalCredits };
             setCurrentUser(updatedCurrentUser);
             console.log("[updateUserCredits] Local currentUser state updated:", JSON.parse(JSON.stringify(updatedCurrentUser)));
 
+
+            // Potentially update UI elements displaying credits if not handled by reactivity
             const creditsDisplay = document.getElementById('user-profile-credits');
             if (creditsDisplay) creditsDisplay.textContent = newLocalCredits.toLocaleString();
             const marketplaceCreditsDisplay = document.getElementById('marketplace-credit-balance');
             if (marketplaceCreditsDisplay) marketplaceCreditsDisplay.textContent = newLocalCredits.toLocaleString();
+            
+            // The auth listener or other UI update functions might already handle refreshing the header
+            // fetchAndUpdateUserInfo might be too heavy here, setCurrentUser should suffice for state.
         }
         return true;
     } catch (error) {
@@ -1964,104 +2234,13 @@ export async function updateUserCredits(userId, creditChange, reason) {
         return false;
     }
 }
+
+// NOTE for `submitPendingResults` (PDF exams):
+// The `submitPendingResults` function is located in `ui_exams_dashboard.js`.
+// After `submitPendingResults` successfully saves the exam results to Firestore
+// (likely by calling `storeExamResult` from `exam_storage.js`, or its own logic),
+// it should then call:
+// await updateUserCredits(currentUser.uid, 10, "Completed PDF Test (Legacy)");
+// This cannot be directly implemented in `firebase_firestore.js` without modifying `ui_exams_dashboard.js`.
+// Ensure this call is added to the success path of `submitPendingResults`.
 // --- END: User Credit System ---
-
-// --- NEW AI Chat Studio Firestore Functions ---
-
-/**
- * Saves or updates a specific AI chat session document for a user.
- * @param {string} userId - The user's unique ID.
- * @param {string} sessionId - The ID of the chat session.
- * @param {object} sessionData - The chat session data to save.
- * @returns {Promise<void>}
- */
-export async function saveChatSession(userId, sessionId, sessionData) {
-    if (!db || !userId || !sessionId || !sessionData) {
-        console.error("saveChatSession: Missing required parameters.");
-        throw new Error("Missing required parameters for saving chat session.");
-    }
-    const sessionRef = db.collection('users').doc(userId)
-                         .collection(aiChatSessionsSubCollection).doc(sessionId);
-
-    const dataToSave = { ...sessionData }; // Clone to avoid modifying original object by reference
-
-    // Handle createdAt:
-    // It should be set once when the session is first created.
-    // If it's a number (from client Date.now()), convert to Firestore Timestamp for the initial save.
-    // If it already exists (e.g., as a Firestore Timestamp from a previous load), don't overwrite it.
-    // The client-side logic already sets `createdAt: Date.now()` on new session.
-    // So, if it's a number, we assume it's the initial creation time.
-    if (typeof dataToSave.createdAt === 'number') {
-        dataToSave.createdAt = firebase.firestore.Timestamp.fromMillis(dataToSave.createdAt);
-    } else if (!dataToSave.createdAt) { // If somehow createdAt is missing entirely, set it.
-        dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-    }
-    // If dataToSave.createdAt is already a Firestore Timestamp, it will be preserved.
-
-    // lastModified should always be updated to the server's current time on any save.
-    dataToSave.lastModified = firebase.firestore.FieldValue.serverTimestamp();
-
-    // Ensure history is an array
-    dataToSave.history = Array.isArray(dataToSave.history) ? dataToSave.history : [];
-
-    try {
-        // Using set with merge:true will create the document if it doesn't exist,
-        // or update it if it does. For createdAt, this strategy means it's set on creation
-        // and not typically overwritten unless explicitly included in `dataToSave` again (which it is as a Timestamp).
-        await sessionRef.set(dataToSave, { merge: true });
-        console.log(`AI Chat session ${sessionId} saved successfully for user ${userId}.`);
-    } catch (error) {
-        console.error(`Error saving AI Chat session ${sessionId} for user ${userId}:`, error);
-        throw error; // Re-throw to be caught by caller
-    }
-}
-
-/**
- * Loads all AI chat sessions for a given user from Firestore.
- * @param {string} userId - The user's unique ID.
- * @returns {Promise<Array<object>>} - An array of chat session objects, each with an 'id' field.
- */
-export async function loadUserChatSessionsFromFirestore(userId) {
-    if (!db || !userId) {
-        console.error("loadUserChatSessionsFromFirestore: Missing DB or userId.");
-        return [];
-    }
-    const sessionsRef = db.collection('users').doc(userId)
-                          .collection(aiChatSessionsSubCollection);
-    try {
-        const snapshot = await sessionsRef.orderBy('lastModified', 'desc').get(); 
-        const sessions = [];
-        snapshot.forEach(doc => {
-            sessions.push({ id: doc.id, ...doc.data() });
-        });
-        console.log(`Loaded ${sessions.length} AI chat sessions from Firestore for user ${userId}.`);
-        return sessions;
-    } catch (error) {
-        console.error(`Error loading AI chat sessions from Firestore for user ${userId}:`, error);
-        throw error; 
-    }
-}
-
-/**
- * Deletes a specific AI chat session document for a user.
- * @param {string} userId - The user's unique ID.
- * @param {string} sessionId - The ID of the chat session to delete.
- * @returns {Promise<void>}
- */
-export async function deleteChatSessionFromFirestore(userId, sessionId) {
-    if (!db || !userId || !sessionId) {
-        console.error("deleteChatSessionFromFirestore: Missing required parameters.");
-        throw new Error("Missing required parameters for deleting chat session.");
-    }
-    const sessionRef = db.collection('users').doc(userId)
-                         .collection(aiChatSessionsSubCollection).doc(sessionId);
-    try {
-        await sessionRef.delete();
-        console.log(`AI Chat session ${sessionId} deleted successfully for user ${userId}.`);
-    } catch (error) {
-        console.error(`Error deleting AI Chat session ${sessionId} for user ${userId}:`, error);
-        throw error; 
-    }
-}
-
-// --- END OF FILE firebase_firestore.js ---

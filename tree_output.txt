@@ -30,6 +30,7 @@ C:\USERS\PC\DESKTOP\SCRIPTS\THE TEST BANK PROJECT\PHYSICS-TEST-BANK
 ¦   test_logic.js
 ¦   tree_output.txt
 ¦   ui_admin_dashboard.js
+¦   ui_ai_chat_studio.js
 ¦   ui_ai_settings.js
 ¦   ui_chat.js
 ¦   ui_core.js
@@ -74,6 +75,10 @@ C:\USERS\PC\DESKTOP\SCRIPTS\THE TEST BANK PROJECT\PHYSICS-TEST-BANK
 ¦   ¦       Guide.pdf
 ¦   ¦       
 ¦   +---images
+¦       ¦   app-screenshot-placeholder.png
+¦       ¦   hero-bg-light.png
+¦       ¦   hero-bg.png
+¦       ¦   
 ¦       +---branding
 ¦               admin-icon.png
 ¦               badge-a.png

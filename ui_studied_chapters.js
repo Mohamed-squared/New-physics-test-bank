@@ -85,6 +85,16 @@ export async function toggleStudiedChapter(chapNum, isChecked) {
      // Use the subject reference directly from the 'data' object to ensure modification
      const subjectToModify = data.subjects[currentSubject.id];
 
+    // *** MODIFIED: Add robust check for subjectToModify ***
+    if (!subjectToModify || typeof subjectToModify !== 'object' || !subjectToModify.id) {
+        console.error("Cannot toggle studied chapter: subjectToModify is invalid or missing ID. CurrentSubject.id:", currentSubject?.id, "subjectToModify:", subjectToModify);
+        // Revert checkbox
+        const checkbox = document.getElementById(`studied-chap-${chapNum}`);
+        if (checkbox) checkbox.checked = !isChecked;
+        alert("Error saving change. Subject data inconsistent. Please refresh and try again.");
+        return;
+    }
+
     // Ensure the studied_chapters array exists on the subject being modified
     subjectToModify.studied_chapters = subjectToModify.studied_chapters || [];
 
@@ -115,7 +125,8 @@ export async function toggleStudiedChapter(chapNum, isChecked) {
     if (changed) {
         console.log('Attempting to save user data...');
         try {
-            await saveUserData(currentUser.uid); // saveUserData saves the entire 'data' object which includes the modified subject
+            // *** MODIFIED: Ensure saveUserData(currentUser.uid) is called (correct, uses global 'data' by default) ***
+            await saveUserData(currentUser.uid); 
             console.log("Studied chapters updated and saved successfully via saveUserData.");
         } catch (error) {
             console.error("Failed to save studied chapter update:", error);

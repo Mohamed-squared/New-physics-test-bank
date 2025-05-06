@@ -6,7 +6,7 @@ service cloud.firestore {
     // --- Helper Functions for Admin Checks ---
     function isPrimaryAdmin() {
       // Primary Admin Check (fixed UID)
-      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1"; // <<< REPLACE WITH YOUR ACTUAL ADMIN_UID
+      return request.auth != null && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1"; // <<< YOUR ACTUAL PRIMARY ADMIN_UID
     }
 
     function isAssignedAdmin() {
@@ -17,7 +17,7 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
-    function canPerformAdminActions() {
+    function canPerformGeneralAdminActions() {
       // A user can perform general admin actions if they are the Primary Admin OR an Assigned Admin.
       return isPrimaryAdmin() || isAssignedAdmin();
     }
@@ -33,8 +33,8 @@ service cloud.firestore {
 
     // --- Users Collection ---
     match /users/{userId} {
-      // Read: Owner or any Admin (Primary or Assigned)
-      allow read: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions());
+      // Read: Owner or any General Admin
+      allow read: if request.auth != null && (request.auth.uid == userId || canPerformGeneralAdminActions());
 
       // Create: Only the user themselves can create their document
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -49,11 +49,11 @@ service cloud.firestore {
                          (request.auth.uid == userId &&
                            // Owner CANNOT update 'isAdmin'
                            !request.resource.data.diff(resource.data).affectedKeys().has('isAdmin') &&
-                           // Allow all other specified fields for owner update, including 'credits' and 'userNotes'
+                           // Allow all other specified fields for owner update
                            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                                'username', 'displayName', 'photoURL', 'completedCourseBadges',
                                'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
-                               'credits', 'appData', 'userNotes'
+                               'credits', 'appData', 'userNotes', 'userAiChatSettings' // Added userAiChatSettings
                            ])
                          ) ||
                          // Case 2: Primary Admin updates OTHER users' documents
@@ -62,7 +62,8 @@ service cloud.firestore {
                            request.resource.data.diff(resource.data).affectedKeys()
                              .hasOnly(['username', 'displayName', 'photoURL', 'completedCourseBadges',
                                        'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
-                                       'isAdmin', 'credits', 'appData', 'userNotes'])
+                                       'isAdmin', 'credits', 'appData', 'userNotes', 'userAiChatSettings' // Added userAiChatSettings
+                                       ])
                          ) ||
                          // Case 3: Primary Admin updates THEIR OWN document
                          (isPrimaryAdmin() && userId == request.auth.uid &&
@@ -72,7 +73,7 @@ service cloud.firestore {
                            request.resource.data.diff(resource.data).affectedKeys().hasOnly([
                                'username', 'displayName', 'photoURL', 'completedCourseBadges',
                                'onboardingComplete', 'email', 'status', 'lastSelectedSubjectId',
-                               'credits', 'appData', 'userNotes'
+                               'credits', 'appData', 'userNotes', 'userAiChatSettings' // Added userAiChatSettings
                            ])
                          )
                        );
@@ -80,18 +81,18 @@ service cloud.firestore {
       // --- User Subcollections ---
       match /inbox/{messageId} {
         allow read, update: if request.auth != null && request.auth.uid == userId; // Owner
-        allow create: if request.auth != null && canPerformAdminActions();          // Any Admin can send (create)
-        allow delete: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions()); // Owner or any Admin
+        allow create: if request.auth != null && canPerformGeneralAdminActions(); // Any Admin can send (create)
+        allow delete: if request.auth != null && (request.auth.uid == userId || canPerformGeneralAdminActions()); // Owner or any Admin
       }
 
       match /userFormulaSheets/{sheetId} {
         allow read, write: if request.auth != null && request.auth.uid == userId; // Owner
-        allow read, delete: if request.auth != null && canPerformAdminActions();   // Any Admin can read/delete
+        allow read, delete: if request.auth != null && canPerformGeneralAdminActions();   // Any Admin can read/delete
       }
 
       match /userChapterSummaries/{summaryId} {
         allow read, write: if request.auth != null && request.auth.uid == userId; // Owner
-        allow read, delete: if request.auth != null && canPerformAdminActions();   // Any Admin can read/delete
+        allow read, delete: if request.auth != null && canPerformGeneralAdminActions();   // Any Admin can read/delete
       }
 
       match /creditLog/{logId} {
@@ -103,27 +104,32 @@ service cloud.firestore {
                          );
         allow update, delete: if false; // Logs are immutable
       }
+
+      // NEW: AI Chat Sessions Subcollection
+      match /aiChatSessions/{sessionId} {
+        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId; // Owner only
+      }
     }
 
-    // --- User Course Progress: Owner or any Admin can manage ---
-    match /userCourseProgress/{userId}/{courses=**} {
-       allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || canPerformAdminActions());
+    // --- User Course Progress: Owner or any General Admin can manage ---
+    match /userCourseProgress/{userId}/{courses=**} { // Wildcard for courses subcollection
+       allow read, write, create, delete: if request.auth != null && (request.auth.uid == userId || canPerformGeneralAdminActions());
     }
 
-    // --- User Exam Storage: Owner manages read/write/create/delete, any Admin can read ---
-    match /userExams/{userId}/{exams=**} {
+    // --- User Exam Storage: Owner manages read/write/create/delete, any General Admin can read ---
+    match /userExams/{userId}/{exams=**} { // Wildcard for exams subcollection
        allow read, write, create, delete: if request.auth != null && request.auth.uid == userId;
-       allow read: if request.auth != null && canPerformAdminActions();
+       allow read: if request.auth != null && canPerformGeneralAdminActions();
     }
 
-    // --- Feedback & Exam Issues: Authenticated users create, any Admin manages ---
+    // --- Feedback & Exam Issues: Authenticated users create, any General Admin manages ---
     match /feedback/{feedbackId} {
       allow create: if request.auth != null;
-      allow read, update, delete: if request.auth != null && canPerformAdminActions();
+      allow read, update, delete: if request.auth != null && canPerformGeneralAdminActions();
     }
     match /examIssues/{issueId} {
        allow create: if request.auth != null;
-       allow read, update, delete: if request.auth != null && canPerformAdminActions();
+       allow read, update, delete: if request.auth != null && canPerformGeneralAdminActions();
     }
 
     // --- Course Definitions ---
@@ -134,8 +140,10 @@ service cloud.firestore {
       allow create: if request.auth != null &&
                        request.resource.data.creatorUid == request.auth.uid &&
                        (
-                         (request.resource.data.status == 'pending' && !isPrimaryAdmin()) || // Non-Primary Admin creates as 'pending'
-                         (request.resource.data.status == 'approved' && isPrimaryAdmin())    // Primary Admin can create as 'approved'
+                         // Non-Admin (neither Primary nor Assigned) creates as 'pending'
+                         (request.resource.data.status == 'pending' && !isPrimaryAdmin() && !isAssignedAdmin()) ||
+                         // Primary Admin or Assigned Admin can create as 'approved' OR 'pending'
+                         ( (request.resource.data.status == 'approved' || request.resource.data.status == 'pending') && (isPrimaryAdmin() || isAssignedAdmin()) )
                        ) &&
                        // Fields allowed on creation (important for security)
                        request.resource.data.keys().hasOnly([
@@ -146,35 +154,50 @@ service cloud.firestore {
                          'creatorIsAdmin' // Store if creator was an admin at time of creation
                        ]);
 
-      // Update & Delete: Only Primary Admin
-      allow update, delete: if request.auth != null && isPrimaryAdmin();
+      // Update & Delete: Only Primary Admin or an Assigned Admin
+      allow update, delete: if request.auth != null && canPerformGeneralAdminActions();
     }
 
-    // --- Shared Notes: Public read, Auth create, Owner/any Admin manage update/delete ---
+    // --- Shared Notes: Public read, Auth create, Owner/any General Admin manage update/delete ---
     match /sharedCourseNotes/{noteId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || canPerformAdminActions());
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || canPerformGeneralAdminActions());
     }
 
     // --- Admin Tasks: Only Primary Admin can manage ---
-    // (Assigned admins might view tasks, but only primary admin creates/updates/deletes them via these rules)
     match /adminTasks/{taskId} {
+      allow read, write, create, delete: if request.auth != null && isPrimaryAdmin();
+    }
+
+    // --- Task Versions: Only Primary Admin can manage ---
+    match /taskVersions/{versionId} {
       allow read, write, create, delete: if request.auth != null && isPrimaryAdmin();
     }
 
     // --- Global Chat Messages ---
     match /globalChatMessages/{messageId} {
-      allow read, create: if request.auth != null && request.auth.uid != null;
-      allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || canPerformAdminActions());
-      allow update: if request.auth != null && canPerformAdminActions() &&
+      allow read: if request.auth != null; // Authenticated users can read
+      allow create: if request.auth != null && request.auth.uid != null && request.resource.data.senderId == request.auth.uid; // Authenticated users can create their own messages
+      // Delete: Owner or any General Admin
+      allow delete: if request.auth != null && (request.auth.uid == resource.data.senderId || canPerformGeneralAdminActions());
+      // Update: Any General Admin, but only for 'isPinned' field
+      allow update: if request.auth != null && canPerformGeneralAdminActions() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned']);
     }
 
-    // --- Settings Collection (e.g., chat auto-delete) ---
+    // --- Settings Collection ---
     match /settings/{settingDocId} {
-      // Only Primary Admin can read or write these global settings
-      allow read, write: if request.auth != null && isPrimaryAdmin();
+      // aiPrompts document within settings
+      match /aiPrompts {
+        allow read: if request.auth != null; // Authenticated users can read global prompts
+        allow write: if request.auth != null && isPrimaryAdmin(); // Only Primary Admin can write
+      }
+      // chat document within settings
+      match /chat {
+        allow read, write: if request.auth != null && isPrimaryAdmin(); // Only Primary Admin can r/w global chat settings
+      }
+      // Add rules for other specific setting documents if created
     }
 
     // --- Deprecated Global Caches: Read allowed, Write by Primary Admin ---

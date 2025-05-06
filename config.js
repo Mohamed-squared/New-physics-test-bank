@@ -15,13 +15,13 @@ export const YOUTUBE_API_KEY = "AIzaSyB8v1IX_H3USSmBCJjee6kQBONAdTjmSuA"; // Use
 export const COURSE_BASE_PATH = "./courses"; // Base directory for all course content
 export const DEFAULT_COURSE_PDF_FOLDER = "PDFs";
 export const DEFAULT_COURSE_TRANSCRIPTION_FOLDER = "Transcriptions";
-// *** NEW: Folder for course-specific questions/problems ***
-export const DEFAULT_COURSE_QUESTIONS_FOLDER = "Questions";
-// *** NEW: Default filenames within the Questions folder ***
-export const DEFAULT_COURSE_TEXT_MCQ_FILENAME = "TextMCQ.md";
+// *** MODIFIED: Renamed and value changed. Folder for general subject resources (MCQs, Problems for TestGen subjects) ***
+export const SUBJECT_RESOURCE_FOLDER = "Problems"; // Was DEFAULT_COURSE_QUESTIONS_FOLDER = "Questions"
+// *** NEW: Default filenames within the Questions folder (now SUBJECT_RESOURCE_FOLDER) ***
+export const DEFAULT_COURSE_TEXT_MCQ_FILENAME = "TextMCQ.md"; // Example, may need adjustment if structure changes
 export const DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME = "TextProblems.md";
-export const DEFAULT_COURSE_LECTURE_MCQ_FILENAME = "LecturesMCQ.md";
-export const DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME = "LecturesProblems.md";
+export const DEFAULT_COURSE_LECTURE_MCQ_FILENAME = "LecturesMCQ.md"; // Example
+export const DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME = "LecturesProblems.md"; // Example
 // --- End File Path Configuration ---
 
 
@@ -87,9 +87,9 @@ export const initialSubjectData = {
         "1": { // Linked to FoP Course
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // MCQ file name (e.g., courses/fop_physics_v1/Questions/chapters.md)
+            "fileName": "chapters.md", // MCQ file name (e.g., courses/fop_physics_v1/Problems/chapters.md)
             "courseDirName": "fop_physics_v1", // Directory name for this subject's content
-            "problemsFileName": "chapters.md", // Problems file name (e.g., courses/fop_physics_v1/Questions/chapters.md if same file)
+            "problemsFileName": "chapters.md", // Problems file name (e.g., courses/fop_physics_v1/Problems/chapters.md if same file)
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
             "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
             "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
@@ -104,9 +104,9 @@ export const initialSubjectData = {
         "2": { // Example unrelated subject
             "id": "2",
             "name": "ABC of Aviation",
-            "fileName": "ABC_Aviation_MCQ.md", // MCQ file name (e.g., courses/abc_of_aviation/Questions/ABC_Aviation_MCQ.md)
+            "fileName": "ABC_Aviation_MCQ.md", // MCQ file name (e.g., courses/abc_of_aviation/Problems/ABC_Aviation_MCQ.md)
             "courseDirName": "abc_of_aviation", // Directory name for this subject's content
-            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name (e.g., courses/abc_of_aviation/Questions/ABC_Aviation_Problems.md)
+            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name (e.g., courses/abc_of_aviation/Problems/ABC_Aviation_Problems.md)
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
             "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
             "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,

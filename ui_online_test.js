@@ -1,7 +1,5 @@
 // --- START OF FILE ui_online_test.js ---
 
-// --- START OF FILE ui_online_test.js ---
-
 import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js'; // Added globalCourseDataMap and updateUserCourseProgress
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
 import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js'; // Added escapeHtml and getFormattedDate
@@ -152,6 +150,8 @@ export function startTimer() {
 }
 
 export async function displayCurrentQuestion() {
+    // *** MODIFIED: Add logging at the very beginning ***
+    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState)));
     console.log("displayCurrentQuestion START");
     // --- MODIFICATION: Check state ---
     if (!currentOnlineTestState) {
@@ -206,11 +206,12 @@ export async function displayCurrentQuestion() {
          </div>`;
     } else { // MCQ
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
-             // MODIFICATION: Log option details and comparison
-             console.log('[DisplayQuestion] Option:', opt.letter, 'Type:', typeof opt.letter, 'Current Answer for Q:', currentOnlineTestState.userAnswers[questionId], 'Match:', currentOnlineTestState.userAnswers[questionId] === opt.letter);
+             // *** MODIFIED: Log option details and comparison ***
+             console.log(`[DisplayQuestion] QID: ${questionId}, Option Letter: '${opt.letter}' (Type: ${typeof opt.letter}), Stored Answer for QID: '${currentOnlineTestState.userAnswers[questionId]}' (Type: ${typeof currentOnlineTestState.userAnswers[questionId]})`);
              
-             const isChecked = currentOnlineTestState.userAnswers[questionId] === opt.letter;
-             console.log(`[DisplayQuestion] QID ${questionId}, Option ${opt.letter}: Stored='${currentOnlineTestState.userAnswers[questionId]}' (Type: ${typeof currentOnlineTestState.userAnswers[questionId]}), OptionVal='${opt.letter}' (Type: ${typeof opt.letter}), Match: ${isChecked}`);
+             // *** MODIFIED: Modify the isChecked line and add log after it ***
+             const isChecked = String(currentOnlineTestState.userAnswers[questionId]) === String(opt.letter);
+             console.log(`[DisplayQuestion] For QID ${questionId}, Option ${opt.letter}: isChecked resolves to ${isChecked}`);
              
              return `
              <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150 option-label">
@@ -263,15 +264,16 @@ export function recordAnswer(questionId, answer) {
     console.log('[RecordAnswer] QID:', questionId, 'Answer:', answer, 'Type:', typeof answer);
     if (!currentOnlineTestState) return;
     // For text areas, we might want to debounce this later if performance becomes an issue
-    console.log(`Answer recorded for ${questionId}: ${answer.substring(0, 50)}...`);
-    currentOnlineTestState.userAnswers[questionId] = answer;
+    // *** MODIFIED: Change to store as string and log ***
+    currentOnlineTestState.userAnswers[String(questionId)] = String(answer);
+    console.log(`[RecordAnswer] Stored answer for ${String(questionId)}: ${String(answer)} (Type: ${typeof String(answer)})`);
 }
 
 export function confirmSubmitOnlineTest() {
      if (!currentOnlineTestState) return;
      // Count unanswered questions (null, undefined, or empty string for problems)
     const unanswered = currentOnlineTestState.questions.filter(q => {
-        const answer = currentOnlineTestState.userAnswers[q.id];
+        const answer = currentOnlineTestState.userAnswers[q.id]; // Use original q.id for checking
         return answer === null || answer === undefined || (typeof answer === 'string' && answer.trim() === '');
     }).length;
     let msg = "Submit test?"; if (unanswered > 0) msg += `\n\n${unanswered} unanswered question(s).`;
@@ -368,9 +370,19 @@ export async function submitOnlineTest() {
                         console.log(`Updated weekly exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
 
-                    case 'final_exam':
-                        progress.finalExamScore = percentageScore;
+                    case 'final_exam': // This might be a single score or an array if multiple attempts are allowed
+                        // For simplicity, let's assume finalExamScore is a single value or the latest.
+                        // If it's an array, logic for appending/updating specific attempts would be needed.
+                        // progress.finalExamScores = progress.finalExamScores || [];
+                        // progress.finalExamScores.push(percentageScore); // Example for multiple attempts
+                        progress.finalExamScore = percentageScore; // Overwriting example for single/latest score
                         console.log(`Updated final exam score: ${percentageScore.toFixed(1)}%`);
+                        break;
+                    
+                    case 'midcourse': // Added this case for midcourse exams
+                        progress.midcourseExamScores = progress.midcourseExamScores || {};
+                        progress.midcourseExamScores[activityId] = percentageScore; // Assuming activityId is relevant here (e.g. 'midcourse1')
+                        console.log(`Updated midcourse exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
 
                     case 'skip_exam':
