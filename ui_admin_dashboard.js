@@ -1433,7 +1433,10 @@ async function listAllUsersAdmin() {
             if (!isAdminUserPrimary) {
                 const buttonText = userIsAdmin ? 'Remove Admin' : 'Make Admin';
                 const buttonClass = userIsAdmin ? 'btn-warning-small' : 'btn-success-small';
-                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2">${buttonText}</button>`;
+                const isCurrentUserPrimary = currentUser.uid === ADMIN_UID;
+                const disabledAttr = !isCurrentUserPrimary ? 'disabled' : '';
+                const titleAttr = !isCurrentUserPrimary ? 'title="Only the primary admin can change admin status."' : `title="${userIsAdmin ? 'Remove Admin Privileges' : 'Grant Admin Privileges'}"`;
+                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2" ${disabledAttr} ${titleAttr}>${buttonText}</button>`;
             }
 
             usersHtml += `

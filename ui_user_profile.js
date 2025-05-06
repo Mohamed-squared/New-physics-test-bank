@@ -31,6 +31,7 @@ export function showUserProfileDashboard() {
         let currentPhotoURL = DEFAULT_PROFILE_PIC_URL;
         let currentUsername = ''; // Load username
         let completedBadges = [];
+        let currentCredits = 0; // MODIFIED: Load credits
 
         if (doc.exists) {
             const userData = doc.data();
@@ -38,12 +39,14 @@ export function showUserProfileDashboard() {
             currentPhotoURL = userData.photoURL || currentUser.photoURL || DEFAULT_PROFILE_PIC_URL;
             currentUsername = userData.username || ''; // Get username from Firestore
             completedBadges = userData.completedCourseBadges || []; // Load badges from user doc
+            currentCredits = userData.credits || 0; // MODIFIED: Get credits from Firestore
         } else {
             console.warn("Firestore profile doc not found, using Auth profile data.");
             currentDisplayName = currentUser.displayName || currentUser.email?.split('@')[0] || 'User';
             currentPhotoURL = currentUser.photoURL || DEFAULT_PROFILE_PIC_URL;
             // Username might not be in auth, derive if possible
             currentUsername = currentUser.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20) || `user_${currentUser.uid.substring(0,6)}`;
+            currentCredits = currentUser.credits || 0; // MODIFIED: Get credits from state if Firestore doc missing
         }
         const photoUrlValue = currentPhotoURL || '';
 
@@ -91,6 +94,11 @@ export function showUserProfileDashboard() {
                              <p class="text-lg font-medium text-gray-800 dark:text-gray-100" id="profile-display-name-header">${escapeHtml(currentDisplayName)}</p>
                              <p class="text-sm text-muted">@${escapeHtml(currentUsername)}</p>
                              <p class="text-sm text-muted">${currentUser.email || 'No email provided'}</p>
+                             <!-- MODIFIED: Added Credits Display -->
+                             <p class="text-sm text-yellow-600 dark:text-yellow-400 font-semibold">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 inline-block mr-1 align-text-bottom"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-.75-4.75a.75.75 0 0 0 1.5 0V8.66l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0L6.2 9.74a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.59Z" clip-rule="evenodd" /></svg>
+                                <span id="user-profile-credits">${currentCredits.toLocaleString()}</span> Credits
+                             </p>
                              <p class="text-xs text-muted mt-1">User ID: ${currentUser.uid}</p>
                          </div>
                     </div>
@@ -208,6 +216,7 @@ export function showUserProfileDashboard() {
         let currentDisplayName = currentUser?.displayName || currentUser?.email?.split('@')[0] || 'User';
         let currentPhotoURL = currentUser?.photoURL || DEFAULT_PROFILE_PIC_URL;
         let currentUsername = currentUser?.email?.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20) || `user_${currentUser?.uid?.substring(0,6) || '??'}`;
+        let currentCreditsFallback = currentUser?.credits || 0; // MODIFIED: Fallback for credits
         const photoUrlValue = currentPhotoURL || '';
          const fallbackHtml = `
          <div class="max-w-lg mx-auto animate-fade-in">
@@ -215,7 +224,20 @@ export function showUserProfileDashboard() {
              <div class="content-card mb-6 bg-warning-100 dark:bg-yellow-900/30 border-warning-300 dark:border-warning-700"><p class="text-sm text-warning-700 dark:text-warning-200 font-medium text-center">Could not load full profile data. Displaying basic info.</p></div>
              <div class="content-card mb-6">
                  <form id="update-profile-form" onsubmit="window.updateUserProfile(event)">
-                      <div class="flex items-center mb-6 space-x-4 pb-4 border-b dark:border-gray-700"><img id="profile-pic-preview" src="${photoUrlValue}" alt="Profile Picture" class="w-16 h-16 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600 shadow-sm" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';"><div><p class="text-lg font-medium text-gray-800 dark:text-gray-100">${escapeHtml(currentDisplayName)}</p><p class="text-sm text-muted">@${escapeHtml(currentUsername)}</p><p class="text-sm text-muted">${currentUser?.email || 'N/A'}</p><p class="text-xs text-muted mt-1">UID: ${currentUser?.uid || 'N/A'}</p></div></div>
+                      <div class="flex items-center mb-6 space-x-4 pb-4 border-b dark:border-gray-700">
+                        <img id="profile-pic-preview" src="${photoUrlValue}" alt="Profile Picture" class="w-16 h-16 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600 shadow-sm" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
+                        <div>
+                            <p class="text-lg font-medium text-gray-800 dark:text-gray-100">${escapeHtml(currentDisplayName)}</p>
+                            <p class="text-sm text-muted">@${escapeHtml(currentUsername)}</p>
+                            <p class="text-sm text-muted">${currentUser?.email || 'N/A'}</p>
+                            <!-- MODIFIED: Added Credits Display Fallback -->
+                            <p class="text-sm text-yellow-600 dark:text-yellow-400 font-semibold">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 inline-block mr-1 align-text-bottom"><path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm-.75-4.75a.75.75 0 0 0 1.5 0V8.66l1.95 2.1a.75.75 0 1 0 1.1-1.02l-3.25-3.5a.75.75 0 0 0-1.1 0L6.2 9.74a.75.75 0 1 0 1.1 1.02l1.95-2.1v4.59Z" clip-rule="evenodd" /></svg>
+                                <span id="user-profile-credits-fallback">${currentCreditsFallback.toLocaleString()}</span> Credits
+                             </p>
+                            <p class="text-xs text-muted mt-1">UID: ${currentUser?.uid || 'N/A'}</p>
+                        </div>
+                      </div>
                       <div class="space-y-4"><div><label for="displayNameInput">Display Name</label><input type="text" id="displayNameInput" value="${escapeHtml(currentDisplayName)}" required></div><div><label for="usernameDisplay">Username</label><input type="text" id="usernameDisplay" value="@${escapeHtml(currentUsername)}" disabled class="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"></div><div><button type="submit" class="btn-primary w-full mt-2">Save Profile Changes</button></div></div>
                  </form>
              </div>

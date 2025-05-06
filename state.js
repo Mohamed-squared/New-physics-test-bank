@@ -20,6 +20,7 @@ import { ADMIN_UID } from './config.js';
     // --- Custom data typically fetched from Firestore 'users/{uid}' ---
     username: string | null,   // Unique username for mentions etc. (e.g., 'john_doe')
     isAdmin: boolean,          // True if user has admin privileges
+    credits: number,           // User's current credit balance
     // ... other profile fields ...
 }
 */
@@ -79,15 +80,16 @@ export function setCurrentUser(newUser) {
         }
         // --- END MODIFICATION ---
 
-         // Merge the new user data. Ensure username, displayName, photoURL, and isAdmin are handled.
+         // Merge the new user data. Ensure username, displayName, photoURL, isAdmin, and credits are handled.
         currentUser = {
             ...newUser, // Spread all properties from the provided object
             isAdmin: determinedIsAdmin, // Set determined admin status
             username: newUser.username || null,
             displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User',
             photoURL: newUser.photoURL || null,
+            credits: newUser.credits !== undefined ? Number(newUser.credits) : 0, // MODIFIED: Initialize credits
         };
-        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin });
+        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin, credits: currentUser.credits });
     } else {
         currentUser = null;
         console.log("[State] Current user cleared (logged out).");
@@ -162,6 +164,7 @@ currentUser object:
     photoURL: string | null,    // From Firebase Auth profile
     username: string | null,    // Custom unique username from Firestore, used for mentions (e.g., 'john_doe')
     isAdmin: boolean,          // True if user has admin privileges
+    credits: number,           // User's current credit balance
     // Potentially other custom fields like registrationDate, etc.
 }
 */

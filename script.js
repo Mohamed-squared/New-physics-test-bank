@@ -10,8 +10,8 @@ import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-// MODIFIED: Added adminUpdateUserSubjectStatus import
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, sendWelcomeGuideMessage, adminUpdateUserSubjectStatus } from './firebase_firestore.js';
+// MODIFIED: Added adminUpdateUserSubjectStatus, updateUserCredits import
+import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits } from './firebase_firestore.js';
 
 
 // --- UI Imports ---
@@ -38,6 +38,9 @@ import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSear
 import { showInbox, handleMarkRead } from './ui_inbox.js';
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
 import { showGlobalChat, sendChatMessage, deleteChatMessage } from './ui_chat.js';
+
+// --- NEW Leaderboard/Marketplace Imports ---
+import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
 
 // --- Course UI Imports ---
@@ -224,6 +227,10 @@ window.closeDashboard = closeDashboard;
 window.initializeApp = initializeApp;
 window.showLoginUI = showLoginUI;
 
+// NEW Leaderboard / Marketplace assignments
+window.showLeaderboard = showLeaderboard;
+window.showMarketplacePlaceholder = showMarketplacePlaceholder;
+
 
 window.showMyCoursesDashboard = showMyCoursesDashboard;
 window.showBrowseCourses = showBrowseCourses;
@@ -378,7 +385,7 @@ export function updateAdminPanelVisibility() {
     const adminIcon = document.getElementById('admin-indicator-icon');
     const stateCurrentUser = currentUser;
 
-    const isAdmin = stateCurrentUser && stateCurrentUser.uid === ADMIN_UID; // Or stateCurrentUser.isAdmin for broader admin access
+    const isAdmin = stateCurrentUser && (stateCurrentUser.uid === ADMIN_UID || stateCurrentUser.isAdmin === true);
 
     if (adminPanelLink) {
         adminPanelLink.style.display = isAdmin ? 'flex' : 'none';

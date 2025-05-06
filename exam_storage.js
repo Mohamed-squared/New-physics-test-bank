@@ -1,11 +1,5 @@
 // --- START OF FILE exam_storage.js ---
 
-// --- START OF FILE exam_storage.js ---
-
-
-
-// --- START OF FILE exam_storage.js ---
-
 import { db, currentUser, globalCourseDataMap, currentSubject, data, setData } from './state.js'; // Added data and setData
 import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
 // MODIFIED: Import AI marking and explanation generation
@@ -15,7 +9,8 @@ import { renderMathIn } from './utils.js'; // Import MathJax renderer
 import { displayContent, setActiveSidebarLink} from './ui_core.js';
 import { showProgressDashboard } from './ui_progress_dashboard.js';
 // MODIFIED: Import submitFeedback and saveUserData from firestore
-import { submitFeedback, saveUserData } from './firebase_firestore.js';
+// MODIFIED: Added updateUserCredits
+import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
 // MODIFIED: Import config for MAX_MARKS etc.
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 
@@ -85,6 +80,46 @@ export async function storeExamResult(courseId, examState, examType) {
             throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
         }
         // *** END Specific Try/Catch ***
+
+        // --- START: Award Credits ---
+        let creditsAwarded = 0;
+        let creditReason = "";
+        switch (examType) {
+            case 'assignment':
+                creditsAwarded = 5;
+                creditReason = `Completed Course Assignment: ${examState.courseContext?.assignmentId || examState.examId}`;
+                break;
+            case 'weekly_exam':
+                creditsAwarded = 10;
+                creditReason = `Completed Weekly Exam: ${examState.courseContext?.weekNum || examState.examId}`;
+                break;
+            case 'midcourse_exam':
+                creditsAwarded = 25;
+                creditReason = `Completed Midcourse Exam: ${examState.courseContext?.midcourseNum || examState.examId}`;
+                break;
+            case 'final_exam':
+                creditsAwarded = 50;
+                creditReason = `Completed Final Exam: ${examState.courseContext?.finalNum || examState.examId}`;
+                break;
+            case 'skip_exam':
+                creditsAwarded = 2;
+                creditReason = `Completed Skip Exam: Ch ${examState.courseContext?.chapterNum || 'Unknown'}`;
+                break;
+            case 'testgen': // Standard TestGen test
+            case 'practice': // Could be from TestGen or a general practice test
+                creditsAwarded = 3;
+                creditReason = `Completed Practice Test: ${examState.subjectId || examState.examId}`;
+                break;
+            default:
+                creditsAwarded = 1; // Default small amount for unknown types
+                creditReason = `Completed Exam: ${examType} - ${examState.examId}`;
+        }
+
+        if (creditsAwarded > 0) {
+            await updateUserCredits(currentUser.uid, creditsAwarded, creditReason);
+        }
+        // --- END: Award Credits ---
+
 
         hideLoading();
         return examRecord; // Return the full record including marking

@@ -5,13 +5,13 @@
 import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
-    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser // Added setCurrentUser
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js'; // Added getFormattedDate
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
 // Import ALL needed config values
 import { initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, SKIP_EXAM_PASSING_PERCENT } from './config.js'; // Added SKIP_EXAM_PASSING_PERCENT
-import { updateSubjectInfo } from './ui_core.js';
+import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js'; // Added fetchAndUpdateUserInfo
 import { showOnboardingUI } from './ui_onboarding.js';
 // *** MODIFIED: Import calculateTotalMark, getLetterGrade ***
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
@@ -23,6 +23,7 @@ const userFormulaSheetSubCollection = "userFormulaSheets";
 const userSummarySubCollection = "userChapterSummaries";
 const sharedNotesCollection = "sharedCourseNotes";
 const adminTasksCollection = "adminTasks"; // NEW: Collection name for admin tasks
+const userCreditLogSubCollection = "creditLog"; // NEW: For credit transactions
 
 // --- Utilities ---
 /**
@@ -305,7 +306,7 @@ export async function loadAllUserCourseProgress(uid) {
                 // Determine today's objective based on loaded progress and course definition
                 const courseDef = globalCourseDataMap.get(doc.id);
                 if (courseDef) {
-                     // MODIFIED: Pass enrollmentMode to objective calculation if needed
+                     // MODIFIED: Pass enrollmentMode if needed
                      progressData.currentDayObjective = determineTodaysObjective(progressData, courseDef);
                 } else {
                      console.warn(`Course definition missing for course ${doc.id} when calculating objective.`);
@@ -512,12 +513,28 @@ export async function loadUserData(uid) {
             let loadedAppData = userData.appData;
             console.log("User appData loaded from Firestore.");
 
-            // --- MODIFICATION: Pass isAdmin to setCurrentUser ---
-            // The actual setting of currentUser.isAdmin will be handled by setCurrentUser in state.js
-            // based on userData.isAdmin or defaulting if missing.
-            // No direct action here, but ensure userData (which contains isAdmin if present)
-            // is the basis for what fetchAndUpdateUserInfo passes to setCurrentUser.
-            // The setCurrentUser in state.js should already handle this based on prior instructions.
+            // --- MODIFICATION: Pass isAdmin and credits to setCurrentUser via fetchAndUpdateUserInfo ---
+            // This happens because fetchAndUpdateUserInfo is called from setupAuthListener
+            // which gets the full userData object (including isAdmin and credits if they exist).
+            // fetchAndUpdateUserInfo itself will call setCurrentUser with this comprehensive object.
+            // No direct change needed here in loadUserData, but this confirms the flow.
+            // Ensure `credits` is loaded and passed.
+            const userProfileForState = {
+                uid: uid,
+                email: userData.email || firebaseAuth?.currentUser?.email,
+                displayName: userData.displayName || firebaseAuth?.currentUser?.displayName,
+                photoURL: userData.photoURL || firebaseAuth?.currentUser?.photoURL,
+                username: userData.username || null,
+                isAdmin: userData.isAdmin !== undefined ? userData.isAdmin : (uid === ADMIN_UID),
+                credits: userData.credits !== undefined ? Number(userData.credits) : 0, // Load credits, default to 0
+                onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
+            };
+            setCurrentUser(userProfileForState); // Update central state immediately
+            // Call fetchAndUpdateUserInfo to update UI elements like header, this might be redundant
+            // if setupAuthListener also calls it, but ensures UI consistency.
+            // We might want to rely on the call from setupAuthListener after login.
+            // For direct loads (e.g. refresh), this ensures the UI is populated.
+            // await fetchAndUpdateUserInfo(firebaseAuth.currentUser); // This might be redundant if auth listener handles it
             // --- END MODIFICATION ---
 
             // --- appData Initialization/Validation ---
@@ -545,6 +562,11 @@ export async function loadUserData(uid) {
              if (userData.isAdmin === undefined) {
                  console.log(`Initializing isAdmin field for user ${uid}.`);
                  await userRef.update({ isAdmin: (uid === ADMIN_UID) }).catch(e => console.error("Error setting initial isAdmin field:", e));
+             }
+             // Ensure credits field exists, defaulting to 0.
+             if (userData.credits === undefined) {
+                console.log(`Initializing credits field for user ${uid}.`);
+                await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
              }
 
 
@@ -686,6 +708,13 @@ export async function initializeUserData(uid, email, username, displayName = nul
     }
     // --- END MODIFICATION ---
 
+    // --- MODIFICATION: Initialize credits ---
+    let initialCredits = 0;
+    if (docExists && !forceReset && typeof existingUserData.credits === 'number') {
+        initialCredits = existingUserData.credits;
+    }
+    // --- END MODIFICATION ---
+
     if (!docExists || forceReset) {
         console.log(`Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}`);
         let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
@@ -726,7 +755,8 @@ export async function initializeUserData(uid, email, username, displayName = nul
              appData: defaultAppData,
              completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
-             isAdmin: initialIsAdmin // --- MODIFICATION: Set isAdmin field ---
+             isAdmin: initialIsAdmin, // --- MODIFICATION: Set isAdmin field ---
+             credits: initialCredits, // --- MODIFICATION: Set credits field ---
         };
         try {
             await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
@@ -746,6 +776,11 @@ export async function initializeUserData(uid, email, username, displayName = nul
         // --- MODIFICATION: Ensure isAdmin field is initialized if missing ---
         if (existingUserData && existingUserData.isAdmin === undefined) {
             updatesNeeded.isAdmin = (uid === ADMIN_UID); // Default to true only for primary admin, false for others
+        }
+        // --- END MODIFICATION ---
+        // --- MODIFICATION: Ensure credits field is initialized if missing ---
+        if (existingUserData && existingUserData.credits === undefined) {
+            updatesNeeded.credits = 0;
         }
         // --- END MODIFICATION ---
          if (Object.keys(updatesNeeded).length > 0) {
@@ -973,6 +1008,7 @@ export async function updateCourseDefinition(courseId, updates) {
 /**
  * Adds a new course to Firestore.
  * MODIFIED: Includes prerequisites and corequisites as arrays of strings (Subject Tags).
+ * MODIFIED: Awards credits if a non-admin user suggests a course (status='pending').
  */
 export async function addCourseToFirestore(courseData) {
     if (!currentUser) return { success: false, message: "User not logged in." };
@@ -1048,6 +1084,12 @@ export async function addCourseToFirestore(courseData) {
         // --- End MODIFICATION ---
 
         updateGlobalCourseData(docRef.id, savedData);
+
+        // --- MODIFIED: Award credits if user suggested a course (status is 'pending') ---
+        if (finalStatus === 'pending' && !isAdminUser) {
+            await updateUserCredits(currentUser.uid, 50, `Suggested Course: ${savedData.name.substring(0, 50)}`);
+        }
+        // --- END MODIFICATION ---
 
         return { success: true, id: docRef.id, status: finalStatus };
     } catch (error) {
@@ -1996,20 +2038,17 @@ export async function deleteAdminTask(taskId) {
  * @returns {Promise<boolean>} - True on success, false on failure.
  */
 export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
-    if (!db || !firebaseAuth || !currentUser || currentUser.uid !== ADMIN_UID) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
         console.error("Permission denied: Only the primary admin can toggle admin status.");
-        alert("Permission denied: Only the primary admin can perform this action.");
-        return false;
+        throw new Error("Permission denied: Only the primary admin can perform this action.");
     }
     if (!targetUserId) {
         console.error("Target User ID is missing for toggling admin status.");
-        alert("Internal Error: Target user ID missing.");
-        return false;
+        throw new Error("Internal Error: Target user ID missing.");
     }
     if (targetUserId === ADMIN_UID) {
         console.warn("Primary admin cannot change their own admin status.");
-        alert("The primary admin's status cannot be changed through this interface.");
-        return false;
+        throw new Error("The primary admin's status cannot be changed through this interface.");
     }
 
     const newIsAdminStatus = !currentIsAdmin;
@@ -2022,8 +2061,7 @@ export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
         return true;
     } catch (error) {
         console.error(`Error toggling admin status for user ${targetUserId}:`, error);
-        alert(`Failed to toggle admin status: ${error.message}`);
-        return false;
+        throw new Error(`Failed to toggle admin status: ${error.message}`);
     }
 }
 
@@ -2086,6 +2124,87 @@ export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subje
         return false;
     }
 }
+
+// --- START: User Credit System ---
+/**
+ * Updates a user's credit balance atomically and logs the transaction.
+ * @param {string} userId - The UID of the user.
+ * @param {number} creditChange - The amount to change credits by (positive or negative).
+ * @param {string} reason - A brief description for the credit change (e.g., "Completed Assignment").
+ * @returns {Promise<boolean>} - True on success, false on failure.
+ */
+export async function updateUserCredits(userId, creditChange, reason) {
+    if (!db || !userId || typeof creditChange !== 'number' || !reason) {
+        console.error("updateUserCredits: Invalid parameters.", { userId, creditChange, reason });
+        return false;
+    }
+    if (creditChange === 0) {
+        console.log("updateUserCredits: creditChange is 0, no update needed.");
+        return true; // No change, but not an error.
+    }
+
+    const userRef = db.collection('users').doc(userId);
+    const creditLogRef = userRef.collection(userCreditLogSubCollection).doc(); // Auto-generate ID for log
+
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef);
+            if (!userDoc.exists) {
+                throw new Error(`User document ${userId} not found for credit update.`);
+            }
+            const currentCredits = userDoc.data().credits || 0;
+            const newCredits = currentCredits + creditChange;
+
+            // Update user's credit balance
+            transaction.update(userRef, {
+                credits: firebase.firestore.FieldValue.increment(creditChange)
+            });
+
+            // Log the transaction
+            transaction.set(creditLogRef, {
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                change: creditChange,
+                newBalance: newCredits, // Store the calculated new balance for the log
+                reason: reason,
+                performedBy: firebaseAuth.currentUser ? firebaseAuth.currentUser.uid : 'system' // Track who initiated (if applicable)
+            });
+        });
+
+        console.log(`Successfully updated credits for user ${userId} by ${creditChange}. Reason: ${reason}`);
+        
+        // If the current user is being updated, refresh their local state
+        if (currentUser && currentUser.uid === userId) {
+            currentUser.credits = (currentUser.credits || 0) + creditChange;
+            // Potentially update UI elements displaying credits if not handled by reactivity
+            // For example, if the user profile page is open and shows credits:
+            const creditsDisplay = document.getElementById('user-profile-credits'); // Assume such an ID exists
+            if (creditsDisplay) creditsDisplay.textContent = currentUser.credits.toLocaleString();
+            const marketplaceCreditsDisplay = document.getElementById('marketplace-credit-balance');
+            if (marketplaceCreditsDisplay) marketplaceCreditsDisplay.textContent = currentUser.credits.toLocaleString();
+
+            // Also update the user info in the header if it's the current user
+            // This ensures the central currentUser state is fully up-to-date and UI reflects this.
+            // Fetching and updating again ensures all data is consistent, including credits.
+            await fetchAndUpdateUserInfo(firebaseAuth.currentUser);
+
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error updating credits for user ${userId}:`, error);
+        alert(`Failed to update credits: ${error.message}`);
+        return false;
+    }
+}
+
+// NOTE for `submitPendingResults` (PDF exams):
+// The `submitPendingResults` function is located in `ui_exams_dashboard.js`.
+// After `submitPendingResults` successfully saves the exam results to Firestore
+// (likely by calling `storeExamResult` from `exam_storage.js`, or its own logic),
+// it should then call:
+// await updateUserCredits(currentUser.uid, 10, "Completed PDF Test (Legacy)");
+// This cannot be directly implemented in `firebase_firestore.js` without modifying `ui_exams_dashboard.js`.
+// Ensure this call is added to the success path of `submitPendingResults`.
+// --- END: User Credit System ---
 
 
 // --- END OF FILE firebase_firestore.js ---

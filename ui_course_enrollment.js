@@ -6,7 +6,8 @@
 import { currentUser, db, globalCourseDataMap, userCourseProgressMap, setActiveCourseId } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading } from './utils.js';
-import { saveUserCourseProgress } from './firebase_firestore.js';
+// MODIFIED: Added updateUserCredits
+import { saveUserCourseProgress, updateUserCredits } from './firebase_firestore.js';
 import { showCourseDashboard } from './ui_course_dashboard.js';
 import { FOP_COURSE_ID } from './config.js'; // Import FoP ID if needed for specific logic
 
@@ -124,6 +125,8 @@ export async function handlePaceSelection(event, courseId) {
     }
 
     showLoading("Enrolling in course...");
+    const course = globalCourseDataMap.get(courseId);
+    const courseName = course ? course.name : 'Unknown Course';
 
     const initialProgressData = {
         courseId: courseId,
@@ -186,6 +189,11 @@ export async function handlePaceSelection(event, courseId) {
         userCourseProgressMap.set(courseId, localProgressData);
         setActiveCourseId(courseId); // Set this as the active course *after* success
         console.log(`Successfully enrolled in course ${courseId} with mode: ${selectedMode}, pace: ${selectedPace}`);
+        
+        // --- START: Award Credits for Enrollment ---
+        await updateUserCredits(currentUser.uid, 5, `Enrolled in Course: ${courseName.substring(0,50)}`);
+        // --- END: Award Credits for Enrollment ---
+
         showCourseDashboard(courseId); // Navigate to the course dashboard
     } else {
         alert("Failed to enroll in the course. Please try again.");
