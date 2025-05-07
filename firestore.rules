@@ -79,10 +79,19 @@ service cloud.firestore {
       // Update rules require careful field control
       allow update: if isLoggedIn() &&
                      (
-                       // Case 1: Owner updating own profile (cannot change isAdmin or credits directly)
+                       // Case 1: Owner updating own profile
                        ( isOwner(userId) &&
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits']) &&
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFields())
+                         (
+                           // Allow updating standard profile fields (excluding isAdmin/credits initially checked)
+                           ( !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits']) &&
+                             request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFields())
+                           )
+                           ||
+                           // OR Allow updating ONLY the 'credits' field (can be set or incremented)
+                           ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits']) &&
+                             request.resource.data.credits is number // Ensure new value is a number
+                           )
+                         )
                        ) ||
                        // Case 2: Primary Admin updating OTHER users (can change isAdmin/credits)
                        ( isPrimaryAdmin() && userId != request.auth.uid &&

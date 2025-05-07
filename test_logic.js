@@ -33,7 +33,7 @@ export function calculateDifficulty(chap) {
 
 // MODIFIED: Cache now Map<string (cacheKey), object (chapterProblems)>
 // Cache key format: "subjectId|sourceType" e.g., "1|text_problems"
-const subjectProblemCache = new Map();
+export const subjectProblemCache = new Map();
 
 /**
  * Parses a specific Markdown problems file and caches the result.

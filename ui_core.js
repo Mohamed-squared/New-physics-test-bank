@@ -1,5 +1,7 @@
 // --- START OF FILE ui_core.js ---
 
+// --- START OF FILE ui_core.js ---
+
 import { currentUser, currentSubject, db, activeCourseId, userCourseProgressMap, setCurrentUser } from './state.js'; // Added setCurrentUser, course state imports
 import { ADMIN_UID, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import ADMIN_UID and DEFAULT_PROFILE_PIC_URL from config
 import { renderMathIn } from './utils.js';
@@ -152,7 +154,7 @@ export async function fetchAndUpdateUserInfo(user) {
 
         let adminIconHtml = '';
         if (determinedIsAdmin) { // MODIFIED: Use determinedIsAdmin for UI icon
-            adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
+            adminIconHtml = `<svg class="admin-icon w-4 h-4 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a1 1 0 0 1 1 1v1.755a4.96 4.96 0 0 1 2.626.91 1 1 0 0 1 .574 1.707l-1.13 1.131a1 1 0 0 1-1.414 0l-.88-.88a1 1 0 0 0-1.414 0l-.88.88a1 1 0 0 1-1.414 0l-1.13-1.131a1 1 0 0 1 .574-1.707A4.96 4.96 0 0 1 9 3.755V2a1 1 0 0 1 1-1Zm-3.89 7.762a.75.75 0 0 1 .318-1.035l4-2.5a.75.75 0 0 1 .944 0l4 2.5a.75.75 0 0 1 .318 1.035l-1.38 2.18a.75.75 0 0 1-1.035-.318l-1.38-2.18H8.11l-1.38 2.18a.75.75 0 0 1-1.035-.318l-1.38-2.18ZM5 11a5 5 0 1 1 10 0 5 5 0 0 1-10 0Z" clip-rule="evenodd" /></svg>`;
         }
         nameSpan.innerHTML = nameSpan.textContent + adminIconHtml;
 

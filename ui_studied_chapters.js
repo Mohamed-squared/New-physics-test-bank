@@ -32,6 +32,10 @@ export function showManageStudiedChapters() {
     let chapterCheckboxesHtml = chapterNumbers.map(num => {
         const chap = chapters[num];
         const totalCount = chap.total_questions || 0;
+        // --- MODIFICATION START ---
+        const chapterTitle = chap?.title ? escapeHtml(chap.title) : 'No Title Found';
+        // --- MODIFICATION END ---
+
         // Skip rendering if totalCount is somehow still 0 after filter (safety)
         // if (totalCount === 0) return '';
         return `
@@ -40,9 +44,11 @@ export function showManageStudiedChapters() {
                    class="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:bg-gray-600 dark:border-gray-500"
                    ${studied.includes(num) ? 'checked' : ''}
                    onchange="window.toggleStudiedChapter('${num}', this.checked)">
+            <!-- --- MODIFICATION START --- -->
             <label for="studied-chap-${num}" class="ml-3 block text-sm font-medium text-gray-900 dark:text-gray-300 cursor-pointer flex-grow">
-                Chapter ${num} <span class="text-xs text-gray-500 dark:text-gray-400">(${totalCount} questions)</span>
+                Chapter ${num}: ${chapterTitle} <span class="text-xs text-gray-500 dark:text-gray-400">(${totalCount} questions)</span>
             </label>
+            <!-- --- MODIFICATION END --- -->
         </div>
         `;
     }).join('');

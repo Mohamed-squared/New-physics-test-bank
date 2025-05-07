@@ -1,3 +1,5 @@
+// --- START OF FILE ui_inbox.js ---
+
 // ui_inbox.js
 
 // Import db and currentUser from state.js
@@ -24,7 +26,8 @@ export function showInbox() {
                 <!-- MODIFIED: Button opens modal -->
                 <button onclick="window.showContactAdminModal()" class="btn-secondary-small flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 mr-1">
-                      <path fill-rule="evenodd" d="M2.5 3A1.5 1.5 0 0 0 1 4.5v11A1.5 1.5 0 0 0 2.5 17h15a1.5 1.5 0 0 0 1.5-1.5v-11A1.5 1.5 0 0 0 17.5 3h-15Zm11.25 8.75c.414 0 .75.336.75.75s-.336.75-.75.75h-5.5a.75.75 0 0 1 0-1.5h5.5Zm0-3c.414 0 .75.336.75.75s-.336.75-.75.75h-5.5a.75.75 0 0 1 0-1.5h5.5Zm-5.5-3A.75.75 0 0 0 7.5 7h5a.75.75 0 0 0 0-1.5h-5A.75.75 0 0 0 7.5 6Z" clip-rule="evenodd" />
+                        <path d="M5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                        <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                     </svg>
                     Contact Admin
                 </button>
@@ -87,9 +90,15 @@ async function loadInboxMessages() {
                         <p>${message.body ? message.body.replace(/\n/g, '<br>') : 'No content.'}</p>
                         <div class="mt-3 text-right space-x-2">
                             ${isAdminSender ? `
-                                <button onclick="window.showReplyToAdminModal('${messageId}', '${escapeHtml(message.subject)}')" class="btn-secondary-small text-xs">Reply to Admin</button>
+                                <button onclick="window.showReplyToAdminModal('${messageId}', '${escapeHtml(message.subject)}')" class="btn-secondary-small text-xs flex items-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-3.5 h-3.5 mr-1"><path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.56l2.72 2.72a.75.75 0 1 1-1.06 1.06l-4-4a.75.75 0 0 1 0-1.06l4-4a.75.75 0 0 1 1.06 1.06L5.56 9.25H16.25A.75.75 0 0 1 17 10Z" clip-rule="evenodd" /></svg>
+                                    Reply to Admin
+                                </button>
                             ` : ''}
-                            <button onclick="window.confirmDeleteInboxMessage('${messageId}')" class="btn-danger-small text-xs">Delete</button>
+                            <button onclick="window.confirmDeleteInboxMessage('${messageId}')" class="btn-danger-small text-xs flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.326.419C2.675 4.793 2 5.51 2 6.318V15.75A2.25 2.25 0 0 0 4.25 18h11.5A2.25 2.25 0 0 0 18 15.75V6.318c0-.808-.675-1.525-1.674-1.699a18.17 18.17 0 0 0-2.326-.419v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg>
+                                Delete
+                            </button>
                         </div>
                     </div>
                 </details>
@@ -174,7 +183,7 @@ export function showContactAdminModal() {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="contact-admin-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Contact Admin</h3>
-                    <button onclick="document.getElementById('contact-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                    <button onclick="document.getElementById('contact-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
                 </div>
                 <form id="contact-admin-form" onsubmit="window.handleSendAdminMessage(event)" class="space-y-4">
                     <div>
@@ -251,7 +260,7 @@ export function showReplyToAdminModal(originalMessageId, originalSubject) {
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg transform transition-all">
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="reply-admin-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">Reply to Admin</h3>
-                    <button onclick="document.getElementById('reply-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">&times;</button>
+                    <button onclick="document.getElementById('reply-admin-modal').remove()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">×</button>
                 </div>
                 <form id="reply-admin-form" onsubmit="window.handleSendReplyToAdmin(event, '${originalMessageId}', '${escapeHtml(replySubject)}')" class="space-y-4">
                     <div>

@@ -182,8 +182,8 @@ export async function displayCurrentQuestion() {
         return;
     }
 
-    // Ensure question has an ID
-    const questionId = question.id || `q-${index+1}`;
+    // Ensure question has an ID, convert to string for consistency
+    const questionId = String(question.id || `q-${index+1}`);
     console.log(`Displaying question ${questionId} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
     
     // MODIFICATION: Log UserAnswers state before rendering
@@ -205,12 +205,15 @@ export async function displayCurrentQuestion() {
          </div>`;
     } else { // MCQ
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
-             // *** MODIFIED: Log option details and comparison ***
-             console.log(`[DisplayQuestion] QID: ${questionId}, Option Letter: '${opt.letter}' (Type: ${typeof opt.letter}), Stored Answer for QID: '${currentOnlineTestState.userAnswers[questionId]}' (Type: ${typeof currentOnlineTestState.userAnswers[questionId]})`);
+             // Retrieve stored answer as string, ensuring questionId is also treated as string for lookup
+             const storedAnswer = String(currentOnlineTestState.userAnswers[questionId] ?? '');
              
-             // *** MODIFIED: Modify the isChecked line and add log after it ***
-             const isChecked = String(currentOnlineTestState.userAnswers[questionId]) === String(opt.letter);
-             console.log(`[DisplayQuestion] For QID ${questionId}, Option ${opt.letter}: isChecked resolves to ${isChecked}`);
+             // Compare as strings for isChecked
+             const optLetterStr = String(opt.letter);
+             const isChecked = storedAnswer === optLetterStr;
+             
+             // Logging inside the loop
+             console.log(`[DisplayQuestion] QID: ${questionId} | Option: ${optLetterStr} | Stored: ${storedAnswer} | Checked: ${isChecked}`);
              
              return `
              <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150 option-label">
@@ -262,17 +265,22 @@ export function recordAnswer(questionId, answer) {
     // MODIFICATION: Log questionId and answer
     console.log('[RecordAnswer] QID:', questionId, 'Answer:', answer, 'Type:', typeof answer);
     if (!currentOnlineTestState) return;
-    // For text areas, we might want to debounce this later if performance becomes an issue
-    // *** MODIFIED: Change to store as string and log ***
-    currentOnlineTestState.userAnswers[String(questionId)] = String(answer);
-    console.log(`[RecordAnswer] Stored answer for ${String(questionId)}: ${String(answer)} (Type: ${typeof String(answer)})`);
+
+    // Ensure both questionId (as key) and answer (as value) are stored as strings
+    const qIdStr = String(questionId);
+    const ansStr = String(answer);
+
+    currentOnlineTestState.userAnswers[qIdStr] = ansStr;
+    console.log(`[RecordAnswer] Stored answer for ${qIdStr}: ${ansStr} (Type: ${typeof ansStr})`);
+    // Add log statement *after* updating the state to confirm the stored value and its type
+    console.log('[RecordAnswer] Updated userAnswers:', JSON.stringify(currentOnlineTestState.userAnswers));
 }
 
 export function confirmSubmitOnlineTest() {
      if (!currentOnlineTestState) return;
      // Count unanswered questions (null, undefined, or empty string for problems)
     const unanswered = currentOnlineTestState.questions.filter(q => {
-        const answer = currentOnlineTestState.userAnswers[q.id]; // Use original q.id for checking
+        const answer = currentOnlineTestState.userAnswers[String(q.id)]; // Use string q.id for checking
         return answer === null || answer === undefined || (typeof answer === 'string' && answer.trim() === '');
     }).length;
     let msg = "Submit test?"; if (unanswered > 0) msg += `\n\n${unanswered} unanswered question(s).`;

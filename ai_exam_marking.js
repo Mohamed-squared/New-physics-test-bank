@@ -91,14 +91,16 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `4. Provide specific, constructive feedback explaining the score, highlighting both correct aspects and errors/misconceptions.\n`;
         prompt += `5. List key points (correct steps/concepts identified) and specific areas for improvement.\n\n`;
         prompt += `**For Improvement Suggestions:**\n`;
-        prompt += `1. Carefully analyze the student's answer to understand their specific approach and thought process.\n`;
-        prompt += `2. Identify any misconceptions or error patterns in their reasoning, calculations, or problem-solving strategy.\n`;
-        prompt += `3. Provide personalized, actionable suggestions that directly address:\n`;
-        prompt += `   - The specific mistakes or gaps in their answer\n`;
-        prompt += `   - Their apparent understanding level and problem-solving approach\n`;
-        prompt += `   - Common pitfalls related to their particular error pattern\n`;
-        prompt += `4. Focus on concrete steps they can take to improve, based on their actual work, not generic topic review.\n`;
-        prompt += `5. If possible, suggest a specific practice strategy or problem-solving technique that would help prevent similar errors.\n\n`;
+        prompt += `1. Carefully analyze the student's specific approach, calculations, and reasoning in their provided answer. Do not just compare the final result.\n`;
+        prompt += `2. Identify the *root cause* of any errors (e.g., conceptual misunderstanding, calculation mistake, incorrect formula application, faulty reasoning step, misunderstanding the question).\n`;
+        prompt += `3. Provide **personalized, actionable suggestions** that *directly address* the identified errors and the student's apparent thought process.\n`;
+        prompt += `4. Avoid generic advice like "review the topic". Instead, suggest *specific* actions related to *their mistake*. For example:\n`;
+        prompt += `   - "Double-check the formula for kinetic energy; it seems you used potential energy here."\n`;
+        prompt += `   - "Review the sign convention for forces acting in the opposite direction of motion."\n`;
+        prompt += `   - "Practice similar problems focusing on setting up the free-body diagram correctly."\n`;
+        prompt += `   - "Ensure all units are consistent before performing calculations."\n`;
+        prompt += `5. Explain *why* their approach was incorrect in relation to the specific error.\n`;
+        prompt += `6. If possible, suggest a specific problem-solving strategy or a way to verify their answer that would help prevent this type of error in the future.\n\n`;
         prompt += `**Output Format:** Provide your response ONLY in this strict JSON format:\n`;
         prompt += `{\n`;
         prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
@@ -148,7 +150,7 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
  * @returns {Promise<object>} - A promise resolving to the full marking results.
  */
 export async function markFullExam(examData) {
-    showLoading("AI is marking your exam...");
+    showLoading("AI is marking your exam..."); // Already correctly placed
     const results = {
         totalScore: 0,
         maxPossibleScore: 0,
@@ -332,7 +334,7 @@ Respond ONLY in this strict JSON format:
         results.overallFeedback = { ...defaultOverallFeedback };
         results.overallFeedback.overall_feedback = `An error occurred during marking: ${error?.message || String(error)}`;
     } finally {
-        hideLoading();
+        hideLoading(); // Already correctly placed
     }
 
     results.questionResults = results.questionResults.map((r, i) => {
@@ -394,6 +396,7 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
 
     const currentHistory = [...history, { role: "user", parts: [{ text: currentPromptText }] }];
 
+    showLoading("Generating AI explanation..."); // MODIFICATION: Added showLoading
     try {
         const explanationText = await callGeminiTextAPI(null, currentHistory);
         const updatedHistory = [...currentHistory, { role: "model", parts: [{ text: explanationText }] }];
@@ -408,6 +411,8 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
             explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
             history: currentHistory
         };
+    } finally { // MODIFICATION: Added finally block
+        hideLoading(); // MODIFICATION: Added hideLoading
     }
 }
 

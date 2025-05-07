@@ -4,7 +4,7 @@ import { currentUser, userCourseProgressMap, globalCourseDataMap, activeCourseId
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml, getFormattedDate, daysBetween } from './utils.js';
 // *** MODIFIED: Import specific parsers/selectors ***
-import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
+import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, subjectProblemCache } from './test_logic.js'; // Added subjectProblemCache for direct access if needed, though test_logic manages it
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
 import { getExamHistory, getExamDetails, showExamReviewUI, deleteCompletedExamV2 } from './exam_storage.js';
@@ -21,7 +21,7 @@ import { deleteCourseActivityProgress } from './firebase_firestore.js';
 
 // --- Helper Functions ---
 
-// Helper to fetch markdown content, returns null on 404
+// Helper to fetch markdown content, returns null on 404 or other errors
 async function fetchCourseMarkdownContent(filePath) {
     // Add cache buster
     const url = `${filePath}?t=${new Date().getTime()}`;
@@ -33,7 +33,9 @@ async function fetchCourseMarkdownContent(filePath) {
                 console.warn(`Markdown file not found at ${url}.`);
                 return null; // Gracefully handle missing files
             }
-            throw new Error(`HTTP error fetching markdown! status: ${response.status} for ${url}`);
+            // For other non-ok statuses, log and return null
+            console.error(`HTTP error fetching markdown! status: ${response.status} for ${url}`);
+            return null;
         }
         const mdContent = await response.text();
         // console.log(`Markdown fetched successfully from ${url}. Length: ${mdContent.length}`);
@@ -239,13 +241,11 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
     // --- Determine Chapter Scope ---
     let chaptersToInclude = [];
-    // Use enrollment date and activity type/id to determine chapters
     const enrollmentDate = progress.enrollmentDate instanceof Date && !isNaN(progress.enrollmentDate) ? progress.enrollmentDate : null;
     const today = new Date(); today.setHours(0,0,0,0);
     const validEnrollmentDate = enrollmentDate instanceof Date;
 
     try {
-        // Skip exams have different logic (handled elsewhere), finals include all
         if (type !== 'final' && type !== 'skip_exam' && !validEnrollmentDate) {
              throw new Error("Invalid enrollment date. Cannot determine chapter scope for this activity.");
         }
@@ -254,7 +254,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
             case 'assignment':
                 const dayNumMatch = id.match(/day(\d+)/); if (!dayNumMatch) throw new Error("Invalid assignment ID format.");
                 const dayNum = parseInt(dayNumMatch[1], 10);
-                chaptersToInclude = [dayNum]; // Assignment covers the chapter for that day
+                chaptersToInclude = [dayNum];
                 break;
             case 'weekly_exam':
                 const weekNumMatch = id.match(/week(\d+)/); if (!weekNumMatch) throw new Error("Invalid weekly exam ID.");
@@ -286,23 +286,37 @@ export async function startAssignmentOrExam(courseId, type, id) {
         const lectMcqPath = `${questionsBasePath}/${DEFAULT_COURSE_LECTURE_MCQ_FILENAME}`;
         const lectProbPath = `${questionsBasePath}/${DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME}`;
 
-        const [textMcqContent, textProbContent, lectMcqContent, lectProbContent] = await Promise.all([
+        // Fetch all markdown content. fetchCourseMarkdownContent returns null on error/404.
+        const [
+            textMcqContent,         // Content for text-based MCQs
+            textProbContent_fetched,  // Content for text-based Problems (fetched, but parseChapterProblems fetches again by path)
+            lectMcqContent,         // Content for lecture-based MCQs
+            lectProbContent_fetched   // Content for lecture-based Problems (fetched, but parseChapterProblems fetches again by path)
+        ] = await Promise.all([
             fetchCourseMarkdownContent(textMcqPath),
-            fetchCourseMarkdownContent(textProbPath), // Fetch problem content too
+            fetchCourseMarkdownContent(textProbPath),
             fetchCourseMarkdownContent(lectMcqPath),
-            fetchCourseMarkdownContent(lectProbPath) // Fetch problem content too
+            fetchCourseMarkdownContent(lectProbPath)
         ]);
 
+        // MODIFIED: Check if ALL initial file fetches returned null.
+        if (textMcqContent === null && textProbContent_fetched === null && lectMcqContent === null && lectProbContent_fetched === null) {
+            throw new Error("Could not load ANY question/problem files for the course. All specified Markdown files were not found or were inaccessible. Please check course configuration and file paths.");
+        }
+
         // --- Parse Content (Filtered by Chapter Scope) ---
-        console.log("Parsing fetched content...");
+        console.log("Parsing fetched MCQ content (if available)...");
+        // extractQuestionsFromMarkdown handles null content gracefully, returning { questions: [], answers: {} }
         const parsedTextMcqs = extractQuestionsFromMarkdown(textMcqContent, chaptersToInclude, 'text_mcq');
         const parsedLectMcqs = extractQuestionsFromMarkdown(lectMcqContent, chaptersToInclude, 'lect_mcq');
 
-        // Parse problems (asynchronously, populates cache) - Need to await these
-        console.log("Parsing problems (populating cache)...");
-        await parseChapterProblems(subjectId, textProbPath, 'text_problems');
-        await parseChapterProblems(subjectId, lectProbPath, 'lecture_problems');
-        console.log("Problem parsing complete.");
+        // Parse problems (asynchronously, populates cache).
+        // These functions fetch files by path internally and handle their own file-not-found errors.
+        console.log("Parsing problems (populating cache, involves internal fetching)...");
+        await parseChapterProblems(textProbPath, subjectId, 'text_problems'); // Corrected: subjectId first, then filePath
+        await parseChapterProblems(lectProbPath, subjectId, 'lecture_problems'); // Corrected: subjectId first, then filePath
+        console.log("Problem parsing attempts complete.");
+
 
         // Combine all available parsed items within the chapter scope
         const availableTextMcqs = parsedTextMcqs.questions || [];
@@ -324,49 +338,43 @@ export async function startAssignmentOrExam(courseId, type, id) {
         const totalAvailableProblems = availableTextProbs.length + availableLectProbs.length;
         const totalAvailableItems = totalAvailableMcqs + totalAvailableProblems;
 
-        console.log(`Available Items: TextMCQ=${availableTextMcqs.length}, LectMCQ=${availableLectMcqs.length}, TextProb=${availableTextProbs.length}, LectProb=${availableLectProbs.length}`);
+        console.log(`Available Items After Parsing & Cache Retrieval: TextMCQ=${availableTextMcqs.length}, LectMCQ=${availableLectMcqs.length}, TextProb=${availableTextProbs.length}, LectProb=${availableLectProbs.length}`);
 
+        // MODIFIED: This check now correctly reflects if no items were available from any source after all attempts.
         if (totalAvailableItems === 0) {
-            throw new Error("No questions or problems found in the course files for the relevant chapters.");
+            throw new Error("No questions or problems found in the course files for the relevant chapters after attempting to parse all available sources. Exam cannot be generated.");
         }
 
         // --- Determine Target Counts based on Ratios and Availability ---
-        const finalTestSize = Math.min(EXAM_QUESTION_COUNTS[type] || 20, totalAvailableItems); // Use config count, capped by availability
-        const baseMcqRatio = subject.mcqProblemRatio ?? DEFAULT_MCQ_PROBLEM_RATIO; // Ratio from subject data
-        const textLectureRatio = COURSE_EXAM_TEXT_LECTURE_RATIO; // 50/50 split
+        const finalTestSize = Math.min(EXAM_QUESTION_COUNTS[type] || 20, totalAvailableItems);
+        const baseMcqRatio = subject.mcqProblemRatio ?? DEFAULT_MCQ_PROBLEM_RATIO;
+        const textLectureRatio = COURSE_EXAM_TEXT_LECTURE_RATIO;
 
-        // Calculate overall MCQ/Problem counts
         let targetTotalMcq = Math.round(finalTestSize * baseMcqRatio);
         let targetTotalProb = finalTestSize - targetTotalMcq;
 
-        // Ensure total counts don't exceed available
         targetTotalMcq = Math.min(targetTotalMcq, totalAvailableMcqs);
         targetTotalProb = Math.min(targetTotalProb, totalAvailableProblems);
 
-        // Recalculate final size if initial targets reduced total
         const adjustedFinalSize = targetTotalMcq + targetTotalProb;
 
-        // Distribute MCQ target across Text/Lecture sources
         let targetTextMcq = Math.min(availableTextMcqs.length, Math.round(targetTotalMcq * textLectureRatio));
         let targetLectMcq = Math.min(availableLectMcqs.length, targetTotalMcq - targetTextMcq);
-        // Adjust if one source was limited, try to fulfill from the other
         if (targetTextMcq + targetLectMcq < targetTotalMcq) {
             const deficit = targetTotalMcq - (targetTextMcq + targetLectMcq);
             if (availableTextMcqs.length > targetTextMcq) targetTextMcq = Math.min(availableTextMcqs.length, targetTextMcq + deficit);
             else if (availableLectMcqs.length > targetLectMcq) targetLectMcq = Math.min(availableLectMcqs.length, targetLectMcq + deficit);
         }
-         targetTotalMcq = targetTextMcq + targetLectMcq; // Update total based on selection
+         targetTotalMcq = targetTextMcq + targetLectMcq;
 
-        // Distribute Problem target across Text/Lecture sources
         let targetTextProb = Math.min(availableTextProbs.length, Math.round(targetTotalProb * textLectureRatio));
         let targetLectProb = Math.min(availableLectProbs.length, targetTotalProb - targetTextProb);
-        // Adjust if one source was limited
         if (targetTextProb + targetLectProb < targetTotalProb) {
             const deficit = targetTotalProb - (targetTextProb + targetLectProb);
              if (availableTextProbs.length > targetTextProb) targetTextProb = Math.min(availableTextProbs.length, targetTextProb + deficit);
              else if (availableLectProbs.length > targetLectProb) targetLectProb = Math.min(availableLectProbs.length, targetLectProb + deficit);
         }
-        targetTotalProb = targetTextProb + targetLectProb; // Update total based on selection
+        targetTotalProb = targetTextProb + targetLectProb;
 
         console.log('Target Selection Counts:', {
             finalSize: adjustedFinalSize, baseMcqRatio, textLectureRatio,
@@ -379,24 +387,50 @@ export async function startAssignmentOrExam(courseId, type, id) {
         const selectedLectMcqs = [...availableLectMcqs].sort(() => 0.5 - Math.random()).slice(0, targetLectMcq);
         const selectedMcqs = [...selectedTextMcqs, ...selectedLectMcqs];
 
-        // Convert raw parsed problems into exam format *before* selection
-        const formattedTextProbs = availableTextProbs.map((p, i) => ({ ...p, isProblem: true, displayNumber: i + 1 }));
-        const formattedLectProbs = availableLectProbs.map((p, i) => ({ ...p, isProblem: true, displayNumber: i + 1 }));
+        // Problems are already in a suitable format from parseChapterProblems via cache, just need to ensure they are flagged as problems for combine function
+        // The selectProblemsForExam function is more for when you need to format from raw. Here, problems from cache are mostly formatted.
+        // We just need to ensure they have `isProblem: true` if `combineProblemsWithQuestions` relies on it.
+        // The `availableTextProbs` and `availableLectProbs` are arrays of problem objects from the cache.
+        // Let's re-check `selectProblemsForExam` structure if it's needed, or simplify selection if problems from cache are ready.
+        // `parseChapterProblems` creates problem objects with `id, chapter, text, type, difficulty, topics, answer=null, parts={}`.
+        // `combineProblemsWithQuestions` just combines. The `selectProblemsForExam` formats for exam.
+        // For now, let's assume problems from cache are good enough and just need random selection.
+        // We need to convert these "raw" problem objects from the cache into the exam item format.
+        // `selectProblemsForExam` does exactly this, PLUS random selection.
+        // However, `selectProblemsForExam` operates on a single chapter and source. We have multiple chapters.
+        // It's better to select from the already aggregated `availableTextProbs` and `availableLectProbs`.
 
-        const selectedTextProbs = [...formattedTextProbs].sort(() => 0.5 - Math.random()).slice(0, targetTextProb);
-        const selectedLectProbs = [...formattedLectProbs].sort(() => 0.5 - Math.random()).slice(0, targetLectProb);
+        const selectedTextProbsRaw = [...availableTextProbs].sort(() => 0.5 - Math.random()).slice(0, targetTextProb);
+        const selectedLectProbsRaw = [...availableLectProbs].sort(() => 0.5 - Math.random()).slice(0, targetLectProb);
+
+        // Convert these selected raw problems to the standard exam item format
+        const problemToExamItem = (problem, indexOffset = 0, sourceSuffix = 'unknown') => ({
+            id: problem.id || `problem-${problem.chapter}-${indexOffset}-${sourceSuffix}`, // Use parsed ID
+            chapter: String(problem.chapter),
+            number: indexOffset, // This will be overwritten by displayNumber in combine
+            text: problem.text || "Problem text not found.",
+            options: [],
+            image: null, // Placeholder
+            correctAnswer: null,
+            type: problem.type || 'Problem',
+            difficulty: problem.difficulty,
+            topics: problem.topics || [],
+            isProblem: true
+        });
+
+        const selectedTextProbs = selectedTextProbsRaw.map((p, i) => problemToExamItem(p, i, 'text_problems'));
+        const selectedLectProbs = selectedLectProbsRaw.map((p, i) => problemToExamItem(p, i, 'lecture_problems'));
         const selectedProblems = [...selectedTextProbs, ...selectedLectProbs];
 
 
         // --- Combine & Finalize ---
-        // Use the simpler combine function from test_logic
         const finalExamItems = combineProblemsWithQuestions(selectedProblems, selectedMcqs);
 
-        if (finalExamItems.length === 0) {
-            throw new Error("Failed to select any questions or problems after processing.");
+        if (finalExamItems.length === 0) { // Should be caught by totalAvailableItems check, but safety.
+            throw new Error("Failed to select any questions or problems after processing, even though some items were initially available.");
         }
-        if (finalExamItems.length < (EXAM_QUESTION_COUNTS[type] || 10) * 0.5) { // Warn if significantly fewer than expected
-             console.warn(`Generated exam has only ${finalExamItems.length} items, which is much lower than the target count of ${EXAM_QUESTION_COUNTS[type]}. Check course content files.`);
+        if (finalExamItems.length < (EXAM_QUESTION_COUNTS[type] || 10) * 0.5) {
+             console.warn(`Generated exam has only ${finalExamItems.length} items, which is much lower than the target count of ${EXAM_QUESTION_COUNTS[type]}. Check course content files and chapter scope.`);
         }
 
         console.log('Final Exam Composition:', {
@@ -405,7 +439,6 @@ export async function startAssignmentOrExam(courseId, type, id) {
             problems: selectedProblems.length
         });
 
-        // Combine answers from both MCQ sources
         const mcqAnswers = { ...parsedTextMcqs.answers, ...parsedLectMcqs.answers };
 
         // --- Launch Online Test ---
@@ -414,16 +447,15 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
         const onlineTestState = {
             examId: examId,
-            questions: finalExamItems, // Combined and shuffled list
-            correctAnswers: mcqAnswers, // Combined MCQ answers
+            questions: finalExamItems,
+            correctAnswers: mcqAnswers,
             userAnswers: {},
-            // Remove old allocation fields, not used in this flow
             startTime: Date.now(),
             timerInterval: null,
             currentQuestionIndex: 0,
             status: 'active',
             durationMinutes: durationMinutes,
-            subjectId: subject.id, // Include subject ID
+            subjectId: subject.id,
             courseContext: { isCourseActivity: true, courseId: courseId, activityType: type, activityId: id }
         };
 
@@ -453,15 +485,12 @@ window.confirmDeleteCourseActivity = confirmDeleteCourseActivity;
 export async function handleDeleteCourseActivity(courseId, activityType, activityId) {
     showLoading(`Deleting ${activityType} ${activityId}...`);
     try {
-        // Delete the score from the course progress document
         const success = await deleteCourseActivityProgress(currentUser.uid, courseId, activityType, activityId);
 
-        // Also delete any corresponding entries in userExams history
         console.log(`Finding exam history records for activity: ${activityType} ${activityId}`);
         const examHistory = await getExamHistory(currentUser.uid, courseId, 'course');
-        // Match based on type and the activity ID being part of the exam ID (heuristic)
         const examsToDelete = examHistory.filter(exam =>
-            exam.type === activityType && exam.id && exam.id.includes(activityId)
+            exam.type === activityType && exam.id && exam.id.includes(`-${activityType}-${activityId}-`) // More specific match
         );
 
         if (examsToDelete.length > 0) {
@@ -469,20 +498,20 @@ export async function handleDeleteCourseActivity(courseId, activityType, activit
             let deletedCount = 0;
             for (const exam of examsToDelete) {
                  console.log(`Deleting exam record: ${exam.id}`);
-                 const deleted = await deleteCompletedExamV2(exam.id); // Reuse central deletion logic
+                 const deleted = await deleteCompletedExamV2(exam.id);
                  if (deleted) deletedCount++;
             }
             console.log(`Successfully deleted ${deletedCount} of ${examsToDelete.length} related exam records.`);
-             alert(`Successfully deleted progress score${deletedCount > 0 ? ` and ${deletedCount} related exam record(s)` : ''} for ${activityType} ${activityId}.`);
+             if(success || deletedCount > 0) alert(`Successfully deleted progress score${deletedCount > 0 ? ` and ${deletedCount} related exam record(s)` : ''} for ${activityType} ${activityId}.`);
         } else {
             console.log(`No matching exam records found in userExams to delete for activity ${activityId}.`);
             if(success) alert(`Successfully deleted progress score for ${activityType} ${activityId}. No related exam history found.`);
         }
 
         hideLoading();
-        if (success || examsToDelete.length > 0) { // Refresh if either score or history was deleted
-            showCourseAssignmentsExams(courseId); // Refresh the view
-        } else {
+        if (success || examsToDelete.length > 0) {
+            showCourseAssignmentsExams(courseId);
+        } else if (!success && examsToDelete.length === 0){ // Only show failure if both failed
             alert(`Failed to delete ${activityType} ${activityId} results. Please check logs or try again.`);
         }
     } catch (error) {

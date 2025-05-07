@@ -87,7 +87,7 @@ export const initialSubjectData = {
         "1": { // Linked to FoP Course
             "id": "1",
             "name": "Fundamentals of Physics",
-            "fileName": "chapters.md", // MCQ file name (e.g., courses/fop_physics_v1/Problems/chapters.md)
+            "fileName": "TextMCQ.md", // MCQ file name (e.g., courses/fop_physics_v1/Problems/chapters.md)
             "courseDirName": "fop_physics_v1", // Directory name for this subject's content
             "problemsFileName": "chapters.md", // Problems file name (e.g., courses/fop_physics_v1/Problems/chapters.md if same file)
             "max_questions_per_test": DEFAULT_MAX_QUESTIONS,

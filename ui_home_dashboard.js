@@ -1,3 +1,5 @@
+// --- START OF FILE ui_home_dashboard.js ---
+
 import { currentUser, currentSubject, data, userCourseProgressMap, globalCourseDataMap, activeCourseId } from './state.js'; // Import course state
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
@@ -46,7 +48,8 @@ export function showHomeDashboard() {
                 <p>${pendingCount} Exams Pending</p>
                 <p>${recentExamHtml}</p>
             </div>
-             <button onclick="window.showTestGenerationDashboard()" class="mt-4 btn-secondary-small w-full">
+             <button onclick="window.showTestGenerationDashboard()" class="mt-4 btn-secondary-small w-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
                 Go to TestGen Dashboard
             </button>
         `;
@@ -54,7 +57,8 @@ export function showHomeDashboard() {
         testGenHtml = `
             <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Test Generation</h3>
             <p class="text-muted text-sm mb-3">No subject selected for Test Generation.</p>
-            <button onclick="window.showManageSubjects()" class="btn-secondary-small w-full">
+            <button onclick="window.showManageSubjects()" class="btn-secondary-small w-full flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
                 Select or Manage Subjects
             </button>
         `;
@@ -79,7 +83,8 @@ export function showHomeDashboard() {
             <p class="text-base font-medium text-primary-600 dark:text-primary-400 mb-2">${enrolledCoursesCount} Course${enrolledCoursesCount === 1 ? '' : 's'} Enrolled</p>
             <p class="text-sm text-muted mb-3">Today's Focus: ${escapeHtml(nextObjective)}</p>
             ${nextTask ? `<button onclick="window.handleCourseAction('${activeCourseId}', '${nextTask.type}', '${nextTask.id}')" class="btn-primary-small mb-3">${nextTask.buttonText}</button>` : ''}
-            <button onclick="window.showMyCoursesDashboard()" class="btn-secondary-small w-full">
+            <button onclick="window.showMyCoursesDashboard()" class="btn-secondary-small w-full flex items-center justify-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
                  Go to My Courses
             </button>
         `;
@@ -87,7 +92,8 @@ export function showHomeDashboard() {
         coursesHtml = `
             <h3 class="text-lg font-semibold mb-3 text-gray-700 dark:text-gray-300">Courses</h3>
             <p class="text-muted text-sm mb-3">You are not enrolled in any courses yet.</p>
-            <button onclick="window.showBrowseCourses()" class="btn-secondary-small w-full">
+            <button onclick="window.showBrowseCourses()" class="btn-secondary-small w-full flex items-center justify-center">
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
                  Browse Courses
             </button>
         `;
