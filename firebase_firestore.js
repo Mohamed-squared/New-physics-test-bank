@@ -3,7 +3,8 @@
 import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
-    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
+    setUserAiChatSettings // MODIFICATION: Import setUserAiChatSettings
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -11,7 +12,8 @@ import { updateChaptersFromMarkdown } from './markdown_parser.js';
 import { 
     initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
-    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER
+    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL // MODIFICATION: Import AI model defaults
 } from './config.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
@@ -109,7 +111,6 @@ export async function saveUserData(uid, appDataToSave = data) {
              });
         }
         
-        // *** MODIFIED: Added logging before update ***
         console.log(`[saveUserData] Attempting to update appData for UID: ${uid}. Current auth UID: ${firebaseAuth?.currentUser?.uid}`);
         console.log(`[saveUserData] Data keys in appDataToSave: ${Object.keys(appDataToSave || {}).join(', ')}`);
         try {
@@ -121,7 +122,6 @@ export async function saveUserData(uid, appDataToSave = data) {
         } catch (e) {
             console.warn("[saveUserData] Could not stringify cleanData for logging:", e);
         }
-        // *** END MODIFICATION ***
         
         await userRef.update({
             appData: cleanData
@@ -151,7 +151,6 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
     try {
         const dataToSave = JSON.parse(JSON.stringify(progressData));
 
-        // *** MODIFIED: More detailed logging for date conversions ***
         if (dataToSave.enrollmentDate) {
              if (dataToSave.enrollmentDate instanceof Date) { 
                 try {
@@ -210,7 +209,6 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
 
         dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
         console.log("[saveUserCourseProgress] Setting lastActivityDate to serverTimestamp for save.");
-        // *** END MODIFICATION ***
 
         dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; 
         dataToSave.courseStudiedChapters = dataToSave.courseStudiedChapters || [];
@@ -232,9 +230,7 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
             dataToSave.dailyProgress[dateStr].assignmentScore = dataToSave.dailyProgress[dateStr].assignmentScore ?? null;
         });
 
-        // *** MODIFIED: Added logging before set ***
         console.log(`[saveUserCourseProgress] Data ready for Firestore set for course ${courseId}. Keys: ${Object.keys(dataToSave).join(', ')}`);
-        // *** END MODIFICATION ***
         await progressRef.set(dataToSave, { merge: true });
         console.log(`User course progress saved successfully for course ${courseId}.`);
         return true;
@@ -466,6 +462,99 @@ export async function loadGlobalCourseDefinitions() {
     }
 }
 
+// --- MODIFICATION: Helper function to get default AI settings ---
+function getDefaultAiSettings() {
+    return {
+        primaryModel: DEFAULT_PRIMARY_AI_MODEL,
+        fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
+        customSystemPrompts: {}
+    };
+}
+
+// --- MODIFICATION: Load User AI Settings ---
+/**
+ * Fetches the user's AI chat settings from Firestore.
+ * If not found or invalid, returns default settings.
+ * @param {string} userId - The user's unique ID.
+ * @returns {Promise<object>} - The user's AI chat settings.
+ */
+export async function loadUserAiSettings(userId) {
+    if (!db) {
+        console.error("[loadUserAiSettings] Firestore DB not initialized.");
+        return getDefaultAiSettings();
+    }
+    if (!userId) {
+        console.error("[loadUserAiSettings] User ID is missing.");
+        return getDefaultAiSettings();
+    }
+
+    const userRef = db.collection('users').doc(userId);
+    try {
+        const doc = await userRef.get();
+        if (doc.exists) {
+            const userData = doc.data();
+            const storedSettings = userData.userAiChatSettings;
+
+            if (storedSettings && typeof storedSettings === 'object') {
+                // Merge with defaults to ensure all keys are present and have valid types
+                const finalSettings = {
+                    primaryModel: (typeof storedSettings.primaryModel === 'string' && storedSettings.primaryModel)
+                        ? storedSettings.primaryModel
+                        : DEFAULT_PRIMARY_AI_MODEL,
+                    fallbackModel: (typeof storedSettings.fallbackModel === 'string' && storedSettings.fallbackModel)
+                        ? storedSettings.fallbackModel
+                        : DEFAULT_FALLBACK_AI_MODEL,
+                    customSystemPrompts: (typeof storedSettings.customSystemPrompts === 'object' && storedSettings.customSystemPrompts !== null)
+                        ? { ...storedSettings.customSystemPrompts } // Shallow copy to avoid modifying original from Firestore cache
+                        : {}
+                };
+                console.log("[loadUserAiSettings] Loaded and merged user AI settings from Firestore:", finalSettings);
+                return finalSettings;
+            }
+        }
+        console.log("[loadUserAiSettings] No valid user AI settings found in Firestore for user", userId, "Returning defaults.");
+        return getDefaultAiSettings();
+    } catch (error) {
+        console.error(`[loadUserAiSettings] Error loading AI settings for user ${userId}:`, error);
+        return getDefaultAiSettings(); // Fallback to defaults on error
+    }
+}
+
+// --- MODIFICATION: Save User AI Settings ---
+/**
+ * Saves the user's AI chat settings to Firestore.
+ * @param {string} userId - The user's unique ID.
+ * @param {object} settings - The AI chat settings object to save.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+export async function saveUserAiSettings(userId, settings) {
+    if (!db) {
+        console.error("[saveUserAiSettings] Firestore DB not initialized.");
+        return false;
+    }
+    if (!userId) {
+        console.error("[saveUserAiSettings] User ID is missing.");
+        return false;
+    }
+    if (!settings || typeof settings.primaryModel !== 'string' ||
+        typeof settings.fallbackModel !== 'string' ||
+        typeof settings.customSystemPrompts !== 'object' || settings.customSystemPrompts === null) {
+        console.warn("[saveUserAiSettings] Attempted to save invalid AI settings structure. Aborting.", settings);
+        return false;
+    }
+
+    const userRef = db.collection('users').doc(userId);
+    try {
+        await userRef.update({ userAiChatSettings: settings });
+        console.log(`[saveUserAiSettings] User AI Chat Settings saved successfully for user ${userId}.`, settings);
+        return true;
+    } catch (error) {
+        console.error(`[saveUserAiSettings] Error saving User AI Chat Settings for user ${userId}:`, error);
+        alert("Error saving AI settings: " + error.message);
+        return false;
+    }
+}
+
 
 /**
  * Loads the main user document (including appData) and triggers loading of course progress.
@@ -498,10 +587,23 @@ export async function loadUserData(uid) {
                 credits: userData.credits !== undefined ? Number(userData.credits) : 0, 
                 onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
             };
-            // *** MODIFIED: Log before setCurrentUser ***
             console.log("[loadUserData] setCurrentUser will be called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
             setCurrentUser(userProfileForState); 
-            // *** END MODIFICATION ***
+
+            // --- MODIFICATION: Load and set user AI chat settings ---
+            try {
+                const aiSettings = await loadUserAiSettings(uid);
+                setUserAiChatSettings(aiSettings); // This function in state.js handles validation and defaults
+                console.log(`[loadUserData] User AI Chat Settings loaded and set for UID: ${uid}`, aiSettings);
+            } catch (error) {
+                console.error(`[loadUserData] Error loading AI Chat Settings for UID: ${uid}. Setting to defaults.`, error);
+                // setUserAiChatSettings in state.js will apply defaults if an invalid object is passed,
+                // or we can explicitly call it with defaults here too.
+                // The loadUserAiSettings itself returns defaults on error, which then get passed to setUserAiChatSettings.
+                 setUserAiChatSettings(getDefaultAiSettings());
+            }
+            // --- END MODIFICATION ---
+
 
             if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
                 console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
@@ -529,6 +631,12 @@ export async function loadUserData(uid) {
                 console.log(`Initializing credits field for user ${uid}.`);
                 await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
              }
+             // Check for userAiChatSettings existence at top level, if not done by loadUserAiSettings already
+             if (userData.userAiChatSettings === undefined) {
+                console.log(`Initializing userAiChatSettings field for user ${uid}.`);
+                await saveUserAiSettings(uid, getDefaultAiSettings()); // Save ensures it's on the doc
+             }
+
 
             setData(loadedAppData); 
 
@@ -692,10 +800,15 @@ export async function initializeUserData(uid, email, username, displayName = nul
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
              isAdmin: initialIsAdmin, 
              credits: initialCredits, 
+             userAiChatSettings: getDefaultAiSettings() // MODIFICATION: Add default AI settings
         };
         try {
             await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
             setData(defaultAppData);
+            // --- MODIFICATION: Set AI chat settings in state after initialization ---
+            setUserAiChatSettings(dataToSet.userAiChatSettings); 
+            console.log("[initializeUserData] Default AI Chat Settings set in state.");
+            // --- END MODIFICATION ---
             if (forceReset) { setUserCourseProgressMap(new Map()); console.warn("Force reset executed. User course progress subcollection NOT cleared automatically."); }
             if (forceReset) { const firstSubjectId = Object.keys(defaultAppData.subjects)[0]; setCurrentSubject(firstSubjectId ? defaultAppData.subjects[firstSubjectId] : null); updateSubjectInfo(); }
             if (usernameLower) { try { const usernameRef = db.collection('usernames').doc(usernameLower); const usernameDoc = await usernameRef.get(); if (!usernameDoc.exists) { await usernameRef.set({ userId: uid }); } } catch(userErr) { console.error("Error reserving username:", userErr); } }
@@ -714,6 +827,11 @@ export async function initializeUserData(uid, email, username, displayName = nul
         if (existingUserData && existingUserData.credits === undefined) {
             updatesNeeded.credits = 0;
         }
+        // MODIFICATION: Ensure userAiChatSettings exists if user doc already exists but this field is new
+        if (existingUserData && existingUserData.userAiChatSettings === undefined) {
+            updatesNeeded.userAiChatSettings = getDefaultAiSettings();
+        }
+
          if (Object.keys(updatesNeeded).length > 0) {
              console.log(`Updating missing fields for ${uid}:`, Object.keys(updatesNeeded));
              try {
@@ -1938,23 +2056,21 @@ export async function updateUserCredits(userId, creditChange, reason) {
             const currentCredits = userDoc.data().credits || 0;
             const newCredits = currentCredits + creditChange;
 
-            // *** MODIFIED: Log before transaction operations ***
             console.log(`[updateUserCredits Transaction] Updating user credits. Current: ${currentCredits}, Change: ${creditChange}, New Calculated: ${newCredits}`);
             transaction.update(userRef, {
                 credits: firebase.firestore.FieldValue.increment(creditChange)
             });
 
             const logEntryData = {
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(), // Represented as string for logging
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(), 
                 change: creditChange,
                 newBalance: newCredits, 
                 reason: reason,
                 performedBy: currentUser ? currentUser.uid : 'system' 
             };
-            console.log("[updateUserCredits Transaction] Logging credit transaction:", {...logEntryData, timestamp: 'ServerTimestamp'}); // Log with placeholder for server ts
-            // *** END MODIFICATION ***
+            console.log("[updateUserCredits Transaction] Logging credit transaction:", {...logEntryData, timestamp: 'ServerTimestamp'}); 
             
-            transaction.set(creditLogRef, { // Actual data with server timestamp
+            transaction.set(creditLogRef, { 
                 timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                 change: creditChange,
                 newBalance: newCredits,
@@ -2003,36 +2119,23 @@ export async function saveChatSession(userId, sessionId, sessionData) {
     const sessionRef = db.collection('users').doc(userId)
                          .collection(aiChatSessionsSubCollection).doc(sessionId);
 
-    const dataToSave = { ...sessionData }; // Clone to avoid modifying original object by reference
+    const dataToSave = { ...sessionData }; 
 
-    // Handle createdAt:
-    // It should be set once when the session is first created.
-    // If it's a number (from client Date.now()), convert to Firestore Timestamp for the initial save.
-    // If it already exists (e.g., as a Firestore Timestamp from a previous load), don't overwrite it.
-    // The client-side logic already sets `createdAt: Date.now()` on new session.
-    // So, if it's a number, we assume it's the initial creation time.
     if (typeof dataToSave.createdAt === 'number') {
         dataToSave.createdAt = firebase.firestore.Timestamp.fromMillis(dataToSave.createdAt);
-    } else if (!dataToSave.createdAt) { // If somehow createdAt is missing entirely, set it.
+    } else if (!dataToSave.createdAt) { 
         dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
     }
-    // If dataToSave.createdAt is already a Firestore Timestamp, it will be preserved.
-
-    // lastModified should always be updated to the server's current time on any save.
+    
     dataToSave.lastModified = firebase.firestore.FieldValue.serverTimestamp();
-
-    // Ensure history is an array
     dataToSave.history = Array.isArray(dataToSave.history) ? dataToSave.history : [];
 
     try {
-        // Using set with merge:true will create the document if it doesn't exist,
-        // or update it if it does. For createdAt, this strategy means it's set on creation
-        // and not typically overwritten unless explicitly included in `dataToSave` again (which it is as a Timestamp).
         await sessionRef.set(dataToSave, { merge: true });
         console.log(`AI Chat session ${sessionId} saved successfully for user ${userId}.`);
     } catch (error) {
         console.error(`Error saving AI Chat session ${sessionId} for user ${userId}:`, error);
-        throw error; // Re-throw to be caught by caller
+        throw error; 
     }
 }
 

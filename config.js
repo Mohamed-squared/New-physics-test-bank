@@ -189,7 +189,7 @@ export const FOP_COURSE_DEFINITION = {
 };
 
 // *** NEW: AI Model Configuration ***
-export const AVAILABLE_AI_MODELS = ["gemini-2.5-pro-exp-03-25", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"];
-export const DEFAULT_PRIMARY_AI_MODEL = "gemini-2.5-pro-exp-03-25"; // Fallback if user settings are not loaded
-export const DEFAULT_FALLBACK_AI_MODEL = "gemini-1.5-pro"; // Fallback if primary fails
+export const AVAILABLE_AI_MODELS = ["gemini-2.5-pro-preview-05-06", "gemini-2.5-pro-exp-03-25", "gemini-1.5-pro", "gemini-1.5-flash", "gemini-1.0-pro"];
+export const DEFAULT_PRIMARY_AI_MODEL = "gemini-2.5-pro-preview-05-06"; // Fallback if user settings are not loaded
+export const DEFAULT_FALLBACK_AI_MODEL = "gemini-2.5-pro-exp-03-25"; // Fallback if primary fails
 // --- END OF FILE config.js ---
