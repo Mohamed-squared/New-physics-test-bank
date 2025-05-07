@@ -12,11 +12,12 @@ import { DEFAULT_MAX_QUESTIONS, DEFAULT_MCQ_PROBLEM_RATIO, DEFAULT_ONLINE_TEST_D
 // --- Subject Management ---
 
 export function showManageSubjects() {
-     // Check if data or data.subjects is missing/null
-     if (!data || typeof data.subjects !== 'object' || data.subjects === null) { // Added null check
+     // *** MODIFIED: Check if data or data.subjects is missing/null ***
+     if (!data || typeof data.subjects !== 'object' || data.subjects === null) {
          console.error("Subject data is missing or invalid:", data);
-         // Attempt to display a useful error message
-         const errorMsg = data ? "Subject data structure is invalid (subjects object missing or not an object)." : "Subject data not loaded.";
+         const errorMsg = !data
+            ? "Subject data not loaded."
+            : "Subject data structure is invalid (subjects object missing or not an object).";
          displayContent(`<div class="content-card text-center animate-fade-in">
                              <p class="text-danger p-4">${errorMsg} Please try reloading the application or check the data source.</p>
                              <button onclick="window.location.reload()" class="btn-secondary mt-2">Reload App</button>
@@ -24,6 +25,7 @@ export function showManageSubjects() {
          setActiveSidebarLink('showManageSubjects', 'testgen-dropdown-content');
          return;
      }
+     // *** END MODIFICATION ***
 
 
      const subjects = data.subjects;
@@ -580,7 +582,7 @@ export async function deleteSubject(id) {
     }
 }
 
-// MODIFIED: New function for handling subject approval by admin (acting on their own subjects for now)
+// MODIFIED: New function for handling subject approval by admin
 export async function handleSubjectApproval(subjectId, newStatus) {
     if (!currentUser.isAdmin) {
         alert("You do not have permission to change subject status.");
@@ -595,11 +597,14 @@ export async function handleSubjectApproval(subjectId, newStatus) {
 
     if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subject.name)}"?`)) {
         showLoading("Updating subject status...");
+        const oldStatus = subject.status; // Store old status for potential revert
         subject.status = newStatus;
-        // subject.approvedBy = currentUser.uid; // Optional: track approver
-        // subject.approvedAt = new Date().toISOString(); // Optional: track approval time
+        // Optional: track approver/time
+        // subject.approvedBy = currentUser.uid;
+        // subject.approvedAt = new Date().toISOString();
         try {
-            await saveUserData(currentUser.uid);
+            // Save the *entire* data object as subject status is part of it
+            await saveUserData(currentUser.uid, data); // Pass the modified data
             hideLoading();
             const feedbackMsgHtml = `<div class="toast-notification toast-success animate-fade-in"><p>Subject "${escapeHtml(subject.name)}" has been ${newStatus}.</p></div>`;
             const msgContainer = document.createElement('div'); msgContainer.innerHTML = feedbackMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 5000);
@@ -610,7 +615,7 @@ export async function handleSubjectApproval(subjectId, newStatus) {
             const errorMsgHtml = `<div class="toast-notification toast-error animate-fade-in"><p>Failed to update subject status: ${error.message}</p></div>`;
             const msgContainer = document.createElement('div'); msgContainer.innerHTML = errorMsgHtml; document.body.appendChild(msgContainer); setTimeout(() => { msgContainer.remove(); }, 6000);
              // Revert status change in local state on error
-            subject.status = subject.status === 'approved' ? 'pending' : (subject.status === 'rejected' ? 'pending' : 'approved'); // simplified revert
+            subject.status = oldStatus;
             showManageSubjects();
         }
     }

@@ -132,7 +132,7 @@ export async function storeExamResult(courseId, examState, examType) {
              try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", examRecord);}
         }
         // Provide specific user feedback
-        if (error.message.includes("Failed to save exam data")) { // Check for our re-thrown error
+        if (error.message.includes("Failed to save exam data to Firestore")) { // Check for our re-thrown error
              alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
              alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
@@ -162,7 +162,7 @@ export async function getExamDetails(userId, examId) {
             console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
             return docSnap.data();
         } else {
-            // This is where the error currently happens
+            // *** MODIFIED: Log path if not found ***
             console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
             return null;
         }
@@ -918,6 +918,5 @@ export async function deleteCompletedExamV2(examId) {
 }
 // Make sure the function is available globally if called via onclick
 window.deleteCompletedExamV2 = deleteCompletedExamV2;
-
 
 // --- END OF FILE exam_storage.js ---

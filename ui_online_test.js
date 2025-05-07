@@ -18,17 +18,17 @@ import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingMo
 export function launchOnlineTestUI() {
     clearContent(); // Clear main content area first
     const testArea = document.getElementById('online-test-area');
+    
     // --- MODIFICATION: Check state and element ---
     if (!currentOnlineTestState) {
         console.error("launchOnlineTestUI Error: Online test state missing.");
-        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>");
+        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>", 'content'); // Display in main content area
         return;
     }
     if (!testArea) {
         console.error("launchOnlineTestUI Error: Test area element (#online-test-area) not found.");
         // If the main container is missing, there's a fundamental issue.
-        // No point trying to display content within it. Maybe alert?
-        alert("Critical Error: Test UI container is missing from the page.");
+        alert("Critical Error: Test UI container is missing from the page. Cannot launch test.");
         return;
     }
     // --- END MODIFICATION ---
@@ -151,26 +151,25 @@ export function startTimer() {
 
 export async function displayCurrentQuestion() {
     // *** MODIFIED: Add logging at the very beginning ***
-    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState)));
+    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState || {}))); // Ensure state is not null for stringify
     console.log("displayCurrentQuestion START");
-    // --- MODIFICATION: Check state ---
+    
+    const container = document.getElementById('question-container');
+    // --- MODIFICATION: Check state and element ---
     if (!currentOnlineTestState) {
         console.error("displayCurrentQuestion HALTED: currentOnlineTestState is null.");
-        const c = document.getElementById('question-container');
-        if (c) c.innerHTML = '<p class="text-red-500 p-4">Error: Test state lost. Cannot display question.</p>';
+        if (container) container.innerHTML = '<p class="text-red-500 p-4">Error: Test state lost. Cannot display question.</p>';
+        else console.error("displayCurrentQuestion HALTED: Also #question-container not found.");
         return;
     }
-    // --- END MODIFICATION ---
-
-    const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
-    const container = document.getElementById('question-container');
-    // --- MODIFICATION: Check element ---
     if (!container) {
          console.error("displayCurrentQuestion HALTED: Question container (#question-container) not found.");
          return;
      }
     // --- END MODIFICATION ---
 
+    const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
+    
     if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) {
          console.error(`displayCurrentQuestion HALTED: Invalid index ${index}/${questions?.length}`);
          container.innerHTML = '<p class="text-red-500 p-4">Error: Invalid question index.</p>';
@@ -239,14 +238,14 @@ export async function displayCurrentQuestion() {
         const nextBtn = document.getElementById('next-btn');
         const submitBtn = document.getElementById('submit-btn');
 
-        if (counterEl) counterEl.textContent = `Question ${index + 1} / ${totalQuestions}`; else console.warn("Element #question-counter not found");
-        if (prevBtn) prevBtn.disabled = (index === 0); else console.warn("Element #prev-btn not found");
-        if (nextBtn) nextBtn.classList.toggle('hidden', index === totalQuestions - 1); else console.warn("Element #next-btn not found");
-        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("Element #submit-btn not found");
+        if (counterEl) counterEl.textContent = `Question ${index + 1} / ${totalQuestions}`; else console.warn("[DisplayQuestion] Element #question-counter not found");
+        if (prevBtn) prevBtn.disabled = (index === 0); else console.warn("[DisplayQuestion] Element #prev-btn not found");
+        if (nextBtn) nextBtn.classList.toggle('hidden', index === totalQuestions - 1); else console.warn("[DisplayQuestion] Element #next-btn not found");
+        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("[DisplayQuestion] Element #submit-btn not found");
 
-        console.log("Navigation updated.");
+        console.log("[DisplayQuestion] Navigation updated.");
     } catch (e) {
-        console.error("Error updating navigation elements:", e);
+        console.error("[DisplayQuestion] Error updating navigation elements:", e);
     }
     // --- END MODIFICATION ---
 

@@ -7,7 +7,9 @@ export let data = null; // Holds the user's specific app data { subjects: { ... 
 export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
 
 // --- MODIFICATION: Import ADMIN_UID at the top level ---
-import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL } from './config.js';
+import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL} from './config.js'; // Added DEFAULT_AI_SYSTEM_PROMPTS
+import {DEFAULT_AI_SYSTEM_PROMPTS} from './ai_prompts.js'
+
 // --- END MODIFICATION ---
 
 /* Example structure for currentUser after successful login and profile fetch:
@@ -48,6 +50,8 @@ export let userAiChatSettings = {
     fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
     customSystemPrompts: {} // Key: functionKey, Value: custom prompt string
 };
+// Global system prompts, potentially loaded from a central DB collection.
+// For now, initialized empty. Logic will fall back to DEFAULT_AI_SYSTEM_PROMPTS from config.js.
 export let globalAiSystemPrompts = {}; // Key: functionKey, Value: global default prompt string
 
 // --- State Modifiers ---
@@ -146,6 +150,7 @@ export function setUserAiChatSettings(settings) {
         console.log("[State] User AI Chat Settings updated:", userAiChatSettings);
     } else {
         console.warn("[State] Attempted to set invalid User AI Chat Settings. Using defaults.", settings);
+        // Revert to default if invalid structure is passed
         userAiChatSettings = {
             primaryModel: DEFAULT_PRIMARY_AI_MODEL,
             fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
@@ -180,12 +185,15 @@ export function clearUserSession() {
     videoDurationMap = {};
 
     // --- NEW: Reset User AI Chat Settings to default on logout ---
+    // This ensures that settings from a previous user don't leak if simulation (localStorage) is used
+    // and not properly cleared, or if state isn't fully reset.
     setUserAiChatSettings({
         primaryModel: DEFAULT_PRIMARY_AI_MODEL,
         fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
         customSystemPrompts: {}
     });
-    // Global AI System Prompts are not user-specific, so don't clear them here.
+    // Global AI System Prompts are not user-specific, so don't clear them here unless
+    // they are also fetched per session, which is unlikely for "global" prompts.
 
     document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');

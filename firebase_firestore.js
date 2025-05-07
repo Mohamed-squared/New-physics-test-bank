@@ -109,6 +109,7 @@ export async function saveUserData(uid, appDataToSave = data) {
              });
         }
         
+        // *** MODIFIED: Added logging before update ***
         console.log(`[saveUserData] Attempting to update appData for UID: ${uid}. Current auth UID: ${firebaseAuth?.currentUser?.uid}`);
         console.log(`[saveUserData] Data keys in appDataToSave: ${Object.keys(appDataToSave || {}).join(', ')}`);
         try {
@@ -120,6 +121,7 @@ export async function saveUserData(uid, appDataToSave = data) {
         } catch (e) {
             console.warn("[saveUserData] Could not stringify cleanData for logging:", e);
         }
+        // *** END MODIFICATION ***
         
         await userRef.update({
             appData: cleanData
@@ -149,29 +151,30 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
     try {
         const dataToSave = JSON.parse(JSON.stringify(progressData));
 
+        // *** MODIFIED: More detailed logging for date conversions ***
         if (dataToSave.enrollmentDate) {
              if (dataToSave.enrollmentDate instanceof Date) { 
                 try {
                     dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dataToSave.enrollmentDate);
-                    console.log("Converted enrollmentDate (JS Date) to Timestamp for saving.");
+                    console.log("[saveUserCourseProgress] Converted enrollmentDate (JS Date) to Firestore Timestamp for saving.");
                 } catch (e) {
-                    console.error("Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
+                    console.error("[saveUserCourseProgress] Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
                     delete dataToSave.enrollmentDate; 
                 }
              } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate?._methodName === 'serverTimestamp') {
-                 console.log("enrollmentDate is already serverTimestamp, keeping as is.");
-             } else {
+                 console.log("[saveUserCourseProgress] enrollmentDate is already a serverTimestamp, keeping as is.");
+             } else { // String or Number
                  try {
                      const dateObj = new Date(dataToSave.enrollmentDate);
                      if (!isNaN(dateObj)) {
                           dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dateObj);
-                          console.log("Converted enrollmentDate (String/Number) to Timestamp for saving.");
+                          console.log("[saveUserCourseProgress] Converted enrollmentDate (String/Number) to Firestore Timestamp for saving.");
                      } else {
-                          console.warn("Invalid enrollmentDate value during save, deleting:", dataToSave.enrollmentDate);
+                          console.warn("[saveUserCourseProgress] Invalid enrollmentDate value (String/Number), deleting:", dataToSave.enrollmentDate);
                           delete dataToSave.enrollmentDate;
                      }
                  } catch(e) {
-                      console.warn("Error processing non-Date/non-ServerTimestamp enrollmentDate during save, deleting:", e, dataToSave.enrollmentDate);
+                      console.warn("[saveUserCourseProgress] Error processing non-Date/non-ServerTimestamp enrollmentDate, deleting:", e, dataToSave.enrollmentDate);
                       delete dataToSave.enrollmentDate;
                  }
              }
@@ -181,23 +184,23 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
              if (dataToSave.completionDate instanceof Date) { 
                 try {
                     dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
-                    console.log("Converted completionDate (JS Date) to Timestamp for saving.");
+                    console.log("[saveUserCourseProgress] Converted completionDate (JS Date) to Firestore Timestamp for saving.");
                 } catch (e) {
-                    console.error("Error converting completionDate JS Date to Timestamp:", e, dataToSave.completionDate);
+                    console.error("[saveUserCourseProgress] Error converting completionDate JS Date to Timestamp:", e, dataToSave.completionDate);
                     delete dataToSave.completionDate;
                 }
-             } else { 
+             } else { // String or Number
                  try {
                      const dateObj = new Date(dataToSave.completionDate);
                      if (!isNaN(dateObj)) {
                          dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dateObj);
-                         console.log("Converted completionDate (String/Number) to Timestamp for saving.");
+                         console.log("[saveUserCourseProgress] Converted completionDate (String/Number) to Firestore Timestamp for saving.");
                      } else {
-                         console.warn("Invalid completionDate value during save, setting to null:", dataToSave.completionDate);
+                         console.warn("[saveUserCourseProgress] Invalid completionDate value (String/Number), setting to null:", dataToSave.completionDate);
                          dataToSave.completionDate = null; 
                      }
                  } catch (e) {
-                     console.warn("Error processing non-Date completionDate during save, setting to null:", e, dataToSave.completionDate);
+                     console.warn("[saveUserCourseProgress] Error processing non-Date completionDate, setting to null:", e, dataToSave.completionDate);
                      dataToSave.completionDate = null;
                  }
              }
@@ -206,7 +209,8 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
         }
 
         dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
-        console.log("Setting lastActivityDate to serverTimestamp for save.");
+        console.log("[saveUserCourseProgress] Setting lastActivityDate to serverTimestamp for save.");
+        // *** END MODIFICATION ***
 
         dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; 
         dataToSave.courseStudiedChapters = dataToSave.courseStudiedChapters || [];
@@ -228,7 +232,9 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
             dataToSave.dailyProgress[dateStr].assignmentScore = dataToSave.dailyProgress[dateStr].assignmentScore ?? null;
         });
 
-        console.log("Data ready for Firestore set:", dataToSave);
+        // *** MODIFIED: Added logging before set ***
+        console.log(`[saveUserCourseProgress] Data ready for Firestore set for course ${courseId}. Keys: ${Object.keys(dataToSave).join(', ')}`);
+        // *** END MODIFICATION ***
         await progressRef.set(dataToSave, { merge: true });
         console.log(`User course progress saved successfully for course ${courseId}.`);
         return true;
@@ -492,8 +498,10 @@ export async function loadUserData(uid) {
                 credits: userData.credits !== undefined ? Number(userData.credits) : 0, 
                 onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
             };
+            // *** MODIFIED: Log before setCurrentUser ***
+            console.log("[loadUserData] setCurrentUser will be called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
             setCurrentUser(userProfileForState); 
-            console.log("[loadUserData] setCurrentUser called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
+            // *** END MODIFICATION ***
 
             if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
                 console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
@@ -1930,16 +1938,28 @@ export async function updateUserCredits(userId, creditChange, reason) {
             const currentCredits = userDoc.data().credits || 0;
             const newCredits = currentCredits + creditChange;
 
+            // *** MODIFIED: Log before transaction operations ***
+            console.log(`[updateUserCredits Transaction] Updating user credits. Current: ${currentCredits}, Change: ${creditChange}, New Calculated: ${newCredits}`);
             transaction.update(userRef, {
                 credits: firebase.firestore.FieldValue.increment(creditChange)
             });
 
-            transaction.set(creditLogRef, {
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            const logEntryData = {
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(), // Represented as string for logging
                 change: creditChange,
                 newBalance: newCredits, 
                 reason: reason,
                 performedBy: currentUser ? currentUser.uid : 'system' 
+            };
+            console.log("[updateUserCredits Transaction] Logging credit transaction:", {...logEntryData, timestamp: 'ServerTimestamp'}); // Log with placeholder for server ts
+            // *** END MODIFICATION ***
+            
+            transaction.set(creditLogRef, { // Actual data with server timestamp
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                change: creditChange,
+                newBalance: newCredits,
+                reason: reason,
+                performedBy: currentUser ? currentUser.uid : 'system'
             });
         });
 
