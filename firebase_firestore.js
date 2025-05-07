@@ -4,7 +4,7 @@ import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
-    setUserAiChatSettings // MODIFICATION: Import setUserAiChatSettings
+    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts // MODIFICATION: Import globalAiSystemPrompts, setGlobalAiSystemPrompts
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -13,8 +13,9 @@ import {
     initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
-    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL // MODIFICATION: Import AI model defaults
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL
 } from './config.js';
+import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js'; // MODIFICATION: Import AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
@@ -27,6 +28,9 @@ const sharedNotesCollection = "sharedCourseNotes";
 const adminTasksCollection = "adminTasks";
 const userCreditLogSubCollection = "creditLog";
 const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Chat
+const globalSettingsCollection = "settings"; // MODIFICATION: New constant
+const aiPromptsDocId = "aiPrompts"; // MODIFICATION: New constant
+
 
 // --- Utilities ---
 /**
@@ -555,6 +559,149 @@ export async function saveUserAiSettings(userId, settings) {
     }
 }
 
+// --- START: Global AI Prompts Management ---
+/**
+ * Loads global AI system prompts from Firestore (settings/aiPrompts).
+ * @returns {Promise<object>} - The global prompts object or an empty object if not found/error.
+ */
+export async function loadGlobalAiPrompts() {
+    if (!db) {
+        console.error("[loadGlobalAiPrompts] Firestore DB not initialized.");
+        return {};
+    }
+    const promptsRef = db.collection(globalSettingsCollection).doc(aiPromptsDocId);
+    try {
+        const docSnap = await promptsRef.get();
+        if (docSnap.exists) {
+            const loadedPrompts = docSnap.data();
+            // Validate structure: ensure it's an object
+            if (typeof loadedPrompts === 'object' && loadedPrompts !== null) {
+                 // Ensure all keys from AI_FUNCTION_KEYS exist, falling back to default if a key is missing
+                const validatedPrompts = {};
+                AI_FUNCTION_KEYS.forEach(key => {
+                    if (loadedPrompts.hasOwnProperty(key) && typeof loadedPrompts[key] === 'string') {
+                        validatedPrompts[key] = loadedPrompts[key];
+                    } else {
+                        // If a prompt is missing in DB or is not a string, it will effectively use the hardcoded default
+                        // We don't store the default in validatedPrompts, rather let the getter logic handle it
+                        // Or, we can store the default here if we want the DB to always be complete.
+                        // For now, just ensure valid ones are passed.
+                        // If loadedPrompts[key] is empty string, it's a valid custom "empty" prompt.
+                        if (loadedPrompts.hasOwnProperty(key)) { // it exists but is not a string
+                             console.warn(`[loadGlobalAiPrompts] Invalid type for prompt key '${key}'. Will effectively use default.`);
+                        }
+                    }
+                });
+                 // Add any prompts from DB that are not in AI_FUNCTION_KEYS (e.g. old/orphaned keys)
+                 // Or better, only keep prompts that are in AI_FUNCTION_KEYS
+                 const finalPrompts = {};
+                 AI_FUNCTION_KEYS.forEach(key => {
+                     if (loadedPrompts.hasOwnProperty(key) && typeof loadedPrompts[key] === 'string') {
+                         finalPrompts[key] = loadedPrompts[key];
+                     }
+                 });
+
+                console.log("[loadGlobalAiPrompts] Loaded global AI prompts from Firestore:", finalPrompts);
+                return finalPrompts;
+            } else {
+                console.warn("[loadGlobalAiPrompts] 'settings/aiPrompts' document data is not a valid object. Returning empty.", loadedPrompts);
+                return {};
+            }
+        }
+        console.log("[loadGlobalAiPrompts] No 'settings/aiPrompts' document found. Returning empty object.");
+        return {};
+    } catch (error) {
+        console.error("[loadGlobalAiPrompts] Error loading global AI prompts:", error);
+        return {}; // Fallback to empty object on error
+    }
+}
+
+/**
+ * Saves the global AI system prompts to Firestore (settings/aiPrompts).
+ * Requires the current user to be the Primary Admin.
+ * @param {object} promptsObject - The complete object of global prompts to save.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+export async function saveGlobalAiPrompts(promptsObject) {
+    if (!db) {
+        console.error("[saveGlobalAiPrompts] Firestore DB not initialized.");
+        alert("Database error. Cannot save settings.");
+        return false;
+    }
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("[saveGlobalAiPrompts] Permission Denied: Only the Primary Admin can save global AI prompts.");
+        alert("Permission Denied: Only the Primary Admin can save these settings.");
+        return false;
+    }
+    if (!promptsObject || typeof promptsObject !== 'object') {
+        console.error("[saveGlobalAiPrompts] Invalid promptsObject. Must be an object.", promptsObject);
+        alert("Internal error: Invalid data format for prompts.");
+        return false;
+    }
+
+    // Validate prompts: ensure all keys are from AI_FUNCTION_KEYS and values are strings
+    const validPromptsToSave = {};
+    let hasInvalidData = false;
+    for (const key of AI_FUNCTION_KEYS) {
+        if (promptsObject.hasOwnProperty(key)) {
+            if (typeof promptsObject[key] === 'string') {
+                validPromptsToSave[key] = promptsObject[key];
+            } else {
+                console.warn(`[saveGlobalAiPrompts] Invalid value for prompt key '${key}'. Expected string, got ${typeof promptsObject[key]}. Skipping this key.`);
+                hasInvalidData = true;
+                 // Optionally, fall back to default for this key if saving partial object
+                 // validPromptsToSave[key] = DEFAULT_AI_SYSTEM_PROMPTS[key];
+            }
+        } else {
+             // If a key from AI_FUNCTION_KEYS is missing in promptsObject, it means "use default".
+             // We can either save it as empty string, or not save it and let the getter handle the default.
+             // Saving it as empty string if user explicitly cleared it.
+             // If it was never there, it should not be added with default, better to save only what admin provides.
+             // For this implementation, if admin clears a textarea, it becomes empty string.
+             // If a new AI_FUNCTION_KEY is added to config, it won't be in promptsObject until admin saves.
+             // Let's save only keys explicitly present in promptsObject, if they are strings.
+        }
+    }
+
+     // Alternative: strictly save only what is provided, and what is a valid key
+     const strictlyValidPrompts = {};
+     for (const key in promptsObject) {
+         if (AI_FUNCTION_KEYS.includes(key) && typeof promptsObject[key] === 'string') {
+             strictlyValidPrompts[key] = promptsObject[key];
+         } else if (AI_FUNCTION_KEYS.includes(key) && typeof promptsObject[key] !== 'string') {
+              console.warn(`[saveGlobalAiPrompts] Prompt for key '${key}' is not a string, using default value for saving an empty string to signify custom clear.`);
+              strictlyValidPrompts[key] = ""; // Save as empty string if admin cleared it but it's not string (e.g. null)
+         } else if (!AI_FUNCTION_KEYS.includes(key)){
+              console.warn(`[saveGlobalAiPrompts] Prompt key '${key}' is not a recognized AI_FUNCTION_KEY. It will not be saved.`);
+         }
+     }
+
+
+    if (hasInvalidData) {
+        // Potentially alert user or handle more gracefully
+        console.warn("[saveGlobalAiPrompts] Some provided prompt values were invalid and were skipped or defaulted.");
+    }
+    if (Object.keys(strictlyValidPrompts).length === 0 && AI_FUNCTION_KEYS.length > 0) {
+        console.warn("[saveGlobalAiPrompts] Attempting to save an empty set of valid prompts. This will clear all global custom prompts.");
+        // This is allowed, effectively resetting all to default.
+    }
+
+
+    const promptsRef = db.collection(globalSettingsCollection).doc(aiPromptsDocId);
+    try {
+        // Using set() will overwrite the document completely with strictlyValidPrompts.
+        // This is desired behavior: if a prompt is removed from UI or cleared, it should be removed from DB.
+        await promptsRef.set(strictlyValidPrompts);
+        console.log("[saveGlobalAiPrompts] Global AI prompts saved successfully to Firestore:", strictlyValidPrompts);
+        return true;
+    } catch (error) {
+        console.error("[saveGlobalAiPrompts] Error saving global AI prompts:", error);
+        alert("Error saving global AI prompts: " + error.message);
+        return false;
+    }
+}
+// --- END: Global AI Prompts Management ---
+
 
 /**
  * Loads the main user document (including appData) and triggers loading of course progress.
@@ -590,19 +737,14 @@ export async function loadUserData(uid) {
             console.log("[loadUserData] setCurrentUser will be called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
             setCurrentUser(userProfileForState); 
 
-            // --- MODIFICATION: Load and set user AI chat settings ---
             try {
                 const aiSettings = await loadUserAiSettings(uid);
-                setUserAiChatSettings(aiSettings); // This function in state.js handles validation and defaults
+                setUserAiChatSettings(aiSettings); 
                 console.log(`[loadUserData] User AI Chat Settings loaded and set for UID: ${uid}`, aiSettings);
             } catch (error) {
                 console.error(`[loadUserData] Error loading AI Chat Settings for UID: ${uid}. Setting to defaults.`, error);
-                // setUserAiChatSettings in state.js will apply defaults if an invalid object is passed,
-                // or we can explicitly call it with defaults here too.
-                // The loadUserAiSettings itself returns defaults on error, which then get passed to setUserAiChatSettings.
                  setUserAiChatSettings(getDefaultAiSettings());
             }
-            // --- END MODIFICATION ---
 
 
             if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
@@ -631,10 +773,9 @@ export async function loadUserData(uid) {
                 console.log(`Initializing credits field for user ${uid}.`);
                 await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
              }
-             // Check for userAiChatSettings existence at top level, if not done by loadUserAiSettings already
              if (userData.userAiChatSettings === undefined) {
                 console.log(`Initializing userAiChatSettings field for user ${uid}.`);
-                await saveUserAiSettings(uid, getDefaultAiSettings()); // Save ensures it's on the doc
+                await saveUserAiSettings(uid, getDefaultAiSettings()); 
              }
 
 
@@ -800,15 +941,13 @@ export async function initializeUserData(uid, email, username, displayName = nul
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
              isAdmin: initialIsAdmin, 
              credits: initialCredits, 
-             userAiChatSettings: getDefaultAiSettings() // MODIFICATION: Add default AI settings
+             userAiChatSettings: getDefaultAiSettings() 
         };
         try {
             await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
             setData(defaultAppData);
-            // --- MODIFICATION: Set AI chat settings in state after initialization ---
             setUserAiChatSettings(dataToSet.userAiChatSettings); 
             console.log("[initializeUserData] Default AI Chat Settings set in state.");
-            // --- END MODIFICATION ---
             if (forceReset) { setUserCourseProgressMap(new Map()); console.warn("Force reset executed. User course progress subcollection NOT cleared automatically."); }
             if (forceReset) { const firstSubjectId = Object.keys(defaultAppData.subjects)[0]; setCurrentSubject(firstSubjectId ? defaultAppData.subjects[firstSubjectId] : null); updateSubjectInfo(); }
             if (usernameLower) { try { const usernameRef = db.collection('usernames').doc(usernameLower); const usernameDoc = await usernameRef.get(); if (!usernameDoc.exists) { await usernameRef.set({ userId: uid }); } } catch(userErr) { console.error("Error reserving username:", userErr); } }
@@ -827,7 +966,6 @@ export async function initializeUserData(uid, email, username, displayName = nul
         if (existingUserData && existingUserData.credits === undefined) {
             updatesNeeded.credits = 0;
         }
-        // MODIFICATION: Ensure userAiChatSettings exists if user doc already exists but this field is new
         if (existingUserData && existingUserData.userAiChatSettings === undefined) {
             updatesNeeded.userAiChatSettings = getDefaultAiSettings();
         }
