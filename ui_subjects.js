@@ -151,7 +151,7 @@ export function showManageSubjects() {
                           <input id="subject-filename" type="text"
                                  placeholder="e.g., Quantum_Mechanics_MCQ.md"
                                  required
-                                 pattern="^[^\\\\/:\\*?\\"<>\\|]+$"
+                                 pattern="^[^\\\\/:\\*?\\"&lt&gt\\|]+$"
                                  title="Filename cannot contain invalid characters like / \\ : * ? < > | etc."
                           >
                           <p class="form-help-text">Must end in '.md'. Use 'chapters.md' only for the default/first subject. Ensure file exists.</p>
@@ -160,7 +160,7 @@ export function showManageSubjects() {
                           <label for="subject-problems-filename">Problems Markdown Filename (Optional)</label>
                           <input id="subject-problems-filename" type="text"
                                  placeholder="e.g., Quantum_Mechanics_Problems.md"
-                                 pattern="^[^\\\\/:\\*?\\"<>\\|]+$"
+                                 pattern="^[^\\\\/:\\*?\\"&lt&gt\\|]+$"
                                  title="Filename cannot contain invalid characters like / \\ : * ? < > | etc. Leave blank if no separate problems file."
                           >
                           <p class="form-help-text">Must end in '.md' if provided. Use for separate problem definitions.</p>

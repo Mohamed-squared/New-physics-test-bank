@@ -4,7 +4,7 @@ import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
-    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts // MODIFICATION: Import globalAiSystemPrompts, setGlobalAiSystemPrompts
+    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -15,7 +15,7 @@ import {
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
     DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL
 } from './config.js';
-import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js'; // MODIFICATION: Import AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS
+import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
@@ -25,11 +25,11 @@ import { cleanTextForFilename } from './filename_utils.js';
 const userFormulaSheetSubCollection = "userFormulaSheets";
 const userSummarySubCollection = "userChapterSummaries";
 const sharedNotesCollection = "sharedCourseNotes";
-const adminTasksCollection = "adminTasks";
+const adminTasksCollection = "adminTasks"; // MODIFIED: Added constant
 const userCreditLogSubCollection = "creditLog";
 const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Chat
-const globalSettingsCollection = "settings"; // MODIFICATION: New constant
-const aiPromptsDocId = "aiPrompts"; // MODIFICATION: New constant
+const globalSettingsCollection = "settings";
+const aiPromptsDocId = "aiPrompts";
 
 
 // --- Utilities ---
@@ -1973,7 +1973,10 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
 }
 
 // --- NEW: Admin Tasks Management ---
-
+/**
+ * Fetches all admin tasks from Firestore, ordered by creation date.
+ * @returns {Promise<Array<object>>} - An array of task objects `{ id, text, status, createdAt }`.
+ */
 export async function fetchAdminTasks() {
     if (!db) {
         console.error("Firestore DB not initialized");
@@ -1982,7 +1985,7 @@ export async function fetchAdminTasks() {
     console.log("Fetching admin tasks...");
     try {
         const snapshot = await db.collection(adminTasksCollection)
-                           .orderBy('createdAt', 'desc') 
+                           .orderBy('createdAt', 'desc')
                            .get();
         const tasks = [];
         snapshot.forEach(doc => {
@@ -1990,8 +1993,8 @@ export async function fetchAdminTasks() {
             tasks.push({
                 id: doc.id,
                 text: data.text,
-                status: data.status,
-                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null 
+                status: data.status, // Should be 'pending' or 'done'
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null
             });
         });
         console.log(`Successfully fetched ${tasks.length} admin tasks.`);
@@ -2002,10 +2005,15 @@ export async function fetchAdminTasks() {
     }
 }
 
+/**
+ * Adds a new task to the admin tasks collection. Requires Primary Admin.
+ * @param {string} taskText - The text content of the task.
+ * @returns {Promise<string|null>} - The ID of the new task, or null on failure.
+ */
 export async function addAdminTask(taskText) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
-        console.error("Permission denied: Admin privileges required to add task.");
-        alert("Permission denied: Admin privileges required.");
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Primary Admin privileges required to add task.");
+        alert("Permission denied: Primary Admin privileges required.");
         return null;
     }
     if (!taskText || typeof taskText !== 'string' || taskText.trim().length === 0) {
@@ -2014,11 +2022,11 @@ export async function addAdminTask(taskText) {
         return null;
     }
 
-    console.log("Admin adding new task:", taskText);
+    console.log("Primary Admin adding new task:", taskText);
     try {
         const docRef = await db.collection(adminTasksCollection).add({
             text: taskText.trim(),
-            status: 'pending', 
+            status: 'pending',
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
         });
         console.log(`Successfully added admin task with ID: ${docRef.id}`);
@@ -2030,10 +2038,16 @@ export async function addAdminTask(taskText) {
     }
 }
 
+/**
+ * Updates the status of an existing admin task. Requires Primary Admin.
+ * @param {string} taskId - The ID of the task to update.
+ * @param {string} newStatus - The new status ('pending' or 'done').
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
 export async function updateAdminTaskStatus(taskId, newStatus) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
-        console.error("Permission denied: Admin privileges required to update task status.");
-        alert("Permission denied: Admin privileges required.");
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Primary Admin privileges required to update task status.");
+        alert("Permission denied: Primary Admin privileges required.");
         return false;
     }
     if (!taskId || !newStatus || (newStatus !== 'pending' && newStatus !== 'done')) {
@@ -2042,7 +2056,7 @@ export async function updateAdminTaskStatus(taskId, newStatus) {
         return false;
     }
 
-    console.log(`Admin updating task ${taskId} status to: ${newStatus}`);
+    console.log(`Primary Admin updating task ${taskId} status to: ${newStatus}`);
     const taskRef = db.collection(adminTasksCollection).doc(taskId);
     try {
         await taskRef.update({ status: newStatus });
@@ -2055,10 +2069,15 @@ export async function updateAdminTaskStatus(taskId, newStatus) {
     }
 }
 
+/**
+ * Deletes an admin task, but only if its status is 'done'. Requires Primary Admin.
+ * @param {string} taskId - The ID of the task to delete.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
 export async function deleteAdminTask(taskId) {
-    if (!db || !currentUser || !currentUser.isAdmin) { 
-        console.error("Permission denied: Admin privileges required to delete task.");
-        alert("Permission denied: Admin privileges required.");
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        console.error("Permission denied: Primary Admin privileges required to delete task.");
+        alert("Permission denied: Primary Admin privileges required.");
         return false;
     }
     if (!taskId) {
@@ -2067,17 +2086,15 @@ export async function deleteAdminTask(taskId) {
         return false;
     }
 
-    console.log(`Admin attempting to delete task ${taskId}`);
+    console.log(`Primary Admin attempting to delete task ${taskId}`);
     const taskRef = db.collection(adminTasksCollection).doc(taskId);
     try {
         const docSnap = await taskRef.get();
-
         if (!docSnap.exists) {
             console.warn(`Task ${taskId} not found for deletion.`);
             alert("Task not found.");
             return false;
         }
-
         const taskData = docSnap.data();
         if (taskData.status !== 'done') {
             console.warn(`Cannot delete task ${taskId} because its status is '${taskData.status}'. Only 'done' tasks can be deleted.`);
@@ -2094,6 +2111,7 @@ export async function deleteAdminTask(taskId) {
         return false;
     }
 }
+
 
 // --- NEW: Toggle User Admin Status ---
 export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
@@ -2259,14 +2277,30 @@ export async function saveChatSession(userId, sessionId, sessionData) {
 
     const dataToSave = { ...sessionData }; 
 
+    // Convert createdAt to Firestore Timestamp if it's a number (client-side millis)
+    // or set to serverTimestamp if not present (e.g., very first save attempt)
     if (typeof dataToSave.createdAt === 'number') {
         dataToSave.createdAt = firebase.firestore.Timestamp.fromMillis(dataToSave.createdAt);
-    } else if (!dataToSave.createdAt) { 
+    } else if (!dataToSave.createdAt || (typeof dataToSave.createdAt === 'object' && !dataToSave.createdAt.toDate)) { 
+        // If not a number and not already a Firestore Timestamp, set to server time
         dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
     }
-    
+    // Ensure lastModified is always updated to server time
     dataToSave.lastModified = firebase.firestore.FieldValue.serverTimestamp();
+    
+    // Ensure history is an array and messages have correct structure if needed (basic check)
     dataToSave.history = Array.isArray(dataToSave.history) ? dataToSave.history : [];
+    dataToSave.history.forEach(msg => {
+        if (typeof msg.timestamp === 'object' && msg.timestamp && typeof msg.timestamp.toDate === 'function') {
+            // This should not happen if timestamps are handled as numbers on client
+            console.warn("Message timestamp was a Firestore Timestamp, converting to millis for consistency in DB array.");
+            msg.timestamp = msg.timestamp.toMillis();
+        } else if (typeof msg.timestamp !== 'number') {
+            console.warn("Message timestamp was not a number, setting to Date.now(). Message:", msg);
+            msg.timestamp = Date.now();
+        }
+    });
+
 
     try {
         await sessionRef.set(dataToSave, { merge: true });
@@ -2290,6 +2324,7 @@ export async function loadUserChatSessionsFromFirestore(userId) {
     const sessionsRef = db.collection('users').doc(userId)
                           .collection(aiChatSessionsSubCollection);
     try {
+        // Order by lastModified descending to get newest first
         const snapshot = await sessionsRef.orderBy('lastModified', 'desc').get(); 
         const sessions = [];
         snapshot.forEach(doc => {

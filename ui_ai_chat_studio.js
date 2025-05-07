@@ -43,7 +43,7 @@ export async function showAiChatStudio() {
     }
     
     await loadUserChatSessions();
-    renderActiveChatInterface(); // Render based on current activeChatSessionId
+    // renderActiveChatInterface(); // Called by loadUserChatSessions
 }
 
 async function loadUserChatSessions() {
@@ -210,13 +210,9 @@ async function deleteChatSessionUI(sessionId, sessionName) {
         if (activeChatSessionId === sessionId) {
             activeChatSessionId = null;
             // Optionally, select the next newest chat or clear the view
-            const remainingSessions = Array.from(chatSessions.values()).sort((a,b) => (b.lastModified || b.createdAt) - (a.lastModified || a.createdAt));
+            const remainingSessions = Array.from(chatSessions.entries()).sort(([,a],[,b]) => (b.lastModified || b.createdAt) - (a.lastModified || a.createdAt));
             if (remainingSessions.length > 0) {
-                 // Find the ID of the first remaining session.
-                 const firstRemainingSessionEntry = Array.from(chatSessions.entries()).find(entry => entry[1] === remainingSessions[0]);
-                 if (firstRemainingSessionEntry) {
-                     activeChatSessionId = firstRemainingSessionEntry[0];
-                 }
+                 activeChatSessionId = remainingSessions[0][0]; // Get the ID of the first remaining session
             }
         }
         
@@ -266,7 +262,7 @@ async function handleNewChat() {
     const sessionNameInput = prompt("Enter a name for the new chat session (optional):", `Chat ${chatSessions.size + 1}`);
     const sessionName = (sessionNameInput === null) ? null : (sessionNameInput.trim() || `Chat ${chatSessions.size + 1}`);
     
-    if (sessionName === null) return;
+    if (sessionName === null) return; // User cancelled prompt
 
     const sessionId = `aics_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     
@@ -276,22 +272,25 @@ async function handleNewChat() {
                              "You are a helpful AI assistant.");
 
     const initialHistory = [
-        { role: 'user', parts: [{ text: systemPromptText }], timestamp: Date.now() -1 }, // System prompt as first user message
-        { role: 'model', parts: [{ text: "Okay, I'm ready to help! How can I assist you today?" }], timestamp: Date.now() } // AI's acknowledgement
+        // System prompt as first "user" message with a slightly earlier timestamp to ensure order
+        { role: 'user', parts: [{ text: systemPromptText }], timestamp: Date.now() -1 }, 
+        // AI's acknowledgement message
+        { role: 'model', parts: [{ text: "Okay, I'm ready to help! How can I assist you today?" }], timestamp: Date.now() } 
     ];
 
     const newSessionData = {
         name: sessionName,
         history: initialHistory,
-        createdAt: Date.now(),
+        createdAt: Date.now(), // Will be converted to Firestore Timestamp on save
         systemPromptKey: defaultSystemPromptKey,
-        lastModified: Date.now()
+        lastModified: Date.now() // Will be converted/overridden by serverTimestamp on save
     };
 
     chatSessions.set(sessionId, newSessionData);
     activeChatSessionId = sessionId;
 
     try {
+        // Firestore save will handle timestamp conversions
         await saveChatSession(currentUser.uid, sessionId, newSessionData);
         console.log("New chat session saved to Firestore.");
     } catch (error) {
@@ -328,8 +327,8 @@ function renderChatMessage(message, isLastUserMessage = false) {
     const time = timestamp ? new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 
     // Check if this message is part of the initial system setup exchange
-    const isActiveSessionPresent = activeChatSessionId && chatSessions.has(activeChatSessionId);
-    const activeSessionHistory = isActiveSessionPresent ? chatSessions.get(activeChatSessionId).history : [];
+    const activeSession = activeChatSessionId ? chatSessions.get(activeChatSessionId) : null;
+    const activeSessionHistory = activeSession ? activeSession.history : [];
     
     const isSystemSetupMessage = activeSessionHistory.length > 0 &&
                                  ((message === activeSessionHistory[0] && isUser) || 
@@ -434,6 +433,10 @@ async function handleSendMessage() {
     const userMessage = { role: 'user', parts: [{ text: messageText }], timestamp: Date.now() };
     sessionData.history.push(userMessage);
     sessionData.lastModified = Date.now(); // Update last modified time for the user message
+    
+    // Firestore save for user message + AI response will happen in the finally block or after successful AI response
+    // This allows us to save both in one go, or save user message + error.
+
     await renderActiveChatMessages(); // Render user message immediately
     inputElement.value = '';
     autoResizeTextarea({target: inputElement});
@@ -442,24 +445,29 @@ async function handleSendMessage() {
     let errorOccurred = false;
 
     try {
-        // Pass history excluding the latest user message for context
+        // Pass history *excluding* the latest user message for context to the AI call.
+        // The callGeminiTextAPI function will add the `messageText` as the final user prompt.
         const historyForApi = sessionData.history.slice(0, -1); 
-        const aiResponseText = await callGeminiTextAPI(messageText, historyForApi);
+        const aiResponseText = await callGeminiTextAPI(messageText, historyForApi, sessionData.systemPromptKey);
 
         const aiMessage = { role: 'model', parts: [{ text: aiResponseText }], timestamp: Date.now() };
         sessionData.history.push(aiMessage);
         sessionData.lastModified = Date.now(); // Update last modified for AI response
+        
+        // Save after AI response
         await saveChatSession(currentUser.uid, activeChatSessionId, sessionData);
 
     } catch (error) {
         console.error("Error calling AI:", error);
-        const errorMessage = { role: 'model', parts: [{ text: `Sorry, I encountered an error: ${error.message}` }], timestamp: Date.now() };
+        const errorMessageText = error.message?.includes("safety settings") 
+            ? "I'm sorry, but I can't respond to that due to safety guidelines."
+            : `Sorry, I encountered an error: ${error.message}`;
+        const errorMessage = { role: 'model', parts: [{ text: errorMessageText }], timestamp: Date.now() };
         sessionData.history.push(errorMessage);
         sessionData.lastModified = Date.now(); // Update last modified for error message
         errorOccurred = true; 
-        // Note: saveChatSession for error state will be handled in finally block as per prompt
     } finally {
-        if (errorOccurred) {
+        if (errorOccurred) { // If an error occurred, save the session including the error message
             try {
                 console.log("Attempting to save chat session with error message in finally block.");
                 await saveChatSession(currentUser.uid, activeChatSessionId, sessionData);

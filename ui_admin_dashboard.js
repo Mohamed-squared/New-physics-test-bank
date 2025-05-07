@@ -1,5 +1,3 @@
-// --- START OF FILE ui_admin_dashboard.js ---
-
 // ui_admin_dashboard.js
 
 import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData, globalAiSystemPrompts, setGlobalAiSystemPrompts } from './state.js'; // Added currentUser, globalAiSystemPrompts, setGlobalAiSystemPrompts
@@ -18,15 +16,15 @@ import {
     deleteAllFeedbackMessages,
     deleteAllExamIssues,
     adminUpdateUsername,
-    fetchAdminTasks,      
-    addAdminTask,         
-    updateAdminTaskStatus,
-    deleteAdminTask,       
+    fetchAdminTasks,      // MODIFIED: Import
+    addAdminTask,         // MODIFIED: Import
+    updateAdminTaskStatus,// MODIFIED: Import
+    deleteAdminTask,      // MODIFIED: Import
     toggleUserAdminStatus, 
     adminUpdateUserSubjectStatus,
-    saveGlobalAiPrompts // <-- Import saveGlobalAiPrompts
+    saveGlobalAiPrompts
 } from './firebase_firestore.js'; 
-import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js'; // <-- Import AI prompt constants
+import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowseCourses, showAddCourseForm } from './ui_courses.js'; // Added showBrowseCourses, showAddCourseForm
@@ -35,7 +33,7 @@ import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowse
 // State for Playlist Management section
 let selectedVideosForAssignment = []; // Array to hold { videoId, title }
 let currentLoadedPlaylistCourseId = null;
-let currentManagingUserIdForSubjects = null; // MODIFIED: For subject management
+let currentManagingUserIdForSubjects = null;
 
 // --- Admin Dashboard UI ---
 
@@ -128,11 +126,12 @@ export function showAdminDashboard() {
                     </div>
                 </div>
 
+                <!-- MODIFIED: Admin Tasks Card -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Errors / Features To Fix (Admin Tasks)</h3>
                     <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-new-task-input" placeholder="Enter new task description..." class="flex-grow text-sm">
-                        <button onclick="window.handleAddAdminTask()" class="btn-primary-small text-xs flex-shrink-0">Add Task</button>
+                        <input type="text" id="admin-new-task-input" placeholder="Enter new task description..." class="flex-grow text-sm" ${!isPrimaryAdmin ? 'disabled title="Only Primary Admin can add tasks"' : ''}>
+                        <button onclick="window.handleAddAdminTask()" class="btn-primary-small text-xs flex-shrink-0" ${!isPrimaryAdmin ? 'disabled title="Only Primary Admin can add tasks"' : ''}>Add Task</button>
                     </div>
                     <div id="admin-tasks-area" class="max-h-96 overflow-y-auto pr-2">
                         <p class="text-muted text-sm">Loading tasks...</p>
@@ -225,8 +224,8 @@ export function showAdminDashboard() {
     loadFeedbackForAdmin();
     loadCoursesForAdmin();
     populateAdminCourseSelect();
-    loadAdminTasks();
-    renderGlobalAiPromptsAdmin(); // MODIFICATION: Call new render function
+    loadAdminTasks(); // MODIFIED: Call new function
+    renderGlobalAiPromptsAdmin();
     loadChatAutoDeleteSetting();
 }
 
@@ -245,7 +244,6 @@ function renderGlobalAiPromptsAdmin() {
         const currentGlobalValue = globalAiSystemPrompts[key] || ""; // Use empty string if undefined
         const defaultValue = DEFAULT_AI_SYSTEM_PROMPTS[key] || "No default defined.";
         
-        // Sanitize key for use in ID
         const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '-');
 
         html += `
@@ -283,12 +281,10 @@ async function handleSaveGlobalPrompts() {
         const textarea = document.getElementById(`global-prompt-${sanitizedKey}`);
         if (textarea) {
             const value = textarea.value.trim();
-            // An empty string is a valid custom prompt (means "use default" effectively, or "no specific instruction")
-            // The saveGlobalAiPrompts function in firebase_firestore.js will handle string validation.
             newGlobalPrompts[key] = value;
         } else {
             console.warn(`Textarea for prompt key ${key} not found.`);
-            allPromptsValid = false; // Should not happen if render is correct
+            allPromptsValid = false; 
         }
     });
 
@@ -302,11 +298,10 @@ async function handleSaveGlobalPrompts() {
         const success = await saveGlobalAiPrompts(newGlobalPrompts);
         hideLoading();
         if (success) {
-            setGlobalAiSystemPrompts(newGlobalPrompts); // Update local state
+            setGlobalAiSystemPrompts(newGlobalPrompts); 
             alert("Global AI System Prompts saved successfully!");
-            renderGlobalAiPromptsAdmin(); // Re-render to reflect saved state (though it should be same)
+            renderGlobalAiPromptsAdmin(); 
         } else {
-            // Error already alerted by saveGlobalAiPrompts
             console.warn("Failed to save global AI prompts (firestore function returned false or threw error handled there).");
         }
     } catch (error) {
@@ -315,7 +310,7 @@ async function handleSaveGlobalPrompts() {
         alert(`An unexpected error occurred: ${error.message}`);
     }
 }
-window.handleSaveGlobalPrompts = handleSaveGlobalPrompts;
+// window.handleSaveGlobalPrompts = handleSaveGlobalPrompts; // Already assigned at the end
 // --- END: Global AI Prompts Management UI ---
 
 
@@ -398,7 +393,7 @@ async function loadFeedbackForAdmin() {
         feedbackArea.innerHTML = `<p class="text-red-500 text-sm">Error loading feedback/issues: ${error.message}</p>`;
     }
  }
-window.loadFeedbackForAdmin = loadFeedbackForAdmin;
+// window.loadFeedbackForAdmin = loadFeedbackForAdmin; // Assigned at end
 
 export function promptAdminReply(collectionName, itemId, recipientUserId) {
     if (!currentUser || !currentUser.isAdmin) {
@@ -412,7 +407,7 @@ export function promptAdminReply(collectionName, itemId, recipientUserId) {
         alert("Reply cannot be empty.");
     }
 }
-window.promptAdminReply = promptAdminReply;
+// window.promptAdminReply = promptAdminReply; // Assigned at end
 
 async function handleAdminReply(collectionName, itemId, recipientUserId, replyText) {
      if (!currentUser || !currentUser.isAdmin) {
@@ -446,7 +441,7 @@ export function confirmDeleteItem(collectionName, itemId) {
         handleDeleteItem(collectionName, itemId);
     }
 }
-window.confirmDeleteItem = confirmDeleteItem;
+// window.confirmDeleteItem = confirmDeleteItem; // Assigned at end
 
 async function deleteDbItem(collectionName, itemId) {
     if (!db || !itemId || !collectionName) {
@@ -508,12 +503,12 @@ async function loadCoursesForAdmin() {
              const statusText = course.status === 'pending' ? 'Pending Approval' : 'Reported';
              const creatorName = escapeHtml(course.creatorName || 'Unknown');
              const isPrimaryAdminCreator = course.creatorUid === ADMIN_UID;
-             const creatorIsAssignedAdmin = course.creatorIsAdmin === true && course.creatorUid !== ADMIN_UID;
+             const creatorIsAssignedAdmin = course.creatorIsAdmin === true && course.creatorUid !== ADMIN_UID; // Note: course.creatorIsAdmin might not exist
 
              let adminIconHtml = '';
              if (isPrimaryAdminCreator) {
                 adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Primary Admin"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
-             } else if (creatorIsAssignedAdmin) {
+             } else if (creatorIsAssignedAdmin) { // This relies on a field that might not be consistently set.
                 adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Assigned Admin"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>`;
              }
              const courseName = escapeHtml(course.name || 'Unnamed Course');
@@ -555,7 +550,7 @@ async function loadCoursesForAdmin() {
          }
      }
  }
-window.loadCoursesForAdmin = loadCoursesForAdmin;
+// window.loadCoursesForAdmin = loadCoursesForAdmin; // Assigned at end
 
 // --- User Course Management ---
 export async function loadUserCoursesForAdmin() {
@@ -615,7 +610,7 @@ export async function loadUserCoursesForAdmin() {
         userCoursesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
     }
 }
-window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
+// window.loadUserCoursesForAdmin = loadUserCoursesForAdmin; // Assigned at end
 
 export async function handleAdminMarkCourseComplete(userId, courseId) {
      const courseName = globalCourseDataMap.get(courseId)?.name || courseId;
@@ -653,7 +648,7 @@ export async function handleAdminMarkCourseComplete(userId, courseId) {
          }
      }
 }
-window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
+// window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete; // Assigned at end
 
 // --- User Badge Management ---
 async function findUserId(searchTerm) {
@@ -740,7 +735,7 @@ export async function loadUserBadgesForAdmin() {
         badgesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
     }
 }
-window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
+// window.loadUserBadgesForAdmin = loadUserBadgesForAdmin; // Assigned at end
 
 export function promptAddBadge(userId) {
      if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
@@ -761,7 +756,7 @@ export function promptAddBadge(userId) {
      }
      handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate);
 }
-window.promptAddBadge = promptAddBadge;
+// window.promptAddBadge = promptAddBadge; // Assigned at end
 
 export function confirmRemoveBadge(userId, courseId) {
      if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
@@ -769,7 +764,7 @@ export function confirmRemoveBadge(userId, courseId) {
          handleRemoveBadgeForUser(userId, courseId);
      }
 }
-window.confirmRemoveBadge = confirmRemoveBadge;
+// window.confirmRemoveBadge = confirmRemoveBadge; // Assigned at end
 
 
 // MODIFIED: User Subject Management
@@ -869,7 +864,7 @@ export async function loadUserSubjectsForAdmin() {
         currentManagingUserIdForSubjects = null;
     }
 }
-window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
+// window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; // Assigned at end
 
 export async function handleAdminSubjectApproval(targetUserId, subjectId, newStatus) {
     if (!currentUser || !currentUser.isAdmin || !targetUserId || !subjectId || !newStatus) {
@@ -881,22 +876,31 @@ export async function handleAdminSubjectApproval(targetUserId, subjectId, newSta
         return;
     }
 
-    const subjectNameElement = document.querySelector(`#admin-user-subjects-area li div.flex-grow span.font-medium`);
-    const subjectName = subjectNameElement ? subjectNameElement.textContent : `Subject ID ${subjectId}`;
+    const subjectNameElement = document.querySelector(`#admin-user-subjects-area li div.flex-grow span.font-medium`); // This might be too generic
+    // To be safer, find the specific LI for that subjectId if possible, or use subjectId directly.
+    // For now, let's assume there might be only one or the first one matches, or use the ID.
+    let subjectNameForAlert = `Subject ID ${subjectId}`;
+    const subjectLi = Array.from(document.querySelectorAll('#admin-user-subjects-area li button[onclick*="handleAdminSubjectApproval"]'))
+                        .find(btn => btn.getAttribute('onclick').includes(`'${targetUserId}', '${subjectId}'`))
+                        ?.closest('li');
+    if (subjectLi) {
+        const nameEl = subjectLi.querySelector('span.font-medium');
+        if (nameEl) subjectNameForAlert = nameEl.textContent;
+    }
+
 
     const action = newStatus === 'approved' ? 'approve' : (newStatus === 'rejected' ? 'reject' : 'update');
 
-    if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subjectName)}" for this user?`)) {
+    if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subjectNameForAlert)}" for this user?`)) {
         showLoading("Updating subject status...");
         try {
-            // Pass the current admin's UID (currentUser.uid)
             const success = await adminUpdateUserSubjectStatus(currentUser.uid, targetUserId, subjectId, newStatus);
             hideLoading();
             if (success) {
-                alert(`Subject "${escapeHtml(subjectName)}" has been ${newStatus}.`);
+                alert(`Subject "${escapeHtml(subjectNameForAlert)}" has been ${newStatus}.`);
                 loadUserSubjectsForAdmin(); // Refresh the list for the current user
             } else {
-                alert(`Failed to update subject status.`);
+                alert(`Failed to update subject status.`); // Firestore function should alert more specific errors
             }
         } catch (error) {
             hideLoading();
@@ -905,14 +909,15 @@ export async function handleAdminSubjectApproval(targetUserId, subjectId, newSta
         }
     }
 }
-window.handleAdminSubjectApproval = handleAdminSubjectApproval;
+// window.handleAdminSubjectApproval = handleAdminSubjectApproval; // Assigned at end
 
 
-// --- Admin Tasks Management ---
+// --- Admin Tasks Management (NEW) ---
 async function loadAdminTasks() {
     const tasksArea = document.getElementById('admin-tasks-area');
     if (!tasksArea) return;
     tasksArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
+    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
 
     try {
         const tasks = await fetchAdminTasks();
@@ -929,6 +934,13 @@ async function loadAdminTasks() {
             const isDone = task.status === 'done';
             const dateStr = task.createdAt ? task.createdAt.toLocaleDateString() : 'N/A';
             const statusClass = isDone ? 'bg-green-100 dark:bg-green-900/50 line-through text-muted' : 'bg-yellow-50 dark:bg-yellow-900/50';
+            
+            const toggleButtonTitle = isDone ? 'Mark as Pending' : 'Mark as Done';
+            const toggleButtonDisabled = !isPrimaryAdmin ? 'disabled title="Only Primary Admin can change status"' : `title="${toggleButtonTitle}"`;
+            const deleteButtonDisabled = !isPrimaryAdmin || !isDone ? 'disabled' : '';
+            const deleteButtonTitle = !isPrimaryAdmin ? "Only Primary Admin can delete tasks" : (!isDone ? "Task must be 'done' to delete" : "Delete Task");
+
+
             const buttonIcon = isDone ?
                 '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>' :
                 '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
@@ -937,17 +949,17 @@ async function loadAdminTasks() {
                 <li class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 ${statusClass}">
                     <button
                         onclick="window.handleToggleAdminTask('${taskId}', ${isDone})"
-                        class="btn-icon flex-shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        title="${isDone ? 'Mark as Pending' : 'Mark as Done'}">
+                        class="btn-icon flex-shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${!isPrimaryAdmin ? 'cursor-not-allowed opacity-50' : ''}"
+                        ${toggleButtonDisabled}>
                         ${buttonIcon}
                     </button>
                     <span class="text-sm flex-grow ${isDone ? 'opacity-70' : ''}">${taskText}</span>
                     <span class="text-xs text-muted flex-shrink-0 pr-2">${dateStr}</span>
                     <button
                         onclick="window.handleDeleteAdminTask('${taskId}')"
-                        class="btn-danger-small text-xs flex-shrink-0 ${!isDone ? 'opacity-50 cursor-not-allowed' : ''}"
-                        title="Delete Task (only if done)"
-                        ${!isDone ? 'disabled' : ''}>
+                        class="btn-danger-small text-xs flex-shrink-0 ${(!isPrimaryAdmin || !isDone) ? 'opacity-50 cursor-not-allowed' : ''}"
+                        title="${deleteButtonTitle}"
+                        ${deleteButtonDisabled}>
                         Delete
                     </button>
                 </li>
@@ -963,6 +975,10 @@ async function loadAdminTasks() {
 }
 
 async function handleAddAdminTask() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Permission Denied: Only the Primary Admin can add tasks.");
+        return;
+    }
     const input = document.getElementById('admin-new-task-input');
     if (!input) return;
     const taskText = input.value.trim();
@@ -973,35 +989,57 @@ async function handleAddAdminTask() {
     }
 
     showLoading("Adding task...");
-    const newTaskId = await addAdminTask(taskText);
-    hideLoading();
-
-    if (newTaskId) {
-        input.value = '';
-        loadAdminTasks();
+    try {
+        const newTaskId = await addAdminTask(taskText);
+        if (newTaskId) {
+            input.value = '';
+            loadAdminTasks();
+        }
+    } catch (error) { // Errors from addAdminTask (e.g. permission) are already alerted there
+        console.error("Error in handleAddAdminTask UI:", error);
+    } finally {
+        hideLoading();
     }
 }
 
 async function handleToggleAdminTask(taskId, isCurrentlyDone) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Permission Denied: Only the Primary Admin can change task status.");
+        return;
+    }
     const newStatus = isCurrentlyDone ? 'pending' : 'done';
     showLoading(`Updating task status to ${newStatus}...`);
-    const success = await updateAdminTaskStatus(taskId, newStatus);
-    hideLoading();
-    if (success) {
-        loadAdminTasks();
+    try {
+        const success = await updateAdminTaskStatus(taskId, newStatus);
+        if (success) {
+            loadAdminTasks();
+        }
+    } catch (error) { // Errors from updateAdminTaskStatus are already alerted there
+        console.error("Error in handleToggleAdminTask UI:", error);
+    } finally {
+        hideLoading();
     }
 }
 
 async function handleDeleteAdminTask(taskId) {
-    if (!confirm(`Are you sure you want to delete this completed task (ID: ${taskId})?`)) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Permission Denied: Only the Primary Admin can delete tasks.");
+        return;
+    }
+    if (!confirm(`Are you sure you want to delete this completed task (ID: ${taskId})? This action requires the task to be 'done'.`)) {
         return;
     }
 
     showLoading("Deleting task...");
-    const success = await deleteAdminTask(taskId);
-    hideLoading();
-    if (success) {
-        loadAdminTasks();
+    try {
+        const success = await deleteAdminTask(taskId);
+        if (success) {
+            loadAdminTasks();
+        }
+    } catch (error) { // Errors from deleteAdminTask are already alerted there
+        console.error("Error in handleDeleteAdminTask UI:", error);
+    } finally {
+        hideLoading();
     }
 }
 
@@ -1137,7 +1175,7 @@ async function loadPlaylistForAdmin() {
          actionArea.classList.remove('hidden');
     }
 }
-window.loadPlaylistForAdmin = loadPlaylistForAdmin;
+// window.loadPlaylistForAdmin = loadPlaylistForAdmin; // Assigned at end
 
 function renderPlaylistVideos(videos, container) {
      let videosHtml = `
@@ -1175,7 +1213,7 @@ function toggleSelectAllVideos(select) {
     });
     updateSelectedVideoCount();
 }
-window.toggleSelectAllVideos = toggleSelectAllVideos;
+// window.toggleSelectAllVideos = toggleSelectAllVideos; // Assigned at end
 
 
 function toggleVideoSelection(listItem, videoId, videoTitle) {
@@ -1191,7 +1229,7 @@ function toggleVideoSelection(listItem, videoId, videoTitle) {
 
      updateSelectedVideoCount();
 }
-window.toggleVideoSelection = toggleVideoSelection;
+// window.toggleVideoSelection = toggleVideoSelection; // Assigned at end
 
 function updateSelectionState(videoId, videoTitle, isSelected) {
      const index = selectedVideosForAssignment.findIndex(v => v.videoId === videoId);
@@ -1288,7 +1326,7 @@ async function handleAssignVideoToChapter() {
           alert(`Failed to assign videos: ${error.message}`);
      }
 }
-window.handleAssignVideoToChapter = handleAssignVideoToChapter;
+// window.handleAssignVideoToChapter = handleAssignVideoToChapter; // Assigned at end
 
 async function handleUnassignVideoFromChapter() {
      if (selectedVideosForAssignment.length === 0 || !currentLoadedPlaylistCourseId) {
@@ -1364,7 +1402,7 @@ async function handleUnassignVideoFromChapter() {
           alert(`Failed to unassign videos: ${error.message}`);
      }
 }
-window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
+// window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter; // Assigned at end
 
 
 async function handleDeleteUserFormulaSheetAdmin() {
@@ -1463,8 +1501,8 @@ async function handleDeleteUserChapterSummaryAdmin() {
 }
 
 // Add new functions to window scope
-window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin;
-window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin;
+// window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin; // Assigned at end
+// window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin; // Assigned at end
 
 // --- NEW: Delete All Feedback ---
 export function confirmDeleteAllFeedback() {
@@ -1477,7 +1515,7 @@ export function confirmDeleteAllFeedback() {
         handleDeleteAllFeedback();
     }
 }
-window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
+// window.confirmDeleteAllFeedback = confirmDeleteAllFeedback; // Assigned at end
 
 async function handleDeleteAllFeedback() {
     if (!currentUser || !currentUser.isAdmin) return;
@@ -1586,7 +1624,7 @@ async function listAllUsersAdmin() {
          }
     }
 }
-window.listAllUsersAdmin = listAllUsersAdmin;
+// window.listAllUsersAdmin = listAllUsersAdmin; // Assigned at end
 
 async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
@@ -1625,7 +1663,7 @@ async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
         }
     }
 }
-window.handleToggleAdminStatus = handleToggleAdminStatus;
+// window.handleToggleAdminStatus = handleToggleAdminStatus; // Assigned at end
 
 
 async function viewUserDetailsAdmin(userId) {
@@ -1836,7 +1874,7 @@ async function viewUserDetailsAdmin(userId) {
         alert(`Failed to load user details: ${error.message}`);
     }
 }
-window.viewUserDetailsAdmin = viewUserDetailsAdmin;
+// window.viewUserDetailsAdmin = viewUserDetailsAdmin; // Assigned at end
 
 function promptAdminChangeUsername(userId, currentUsername) {
     if (!currentUser || !currentUser.isAdmin) { 
@@ -1868,7 +1906,7 @@ function promptAdminChangeUsername(userId, currentUsername) {
 
     handleAdminChangeUsername(userId, currentUsername, trimmedUsername);
 }
-window.promptAdminChangeUsername = promptAdminChangeUsername;
+// window.promptAdminChangeUsername = promptAdminChangeUsername; // Assigned at end
 
 async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
     showLoading("Updating username...");
@@ -1889,6 +1927,8 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
              }
         } else {
             hideLoading();
+            // adminUpdateUsername should throw specific errors that are caught and alerted by it
+            // or here if it returns false without throwing.
             alert("An unexpected issue occurred while updating the username.");
         }
     } catch (error) {
@@ -1978,7 +2018,7 @@ export async function saveChatAutoDeleteSetting() {
         alert(`Failed to save setting: ${error.message}`);
     }
 }
-window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
+// window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting; // Assigned at end
 
 
 // --- Assign ALL handlers to window scope ---
@@ -2009,12 +2049,13 @@ window.showCourseDetails = showCourseDetails;
 window.showEditCourseForm = showEditCourseForm;
 window.showBrowseCourses = showBrowseCourses;
 window.showAddCourseForm = showAddCourseForm;
-window.handleAddAdminTask = handleAddAdminTask;
-window.handleToggleAdminTask = handleToggleAdminTask;
-window.handleDeleteAdminTask = handleDeleteAdminTask;
+window.handleAddAdminTask = handleAddAdminTask; // MODIFIED: Add new handler
+window.handleToggleAdminTask = handleToggleAdminTask; // MODIFIED: Add new handler
+window.handleDeleteAdminTask = handleDeleteAdminTask; // MODIFIED: Add new handler
+window.loadAdminTasks = loadAdminTasks; // This is typically called internally, but added if required by prompt explicitly
 window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; 
 window.handleAdminSubjectApproval = handleAdminSubjectApproval; 
-window.handleSaveGlobalPrompts = handleSaveGlobalPrompts; // MODIFICATION: Add new handler
+window.handleSaveGlobalPrompts = handleSaveGlobalPrompts;
 
 // --- END OF FILE ui_admin_dashboard.js ---
