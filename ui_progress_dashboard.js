@@ -99,29 +99,28 @@ export function closeDashboard() {
 
 // Separate function to handle chart rendering
 export function renderCharts() {
-     // *** MODIFICATION: Added logging and re-read state at the start ***
-     console.log("[RenderCharts] Attempting to render charts. Current subject ID:", currentSubject?.id);
-     // Explicitly read currentSubject from state *inside* the function
+     // --- ADDED LOGS --- (and explicit state reading as per instruction)
+     console.log("[RenderCharts] Attempting to render charts. Current subject ID (from module scope):", currentSubject?.id);
+     // Explicitly read currentSubject from state *inside* the function scope
      const activeSubject = currentSubject;
      if (!activeSubject) {
-         console.warn("[RenderCharts] Cannot render charts, currentSubject is null or undefined.");
+         console.warn("[RenderCharts] Cannot render charts, activeSubject (read from currentSubject) is null or undefined.");
          const dashboardContentEl = document.getElementById('dashboard-content');
          if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject data is not available for charts.</p>';
          return;
      }
      try {
-         const subjectStateSnippet = JSON.stringify(activeSubject, (key, value) => typeof value === 'bigint' ? value.toString() : value);
-         console.log("[RenderCharts] Data state being read for charts:", subjectStateSnippet.substring(0, 500) + (subjectStateSnippet.length > 500 ? '...' : ''));
-     } catch(e) { console.warn("[RenderCharts] Could not stringify subject data for logging."); }
+         const subjectStateSnippet = JSON.stringify(activeSubject, (key, value) => typeof value === 'bigint' ? value.toString() : value); // Handle BigInt if any
+         console.log("[RenderCharts] Data state being read for charts (activeSubject):", subjectStateSnippet.substring(0, 500) + (subjectStateSnippet.length > 500 ? '...' : ''));
+     } catch(e) { console.warn("[RenderCharts] Could not stringify activeSubject data for logging."); }
 
-     // Check again if subject and chapters exist before rendering
-     if (!activeSubject.chapters) {
-         console.warn("[RenderCharts] Cannot render charts, subject.chapters data missing.");
-         const dashboardContentEl = document.getElementById('dashboard-content');
-         if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject chapter data is not available for charts.</p>';
-         return;
-     }
-     // *** END MODIFICATION ***
+      if (!activeSubject.chapters) {
+          console.warn("[RenderCharts] Cannot render charts, activeSubject.chapters data missing.");
+          const dashboardContentEl = document.getElementById('dashboard-content');
+          if (dashboardContentEl) dashboardContentEl.innerHTML = '<p class="text-center p-4 text-gray-500">Subject chapter data is not available for charts.</p>';
+          return;
+      }
+     // --- END ADDED LOGS ---
 
     const chapters = activeSubject.chapters; // Use the locally captured activeSubject
     // Filter and sort chapters that have questions
@@ -158,7 +157,7 @@ export function renderCharts() {
         const difficulty = chapterNumbers.map(num => calculateDifficulty(chapters[num])); // calculateDifficulty should handle potential undefined input
         const labels = chapterNumbers.map(num => `Ch ${num}`); // Labels for X-axis
 
-        // Log prepared data arrays for verification
+        // --- ADDED LOGS ---
         console.log("[RenderCharts] Data for charts:", { labels, attempted, wrong, mastery, difficulty });
 
         // Chart configuration based on theme
@@ -212,7 +211,7 @@ export function renderCharts() {
         // --- MODIFICATION: Check context before creating chart ---
         // Create Attempted Chart
         if (attemptedCtx) {
-            console.log("[RenderCharts] Creating Attempted Chart");
+            console.log("[RenderCharts] Creating Attempted Chart"); // --- ADDED LOG ---
             newCharts.attemptedChart = new Chart(attemptedCtx, {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Attempted', data: attempted, backgroundColor: 'rgba(59, 130, 246, 0.7)', borderColor: 'rgb(59, 130, 246)', borderWidth: 1 }] },
@@ -224,7 +223,7 @@ export function renderCharts() {
 
         // Create Wrong Chart
         if (wrongCtx) {
-            console.log("[RenderCharts] Creating Wrong Chart");
+            console.log("[RenderCharts] Creating Wrong Chart"); // --- ADDED LOG ---
             newCharts.wrongChart = new Chart(wrongCtx, {
                 type: 'bar',
                 data: { labels: labels, datasets: [{ label: 'Wrong', data: wrong, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderColor: 'rgb(239, 68, 68)', borderWidth: 1 }] },
@@ -236,7 +235,7 @@ export function renderCharts() {
 
         // Create Mastery Chart
         if (masteryCtx) {
-             console.log("[RenderCharts] Creating Mastery Chart");
+             console.log("[RenderCharts] Creating Mastery Chart"); // --- ADDED LOG ---
             // Suggest a max Y-axis value for mastery (e.g., slightly above typical mastery goal)
             const masteryOptions = commonOptions();
             const maxMasteryValue = mastery.length > 0 ? Math.max(7, ...mastery) : 7; // Default max suggestion
@@ -252,7 +251,7 @@ export function renderCharts() {
 
         // Create Difficulty Chart (with color coding)
          if (difficultyCtx) {
-            console.log("[RenderCharts] Creating Difficulty Chart");
+            console.log("[RenderCharts] Creating Difficulty Chart"); // --- ADDED LOG ---
             const difficultyOptions = commonOptions();
              difficultyOptions.scales.y.max = 150; // Set explicit max for difficulty scale
              difficultyOptions.scales.y.ticks.callback = function(value) { return value + '%'; }; // Add '%' to Y-axis ticks
@@ -285,6 +284,7 @@ export function renderCharts() {
          console.log("[RenderCharts] Charts rendered successfully.");
 
     } catch (error) {
+        // --- ADDED LOG ---
         console.error("[RenderCharts] Error rendering charts:", error);
          const dashboardContentEl = document.getElementById('dashboard-content');
           // --- MODIFICATION: Check element existence in catch block ---

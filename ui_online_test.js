@@ -1,5 +1,9 @@
 // --- START OF FILE ui_online_test.js ---
 
+// --- START OF FILE ui_online_test.js ---
+
+// --- START OF FILE ui_online_test.js ---
+
 import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js'; // Added globalCourseDataMap and updateUserCourseProgress
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
 import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js'; // Added escapeHtml and getFormattedDate
@@ -193,7 +197,7 @@ export async function displayCurrentQuestion() {
     let answerAreaHtml = '';
 
     if (question.isProblem) {
-         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
+         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || ''; // Assuming problem answers are also stored as strings or compatible types
          answerAreaHtml = `
          <div class="mt-4">
              <label for="problem-answer-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Answer / Solution Steps:</label>
@@ -205,12 +209,12 @@ export async function displayCurrentQuestion() {
          </div>`;
     } else { // MCQ
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
-             // Retrieve stored answer as string, ensuring questionId is also treated as string for lookup
-             const storedAnswer = String(currentOnlineTestState.userAnswers[questionId] ?? '');
+             // FIX: Retrieve stored answer as string, ensuring questionId is also treated as string for lookup
+             const storedAnswer = String(currentOnlineTestState.userAnswers[String(questionId)] ?? ''); // Ensure lookup key is string, default to empty string if undefined/null
              
-             // Compare as strings for isChecked
-             const optLetterStr = String(opt.letter);
-             const isChecked = storedAnswer === optLetterStr;
+             // FIX: Compare as strings for isChecked
+             const optLetterStr = String(opt.letter); // Ensure option letter is string
+             const isChecked = storedAnswer === optLetterStr; // Strict comparison of strings
              
              // Logging inside the loop
              console.log(`[DisplayQuestion] QID: ${questionId} | Option: ${optLetterStr} | Stored: ${storedAnswer} | Checked: ${isChecked}`);
@@ -263,16 +267,16 @@ export function navigateQuestion(direction) {
 
 export function recordAnswer(questionId, answer) {
     // MODIFICATION: Log questionId and answer
-    console.log('[RecordAnswer] QID:', questionId, 'Answer:', answer, 'Type:', typeof answer);
+    console.log('[RecordAnswer] QID (raw):', questionId, 'Answer (raw):', answer, 'Type (raw):', typeof answer);
     if (!currentOnlineTestState) return;
 
-    // Ensure both questionId (as key) and answer (as value) are stored as strings
+    // FIX: Ensure both questionId (as key) and answer (as value) are stored as strings
     const qIdStr = String(questionId);
     const ansStr = String(answer);
 
     currentOnlineTestState.userAnswers[qIdStr] = ansStr;
-    console.log(`[RecordAnswer] Stored answer for ${qIdStr}: ${ansStr} (Type: ${typeof ansStr})`);
     // Add log statement *after* updating the state to confirm the stored value and its type
+    console.log(`[RecordAnswer] Stored answer for ${qIdStr}: '${ansStr}' (Type: ${typeof ansStr})`);
     console.log('[RecordAnswer] Updated userAnswers:', JSON.stringify(currentOnlineTestState.userAnswers));
 }
 

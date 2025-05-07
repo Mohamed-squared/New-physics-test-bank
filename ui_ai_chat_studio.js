@@ -1,7 +1,5 @@
 // --- START OF FILE ui_ai_chat_studio.js ---
 
-// --- START OF FILE ui_ai_chat_studio.js ---
-
 import { currentUser, db, userAiChatSettings, globalAiSystemPrompts } from './state.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
@@ -443,7 +441,7 @@ async function handleSendMessage() {
     inputElement.value = '';
     autoResizeTextarea({target: inputElement});
 
-    showLoading("Lyra is thinking..."); // This is before callGeminiTextAPI
+    showLoading("Lyra is thinking..."); // MODIFIED: Added loading indicator
     let errorOccurred = false;
 
     try {
@@ -478,7 +476,7 @@ async function handleSendMessage() {
                 alert("There was an issue calling the AI, and the chat session with the error might not have been saved.");
             }
         }
-        hideLoading(); // This is in the finally block
+        hideLoading(); // MODIFIED: Already in finally, ensures it's called
         inputElement.disabled = false;
         if(sendButton) sendButton.disabled = false;
         inputElement.focus();

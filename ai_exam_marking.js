@@ -90,6 +90,8 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `3. Be **generous** with partial marks. Award credit for correct formulas, partial steps, correct reasoning, or demonstrating understanding, even if the final answer is incorrect or incomplete.\n`;
         prompt += `4. Provide specific, constructive feedback explaining the score, highlighting both correct aspects and errors/misconceptions.\n`;
         prompt += `5. List key points (correct steps/concepts identified) and specific areas for improvement.\n\n`;
+        
+        // --- MODIFICATION START: Detailed Improvement Suggestions ---
         prompt += `**For Improvement Suggestions:**\n`;
         prompt += `1. Carefully analyze the student's specific approach, calculations, and reasoning in their provided answer. Do not just compare the final result.\n`;
         prompt += `2. Identify the *root cause* of any errors (e.g., conceptual misunderstanding, calculation mistake, incorrect formula application, faulty reasoning step, misunderstanding the question).\n`;
@@ -101,6 +103,8 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `   - "Ensure all units are consistent before performing calculations."\n`;
         prompt += `5. Explain *why* their approach was incorrect in relation to the specific error.\n`;
         prompt += `6. If possible, suggest a specific problem-solving strategy or a way to verify their answer that would help prevent this type of error in the future.\n\n`;
+        // --- MODIFICATION END: Detailed Improvement Suggestions ---
+
         prompt += `**Output Format:** Provide your response ONLY in this strict JSON format:\n`;
         prompt += `{\n`;
         prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
@@ -150,12 +154,12 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
  * @returns {Promise<object>} - A promise resolving to the full marking results.
  */
 export async function markFullExam(examData) {
-    showLoading("AI is marking your exam..."); // Already correctly placed
+    showLoading("AI is marking your exam..."); 
     const results = {
         totalScore: 0,
         maxPossibleScore: 0,
-        questionResults: [], // Stores result for each question (score, feedback, etc.)
-        overallFeedback: null, // Initialize as null
+        questionResults: [], 
+        overallFeedback: null, 
         timestamp: Date.now()
     };
     const defaultOverallFeedback = {
@@ -165,33 +169,31 @@ export async function markFullExam(examData) {
         study_recommendations: []
     };
     let overallResponse = null;
-    let cleanedResponse = ''; // Define here for access in catch block
+    let cleanedResponse = ''; 
 
     try {
         console.log(`Marking full exam: ${examData.examId}, Questions: ${examData.questions?.length}`);
 
         if (examData.questions && examData.questions.length > 0) {
-            const markingPromises = []; // Store promises for AI marking
+            const markingPromises = []; 
 
             for (let i = 0; i < examData.questions.length; i++) {
                  const question = examData.questions[i];
-                 if (!question.id) { question.id = `q-${i+1}`; } // Ensure ID exists
+                 if (!question.id) { question.id = `q-${i+1}`; } 
 
                  const studentAnswer = examData.userAnswers?.[question.id];
                  const isProblem = question.isProblem || !question.options || question.options.length === 0;
-                 const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ; // Use constants
-                 results.maxPossibleScore += maxMarks; // Add to max possible score
+                 const maxMarks = isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ; 
+                 results.maxPossibleScore += maxMarks; 
 
                  if (isProblem) {
-                     // Add promise for AI marking
                      console.log(`Marking Problem Q${i+1} (ID: ${question.id}) with AI. Answer: "${studentAnswer?.substring(0, 50)}..."`);
                      markingPromises.push(
                          markProblemAnswer(question, studentAnswer, maxMarks)
                              .then(result => ({ index: i, result: result, isProblem: true }))
-                             .catch(error => ({ index: i, error: error, isProblem: true })) // Catch errors per promise
+                             .catch(error => ({ index: i, error: error, isProblem: true })) 
                      );
                  } else {
-                     // Score MCQs deterministically immediately
                      console.log(`Scoring MCQ Q${i+1} (ID: ${question.id}). Answer: "${studentAnswer}", Correct: "${question.correctAnswer}"`);
                      const correctAnswerStr = String(question.correctAnswer ?? '').trim().toUpperCase();
                      const studentAnswerStr = String(studentAnswer ?? '').trim().toUpperCase();
@@ -234,7 +236,7 @@ export async function markFullExam(examData) {
                           };
                            console.log(`Result for Problem Q${index+1}: Score=${scoreToAdd}/${MAX_MARKS_PER_PROBLEM}`);
                       } else {
-                          const failedIndex = markingPromises[promiseIndex]?.index ?? -1;
+                          const failedIndex = markingPromises[promiseIndex]?.index ?? -1; // Attempt to get index from original promise if available
                           const reason = settled.reason;
                           if (failedIndex !== -1 && examData.questions[failedIndex]) {
                                 console.error(`AI Marking Error for Q${failedIndex + 1}:`, reason);
@@ -257,7 +259,6 @@ export async function markFullExam(examData) {
         }
 
         if (results.questionResults.length > 0 && results.maxPossibleScore > 0) {
-            // *** MODIFIED: Construct detailed summary ***
             let detailedSummary = "";
             examData.questions.forEach((q, index) => {
                 const result = results.questionResults.find(r => r.questionId === q.id);
@@ -275,26 +276,27 @@ export async function markFullExam(examData) {
                 detailedSummary += `Feedback Snippet: ${result?.feedback?.substring(0,100) || 'N/A'}...\n`;
             });
 
+            // --- MODIFICATION START: Updated overallPrompt ---
             const overallPrompt = `You are an expert examiner providing summative feedback on a physics/mathematics exam. The student achieved ${results.totalScore}/${results.maxPossibleScore} (${results.maxPossibleScore > 0 ? ((results.totalScore / results.maxPossibleScore) * 100).toFixed(1) : 0}%).
 
 Analyze the student's performance based *specifically* on the following questions, their answers, and the marking:
 ${detailedSummary}
 ---
-Provide constructive, material-based overall feedback. Focus on patterns of errors related to specific concepts or topics covered in the questions.
+Provide constructive, material-based overall feedback. Focus on patterns of errors related to specific concepts or topics covered in the questions. Identify recurring mistakes if any.
 
 Respond ONLY in this strict JSON format:
 {
-    "overall_feedback": "[Provide a concise (2-4 sentences) overall assessment, mentioning score range and core performance observations based *on the material*.]",
-    "strengths": ["[List 2-3 specific concepts or topics the student demonstrated understanding of, referencing specific question numbers if possible.]"],
-    "weaknesses": ["[List 2-3 specific concepts or topics where the student struggled, referencing specific question numbers or error patterns.]"],
-    "study_recommendations": ["[Provide 2-3 actionable study recommendations *directly related* to the identified weaknesses and the material covered in the exam questions.]"]
+    "overall_feedback": "[Provide a concise (2-4 sentences) overall assessment, mentioning score range and core performance observations based *on the material and observed error patterns*.]",
+    "strengths": ["[List 2-3 specific concepts or topics the student demonstrated understanding of, referencing specific question numbers or types if possible.]"],
+    "weaknesses": ["[List 2-3 specific concepts or topics where the student struggled *most consistently*, referencing specific question numbers or error patterns.]"],
+    "study_recommendations": ["[Provide 2-3 actionable study recommendations *directly related* to the identified weaknesses and the specific material covered in the exam questions.]"]
 }`;
+            // --- MODIFICATION END: Updated overallPrompt ---
 
-            // *** MODIFIED: Check token limit before API call ***
             if (!await tokenLimitCheck(overallPrompt)) {
                  console.warn("Overall feedback prompt exceeds token limit. Generating generic feedback.");
                  results.overallFeedback = { ...defaultOverallFeedback, overall_feedback: "Overall feedback could not be generated due to content length limits." };
-                 overallResponse = null; // Ensure no API call happens
+                 overallResponse = null; 
             } else {
                 console.log("Generating overall feedback with detailed context...");
                 overallResponse = await callGeminiTextAPI(overallPrompt);
@@ -321,7 +323,7 @@ Respond ONLY in this strict JSON format:
                       results.overallFeedback = { ...defaultOverallFeedback };
                       results.overallFeedback.overall_feedback = `Error processing overall feedback. ${parseOrApiError.message || 'Unknown error'}. Raw AI Response: ${escapeHtml(overallResponse || 'No response received from API')}`;
                  }
-             } else if (!results.overallFeedback) {
+             } else if (!results.overallFeedback) { 
                   results.overallFeedback = { ...defaultOverallFeedback, overall_feedback: "Overall feedback could not be generated due to content length limits." };
              }
         } else {
@@ -334,7 +336,7 @@ Respond ONLY in this strict JSON format:
         results.overallFeedback = { ...defaultOverallFeedback };
         results.overallFeedback.overall_feedback = `An error occurred during marking: ${error?.message || String(error)}`;
     } finally {
-        hideLoading(); // Already correctly placed
+        hideLoading(); 
     }
 
     results.questionResults = results.questionResults.map((r, i) => {
@@ -396,7 +398,7 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
 
     const currentHistory = [...history, { role: "user", parts: [{ text: currentPromptText }] }];
 
-    showLoading("Generating AI explanation..."); // MODIFICATION: Added showLoading
+    showLoading("Generating AI explanation...");
     try {
         const explanationText = await callGeminiTextAPI(null, currentHistory);
         const updatedHistory = [...currentHistory, { role: "model", parts: [{ text: explanationText }] }];
@@ -411,8 +413,8 @@ export async function generateExplanation(question, correctAnswer, studentAnswer
             explanationHtml: `<p class="text-danger">Error generating explanation: ${error.message}</p>`,
             history: currentHistory
         };
-    } finally { // MODIFICATION: Added finally block
-        hideLoading(); // MODIFICATION: Added hideLoading
+    } finally { 
+        hideLoading(); 
     }
 }
 

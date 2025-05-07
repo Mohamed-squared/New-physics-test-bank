@@ -376,11 +376,11 @@ export async function showExamReviewUI(userId, examId) {
                         <!-- Action Buttons -->
                         <div class="mt-3 text-right space-x-2">
                             <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                                 Explain (AI)
                              </button>
                             <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 Report Issue
                             </button>
                         </div>
@@ -772,7 +772,7 @@ export async function deleteCompletedExamV2(examId) {
         let statsWrongUpdatedCount = 0;
 
         // --- START: Update local data.subjects stats for TestGen exams ---
-        // Check if it's a TestGen exam (no courseId), subjectId exists, and relevant local data exists
+        console.log(`[DeleteExam] Before stats update - Subject ${examData.subjectId} Chapters state (available):`, JSON.parse(JSON.stringify(data?.subjects?.[examData.subjectId]?.chapters || {})));
         if (!examData.courseId && examData.subjectId && data?.subjects?.[examData.subjectId]?.chapters) {
             const subjectToUpdate = data.subjects[examData.subjectId];
             console.log(`[DeleteExam] Attempting to update stats for Subject '${subjectToUpdate.name}' (ID: ${examData.subjectId})`);
@@ -780,9 +780,8 @@ export async function deleteCompletedExamV2(examId) {
             if (examData.questions && examData.markingResults?.questionResults) {
                 console.log(`[DeleteExam] Processing ${examData.questions.length} questions from the deleted exam.`);
                 examData.questions.forEach((q, index) => {
-                    // Process only MCQs for stats and available questions
                     if (!q.isProblem && q.chapter && q.number && q.id) {
-                        const chapNumStr = String(q.chapter); // Ensure chapter key is a string
+                        const chapNumStr = String(q.chapter);
                         const chap = subjectToUpdate.chapters[chapNumStr];
                         const qNum = parseInt(q.number);
 
@@ -790,46 +789,39 @@ export async function deleteCompletedExamV2(examId) {
                             const originalAttempted = chap.total_attempted;
                             const originalWrong = chap.total_wrong;
 
-                            // Decrement total_attempted if it's a positive number
                             if (typeof chap.total_attempted === 'number' && chap.total_attempted > 0) {
                                 chap.total_attempted--;
                                 console.log(`[DeleteExam] Ch ${chapNumStr}: Decremented total_attempted (Before: ${originalAttempted}, After: ${chap.total_attempted})`);
                                 appDataModified = true;
                                 statsAttemptedUpdatedCount++;
                             } else if (chap.total_attempted === undefined || chap.total_attempted === null || isNaN(chap.total_attempted)) {
-                                // If invalid, set to 0 (though this shouldn't happen with prior validation)
                                 chap.total_attempted = 0;
                                 console.warn(`[DeleteExam] Ch ${chapNumStr}: Reset invalid total_attempted to 0.`);
                                 appDataModified = true;
                             }
 
-                            // Find the marking result for this question
                             const result = examData.markingResults.questionResults.find(r => r.questionId === q.id);
-                            // Decrement total_wrong if it's a positive number AND the question was marked wrong (score <= 0)
                             if (result && result.score <= 0 && typeof chap.total_wrong === 'number' && chap.total_wrong > 0) {
                                 chap.total_wrong--;
                                 console.log(`[DeleteExam] Ch ${chapNumStr}: Decremented total_wrong (Before: ${originalWrong}, After: ${chap.total_wrong}) because question ${q.id} was wrong.`);
                                 appDataModified = true;
                                 statsWrongUpdatedCount++;
                             } else if (chap.total_wrong === undefined || chap.total_wrong === null || isNaN(chap.total_wrong)) {
-                                // If invalid, set to 0
                                 chap.total_wrong = 0;
                                 console.warn(`[DeleteExam] Ch ${chapNumStr}: Reset invalid total_wrong to 0.`);
                                 appDataModified = true;
                             }
 
-                            // Add question number back to available_questions if not already present
                             if (Array.isArray(chap.available_questions)) {
                                 if (!chap.available_questions.includes(qNum)) {
                                     chap.available_questions.push(qNum);
                                     console.log(`[DeleteExam] Ch ${chapNumStr}: Added question number ${qNum} back to available_questions.`);
                                     questionsRestoredCount++;
-                                    appDataModified = true; // Flag modification
+                                    appDataModified = true;
                                 } else {
                                      console.log(`[DeleteExam] Ch ${chapNumStr}: Question number ${qNum} was already in available_questions.`);
                                 }
                             } else {
-                                 // If available_questions is missing or not an array, initialize it (shouldn't happen ideally)
                                  chap.available_questions = [qNum];
                                  console.warn(`[DeleteExam] Ch ${chapNumStr}: Initialized available_questions for chapter. Added ${qNum}.`);
                                  questionsRestoredCount++;
@@ -845,23 +837,21 @@ export async function deleteCompletedExamV2(examId) {
 
                 if (appDataModified) {
                     console.log(`[DeleteExam] Summary of changes: Attempted reversed: ${statsAttemptedUpdatedCount}, Wrong reversed: ${statsWrongUpdatedCount}, MCQs restored: ${questionsRestoredCount}.`);
-                    // Sort available_questions arrays numerically for consistency
                     Object.values(subjectToUpdate.chapters).forEach(chap => {
                         if (Array.isArray(chap.available_questions)) {
                             chap.available_questions.sort((a, b) => a - b);
                         }
                     });
 
-                    // Update the global state immediately - IMPORTANT for subsequent UI refresh
-                    setData({...data}); // Trigger potential reactivity if framework supports it
+                    // 1. Update local state
+                    setData({...data});
                     console.log("[DeleteExam] Local state `data` updated via setData().");
 
-                    // *** MODIFICATION START: Save AFTER local update, BEFORE exam delete ***
-                    // Save the entire updated data object back to Firestore *BEFORE* deleting the exam doc
+                    // 2. Save updated data to Firestore (BEFORE deleting exam doc)
                     console.log(`[DeleteExam] Preparing to save updated app data (data.subjects) to Firestore because appDataModified is true...`);
-                    await saveUserData(currentUser.uid, data); // Pass the modified 'data' object
+                    await saveUserData(currentUser.uid, data);
                     console.log("[DeleteExam] UserData save attempt complete. Data state should now be updated in Firestore.");
-                    // *** MODIFICATION END ***
+                    console.log(`[DeleteExam] After local state update & Firestore save attempt - Subject ${examData.subjectId} Chapters state (available):`, JSON.parse(JSON.stringify(data?.subjects?.[examData.subjectId]?.chapters || {})));
                 } else {
                      console.log(`[DeleteExam] No TestGen appData needed saving for exam ${examId}.`);
                 }
@@ -873,39 +863,30 @@ export async function deleteCompletedExamV2(examId) {
         }
         // --- END: Update local data.subjects stats ---
 
-        // Delete the exam document from Firestore *AFTER* attempting stats update and *AFTER* saving data changes (if necessary)
+        // 3. Delete the exam document from Firestore
         console.log(`[DeleteExam] Deleting exam document ${examId} from Firestore...`);
         await examRef.delete();
         console.log(`[DeleteExam] Successfully deleted exam ${examId} from userExams collection.`);
 
-        // Refresh the progress dashboard AFTER all modifications (local state, Firestore save, Firestore delete) are done
-        // This ensures the dashboard reads the final state reflected in `data` and `currentSubject`
-        // *** MODIFICATION START: Moved dashboard refresh here ***
+        // 4. Refresh the progress dashboard if data was modified
         if (appDataModified && typeof window.showProgressDashboard === 'function') {
             console.log("[DeleteExam] Preparing to refresh progress dashboard. Current subject ID:", currentSubject?.id);
-            // Log the state that the dashboard *should* be reading now
             try {
                 const subjectStateForDashboard = JSON.stringify(data?.subjects?.[currentSubject?.id], null, 2);
-                console.log("[DeleteExam] Current subject data state being passed implicitly to dashboard:", subjectStateForDashboard.substring(0, 500) + (subjectStateForDashboard.length > 500 ? '...' : '')); // Log snippet
+                console.log("[DeleteExam] Current subject data state being passed implicitly to dashboard:", subjectStateForDashboard.substring(0, 500) + (subjectStateForDashboard.length > 500 ? '...' : ''));
             } catch (e) {
                 console.warn("[DeleteExam] Could not stringify current subject data for logging.");
             }
             console.log("[DeleteExam] Refreshing progress dashboard NOW...");
-             window.showProgressDashboard(); // Re-render the dashboard
+            window.showProgressDashboard();
         } else if (appDataModified) {
              console.warn("[DeleteExam] appDataModified is true, but window.showProgressDashboard is not defined, cannot refresh dashboard.");
         } else {
              console.log("[DeleteExam] No app data was modified, skipping dashboard refresh.");
         }
-        // *** MODIFICATION END ***
 
         hideLoading();
         alert(`Exam ${examId} deleted successfully.${appDataModified ? `\n(${questionsRestoredCount} MCQs restored, stats adjusted)` : ''}`);
-
-        // Remove any potential redundant refresh call from here
-        // if (typeof window.showProgressDashboard === 'function') { // REMOVED from here
-        //      window.showProgressDashboard();
-        // }
 
         return true;
 

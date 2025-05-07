@@ -1,5 +1,7 @@
 // --- START OF FILE state.js ---
 
+// --- START OF FILE state.js ---
+
 // --- Core Data & State ---
 export let auth = null;
 export let db = null;
