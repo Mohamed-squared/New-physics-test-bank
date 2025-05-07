@@ -2,11 +2,11 @@
 
 // ui_admin_dashboard.js
 
-import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData } from './state.js'; // Added currentUser
+import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData, globalAiSystemPrompts, setGlobalAiSystemPrompts } from './state.js'; // Added currentUser, globalAiSystemPrompts, setGlobalAiSystemPrompts
 import { ADMIN_UID, YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import YouTube API Key and DEFAULT_PROFILE_PIC_URL
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
-// MODIFIED: Added imports for Admin Tasks
+// MODIFIED: Added imports for Admin Tasks and Global AI Prompts
 import {
     sendAdminReply,
     updateCourseStatusForUser,
@@ -18,17 +18,19 @@ import {
     deleteAllFeedbackMessages,
     deleteAllExamIssues,
     adminUpdateUsername,
-    fetchAdminTasks,      // <-- Import new function
-    addAdminTask,         // <-- Import new function
-    updateAdminTaskStatus,// <-- Import new function
-    deleteAdminTask,       // <-- Import new function
-    toggleUserAdminStatus, // <-- MODIFIED: Import toggleUserAdminStatus
-    adminUpdateUserSubjectStatus // MODIFIED: Import for subject status
-} from './firebase_firestore.js'; // Import badge handlers & course definition update
+    fetchAdminTasks,      
+    addAdminTask,         
+    updateAdminTaskStatus,
+    deleteAdminTask,       
+    toggleUserAdminStatus, 
+    adminUpdateUserSubjectStatus,
+    saveGlobalAiPrompts // <-- Import saveGlobalAiPrompts
+} from './firebase_firestore.js'; 
+import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js'; // <-- Import AI prompt constants
+
 // Import course functions needed by admin buttons
 import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowseCourses, showAddCourseForm } from './ui_courses.js'; // Added showBrowseCourses, showAddCourseForm
 // Use the imported escapeHtml from utils.js
-// Removed redundant escapeHtml import
 
 // State for Playlist Management section
 let selectedVideosForAssignment = []; // Array to hold { videoId, title }
@@ -38,13 +40,14 @@ let currentManagingUserIdForSubjects = null; // MODIFIED: For subject management
 // --- Admin Dashboard UI ---
 
 export function showAdminDashboard() {
-    // MODIFIED: Check general admin status, not just primary admin
     if (!currentUser || !currentUser.isAdmin) {
         displayContent('<p class="text-red-500 p-4">Access Denied. Admin privileges required.</p>');
         return;
     }
     clearContent();
     setActiveSidebarLink('showAdminDashboard', 'sidebar-standard-nav');
+
+    const isPrimaryAdmin = currentUser.uid === ADMIN_UID;
 
     displayContent(`
         <div class="animate-fade-in space-y-8">
@@ -102,7 +105,6 @@ export function showAdminDashboard() {
                     </div>
                 </div>
 
-                 <!-- MODIFIED: User Subject Management Card (Full Width) -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Subject Management (Approval)</h3>
                     <div class="flex gap-4 mb-4">
@@ -115,7 +117,6 @@ export function showAdminDashboard() {
                 </div>
 
 
-                <!-- User Listing Card (Full Width) -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Management</h3>
                     <div class="flex gap-4 mb-4">
@@ -127,7 +128,6 @@ export function showAdminDashboard() {
                     </div>
                 </div>
 
-                 <!-- NEW: Admin Tasks Card -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Errors / Features To Fix (Admin Tasks)</h3>
                     <div class="flex gap-4 mb-4">
@@ -139,7 +139,24 @@ export function showAdminDashboard() {
                     </div>
                 </div>
 
-                <!-- Playlist Assignment Card -->
+                <!-- Global AI System Prompts Card (Full Width) -->
+                <div class="content-card md:col-span-2">
+                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Global AI System Prompts</h3>
+                    <p class="text-sm text-muted mb-3">
+                        Define system prompts that will be used globally unless a user has a custom override for that specific function.
+                        Changes here affect all users.
+                        <strong>Only the Primary Admin (UID: ${ADMIN_UID}) can save these settings.</strong>
+                    </p>
+                    <div id="admin-global-ai-prompts-area" class="space-y-6">
+                        <p class="text-muted text-sm">Loading global AI prompts...</p>
+                    </div>
+                    <div class="mt-6 text-right">
+                        <button id="save-global-ai-prompts-btn" onclick="window.handleSaveGlobalPrompts()" class="btn-primary" ${!isPrimaryAdmin ? 'disabled' : ''}>
+                            Save Global Prompts
+                        </button>
+                    </div>
+                </div>
+
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Playlist & Chapter Assignment</h3>
                      <div class="flex gap-4 mb-4">
@@ -160,7 +177,6 @@ export function showAdminDashboard() {
                      </div>
                 </div>
 
-                <!-- Delete Generated Content Card -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Delete Generated Content</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -184,7 +200,6 @@ export function showAdminDashboard() {
                     <div id="admin-delete-content-status" class="mt-3 text-sm"></div>
                 </div>
 
-                <!-- NEW: Chat Auto-Deletion Card -->
                 <div class="content-card md:col-span-2">
                     <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Chat Auto-Deletion</h3>
                     <p class="text-sm text-muted mb-3">
@@ -194,18 +209,16 @@ export function showAdminDashboard() {
                     </p>
                     <div class="flex flex-wrap items-center gap-4">
                         <label for="chat-auto-delete-select" class="text-sm font-medium">Delete messages older than:</label>
-                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm" ${currentUser?.uid !== ADMIN_UID ? 'disabled' : ''}>
+                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm" ${!isPrimaryAdmin ? 'disabled' : ''}>
                             <option value="0">Disabled</option>
                             <option value="7">7 days</option>
                             <option value="30">30 days</option>
                             <option value="90">90 days</option>
                         </select>
-                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0" ${currentUser?.uid !== ADMIN_UID ? 'disabled' : ''}>Save Setting</button>
+                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0" ${!isPrimaryAdmin ? 'disabled' : ''}>Save Setting</button>
                     </div>
                     <div id="chat-auto-delete-status" class="mt-3 text-sm"></div>
                 </div>
-
-
             </div>
         </div>
     `);
@@ -213,8 +226,98 @@ export function showAdminDashboard() {
     loadCoursesForAdmin();
     populateAdminCourseSelect();
     loadAdminTasks();
+    renderGlobalAiPromptsAdmin(); // MODIFICATION: Call new render function
     loadChatAutoDeleteSetting();
 }
+
+// --- START: Global AI Prompts Management UI ---
+function renderGlobalAiPromptsAdmin() {
+    const promptsArea = document.getElementById('admin-global-ai-prompts-area');
+    if (!promptsArea) {
+        console.error("Admin Global AI Prompts area not found.");
+        return;
+    }
+
+    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
+    let html = '';
+
+    AI_FUNCTION_KEYS.forEach(key => {
+        const currentGlobalValue = globalAiSystemPrompts[key] || ""; // Use empty string if undefined
+        const defaultValue = DEFAULT_AI_SYSTEM_PROMPTS[key] || "No default defined.";
+        
+        // Sanitize key for use in ID
+        const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '-');
+
+        html += `
+            <div class="prompt-item border-t dark:border-gray-600 pt-4">
+                <label for="global-prompt-${sanitizedKey}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    ${escapeHtml(key)}
+                </label>
+                <textarea id="global-prompt-${sanitizedKey}" 
+                          name="${escapeHtml(key)}"
+                          rows="4" 
+                          class="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-200"
+                          placeholder="Enter custom global prompt for ${escapeHtml(key)}..."
+                          ${!isPrimaryAdmin ? 'readonly' : ''}>${escapeHtml(currentGlobalValue)}</textarea>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    <strong>Default:</strong> <span class="font-mono whitespace-pre-wrap">${escapeHtml(defaultValue)}</span>
+                </p>
+            </div>
+        `;
+    });
+
+    promptsArea.innerHTML = html || '<p class="text-muted text-sm">No AI function keys defined.</p>';
+}
+
+async function handleSaveGlobalPrompts() {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Permission Denied: Only the Primary Admin can save these settings.");
+        return;
+    }
+
+    const newGlobalPrompts = {};
+    let allPromptsValid = true;
+
+    AI_FUNCTION_KEYS.forEach(key => {
+        const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '-');
+        const textarea = document.getElementById(`global-prompt-${sanitizedKey}`);
+        if (textarea) {
+            const value = textarea.value.trim();
+            // An empty string is a valid custom prompt (means "use default" effectively, or "no specific instruction")
+            // The saveGlobalAiPrompts function in firebase_firestore.js will handle string validation.
+            newGlobalPrompts[key] = value;
+        } else {
+            console.warn(`Textarea for prompt key ${key} not found.`);
+            allPromptsValid = false; // Should not happen if render is correct
+        }
+    });
+
+    if (!allPromptsValid) {
+        alert("Error collecting prompt data. Please check console.");
+        return;
+    }
+
+    showLoading("Saving Global AI Prompts...");
+    try {
+        const success = await saveGlobalAiPrompts(newGlobalPrompts);
+        hideLoading();
+        if (success) {
+            setGlobalAiSystemPrompts(newGlobalPrompts); // Update local state
+            alert("Global AI System Prompts saved successfully!");
+            renderGlobalAiPromptsAdmin(); // Re-render to reflect saved state (though it should be same)
+        } else {
+            // Error already alerted by saveGlobalAiPrompts
+            console.warn("Failed to save global AI prompts (firestore function returned false or threw error handled there).");
+        }
+    } catch (error) {
+        hideLoading();
+        console.error("Error in handleSaveGlobalPrompts:", error);
+        alert(`An unexpected error occurred: ${error.message}`);
+    }
+}
+window.handleSaveGlobalPrompts = handleSaveGlobalPrompts;
+// --- END: Global AI Prompts Management UI ---
+
 
 // --- Feedback ---
 async function loadFeedbackForAdmin() {
@@ -1446,7 +1549,7 @@ async function listAllUsersAdmin() {
             }
 
             let toggleAdminButtonHtml = '';
-            if (currentUser.uid === ADMIN_UID && !isPrimaryAdminUser) { // MODIFICATION: Only primary admin can toggle, and not for themselves
+            if (currentUser.uid === ADMIN_UID && !isPrimaryAdminUser) { 
                 const buttonText = userIsAdmin ? 'Remove Admin' : 'Make Admin';
                 const buttonClass = userIsAdmin ? 'btn-warning-small' : 'btn-success-small';
                 const titleAttr = userIsAdmin ? 'title="Remove Admin Privileges"' : 'title="Grant Admin Privileges"';
@@ -1507,13 +1610,12 @@ async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
     if (confirm(`Are you sure you want to ${actionText} ${escapeHtml(targetUserDisplayName)}?`)) {
         showLoading("Updating admin status...");
         try {
-            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin); // Call Firestore function
+            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin); 
             hideLoading();
             if (success) {
                 alert("Admin status updated successfully.");
-                listAllUsersAdmin(); // Refresh the user list
+                listAllUsersAdmin(); 
             } else {
-                 // Firestore function will throw on error, so this path might not be hit often unless it returns false
                 alert("Failed to update admin status. The operation might have been denied or an error occurred.");
             }
         } catch (error) {
@@ -1527,7 +1629,7 @@ window.handleToggleAdminStatus = handleToggleAdminStatus;
 
 
 async function viewUserDetailsAdmin(userId) {
-    if (!currentUser || !currentUser.isAdmin || !userId) return; // MODIFIED
+    if (!currentUser || !currentUser.isAdmin || !userId) return; 
 
     document.getElementById('user-details-modal')?.remove();
     showLoading(`Loading details for user ${userId}...`);
@@ -1604,7 +1706,6 @@ async function viewUserDetailsAdmin(userId) {
                         displayValue = escapeHtml(String(value));
                     }
                      let editButton = '';
-                     // Only Primary Admin can edit username directly here
                      if (key === 'username' && currentUser.uid === ADMIN_UID) {
                           editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
                      }
@@ -1738,11 +1839,10 @@ async function viewUserDetailsAdmin(userId) {
 window.viewUserDetailsAdmin = viewUserDetailsAdmin;
 
 function promptAdminChangeUsername(userId, currentUsername) {
-    if (!currentUser || !currentUser.isAdmin) { // General admin check
+    if (!currentUser || !currentUser.isAdmin) { 
         alert("Admin privileges required.");
         return;
     }
-    // Further restrict to primary admin for username changes if desired, or keep as general admin privilege
     if (currentUser.uid !== ADMIN_UID) {
         alert("Only the Primary Admin can change usernames directly.");
         return;
@@ -1789,7 +1889,6 @@ async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
              }
         } else {
             hideLoading();
-            // This path might not be hit if adminUpdateUsername throws errors directly
             alert("An unexpected issue occurred while updating the username.");
         }
     } catch (error) {
@@ -1840,7 +1939,6 @@ async function loadChatAutoDeleteSetting() {
 }
 
 export async function saveChatAutoDeleteSetting() {
-    // MODIFIED: Only primary admin can change this global setting
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Primary Admin privileges required to change chat auto-delete settings.");
         return;
@@ -1915,7 +2013,8 @@ window.handleAddAdminTask = handleAddAdminTask;
 window.handleToggleAdminTask = handleToggleAdminTask;
 window.handleDeleteAdminTask = handleDeleteAdminTask;
 window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
-window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; // MODIFIED: Add subject loader
-window.handleAdminSubjectApproval = handleAdminSubjectApproval; // MODIFIED: Add subject approval handler
+window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; 
+window.handleAdminSubjectApproval = handleAdminSubjectApproval; 
+window.handleSaveGlobalPrompts = handleSaveGlobalPrompts; // MODIFICATION: Add new handler
 
 // --- END OF FILE ui_admin_dashboard.js ---

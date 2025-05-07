@@ -1,8 +1,6 @@
-// --- START OF FILE script.js ---
-
 // script.js
 // --- Core State & Config Imports ---
-import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId, userCourseProgressMap } from './state.js'; // Added userCourseProgressMap
+import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId, userCourseProgressMap, setGlobalAiSystemPrompts } from './state.js'; // Added userCourseProgressMap, setGlobalAiSystemPrompts
 import { ADMIN_UID, FOP_COURSE_ID } from './config.js';
 
 // --- Utility Imports ---
@@ -10,8 +8,15 @@ import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-// MODIFIED: Added adminUpdateUserSubjectStatus, updateUserCredits import
-import { saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits } from './firebase_firestore.js';
+// MODIFIED: Added adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts import
+import { 
+    saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, 
+    updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, 
+    markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, 
+    handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, 
+    loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, 
+    sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts 
+} from './firebase_firestore.js';
 
 
 // --- UI Imports ---
@@ -200,7 +205,19 @@ async function initializeApp() {
         setDb(firebase.firestore());
         window.auth = firebase.auth();
         window.db = firebase.firestore();
-        setupAuthListener();
+
+        // --- MODIFICATION: Load Global AI Prompts ---
+        try {
+            const globalPrompts = await loadGlobalAiPrompts();
+            setGlobalAiSystemPrompts(globalPrompts);
+            console.log("[initializeApp] Global AI System Prompts loaded and set.", globalPrompts);
+        } catch (error) {
+            console.error("[initializeApp] Error loading Global AI System Prompts. Using defaults/empty.", error);
+            setGlobalAiSystemPrompts({}); // Ensure state is at least an empty object
+        }
+        // --- END MODIFICATION ---
+
+        setupAuthListener(); // This will handle UI changes based on auth state
     } catch (e) {
         hideLoading();
         console.error("Firebase initialization error:", e);
