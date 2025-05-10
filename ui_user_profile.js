@@ -347,19 +347,22 @@ export async function updateUserProfile(event) {
 // Helper function to delete all documents in a subcollection
 async function deleteSubcollection(db, parentDocRef, subcollectionName) {
     const subcollectionRef = parentDocRef.collection(subcollectionName);
-    const snapshot = await subcollectionRef.limit(500).get(); // Batch delete in chunks if needed
-    if (snapshot.size === 0) {
-        return; // Nothing to delete
+    let snapshot = await subcollectionRef.limit(500).get(); 
+    
+    while (snapshot.size > 0) {
+        const batch = db.batch();
+        snapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        console.log(`Deleted ${snapshot.size} documents from ${parentDocRef.path}/${subcollectionName}`);
+        
+        // Fetch next batch if necessary
+        if (snapshot.size < 500) break; // If less than limit, all docs in current query were deleted
+        snapshot = await subcollectionRef.limit(500).get();
     }
-    const batch = db.batch();
-    snapshot.docs.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-    await batch.commit();
-    console.log(`Deleted ${snapshot.size} documents from ${parentDocRef.path}/${subcollectionName}`);
-    // Recursively delete if more documents exist (for very large subcollections)
-    if (snapshot.size >= 500) {
-        await deleteSubcollection(db, parentDocRef, subcollectionName);
+    if (snapshot.size === 0) {
+         console.log(`No more documents found in ${parentDocRef.path}/${subcollectionName} or subcollection was empty.`);
     }
 }
 
@@ -391,20 +394,19 @@ async function handleSelfDeleteAccount() {
         return;
     }
 
-    const userEmail = currentUser.email;
-    if (!userEmail) {
-        alert("Error: User email not found. Cannot proceed with re-authentication for deletion.");
-        console.error("handleSelfDeleteAccount: currentUser.email is null.");
-        return;
-    }
-    
-    const authUserForReauth = auth.currentUser; // Use the auth.currentUser for re-authentication
+    const authUserForReauth = auth.currentUser; 
     if (!authUserForReauth) {
         alert("Error: Authentication session error. Please try logging out and back in before deleting your account.");
         console.error("handleSelfDeleteAccount: auth.currentUser is null.");
         return;
     }
-
+    
+    const userEmail = authUserForReauth.email; // Use email from authUserForReauth
+    if (!userEmail) {
+        alert("Error: User email not found in current auth session. Cannot proceed with re-authentication for deletion.");
+        console.error("handleSelfDeleteAccount: authUserForReauth.email is null.");
+        return;
+    }
 
     const password = prompt("For security, please re-enter your password to confirm account deletion:");
     if (!password) {
@@ -416,12 +418,20 @@ async function handleSelfDeleteAccount() {
 
     try {
         const credential = firebase.auth.EmailAuthProvider.credential(userEmail, password);
-        await authUserForReauth.reauthenticateWithCredential(credential);
-        console.log("Re-authentication successful. Proceeding with account deletion.");
+        // --- RE-AUTHENTICATION ---
+        try {
+            await authUserForReauth.reauthenticateWithCredential(credential);
+            console.log("[handleSelfDeleteAccount] Re-authentication successful. Proceeding with account deletion.");
+        } catch (reauthError) {
+            console.error("[handleSelfDeleteAccount] Re-authentication failed:", reauthError);
+            hideLoading();
+            alert("Re-authentication failed. Incorrect password or an account issue occurred. Deletion cancelled.");
+            return; // Stop further execution
+        }
         
         showLoading("Deleting your account and data...");
 
-        const uidToDelete = authUserForReauth.uid; // Use the re-authenticated user's UID
+        const uidToDelete = authUserForReauth.uid;
         let usernameToDelete = null;
 
         // Fetch username from Firestore before deleting the user document
@@ -429,53 +439,57 @@ async function handleSelfDeleteAccount() {
             const userDocSnap = await db.collection('users').doc(uidToDelete).get();
             if (userDocSnap.exists) {
                 usernameToDelete = userDocSnap.data().username;
+                console.log(`[handleSelfDeleteAccount] Fetched username '${usernameToDelete}' for UID ${uidToDelete}.`);
+            } else {
+                console.warn(`[handleSelfDeleteAccount] User document users/${uidToDelete} not found, cannot fetch username.`);
             }
         } catch (fetchError) {
-            console.warn("Could not fetch username before deletion, continuing...", fetchError);
+            console.warn("[handleSelfDeleteAccount] Could not fetch username before deletion, continuing...", fetchError);
         }
 
 
-        console.log(`Starting data deletion for UID: ${uidToDelete}, Username: ${usernameToDelete || 'N/A'}`);
+        console.log(`[handleSelfDeleteAccount] Starting data deletion for UID: ${uidToDelete}, Username: ${usernameToDelete || 'N/A'}`);
 
-        // Firestore Data Deletion
+        // --- Firestore Data Deletion ---
         const userDocRef = db.collection('users').doc(uidToDelete);
 
-        // Subcollections to delete
-        const subcollections = [
-            'courses', // from userCourseProgress/{uid}/courses
-            'exams',   // from userExams/{uid}/exams
+        // Delete userCourseProgress subcollection and parent doc
+        const userCourseProgressDocRef = db.collection('userCourseProgress').doc(uidToDelete);
+        try {
+            console.log(`  Deleting subcollection: /userCourseProgress/${uidToDelete}/courses`);
+            await deleteSubcollection(db, userCourseProgressDocRef, 'courses');
+            await userCourseProgressDocRef.delete(); 
+            console.log(`  Deleted userCourseProgress document: /userCourseProgress/${uidToDelete}`);
+        } catch (error) {
+             console.error(`  Error deleting userCourseProgress for ${uidToDelete}:`, error);
+        }
+        
+        // Delete userExams subcollection and parent doc
+        const userExamsDocRef = db.collection('userExams').doc(uidToDelete);
+         try {
+            console.log(`  Deleting subcollection: /userExams/${uidToDelete}/exams`);
+            await deleteSubcollection(db, userExamsDocRef, 'exams');
+            await userExamsDocRef.delete();
+            console.log(`  Deleted userExams document: /userExams/${uidToDelete}`);
+        } catch (error) {
+             console.error(`  Error deleting userExams for ${uidToDelete}:`, error);
+        }
+
+        // Subcollections under users/{uid}
+        const subcollectionsInUserDoc = [
             'aiChatSessions',
             'userFormulaSheets',
             'userChapterSummaries',
-            'creditLog'
+            'creditLog',
+            'inbox' // Added inbox as per thought process
         ];
-        
-        // Delete userCourseProgress subcollection
-        const userCourseProgressDocRef = db.collection('userCourseProgress').doc(uidToDelete);
-        try {
-            await deleteSubcollection(db, userCourseProgressDocRef, 'courses');
-            await userCourseProgressDocRef.delete(); // Delete the parent doc if it exists
-            console.log(`Deleted subcollection userCourseProgress/${uidToDelete}/courses and its parent doc.`);
-        } catch (error) {
-             console.error(`Error deleting userCourseProgress for ${uidToDelete}:`, error);
-        }
-        
-        // Delete userExams subcollection
-        const userExamsDocRef = db.collection('userExams').doc(uidToDelete);
-         try {
-            await deleteSubcollection(db, userExamsDocRef, 'exams');
-            await userExamsDocRef.delete(); // Delete the parent doc if it exists
-            console.log(`Deleted subcollection userExams/${uidToDelete}/exams and its parent doc.`);
-        } catch (error) {
-             console.error(`Error deleting userExams for ${uidToDelete}:`, error);
-        }
 
-
-        for (const subcollectionName of ['aiChatSessions', 'userFormulaSheets', 'userChapterSummaries', 'creditLog']) {
+        for (const subcollectionName of subcollectionsInUserDoc) {
             try {
+                console.log(`  Deleting subcollection: ${userDocRef.path}/${subcollectionName}`);
                 await deleteSubcollection(db, userDocRef, subcollectionName);
             } catch (error) {
-                console.error(`Error deleting subcollection ${subcollectionName} for UID ${uidToDelete}:`, error);
+                console.error(`  Error deleting subcollection ${subcollectionName} for UID ${uidToDelete}:`, error);
                 // Continue to other deletions
             }
         }
@@ -483,39 +497,46 @@ async function handleSelfDeleteAccount() {
         // Delete main user document
         try {
             await userDocRef.delete();
-            console.log(`Deleted main user document: users/${uidToDelete}`);
+            console.log(`  Deleted main user document: users/${uidToDelete}`);
         } catch (error) {
-            console.error(`Error deleting main user document users/${uidToDelete}:`, error);
+            console.error(`  Error deleting main user document users/${uidToDelete}:`, error);
         }
 
         // Delete username reservation
         if (usernameToDelete) {
             try {
                 await db.collection('usernames').doc(usernameToDelete.toLowerCase()).delete();
-                console.log(`Deleted username reservation: usernames/${usernameToDelete.toLowerCase()}`);
+                console.log(`  Deleted username reservation: usernames/${usernameToDelete.toLowerCase()}`);
             } catch (error) {
-                console.error(`Error deleting username reservation usernames/${usernameToDelete.toLowerCase()}:`, error);
+                console.error(`  Error deleting username reservation usernames/${usernameToDelete.toLowerCase()}:`, error);
+                // Log and continue as Firestore rules might prevent this for non-admins
             }
         }
 
         // Delete Firebase Auth Account
-        console.log("Attempting to delete Firebase Auth account...");
+        console.log("[handleSelfDeleteAccount] Attempting to delete Firebase Auth account...");
         await authUserForReauth.delete(); // This will trigger onAuthStateChanged
-        console.log("Firebase Auth account deleted successfully.");
+        console.log("[handleSelfDeleteAccount] Firebase Auth account deleted successfully.");
         alert("Your account and all associated data have been permanently deleted.");
         // UI updates will be handled by onAuthStateChanged
 
     } catch (error) {
-        console.error("Account deletion process failed:", error);
+        // This catch block now primarily handles errors *after* successful re-authentication,
+        // or general setup errors before re-auth attempt.
+        console.error("[handleSelfDeleteAccount] Account deletion process failed:", error);
         let message = "Account deletion failed. ";
         if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            // This case should ideally be caught by the specific re-auth try-catch,
+            // but including it here as a fallback.
             message += "Incorrect password or re-authentication failed.";
         } else if (error.code === 'auth/requires-recent-login') {
+            // This can happen if re-auth was successful but the auth token is still considered stale
+            // for the delete operation, or if re-auth failed and we fell through.
             message += "This operation is sensitive and requires recent authentication. Please sign out, sign back in, and try again.";
         } else if (error.code === 'auth/user-disabled') {
             message += "Your account is disabled.";
         } else {
-            message += error.message;
+            message += error.message || "An unknown error occurred.";
         }
         alert(message);
     } finally {

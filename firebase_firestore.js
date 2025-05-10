@@ -954,70 +954,133 @@ export async function initializeUserData(uid, email, username, displayName = nul
     const userRef = db.collection('users').doc(uid);
     let docExists = false; let existingUserData = null;
     if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) { console.error("Error checking user existence:", e); } }
-    const usernameLower = username ? username.toLowerCase() : (existingUserData?.username || null);
+    
+    // Ensure username is a string and lowercase for consistency.
+    // For new users (docExists is false), username comes from signup/google sign-in.
+    // For existing users being force-reset, username might come from existingUserData.
+    let usernameLower;
+    if (username && typeof username === 'string') {
+        usernameLower = username.toLowerCase();
+    } else if (docExists && forceReset && existingUserData && typeof existingUserData.username === 'string') {
+        usernameLower = existingUserData.username.toLowerCase();
+    } else {
+        // Fallback if username is somehow not provided or invalid type, especially for new users.
+        // This ensures 'username' field is always a string.
+        usernameLower = (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
+        console.warn(`[initializeUserData] Username was not a valid string, derived as: ${usernameLower}`);
+    }
+
 
     let initialIsAdmin = (uid === ADMIN_UID); 
-    if (docExists && forceReset && typeof existingUserData.isAdmin === 'boolean') {
+    if (docExists && forceReset && existingUserData && typeof existingUserData.isAdmin === 'boolean') {
         initialIsAdmin = existingUserData.isAdmin;
     }
     let initialCredits = 0;
-    if (docExists && forceReset && typeof existingUserData.credits === 'number') {
+    if (docExists && forceReset && existingUserData && typeof existingUserData.credits === 'number') {
         initialCredits = existingUserData.credits;
     }
 
     if (!docExists || forceReset) {
-        console.log(`Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}`);
+        console.log(`[initializeUserData] Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}, Email: ${email}`);
+        
+        // Deep copy initialSubjectData to avoid modifying the template
         let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
-
         const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); 
-        Object.values(defaultAppData.subjects).forEach(subject => {
-            if (!isCurrentUserInitializingAdmin) {
-                subject.status = 'pending'; 
-                subject.creatorUid = uid;
-                subject.creatorName = displayName || username || email?.split('@')[0];
-                subject.createdAt = new Date().toISOString();
-            } else {
-                subject.status = 'approved';
-                subject.creatorUid = ADMIN_UID; 
-                subject.creatorName = 'System'; 
-                subject.createdAt = new Date(0).toISOString(); 
-            }
-        });
+        
+        // Adjust subjects in appData based on whether the user is admin
+        if (defaultAppData.subjects && typeof defaultAppData.subjects === 'object') {
+            Object.values(defaultAppData.subjects).forEach(subject => {
+                if (!isCurrentUserInitializingAdmin) {
+                    subject.status = 'pending'; 
+                    subject.creatorUid = uid;
+                    // Use provided displayName, then username, then derive from email for creatorName
+                    subject.creatorName = displayName || usernameLower || (email ? email.split('@')[0] : 'New User');
+                    subject.createdAt = new Date().toISOString(); // For sub-property, ISO string is fine
+                } else {
+                    // For admin, keep defaults from initialSubjectData (approved, System owner)
+                    subject.status = subject.status || 'approved'; // Ensure it's set
+                    subject.creatorUid = subject.creatorUid || ADMIN_UID;
+                    subject.creatorName = subject.creatorName || 'System';
+                    subject.createdAt = subject.createdAt || new Date(0).toISOString();
+                }
+            });
+        } else {
+            // Ensure appData.subjects is at least an empty map if initialSubjectData was problematic
+            console.warn("[initializeUserData] initialSubjectData.subjects was not an object. Initializing appData.subjects as {}.");
+            defaultAppData.subjects = {};
+        }
+        
 
-
-        for (const subjectId in defaultAppData.subjects) {
-            const defaultSubject = defaultAppData.subjects[subjectId];
-            if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { 
-                 const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
-                 if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
+        // Fetch Markdown for default subjects if user is admin or subjects are approved (relevant for ADMIN_UID case)
+        // For non-admin, subjects are 'pending', so MD sync might not be immediately critical or allowed by rules
+        if (defaultAppData.subjects) {
+            for (const subjectId in defaultAppData.subjects) {
+                const defaultSubject = defaultAppData.subjects[subjectId];
+                if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { 
+                     const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
+                     if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
+                }
             }
         }
+        
         const dataToSet = {
-             email: email, username: usernameLower,
-             displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || username || email?.split('@')[0]),
+             email: email, 
+             username: usernameLower, // Ensured string, lowercase
+             displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`)),
              photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
              onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
-             appData: defaultAppData,
+             appData: defaultAppData, // Contains subjects map, possibly empty or with defaults
              completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
-             isAdmin: initialIsAdmin, 
-             credits: initialCredits, 
-             userAiChatSettings: getDefaultAiSettings() 
+             isAdmin: initialIsAdmin, // boolean: (uid === ADMIN_UID) for new users
+             credits: initialCredits, // number: 0 for new users
+             userAiChatSettings: getDefaultAiSettings() // object with specific structure
         };
+
+        // --- MODIFICATION: Added detailed logging before set ---
+        console.log(`[initializeUserData] Data being set for new user ${uid}:`, JSON.stringify(dataToSet, null, 2));
+
         try {
-            await userRef.set(dataToSet); console.log(`User data initialized/reset (${forceReset ? 'force' : 'initial'}) in Firestore.`);
+            await userRef.set(dataToSet); 
+            // --- MODIFICATION: Added success log ---
+            console.log(`[initializeUserData] User document successfully created/reset for ${uid}`);
+            
             setData(defaultAppData);
             setUserAiChatSettings(dataToSet.userAiChatSettings); 
             console.log("[initializeUserData] Default AI Chat Settings set in state.");
-            if (forceReset) { setUserCourseProgressMap(new Map()); console.warn("Force reset executed. User course progress subcollection NOT cleared automatically."); }
-            if (forceReset) { const firstSubjectId = Object.keys(defaultAppData.subjects)[0]; setCurrentSubject(firstSubjectId ? defaultAppData.subjects[firstSubjectId] : null); updateSubjectInfo(); }
-            if (usernameLower) { try { const usernameRef = db.collection('usernames').doc(usernameLower); const usernameDoc = await usernameRef.get(); if (!usernameDoc.exists) { await usernameRef.set({ userId: uid }); } } catch(userErr) { console.error("Error reserving username:", userErr); } }
-        } catch (error) { console.error("Error initializing user data:", error); alert("Error setting up initial user data: " + error.message); }
-    } else {
+
+            if (forceReset) { 
+                setUserCourseProgressMap(new Map()); 
+                console.warn("Force reset executed. User course progress subcollection NOT cleared automatically."); 
+                const firstSubjectKey = defaultAppData.subjects ? Object.keys(defaultAppData.subjects)[0] : null;
+                setCurrentSubject(firstSubjectKey ? defaultAppData.subjects[firstSubjectKey] : null);
+                updateSubjectInfo();
+            }
+            
+            // Reserve username if it's a valid string (should be, due to earlier checks)
+            if (usernameLower && typeof usernameLower === 'string') { 
+                try { 
+                    const usernameRef = db.collection('usernames').doc(usernameLower); 
+                    const usernameDocCheck = await usernameRef.get(); 
+                    if (!usernameDocCheck.exists) { 
+                        await usernameRef.set({ userId: uid }); 
+                    } else if (usernameDocCheck.data().userId !== uid) {
+                        console.warn(`[initializeUserData] Username ${usernameLower} was already taken by ${usernameDocCheck.data().userId} during initialization for ${uid}. This might happen in race conditions or if initial check failed.`);
+                    }
+                } catch(userErr) { 
+                    console.error("Error reserving username during initialization:", userErr); 
+                } 
+            }
+
+        } catch (error) { 
+            console.error(`[initializeUserData] Error setting user data for ${uid}:`, error); 
+            alert("Error setting up initial user data: " + error.message); 
+        }
+    } else { // Document exists and not forceReset: Update missing fields if any
         let updatesNeeded = {};
         if (usernameLower && existingUserData && !existingUserData.username) { updatesNeeded.username = usernameLower; }
-        if (existingUserData && !existingUserData.displayName) { updatesNeeded.displayName = displayName || username || email?.split('@')[0]; }
+        if (existingUserData && !existingUserData.displayName) { updatesNeeded.displayName = displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`); }
         if (existingUserData && existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
         if (existingUserData && existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
         if (existingUserData && !existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
@@ -1033,14 +1096,29 @@ export async function initializeUserData(uid, email, username, displayName = nul
         }
 
          if (Object.keys(updatesNeeded).length > 0) {
-             console.log(`Updating missing fields for ${uid}:`, Object.keys(updatesNeeded));
+             console.log(`[initializeUserData] Updating missing fields for existing user ${uid}:`, Object.keys(updatesNeeded));
              try {
                  await userRef.update(updatesNeeded);
-                 if (updatesNeeded.username) { try { const usernameRef = db.collection('usernames').doc(updatesNeeded.username); const usernameDoc = await usernameRef.get(); if (!usernameDoc.exists) { await usernameRef.set({ userId: uid }); } } catch (userErr) { console.error("Error reserving username on update:", userErr);} }
-             } catch(updateError) { console.error("Error updating user fields:", updateError); }
-         } else { console.log(`User data already exists for ${uid}.`); }
+                 if (updatesNeeded.username) { 
+                     try { 
+                         const usernameRef = db.collection('usernames').doc(updatesNeeded.username); 
+                         const usernameDoc = await usernameRef.get(); 
+                         if (!usernameDoc.exists) { 
+                             await usernameRef.set({ userId: uid }); 
+                         } 
+                     } catch (userErr) { 
+                         console.error("Error reserving username on update:", userErr);
+                     } 
+                 }
+             } catch(updateError) { 
+                 console.error("[initializeUserData] Error updating existing user fields:", updateError); 
+             }
+         } else { 
+             console.log(`[initializeUserData] User data already exists for ${uid}. No standard fields needed update.`); 
+         }
     }
 }
+
 
 // --- Onboarding Check ---
 export async function checkOnboarding(uid) {

@@ -71,6 +71,7 @@ import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteCh
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection } from './exam_storage.js';
 import { convertNoteToLatex } from './ai_integration.js';
 import { calculateChapterCombinedProgress } from './course_logic.js';
+import { showBackgroundManagement, loadAndApplyBackgroundPreference, loadAndApplyCardOpacityPreference} from './ui_background_management.js';
 
 
 // --- Initialization ---
@@ -78,6 +79,9 @@ import { calculateChapterCombinedProgress } from './course_logic.js';
 async function initializeApp() {
     console.log("Initializing Lyceum (Module)...");
     showLoading("Initializing...");
+
+    loadAndApplyBackgroundPreference();
+    loadAndApplyCardOpacityPreference();
 
     const publicHomepageContainer = document.getElementById('public-homepage-container');
     if (publicHomepageContainer) {
@@ -155,6 +159,18 @@ async function initializeApp() {
              }
         });
         themeToggle.dataset.listenerAttached = 'true';
+    }
+
+    if (themeToggle && !themeToggle.dataset.bgListenerAttached) { // Use a new data attribute
+        themeToggle.addEventListener('click', () => {
+            const currentPref = JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY) || '{}');
+            if (currentPref.type === 'default' || !currentPref.type) {
+                // If the current preference is default, re-apply it to reflect theme change
+                // Small delay to allow theme classes on <html> to update first
+                setTimeout(() => loadAndApplyBackgroundPreference(), 50);
+            }
+        });
+        themeToggle.dataset.bgListenerAttached = 'true';
     }
 
      // Mobile Menu Init
@@ -391,6 +407,7 @@ window.handleRemoveBadgeForUser = handleRemoveBadgeForUser;
 // MODIFIED: Assign subject management functions from ui_admin_dashboard
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
+window.showBackgroundManagement = showBackgroundManagement;
 
 window.renderMathIn = renderMathIn;
 

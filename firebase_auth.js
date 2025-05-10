@@ -38,15 +38,21 @@ export async function signUpUser(username, email, password) {
 
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
-        console.log('Signed up:', user);
+        console.log('[signUpUser] Firebase user created:', user.uid);
 
         // Pass username to initializeUserData
         // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
-        await initializeUserData(user.uid, email, username, null, null, false);
+        await initializeUserData(user.uid, email, username, null, null, false); // Pass username (not usernameLower here, initializeUserData handles lowercasing)
+        // --- MODIFICATION: Added log after initializeUserData ---
+        console.log("[signUpUser] initializeUserData completed for " + user.uid);
+
 
         // Reserve username in the separate collection
+        // --- MODIFICATION: Added log before reserving username ---
+        console.log("[signUpUser] Attempting to reserve username '" + usernameLower + "' for user " + user.uid);
         await db.collection('usernames').doc(usernameLower).set({ userId: user.uid });
-        console.log(`Username ${usernameLower} reserved for user ${user.uid}`);
+        // --- MODIFICATION: Added log after reserving username ---
+        console.log("[signUpUser] Username '" + usernameLower + "' successfully reserved.");
         
         // --- START MODIFICATION: Send welcome guide message ---
         if (user && user.uid) {
@@ -57,6 +63,7 @@ export async function signUpUser(username, email, password) {
         }
         // --- END MODIFICATION ---
         // onAuthStateChanged will handle UI updates and loading data
+        // hideLoading() will be handled by onAuthStateChanged or error cases
 
     } catch (error) {
         console.error("Sign up error:", error);
@@ -65,7 +72,7 @@ export async function signUpUser(username, email, password) {
         } else if (error.code === 'auth/weak-password') {
             alert("Sign up failed: Password is too weak.");
         } else {
-            alert("Sign up failed: " + error.message);
+            alert("Sign up failed: " + error.message + (error.code ? ` (Code: ${error.code})` : ''));
         }
         hideLoading();
     }
@@ -140,36 +147,43 @@ export function signInWithGoogle() {
             console.log('Google sign in success:', user, 'Is new user:', isNewUser);
 
             // Generate a potential username and check for uniqueness
-            const potentialUsername = (user.email?.split('@')[0] || `user_${user.uid.substring(0,6)}`).replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20);
-            let finalUsername = potentialUsername;
+            const potentialUsernameBase = (user.email?.split('@')[0] || `user_${user.uid.substring(0,6)}`).replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20);
+            let finalUsername = potentialUsernameBase;
             let checkCounter = 0;
-            const MAX_CHECKS = 5;
+            const MAX_CHECKS = 5; // Max attempts to find a unique username variation
 
             if (!db) throw new Error("Firestore DB not available for username check.");
 
             // Simple username check loop
-            while (checkCounter < MAX_CHECKS) {
+            while (checkCounter <= MAX_CHECKS) { // Use <= to allow the base username check + MAX_CHECKS variations
                  try {
-                     const usernameRef = db.collection('usernames').doc(finalUsername.toLowerCase());
+                     const usernameToCheck = (checkCounter === 0) ? finalUsername : `${potentialUsernameBase}${checkCounter}`;
+                     const usernameRef = db.collection('usernames').doc(usernameToCheck.toLowerCase());
                      const usernameDoc = await usernameRef.get();
-                     if (!usernameDoc.exists) break; // Found unique username
+                     if (!usernameDoc.exists) {
+                         finalUsername = usernameToCheck; // Found unique username
+                         break; 
+                     }
                  } catch (dbError) {
-                     console.error("Error checking username:", dbError);
-                     break; // Stop check on DB error
+                     console.error("Error checking username during Google Sign-In:", dbError);
+                     finalUsername = potentialUsernameBase; // Fallback on error
+                     break; 
                  }
                  checkCounter++;
-                 finalUsername = `${potentialUsername}${checkCounter}`;
-                 console.log(`Potential Google username taken, trying: ${finalUsername}`);
+                 if (checkCounter > MAX_CHECKS) { // Exhausted checks
+                    finalUsername = `${potentialUsernameBase}_${Date.now().toString().slice(-4)}`; // More unique fallback
+                    console.warn(`Could not find a unique username for Google Sign-In user within ${MAX_CHECKS} attempts. Using time-suffixed fallback: ${finalUsername}`);
+                    break;
+                 }
+                 console.log(`Potential Google username taken, trying variation...`);
             }
+            console.log(`[signInWithGoogle] Final username determined: ${finalUsername}`);
 
-            if (checkCounter >= MAX_CHECKS) {
-                 console.warn(`Could not find a unique username placeholder for Google Sign-In user within ${MAX_CHECKS} attempts. Using default: ${potentialUsername}`);
-                 finalUsername = potentialUsername; // Use the base potential username as fallback
-            }
 
             // Initialize user data (or update if exists), passing the chosen username
             // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
             await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL);
+            console.log("[signInWithGoogle] initializeUserData completed for " + user.uid);
             
             // --- START MODIFICATION: Send welcome guide message if new Google user ---
             if (isNewUser && user && user.uid) {

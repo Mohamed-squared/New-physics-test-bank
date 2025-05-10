@@ -1,0 +1,2763 @@
+1
+00:00:20,740 --> 00:00:22,740
+Peace be upon you
+
+2
+00:00:22,740 --> 00:00:27,740
+This video will be a preview of the topic we will talk about in the next course
+
+3
+00:00:27,740 --> 00:00:30,740
+Which is
+
+4
+00:00:30,740 --> 00:00:33,740
+Calculus
+
+5
+00:00:33,740 --> 00:00:37,740
+We know calculus as
+
+6
+00:00:37,740 --> 00:00:40,740
+Differentiation and
+
+7
+00:00:40,740 --> 00:00:42,740
+Integration
+
+8
+00:00:42,740 --> 00:00:44,740
+Integration
+
+9
+00:00:44,740 --> 00:00:46,740
+How did 'differentiation and integration' 
+
+10
+00:00:46,740 --> 00:00:48,740
+end up being called something like 'calculus'?
+
+11
+00:00:48,740 --> 00:00:50,740
+Let's clear up this naming confusion first
+
+12
+00:00:50,740 --> 00:00:52,740
+and then we'll continue our discussion.
+
+13
+00:00:52,740 --> 00:00:54,740
+Calculus is two main parts
+
+14
+00:00:54,740 --> 00:00:56,740
+One is called
+
+15
+00:00:56,740 --> 00:01:00,740
+Differential
+
+16
+00:01:00,740 --> 00:01:02,740
+Differential
+
+17
+00:01:02,740 --> 00:01:04,740
+Calculus
+
+18
+00:01:04,740 --> 00:01:06,740
+The other is
+
+19
+00:01:06,740 --> 00:01:08,740
+Integral
+
+20
+00:01:08,740 --> 00:01:10,740
+Integral
+
+21
+00:01:10,740 --> 00:01:12,740
+Calculus
+
+22
+00:01:12,740 --> 00:01:14,740
+In brief, both of them are called calculus
+
+23
+00:01:14,740 --> 00:01:18,740
+Differentiation or differential Calculus 
+
+24
+00:01:18,740 --> 00:01:20,740
+And integration or integral calculus
+
+25
+00:01:20,740 --> 00:01:22,740
+And integration or integral calculus
+
+26
+00:01:22,740 --> 00:01:24,740
+And integration or integral calculus
+
+27
+00:01:24,740 --> 00:01:26,740
+Before we leave this part
+
+28
+00:01:26,740 --> 00:01:33,740
+I want to say something else, there are many people who think that you have to learn differentiation first to learn integration
+
+29
+00:01:33,740 --> 00:01:39,740
+and that integration is based on differentiation, and this is not true at all
+
+30
+00:01:39,740 --> 00:01:46,740
+you can learn integration before differentiation, both are considered to be the same subject
+
+31
+00:01:46,740 --> 00:01:50,740
+and in a certain example they are considered opposite to each other
+
+32
+00:01:50,740 --> 00:01:55,740
+but it is not a condition to learn this first and then this
+
+33
+00:01:55,740 --> 00:02:00,740
+and in most of the courses, including the one we will be working on today
+
+34
+00:02:00,740 --> 00:02:05,740
+we will be working on differentiation and then integration, but this is not a condition
+
+35
+00:02:05,740 --> 00:02:11,740
+in fact, one of the two who wrote the calculus published the integration first before differentiation
+
+36
+00:02:11,740 --> 00:02:17,740
+and I think that 100-200 years after the creation of the calculus, most books talked about both separately
+
+37
+00:02:17,740 --> 00:02:21,740
+they wrote the integration and then the differentiation, there was no problem at all
+
+38
+00:02:21,740 --> 00:02:24,740
+I just wanted to clarify this part initially
+
+39
+00:02:24,740 --> 00:02:25,740
+ok
+
+40
+00:02:25,740 --> 00:02:27,740
+so what does calculus mean?
+
+41
+00:02:30,740 --> 00:02:36,740
+there are many people who enter a course like this and then they draw a graph and say that calculus is the rate of change
+
+42
+00:02:36,740 --> 00:02:39,740
+and that it is the slope of the tangent line of a point on a curve
+
+43
+00:02:39,740 --> 00:02:43,740
+and that integration is the area below the curve or part of the curve
+
+44
+00:02:43,740 --> 00:02:49,740
+and if they want to go deeper into the subject, they will give you the example of velocity
+
+45
+00:02:49,740 --> 00:02:52,740
+and the change of distance over time
+
+46
+00:02:52,740 --> 00:02:54,740
+and acceleration which is the change of velocity over time
+
+47
+00:02:54,740 --> 00:02:55,740
+and so on
+
+48
+00:02:55,740 --> 00:02:58,740
+I think that this is a bit early
+
+49
+00:02:58,740 --> 00:03:01,740
+I mean, we can't get into this in a stage like this
+
+50
+00:03:01,740 --> 00:03:08,740
+if we were to give an example that is more in depth and simpler to understand
+
+51
+00:03:08,740 --> 00:03:10,740
+so that we know what calculus is about
+
+52
+00:03:10,740 --> 00:03:18,740
+and frankly, the example of calculating the calculus in the framework that I just mentioned
+
+53
+00:03:18,740 --> 00:03:20,740
+I think it is not very accurate
+
+54
+00:03:20,740 --> 00:03:22,740
+because these are tools
+
+55
+00:03:22,740 --> 00:03:25,740
+that calculus has
+
+56
+00:03:25,740 --> 00:03:30,740
+but the problem that calculus deals with is what I need to talk about a little
+
+57
+00:03:30,740 --> 00:03:31,740
+ok
+
+58
+00:03:33,740 --> 00:03:41,740
+I will say one sentence about calculus before moving on to the historical part that explains the circumstances of the creation of calculus
+
+59
+00:03:41,740 --> 00:03:50,740
+if I wanted to give a definition of calculus, I can say that I personally call it the art of dealing with narrow spaces
+
+60
+00:03:50,740 --> 00:03:51,740
+ok
+
+61
+00:03:51,740 --> 00:03:53,740
+so, keep this sentence in your mind
+
+62
+00:03:53,740 --> 00:03:56,740
+now, it will be clear after a while
+
+63
+00:03:59,740 --> 00:04:01,740
+when we mention the word calculus
+
+64
+00:04:01,740 --> 00:04:03,740
+there are two names that appear instantly
+
+65
+00:04:03,740 --> 00:04:06,740
+Isaac Newton and Gottfried Leibniz
+
+66
+00:04:06,740 --> 00:04:09,740
+Isaac Newton is the most famous mathematician in the world
+
+67
+00:04:09,740 --> 00:04:11,740
+he is an English scientist
+
+68
+00:04:11,740 --> 00:04:16,740
+he is the king of gravity for at least 200 years
+
+69
+00:04:16,740 --> 00:04:18,740
+Newton's laws
+
+70
+00:04:18,740 --> 00:04:20,740
+he has achievements in optics and other things like that
+
+71
+00:04:20,740 --> 00:04:24,740
+and he invented calculus
+
+72
+00:04:24,740 --> 00:04:27,740
+Leibniz is less famous than him
+
+73
+00:04:27,740 --> 00:04:29,740
+although he is also a very respected scientist
+
+74
+00:04:29,740 --> 00:04:30,740
+he is a German scientist
+
+75
+00:04:30,740 --> 00:04:31,740
+he studied law in Germany
+
+76
+00:04:31,740 --> 00:04:33,740
+then he moved to France
+
+77
+00:04:33,740 --> 00:04:34,740
+he studied mathematics
+
+78
+00:04:34,740 --> 00:04:35,740
+he liked it a little
+
+79
+00:04:35,740 --> 00:04:37,740
+he continued with it
+
+80
+00:04:37,740 --> 00:04:39,740
+and then he invented calculus
+
+81
+00:04:39,740 --> 00:04:41,740
+he did not invent calculus only
+
+82
+00:04:41,740 --> 00:04:43,740
+he had achievements in other things
+
+83
+00:04:43,740 --> 00:04:45,740
+including the invention of the binary system of zero and one
+
+84
+00:04:45,740 --> 00:04:49,740
+which we are using today in computer systems
+
+85
+00:04:49,740 --> 00:04:53,740
+this was in the second half of the 17th century
+
+86
+00:04:53,740 --> 00:04:59,740
+the question here is what makes two scientists invent calculus at the same time
+
+87
+00:04:59,740 --> 00:05:05,740
+of course, when Leibniz and Newton started to spread their words about calculus
+
+88
+00:05:05,740 --> 00:05:10,740
+Europe, literally, before calculus
+
+89
+00:05:10,740 --> 00:05:14,740
+or before Leibniz and Newton started to talk about their achievements in calculus
+
+90
+00:05:14,740 --> 00:05:15,740
+was something
+
+91
+00:05:15,740 --> 00:05:17,740
+and after calculus was something else
+
+92
+00:05:17,740 --> 00:05:18,740
+I personally am convinced that
+
+93
+00:05:18,740 --> 00:05:23,740
+ the real European rise started with calculus
+
+94
+00:05:23,740 --> 00:05:25,740
+calculus without exaggeration
+
+95
+00:05:25,740 --> 00:05:28,740
+is the foundation of modern science
+
+96
+00:05:28,740 --> 00:05:32,740
+which you see around you today
+
+97
+00:05:32,740 --> 00:05:36,740
+without calculus you really go back to technology
+
+98
+00:05:36,740 --> 00:05:39,740
+until the beginning of the 18th century
+
+99
+00:05:39,740 --> 00:05:43,740
+so calculus is an important subject
+
+100
+00:05:43,740 --> 00:05:46,740
+you have to study it in depth
+
+101
+00:05:46,740 --> 00:05:48,740
+because any career you want to persue: Physics, Engineering
+
+102
+00:05:48,740 --> 00:05:50,740
+or any kind of science
+
+103
+00:05:50,740 --> 00:05:53,740
+even if it has advanced things in mathematics
+
+104
+00:05:53,740 --> 00:05:56,740
+calculus is the thing that takes all of that
+
+105
+00:05:56,740 --> 00:05:58,740
+okay
+
+106
+00:05:58,740 --> 00:06:00,740
+something of importance
+
+107
+00:06:00,740 --> 00:06:02,740
+when someone like Newton or Leibniz says
+
+108
+00:06:02,740 --> 00:06:03,740
+we invented calculus
+
+109
+00:06:03,740 --> 00:06:05,740
+Europe and its scientific community
+
+110
+00:06:05,740 --> 00:06:07,740
+stood on their feet
+
+111
+00:06:07,740 --> 00:06:10,740
+and there was a big fight between the two
+
+112
+00:06:10,740 --> 00:06:13,740
+which of them had the right to claim that they invented calculus
+
+113
+00:06:13,740 --> 00:06:15,740
+Newton says I did it
+
+114
+00:06:15,740 --> 00:06:16,740
+Leibniz says I did it
+
+115
+00:06:16,740 --> 00:06:17,740
+and a debate occurred between the two of them
+
+116
+00:06:18,740 --> 00:06:20,740
+and there was a huge debate in the scientific community in Europe
+
+117
+00:06:20,740 --> 00:06:21,740
+for decades
+
+118
+00:06:21,740 --> 00:06:23,740
+even after the death of Leibniz and Newton
+
+119
+00:06:23,740 --> 00:06:26,740
+to say who really invented calculus
+
+120
+00:06:26,740 --> 00:06:35,740
+and historians settled that Newton and Leibniz invented calculus independently
+
+121
+00:06:37,740 --> 00:06:40,740
+and of course there were many evidences of this
+
+122
+00:06:40,740 --> 00:06:42,740
+one of them was the difference in timing
+
+123
+00:06:42,740 --> 00:06:44,740
+and the notes they wrote
+
+124
+00:06:44,740 --> 00:06:46,740
+and the most important difference
+
+125
+00:06:46,740 --> 00:06:49,740
+or the most important point that supported
+
+126
+00:06:49,740 --> 00:06:51,740
+the idea that the two of them did it separately
+
+127
+00:06:51,740 --> 00:06:53,740
+is that the two
+
+128
+00:06:53,740 --> 00:06:56,740
+although they reached the same result at the end in calculus
+
+129
+00:06:56,740 --> 00:07:00,740
+but the approach of each one of them was completely different
+
+130
+00:07:00,740 --> 00:07:04,740
+Newton and Leibniz looked at calculus from two completely different perspectives
+
+131
+00:07:04,740 --> 00:07:06,740
+and this is an important point you should keep in mind
+
+132
+00:07:06,740 --> 00:07:09,740
+because sometimes when we talk about calculus
+
+133
+00:07:09,740 --> 00:07:11,740
+we look at it from this perspective
+
+134
+00:07:11,740 --> 00:07:13,740
+which is the rate of change
+
+135
+00:07:13,740 --> 00:07:15,740
+of course the rate of change is the most important thing
+
+136
+00:07:15,740 --> 00:07:18,740
+and we take it only in physics
+
+137
+00:07:18,740 --> 00:07:20,740
+and it adjusts the velocity and acceleration
+
+138
+00:07:20,740 --> 00:07:22,740
+and the end of the subject
+
+139
+00:07:22,740 --> 00:07:24,740
+calculus is very important
+
+140
+00:07:24,740 --> 00:07:28,740
+you will be surprised that it is used strongly in finance and economics
+
+141
+00:07:28,740 --> 00:07:32,740
+so calculus is much wider than this perspective
+
+142
+00:07:32,740 --> 00:07:34,740
+which we sometimes gather ourselves in
+
+143
+00:07:36,740 --> 00:07:38,740
+let's go back to the most important question
+
+144
+00:07:38,740 --> 00:07:40,740
+what makes someone like Newton
+
+145
+00:07:40,740 --> 00:07:42,740
+someone like Leibniz
+
+146
+00:07:42,740 --> 00:07:43,740
+living in two different countries
+
+147
+00:07:43,740 --> 00:07:44,740
+think about something important
+
+148
+00:07:44,740 --> 00:07:46,740
+like calculus
+
+149
+00:07:46,740 --> 00:07:49,740
+and almost at the same time
+
+150
+00:07:49,740 --> 00:07:53,740
+calculus was not a luxury
+
+151
+00:07:53,740 --> 00:07:56,740
+meaning that Newton and Leibniz were not sitting idle
+
+152
+00:07:56,740 --> 00:07:57,740
+and they said let's make something new
+
+153
+00:07:57,740 --> 00:07:58,740
+so they made calculus
+
+154
+00:07:58,740 --> 00:07:59,740
+no
+
+155
+00:07:59,740 --> 00:08:00,740
+and this is a very important point
+
+156
+00:08:00,740 --> 00:08:01,740
+you should keep in mind
+
+157
+00:08:01,740 --> 00:08:06,740
+calculus was a cure for a problem already existing
+
+158
+00:08:06,740 --> 00:08:09,740
+and this problem reached a stage
+
+159
+00:08:09,740 --> 00:08:11,740
+that science, especially physics
+
+160
+00:08:11,740 --> 00:08:14,739
+became a burden that cannot move
+
+161
+00:08:14,743 --> 00:08:18,739
+and this problem existed for thousands of years
+
+162
+00:08:18,740 --> 00:08:20,740
+to understand this problem
+
+163
+00:08:20,740 --> 00:08:22,740
+let's go back to the example I mentioned
+
+164
+00:08:22,740 --> 00:08:24,740
+which is a fundamental one
+
+165
+00:08:24,740 --> 00:08:28,740
+in explaining what is the problem of calculus
+
+166
+00:08:28,740 --> 00:08:31,740
+this example is from the days of the Greeks
+
+167
+00:08:31,740 --> 00:08:33,740
+specifically Archimedes
+
+168
+00:08:33,740 --> 00:08:35,740
+you know that the Greeks were fascinated by geometry
+
+169
+00:08:35,740 --> 00:08:37,740
+geometry was not part of mathematics
+
+170
+00:08:37,740 --> 00:08:40,740
+but this was their life in geometry
+
+171
+00:08:40,740 --> 00:08:43,740
+so Archimedes was trying to calculate an example
+
+172
+00:08:43,740 --> 00:08:45,740
+to calculate the area of the circle
+
+173
+00:08:45,740 --> 00:08:47,740
+of course when I say that Archimedes was trying to calculate the area of the circle
+
+174
+00:08:47,740 --> 00:08:49,740
+I am very simplifying what Archimedes was doing
+
+175
+00:08:49,740 --> 00:08:54,740
+Archimedes was trying to find the nearest value of pi
+
+176
+00:08:54,740 --> 00:08:57,740
+to calculate the area of the circle and its circumference
+
+177
+00:08:57,740 --> 00:09:00,740
+but for simplicity we will say that he wanted to calculate the area of the circle
+
+178
+00:09:00,740 --> 00:09:03,740
+and for simplicity we will not take the approach that they all did
+
+179
+00:09:03,740 --> 00:09:05,740
+because his approach is big
+
+180
+00:09:05,740 --> 00:09:06,740
+and there are many details
+
+181
+00:09:06,740 --> 00:09:08,740
+we will just take a specific part from it
+
+182
+00:09:08,740 --> 00:09:11,740
+to take me to the problem that preceded him
+
+183
+00:09:11,740 --> 00:09:13,740
+and after that Newton and Leibniz solved it
+
+184
+00:09:13,740 --> 00:09:15,740
+and they solved it with calculus
+
+185
+00:09:20,740 --> 00:09:22,740
+to make this clear
+
+186
+00:09:22,740 --> 00:09:24,740
+let's go to the computer
+
+187
+00:09:24,740 --> 00:09:26,740
+and see the model in GeoGebra
+
+188
+00:09:26,740 --> 00:09:27,740
+how it looks
+
+189
+00:09:27,740 --> 00:09:29,740
+and try to solve the problem
+
+190
+00:09:29,740 --> 00:09:34,740
+or try to represent what Archimedes did
+
+191
+00:09:34,740 --> 00:09:37,740
+about 200 years before the birth
+
+192
+00:09:40,740 --> 00:09:42,740
+this is the circle we will work on
+
+193
+00:09:43,740 --> 00:09:45,740
+and we want to see what Archimedes did
+
+194
+00:09:45,740 --> 00:09:48,740
+to calculate its area
+
+195
+00:09:48,740 --> 00:09:54,740
+Archimedes did not have a way to calculate the area of the circle
+
+196
+00:09:54,740 --> 00:09:56,740
+because it is a curve
+
+197
+00:09:56,740 --> 00:10:00,740
+they could calculate the area and circumference of shapes
+
+198
+00:10:00,740 --> 00:10:02,740
+made up of straight lines
+
+199
+00:10:02,740 --> 00:10:05,740
+like triangles, squares, rectangles, polygons, etc.
+
+200
+00:10:05,740 --> 00:10:08,740
+so he said let's put a shape of these straight shapes
+
+201
+00:10:08,740 --> 00:10:10,740
+that we can calculate its area
+
+202
+00:10:10,740 --> 00:10:12,740
+and put it inside the circle so that it occupies the largest space of the circle
+
+203
+00:10:12,740 --> 00:10:17,740
+and thus it is almost the area of the circle
+
+204
+00:10:17,740 --> 00:10:21,740
+so he put a hexagon
+
+205
+00:10:21,740 --> 00:10:23,740
+or a polygon of 6 sides
+
+206
+00:10:23,740 --> 00:10:26,740
+why did he start with a hexagon?
+
+207
+00:10:26,740 --> 00:10:28,740
+because the hexagon has a very important symmetry
+
+208
+00:10:28,740 --> 00:10:31,740
+each of the rectangles in front of you
+
+209
+00:10:31,740 --> 00:10:33,740
+from the hexagon
+
+210
+00:10:33,740 --> 00:10:35,740
+equals half the diameter of the circle
+
+211
+00:10:35,740 --> 00:10:38,740
+that surrounds it from the 6 angles
+
+212
+00:10:38,740 --> 00:10:40,740
+this is something that distinguishes the hexagon
+
+213
+00:10:40,740 --> 00:10:41,740
+that's why he started from the hexagon
+
+214
+00:10:41,740 --> 00:10:44,740
+because it provides him with very important information
+
+215
+00:10:44,740 --> 00:10:48,740
+that facilitates the proof that he was working with
+
+216
+00:10:48,740 --> 00:10:50,740
+as we said there are many details in the work of Archimedes
+
+217
+00:10:50,740 --> 00:10:52,740
+in the pie group or the circumference group
+
+218
+00:10:52,740 --> 00:10:54,740
+or in the area of the circle
+
+219
+00:10:54,740 --> 00:10:55,740
+we will not talk about it
+
+220
+00:10:55,740 --> 00:10:57,740
+I just care about a specific part
+
+221
+00:10:57,740 --> 00:11:01,740
+in clarifying the problem that the calculus is trying to solve
+
+222
+00:11:01,740 --> 00:11:04,740
+if we look at this hexagon
+
+223
+00:11:04,740 --> 00:11:06,740
+it occupies a space that is not necessarily of the circle
+
+224
+00:11:06,740 --> 00:11:08,740
+we have some simple things here
+
+225
+00:11:08,740 --> 00:11:09,740
+which are the white parts
+
+226
+00:11:09,740 --> 00:11:11,740
+we can
+
+227
+00:11:11,740 --> 00:11:14,740
+increase the accuracy of the area
+
+228
+00:11:14,740 --> 00:11:18,740
+if we increase the number of rectangles of the polygon
+
+229
+00:11:18,740 --> 00:11:19,740
+so we started with 6
+
+230
+00:11:19,740 --> 00:11:22,740
+and now we have another polygon
+
+231
+00:11:22,740 --> 00:11:24,740
+let's make it of 12 sides
+
+232
+00:11:24,740 --> 00:11:27,740
+and here we want to look at something
+
+233
+00:11:27,740 --> 00:11:29,740
+the first side
+
+234
+00:11:29,740 --> 00:11:31,740
+or the hexagon
+
+235
+00:11:31,740 --> 00:11:32,740
+when it was 6 sides
+
+236
+00:11:32,740 --> 00:11:34,740
+is longer than each side in the polygon
+
+237
+00:11:34,740 --> 00:11:38,740
+when it was 12 sides
+
+238
+00:11:38,740 --> 00:11:39,740
+ok
+
+239
+00:11:41,740 --> 00:11:45,740
+the distance between the two vertices
+
+240
+00:11:45,740 --> 00:11:48,740
+as a result of the polygon's radius being short
+
+241
+00:11:48,740 --> 00:11:50,740
+the distance between the two vertices got smaller
+
+242
+00:11:50,740 --> 00:11:52,740
+instead of the distance between the two vertices
+
+243
+00:11:52,740 --> 00:11:53,740
+as you can see
+
+244
+00:11:53,740 --> 00:11:55,740
+the distance between the two vertices is less than ti
+
+245
+00:11:55,740 --> 00:11:56,740
+approximately the half
+
+246
+00:11:56,740 --> 00:11:57,740
+or more precisely
+
+247
+00:11:57,740 --> 00:11:58,740
+half
+
+248
+00:11:58,740 --> 00:11:59,740
+keep in mind
+
+249
+00:11:59,740 --> 00:12:01,740
+that we will go back to this part later
+
+250
+00:12:01,740 --> 00:12:04,740
+I still have a white part
+
+251
+00:12:04,740 --> 00:12:07,740
+it is true that my accuracy of the area has increased
+
+252
+00:12:07,740 --> 00:12:09,740
+but I still have a white part here
+
+253
+00:12:09,740 --> 00:12:10,740
+I didn't cover it up
+
+254
+00:12:10,740 --> 00:12:12,740
+I didn't cover it up
+
+255
+00:12:12,740 --> 00:12:13,740
+ok
+
+256
+00:12:13,740 --> 00:12:15,740
+if I increased the number of rectangles of the polygon
+
+257
+00:12:15,740 --> 00:12:16,740
+I started with 6
+
+258
+00:12:16,740 --> 00:12:17,740
+now it is 12
+
+259
+00:12:17,740 --> 00:12:19,740
+let's make it 24
+
+260
+00:12:19,740 --> 00:12:22,740
+now it is clear that we have almost finished the whole circle
+
+261
+00:12:22,740 --> 00:12:24,740
+but I said almost
+
+262
+00:12:24,740 --> 00:12:25,740
+why?
+
+263
+00:12:25,740 --> 00:12:28,740
+because even though you may not be able to keep track of it
+
+264
+00:12:28,740 --> 00:12:30,740
+there are still white parts
+
+265
+00:12:30,740 --> 00:12:32,740
+and to see these white parts
+
+266
+00:12:32,740 --> 00:12:34,740
+if we zoom in
+
+267
+00:12:34,740 --> 00:12:36,740
+it can be more clear
+
+268
+00:12:40,740 --> 00:12:47,740
+you will notice that the white distance here has increased
+
+269
+00:12:47,740 --> 00:12:48,740
+not only increased
+
+270
+00:12:48,740 --> 00:12:50,740
+you will notice that these two points
+
+271
+00:12:50,740 --> 00:12:53,740
+after they were very close to each other
+
+272
+00:12:53,740 --> 00:12:54,740
+they got apart
+
+273
+00:12:54,740 --> 00:12:55,740
+and this is a very important point
+
+274
+00:12:55,740 --> 00:12:56,740
+after I zoomed in
+
+275
+00:12:56,740 --> 00:12:59,740
+the distance between the two points increased
+
+276
+00:12:59,740 --> 00:13:03,740
+and I was able to show you that this white part is present
+
+277
+00:13:03,740 --> 00:13:05,740
+no, there is a part of the circle
+
+278
+00:13:05,740 --> 00:13:07,740
+we still haven't been able to calculate its area
+
+279
+00:13:07,740 --> 00:13:08,740
+ok
+
+280
+00:13:08,740 --> 00:13:09,740
+if we increase it again
+
+281
+00:13:09,740 --> 00:13:11,740
+we have increased the number of the polygon
+
+282
+00:13:11,740 --> 00:13:13,740
+and we made it 48
+
+283
+00:13:13,740 --> 00:13:14,740
+ah, no
+
+284
+00:13:14,740 --> 00:13:17,740
+we have almost finished the whole circle
+
+285
+00:13:17,740 --> 00:13:19,740
+but if you focus a little here
+
+286
+00:13:19,740 --> 00:13:23,740
+you will find that there is still a white space here
+
+287
+00:13:23,740 --> 00:13:26,740
+and if we zoom in more
+
+288
+00:13:28,740 --> 00:13:30,740
+you will notice that every time I zoom in
+
+289
+00:13:30,740 --> 00:13:32,740
+these two points are far apart
+
+290
+00:13:32,740 --> 00:13:33,740
+I stretch them
+
+291
+00:13:33,740 --> 00:13:37,740
+and the white space here appears in front of me
+
+292
+00:13:37,740 --> 00:13:38,740
+and this is something
+
+293
+00:13:38,740 --> 00:13:40,740
+that is very important
+
+294
+00:13:40,740 --> 00:13:41,740
+ok
+
+295
+00:13:41,740 --> 00:13:42,740
+let's see what we did
+
+296
+00:13:42,740 --> 00:13:43,740
+first we put the hexagon
+
+297
+00:13:43,740 --> 00:13:44,740
+which is 6
+
+298
+00:13:44,740 --> 00:13:45,740
+6 sides
+
+299
+00:13:45,740 --> 00:13:46,740
+then we made them 12 sides
+
+300
+00:13:46,740 --> 00:13:47,740
+we covered a larger area
+
+301
+00:13:47,740 --> 00:13:48,740
+then we made 48 sides
+
+302
+00:13:48,740 --> 00:13:49,740
+we covered a larger area
+
+303
+00:13:49,740 --> 00:13:50,740
+then we made
+
+304
+00:13:50,740 --> 00:13:52,740
+no, it was 6, 12, 24
+
+305
+00:13:52,740 --> 00:13:53,740
+then 48
+
+306
+00:13:53,740 --> 00:13:55,740
+in conclusion, it is clear here
+
+307
+00:13:55,740 --> 00:14:00,740
+that no matter how much we increase the number of sides of the polygon
+
+308
+00:14:00,740 --> 00:14:04,740
+there will always be a part of the circle
+
+309
+00:14:04,740 --> 00:14:06,740
+that we still haven't been able to cover with the area
+
+310
+00:14:06,740 --> 00:14:07,740
+because we are still looking for a space
+
+311
+00:14:07,740 --> 00:14:09,740
+because any two points
+
+312
+00:14:09,740 --> 00:14:11,740
+no matter how close they are to each other
+
+313
+00:14:11,740 --> 00:14:13,740
+I can zoom in on them
+
+314
+00:14:13,740 --> 00:14:16,740
+and show you that there is a large space between them
+
+315
+00:14:16,740 --> 00:14:18,740
+we will talk about this topic in detail later
+
+316
+00:14:18,740 --> 00:14:20,740
+the question here is when
+
+317
+00:14:20,740 --> 00:14:23,740
+the length of this polygon
+
+318
+00:14:23,740 --> 00:14:25,740
+or the width of this polygon
+
+319
+00:14:25,740 --> 00:14:28,740
+covers the circle
+
+320
+00:14:28,740 --> 00:14:30,740
+without a gap
+
+321
+00:14:30,740 --> 00:14:31,740
+without this white space
+
+322
+00:14:31,740 --> 00:14:36,740
+the answer is when this point sticks to this point
+
+323
+00:14:36,740 --> 00:14:43,740
+so that the length of the polygon's radius is the same as the point
+
+324
+00:14:43,740 --> 00:14:45,740
+it is just a point on the circle
+
+325
+00:14:45,740 --> 00:14:50,740
+the problem is that this is mathematically impossible
+
+326
+00:14:50,740 --> 00:14:51,740
+why?
+
+327
+00:14:51,740 --> 00:14:53,740
+let's go to the board and see
+
+328
+00:14:56,740 --> 00:14:58,740
+I think we understood what Archimedes was trying to do
+
+329
+00:14:58,740 --> 00:15:02,740
+and we understood that his problem is that no matter how much the number of sides is increased
+
+330
+00:15:02,740 --> 00:15:03,740
+he will always have a side
+
+331
+00:15:03,740 --> 00:15:04,740
+that leaves a space
+
+332
+00:15:04,740 --> 00:15:06,414
+between him and the circle
+
+333
+00:15:06,740 --> 00:15:08,740
+because the circle is curved
+
+334
+00:15:08,740 --> 00:15:10,740
+and the polygon is a straight line
+
+335
+00:15:10,740 --> 00:15:13,740
+and we said that it is impossible
+
+336
+00:15:13,740 --> 00:15:16,740
+for this polygon to stick to the circle
+
+337
+00:15:16,740 --> 00:15:18,740
+and remove all the space to calculate it
+
+338
+00:15:18,740 --> 00:15:22,740
+other than when this point sticks to this point
+
+339
+00:15:24,740 --> 00:15:28,740
+the problem is that in order for this to happen
+
+340
+00:15:28,740 --> 00:15:32,740
+we must understand how the real numbers work
+
+341
+00:15:32,740 --> 00:15:34,740
+because here there is a contradiction
+
+342
+00:15:34,740 --> 00:15:36,740
+if we look at it
+
+343
+00:15:36,740 --> 00:15:38,740
+let's talk about the natural numbers
+
+344
+00:15:38,740 --> 00:15:39,740
+let's say here is 0
+
+345
+00:15:39,740 --> 00:15:40,740
+and here is 1
+
+346
+00:15:40,740 --> 00:15:41,740
+and here is 2
+
+347
+00:15:41,740 --> 00:15:42,740
+and here is 3
+
+348
+00:15:42,740 --> 00:15:45,740
+and here we are talking about natural numbers
+
+349
+00:15:45,740 --> 00:15:47,740
+if I told you
+
+350
+00:15:47,740 --> 00:15:50,740
+what are the numbers between 1 and 3
+
+351
+00:15:50,740 --> 00:15:51,740
+how many will you tell me?
+
+352
+00:15:51,740 --> 00:15:52,740
+you will tell me 2
+
+353
+00:15:52,740 --> 00:15:54,740
+and your answer will be 100% correct
+
+354
+00:15:54,740 --> 00:15:55,740
+why?
+
+355
+00:15:55,740 --> 00:15:57,740
+because the natural numbers have only the whole numbers
+
+356
+00:15:57,740 --> 00:15:58,740
+the positive ones
+
+357
+00:16:00,740 --> 00:16:04,740
+in this situation we are not dealing with natural numbers
+
+358
+00:16:04,740 --> 00:16:05,740
+we are dealing with the set of natural numbers
+
+359
+00:16:06,740 --> 00:16:08,740
+a set of real numbers
+
+360
+00:16:10,500 --> 00:16:12,500
+and the set of real numbers is different from the set of natural numbers
+
+361
+00:16:12,501 --> 00:16:18,739
+because if I told you what in the set of real numbers is between 1 and 3
+
+362
+00:16:18,740 --> 00:16:19,740
+you will tell me 2
+
+363
+00:16:19,740 --> 00:16:20,740
+1.5
+
+364
+00:16:20,740 --> 00:16:21,740
+2.5
+
+365
+00:16:21,740 --> 00:16:22,740
+2.3
+
+366
+00:16:22,740 --> 00:16:23,740
+2.999999999
+
+367
+00:16:23,740 --> 00:16:27,740
+it's infinity
+
+368
+00:16:27,740 --> 00:16:29,740
+the number of numbers between 1 and 3
+
+369
+00:16:29,740 --> 00:16:31,740
+infinity
+
+370
+00:16:31,740 --> 00:16:32,740
+the number of numbers between 1 and 2
+
+371
+00:16:32,740 --> 00:16:33,740
+infinity
+
+372
+00:16:33,740 --> 00:16:35,740
+the number of numbers between any 2 numbers
+
+373
+00:16:36,740 --> 00:16:43,140
+No matter how small the distance between them is on the real numbers line, it's infinity.
+
+374
+00:16:43,140 --> 00:16:48,540
+Any two points you can put, I can zoom in on them, as I did in the program a while ago,
+
+375
+00:16:48,540 --> 00:16:54,040
+and I can get an infinite number of numbers between them, no matter how small the distance between them is.
+
+376
+00:16:54,040 --> 00:16:56,740
+The same problem here.
+
+377
+00:16:56,740 --> 00:17:06,140
+To connect this point to this point, so that this line is the distance between two points on the circle,
+
+378
+00:17:06,140 --> 00:17:12,340
+and these two points don't have anything between them, that's impossible, because there are no points between real numbers.
+
+379
+00:17:12,340 --> 00:17:16,340
+And this was the problem.  That is the calculus.
+
+380
+00:17:16,340 --> 00:17:23,940
+Archimedes imagined something, and gave it a name for a while, not the name we will use later,
+
+381
+00:17:23,940 --> 00:17:29,940
+but he imagined that there is a number, small, but not zero.
+
+382
+00:17:29,940 --> 00:17:33,940
+We will return to this concept later, but keep this in mind.
+
+383
+00:17:33,940 --> 00:17:35,940
+This problem was,
+
+384
+00:17:35,940 --> 00:17:40,340
+it existed for a long time, as we said, Archimedes, and it remained with the scientists for a long time.
+
+385
+00:17:40,340 --> 00:17:47,340
+When did we get a serious work to solve this problem?
+
+386
+00:17:47,340 --> 00:17:50,340
+This was in the first half of the 17th century.
+
+387
+00:17:50,340 --> 00:17:57,840
+You have scientists like Kepler, Descartes, Fermat, Pascal, all of them tried to solve this problem.
+
+388
+00:17:57,840 --> 00:18:03,740
+They were trying to solve the problem that we talked about at the beginning of the video,
+
+389
+00:18:03,740 --> 00:18:05,740
+which is the second problem.
+
+390
+00:18:05,940 --> 00:18:09,940
+The second problem is the tangent line between the point on the curve and the area below the curve.
+
+391
+00:18:09,940 --> 00:18:13,940
+This problem is this problem.
+
+392
+00:18:13,940 --> 00:18:17,940
+How? We will see this in the course.
+
+393
+00:18:17,940 --> 00:18:21,940
+Specifically, this problem, or solving this problem,
+
+394
+00:18:21,940 --> 00:18:24,940
+it would be easy if I could act in this problem,
+
+395
+00:18:24,940 --> 00:18:29,940
+because the only constraint in getting this tangent line and the area below the curve,
+
+396
+00:18:29,940 --> 00:18:33,940
+is to reach the point, or the distance between the two points,
+
+397
+00:18:33,940 --> 00:18:35,940
+so that there is nothing between them.
+
+398
+00:18:35,940 --> 00:18:39,940
+And the number of points is not allowed.
+
+399
+00:18:39,940 --> 00:18:43,940
+As we said, there are many scientists who tried this problem,
+
+400
+00:18:43,940 --> 00:18:45,940
+and some of their techniques worked.
+
+401
+00:18:45,940 --> 00:18:48,940
+Their problem was that they were isolated,
+
+402
+00:18:48,940 --> 00:18:51,940
+meaning that this technique works in this graph, but it does not work in another graph,
+
+403
+00:18:51,940 --> 00:18:53,940
+or it works in this type of problem, but it does not work in other problems,
+
+404
+00:18:53,940 --> 00:18:56,940
+or it makes errors in this case, and in the other case, it does not make errors.
+
+405
+00:18:56,940 --> 00:18:59,940
+So, the problem was not consistent, and it was not possible to solve it,
+
+406
+00:18:59,940 --> 00:19:03,940
+and it was not something that worked on all the graphs.
+
+407
+00:19:03,940 --> 00:19:07,940
+And here is the achievement of Newton and Leibniz.
+
+408
+00:19:07,940 --> 00:19:11,940
+Newton and Leibniz studied the experiments they did,
+
+409
+00:19:11,940 --> 00:19:15,940
+which they did with very high accuracy and very focused,
+
+410
+00:19:15,940 --> 00:19:18,940
+and they benefited from all the errors they made,
+
+411
+00:19:18,940 --> 00:19:21,940
+and they collected all this and came up with the technique called calculus,
+
+412
+00:19:21,940 --> 00:19:24,940
+specifically integration and differentiation.
+
+413
+00:19:24,940 --> 00:19:28,940
+Their problem was that their foundation was not strong.
+
+414
+00:19:28,940 --> 00:19:31,940
+The tool that was working, really, made a revolution in the scientific community,
+
+415
+00:19:31,940 --> 00:19:37,940
+in Europe, because without it, physics was stuck,
+
+416
+00:19:37,940 --> 00:19:42,940
+because all the modern problems of physics depend on the rate of change,
+
+417
+00:19:42,940 --> 00:19:44,940
+depend on irregular shapes,
+
+418
+00:19:44,940 --> 00:19:52,940
+traditional mathematics such as arithmetic, algebra, geometry, and trigonometry
+
+419
+00:19:52,940 --> 00:19:56,940
+could not solve the real problems in the real world.
+
+420
+00:19:56,940 --> 00:19:59,940
+So, physics was really stuck in this stage.
+
+421
+00:19:59,940 --> 00:20:01,940
+So, calculus was the solution,
+
+422
+00:20:01,940 --> 00:20:05,940
+and that is why I always say that if Newton and Leibniz had not invented it,
+
+423
+00:20:05,940 --> 00:20:07,940
+someone else would have invented it.
+
+424
+00:20:07,940 --> 00:20:11,940
+One of these scientists who worked on these things would have reached a solution in the end,
+
+425
+00:20:11,940 --> 00:20:18,940
+because physics would not have moved forward if calculus had not appeared.
+
+426
+00:20:18,940 --> 00:20:24,940
+As we said, Newton and Leibniz made the technique,
+
+427
+00:20:24,940 --> 00:20:28,940
+but the foundation that this technique had in terms of mathematical fundamentals
+
+428
+00:20:28,940 --> 00:20:29,940
+and mathematical reasoning was very, very weak,
+
+429
+00:20:29,940 --> 00:20:31,940
+because they could not find a solution.
+
+430
+00:20:31,940 --> 00:20:34,940
+So, they came up with a new idea,
+
+431
+00:20:34,940 --> 00:20:36,940
+and it was Leibniz,
+
+432
+00:20:36,940 --> 00:20:37,940
+he made a shortcut,
+
+433
+00:20:37,940 --> 00:20:38,940
+he said,
+
+434
+00:20:38,940 --> 00:20:43,940
+we cannot solve this problem,
+
+435
+00:20:43,940 --> 00:20:46,940
+so we invented a new term,
+
+436
+00:20:46,940 --> 00:20:49,940
+they took the same idea from Archimedes,
+
+437
+00:20:49,940 --> 00:20:51,940
+but they gave it a very funny name,
+
+438
+00:20:51,940 --> 00:20:53,940
+it is called
+
+439
+00:20:53,940 --> 00:20:59,940
+infinitesimal numbers,
+
+440
+00:20:59,940 --> 00:21:01,940
+or quantities.
+
+441
+00:21:01,940 --> 00:21:02,940
+What does it mean?
+
+442
+00:21:02,940 --> 00:21:08,940
+This group says that there is a very, very small number,
+
+443
+00:21:08,940 --> 00:21:10,940
+smaller than anything you can imagine,
+
+444
+00:21:10,940 --> 00:21:12,940
+and smaller than anything you can measure,
+
+445
+00:21:12,940 --> 00:21:15,940
+but it is larger than zero,
+
+446
+00:21:15,940 --> 00:21:18,940
+it is still in the positive numbers.
+
+447
+00:21:18,940 --> 00:21:20,940
+What is this number? We do not know.
+
+448
+00:21:20,940 --> 00:21:22,940
+It exists.
+
+449
+00:21:22,940 --> 00:21:28,940
+And this was the problem in the calculus of Newton and Leibniz.
+
+450
+00:21:29,940 --> 00:21:33,940
+Of course, all mathematics scholars and all philosophers
+
+451
+00:21:33,940 --> 00:21:34,940
+who were present at that time
+
+452
+00:21:34,940 --> 00:21:36,940
+criticized this concept,
+
+453
+00:21:36,940 --> 00:21:37,940
+because there is nothing to be said about it,
+
+454
+00:21:37,940 --> 00:21:38,940
+there is nothing,
+
+455
+00:21:38,940 --> 00:21:39,940
+you cannot hold something in your hand,
+
+456
+00:21:39,940 --> 00:21:43,940
+you cannot put an important branch in mathematics
+
+457
+00:21:43,940 --> 00:21:46,940
+on a strange concept like this.
+
+458
+00:21:46,940 --> 00:21:48,940
+But calculus was working,
+
+459
+00:21:48,940 --> 00:21:50,940
+you come to hold the equation of calculus,
+
+460
+00:21:50,940 --> 00:21:52,940
+and apply it, and it is full working,
+
+461
+00:21:52,940 --> 00:21:54,940
+but the foundation had a big problem.
+
+462
+00:21:54,940 --> 00:21:57,940
+It had a big problem to the extent that there was a very famous person called Berkeley,
+
+463
+00:21:57,940 --> 00:22:01,940
+who wrote an article after Newton and Leibniz died,
+
+464
+00:22:01,940 --> 00:22:03,940
+ by about 10 or 20, maybe 30 years,
+
+465
+00:22:03,940 --> 00:22:05,940
+in which the foundation of calculus was criticized very heavily.
+
+466
+00:22:05,940 --> 00:22:07,940
+Maybe this is one of the most critical points
+
+467
+00:22:07,940 --> 00:22:10,940
+that the foundation of calculus had to deal with.
+
+468
+00:22:10,940 --> 00:22:12,940
+And he described these infinitesimal numbers,
+
+469
+00:22:12,940 --> 00:22:18,940
+and he called them the ghosts of the departed quantities.
+
+470
+00:22:18,940 --> 00:22:21,940
+Finally, I want to say that Newton and Leibniz
+
+471
+00:22:21,940 --> 00:22:23,940
+are talking about a number that died,
+
+472
+00:22:23,940 --> 00:22:25,940
+and we are now dealing with its absence,
+
+473
+00:22:25,943 --> 00:22:29,939
+or I mean, it is exactly what he meant,
+
+474
+00:22:29,940 --> 00:22:31,940
+of course, there was a big problem in this subject.
+
+475
+00:22:31,940 --> 00:22:33,940
+This problem was solved later.
+
+476
+00:22:33,940 --> 00:22:35,940
+We will come to this subject in a little while.
+
+477
+00:22:37,940 --> 00:22:39,940
+In the late 17th century and the beginning of the 18th century,
+
+478
+00:22:39,940 --> 00:22:41,940
+or in the first half of the 18th century,
+
+479
+00:22:41,940 --> 00:22:43,940
+a group of scientists appeared
+
+480
+00:22:43,940 --> 00:22:45,940
+who contributed to the development of calculus
+
+481
+00:22:45,940 --> 00:22:47,940
+and the development of mathematics in general,
+
+482
+00:22:47,940 --> 00:22:49,940
+but I only care about three of them here.
+
+483
+00:22:49,940 --> 00:22:53,940
+Taylor, Euler, and Fourier.
+
+484
+00:22:54,940 --> 00:22:56,940
+These three had contributions to mathematics in general,
+
+485
+00:22:56,940 --> 00:22:58,940
+but they were three common factors
+
+486
+00:22:58,940 --> 00:23:01,940
+that taught a lot in two parts,
+
+487
+00:23:01,940 --> 00:23:03,940
+which are the sequences
+
+488
+00:23:08,940 --> 00:23:11,940
+and the series.
+
+489
+00:23:12,940 --> 00:23:14,940
+Of course, the sequences and the series
+
+490
+00:23:14,940 --> 00:23:16,940
+are not new concepts,
+
+491
+00:23:16,940 --> 00:23:18,940
+they did not appear in the 17th and 18th centuries,
+
+492
+00:23:18,940 --> 00:23:20,940
+but they were from the days of Fonacci,
+
+493
+00:23:20,940 --> 00:23:22,940
+before that, for example, 300 or 400 years ago.
+
+494
+00:23:22,940 --> 00:23:23,940
+So, these are old concepts,
+
+495
+00:23:23,940 --> 00:23:25,940
+but with the advent of calculus,
+
+496
+00:23:25,940 --> 00:23:28,940
+they started to look at sequences and series in a different way,
+
+497
+00:23:28,940 --> 00:23:30,940
+and they started to talk about them in a deeper way
+
+498
+00:23:30,940 --> 00:23:32,940
+in the infinite series.
+
+499
+00:23:32,940 --> 00:23:35,940
+This led to the emergence of another concept,
+
+500
+00:23:35,940 --> 00:23:37,940
+which we will talk about later,
+
+501
+00:23:37,940 --> 00:23:40,940
+which corrected the infinitesimal numbers.
+
+502
+00:23:41,940 --> 00:23:44,940
+And here comes the role of the next scientist,
+
+503
+00:23:44,940 --> 00:23:46,940
+who is called Cauchy,
+
+504
+00:23:46,940 --> 00:23:48,940
+and this was a French scientist.
+
+505
+00:23:48,940 --> 00:23:50,940
+He was in the late 18th century
+
+506
+00:23:50,940 --> 00:23:52,940
+and in the beginning of the century,
+
+507
+00:23:52,940 --> 00:23:54,940
+or in the first half of the 19th century.
+
+508
+00:23:55,940 --> 00:23:58,940
+Cauchy was the first to present a concept,
+
+509
+00:23:58,940 --> 00:23:59,940
+let's put it here,
+
+510
+00:23:59,940 --> 00:24:01,940
+because this is its place,
+
+511
+00:24:01,940 --> 00:24:03,940
+the concept of limits,
+
+512
+00:24:03,940 --> 00:24:05,940
+and we put this in a square.
+
+513
+00:24:05,940 --> 00:24:07,940
+Limits are the foundation
+
+514
+00:24:07,940 --> 00:24:09,940
+on which calculus is drawn.
+
+515
+00:24:09,940 --> 00:24:11,940
+Limits are the concept
+
+516
+00:24:11,940 --> 00:24:13,940
+that replaced the infinitesimal numbers.
+
+517
+00:24:13,940 --> 00:24:15,940
+And limits were formed
+
+518
+00:24:15,940 --> 00:24:19,940
+after a great development in mathematics,
+
+519
+00:24:19,940 --> 00:24:21,940
+and one of the most important things
+
+520
+00:24:21,940 --> 00:24:23,940
+that led Cauchy to be able to understand the concept of limits
+
+521
+00:24:23,940 --> 00:24:24,940
+and present it,
+
+522
+00:24:24,940 --> 00:24:26,940
+is the sequence of the series.
+
+523
+00:24:26,940 --> 00:24:27,940
+That's why I mentioned it,
+
+524
+00:24:27,940 --> 00:24:29,940
+one of the most important things in calculus,
+
+525
+00:24:29,940 --> 00:24:32,940
+because it has a very strong impact on the limit.
+
+526
+00:24:32,940 --> 00:24:34,940
+Cauchy was the first to present,
+
+527
+00:24:34,940 --> 00:24:36,940
+or to talk about the limit,
+
+528
+00:24:36,940 --> 00:24:40,940
+more than 130 years after the calculus
+
+529
+00:24:40,940 --> 00:24:42,940
+that Newton and Leibniz did.
+
+530
+00:24:42,940 --> 00:24:44,940
+To the extent that some people consider Cauchy
+
+531
+00:24:44,940 --> 00:24:46,940
+to be the real inventor,
+
+532
+00:24:46,940 --> 00:24:48,940
+or the real discoverer of calculus,
+
+533
+00:24:48,940 --> 00:24:50,940
+because he presented the concept of limits.
+
+534
+00:24:50,940 --> 00:24:51,940
+Because for many people,
+
+535
+00:24:51,940 --> 00:24:52,940
+limits are calculus.
+
+536
+00:24:52,940 --> 00:24:54,940
+The differentiation and integration of the limits,
+
+537
+00:24:54,940 --> 00:24:56,940
+is just a tool that you use
+
+538
+00:24:56,940 --> 00:24:58,940
+to solve the physics problems
+
+539
+00:24:58,940 --> 00:25:00,940
+or the mathematical problems that you have.
+
+540
+00:25:00,940 --> 00:25:01,940
+But the concept,
+
+541
+00:25:01,940 --> 00:25:02,940
+the foundation,
+
+542
+00:25:02,940 --> 00:25:06,940
+the mathematical reasoning of calculus,
+
+543
+00:25:06,940 --> 00:25:10,940
+is almost exclusive in the limits.
+
+544
+00:25:10,940 --> 00:25:12,940
+Understanding the limits is not easy.
+
+545
+00:25:12,940 --> 00:25:14,940
+Understanding the limits requires work from you,
+
+546
+00:25:14,940 --> 00:25:16,940
+because if you understand it,
+
+547
+00:25:16,940 --> 00:25:19,940
+the rest will be a piece of cake.
+
+548
+00:25:19,940 --> 00:25:22,940
+The infinitesimals numbers began to be shaken,
+
+549
+00:25:22,940 --> 00:25:26,939
+Until a German scientist came after Cauchy and refined Cauchy's limits.
+
+550
+00:25:26,940 --> 00:25:28,940
+because Cauchy's limits had ambiguity,
+
+551
+00:25:28,940 --> 00:25:30,940
+so he refined it,
+
+552
+00:25:30,940 --> 00:25:34,940
+and this was the last nail in the infinitesimals numbers' coffin.
+
+553
+00:25:34,940 --> 00:25:38,940
+And the limits took off.
+
+554
+00:25:38,940 --> 00:25:46,940
+The limits were trying to solve this problem,
+
+555
+00:25:46,940 --> 00:25:50,940
+and they really did.
+
+556
+00:25:50,940 --> 00:25:51,940
+After all this,
+
+557
+00:25:51,940 --> 00:25:54,940
+in the late 18th century,
+
+558
+00:25:54,940 --> 00:25:59,940
+and the beginnings of the 19th century,
+
+559
+00:25:59,940 --> 00:26:02,940
+no, sorry,
+
+560
+00:26:02,940 --> 00:26:04,940
+in the late 19th century,
+
+561
+00:26:04,940 --> 00:26:06,940
+and the beginning of the 20th century,
+
+562
+00:26:06,940 --> 00:26:09,940
+or the first period of the 20th century,
+
+563
+00:26:09,940 --> 00:26:12,940
+another scientist appeared.
+
+564
+00:26:12,940 --> 00:26:13,940
+This man in particular,
+
+565
+00:26:13,940 --> 00:26:14,940
+I have to write his name,
+
+566
+00:26:14,940 --> 00:26:16,940
+this man's name is
+
+567
+00:26:16,940 --> 00:26:20,940
+George Cantor.
+
+568
+00:26:20,940 --> 00:26:22,940
+George Cantor,
+
+569
+00:26:22,940 --> 00:26:26,940
+if we had not made a film of his life,
+
+570
+00:26:26,940 --> 00:26:29,940
+now we must make a film of it.
+
+571
+00:26:29,940 --> 00:26:33,940
+This man's life story was a tragedy,
+
+572
+00:26:33,940 --> 00:26:35,940
+it was very exciting and sad,
+
+573
+00:26:35,940 --> 00:26:37,940
+and unfortunately,
+
+574
+00:26:37,940 --> 00:26:41,940
+it is a tragedy to some extent.
+
+575
+00:26:41,940 --> 00:26:46,940
+This man began to talk about very important theories in this part.
+
+576
+00:26:46,940 --> 00:26:47,940
+This man, in the end,
+
+577
+00:26:47,940 --> 00:26:49,940
+he is the boss of real numbers
+
+578
+00:26:49,940 --> 00:26:51,940
+he did not talk about the limit specifically,
+
+579
+00:26:51,940 --> 00:26:53,940
+or his calculations were not in the specific limits,
+
+580
+00:26:53,940 --> 00:26:58,940
+his calculations were in changing the point of view of people in mathematics,
+
+581
+00:26:58,940 --> 00:26:59,940
+to numbers,
+
+582
+00:26:59,940 --> 00:27:01,940
+and specifically in real numbers,
+
+583
+00:27:01,940 --> 00:27:05,940
+which directly affects people's understanding of limits.
+
+584
+00:27:05,940 --> 00:27:08,940
+This man presented the set theory,
+
+585
+00:27:08,940 --> 00:27:09,940
+number theory,
+
+586
+00:27:09,940 --> 00:27:10,940
+the continuum,
+
+587
+00:27:10,940 --> 00:27:11,940
+the cardinality,
+
+588
+00:27:11,940 --> 00:27:13,940
+the cardinality of the continuum,
+
+589
+00:27:13,940 --> 00:27:15,940
+the nested intervals,
+
+590
+00:27:15,940 --> 00:27:18,940
+the amount of theorems this man made,
+
+591
+00:27:18,940 --> 00:27:22,940
+and presented a new door in mathematics,
+
+592
+00:27:22,940 --> 00:27:26,940
+which we now call set theory.
+
+593
+00:27:26,940 --> 00:27:34,940
+The problem is that when he presented all these concepts at the beginning,
+
+594
+00:27:34,940 --> 00:27:36,940
+no one expressed it,
+
+595
+00:27:36,940 --> 00:27:38,940
+even though he was a well-known scientist,
+
+596
+00:27:38,940 --> 00:27:39,940
+he was originally a German scientist,
+
+597
+00:27:39,940 --> 00:27:42,940
+but he was born in Russia and returned to Germany after that,
+
+598
+00:27:42,940 --> 00:27:45,940
+and studied mathematics in famous German universities.
+
+599
+00:27:45,940 --> 00:27:47,940
+But when he started talking about set theories,
+
+600
+00:27:47,940 --> 00:27:51,940
+no one cared.
+
+601
+00:27:51,940 --> 00:27:55,940
+The problem was that they started attacking him to the extent that he was humiliated,
+
+602
+00:27:55,940 --> 00:27:58,940
+and stopped his career in many stages,
+
+603
+00:27:58,940 --> 00:28:03,940
+because he had the opportunity to go and hold a post at the Berlin University,
+
+604
+00:28:03,940 --> 00:28:06,940
+and they stopped his teacher, who was not convinced of his theories.
+
+605
+00:28:06,940 --> 00:28:09,940
+This teacher was one of the most negatively affected people in his life,
+
+606
+00:28:09,940 --> 00:28:14,940
+he was even called the corrupt of the youth,
+
+607
+00:28:14,940 --> 00:28:16,940
+which means that he is a messed-up guy,
+
+608
+00:28:16,940 --> 00:28:19,940
+and he is a boy who mess-up the youth around him,
+
+609
+00:28:19,940 --> 00:28:25,940
+because he was teaching these techniques to his colleagues in mathematics.
+
+610
+00:28:26,940 --> 00:28:29,940
+The situation became very bad with him,
+
+611
+00:28:29,940 --> 00:28:32,940
+to the extent that he entered depression,
+
+612
+00:28:32,940 --> 00:28:39,940
+and he spent the last 15 or 20 years of his life moving from mental institute to mental institute.
+
+613
+00:28:39,940 --> 00:28:42,940
+People have frustrated the man in his life.
+
+614
+00:28:42,940 --> 00:28:45,940
+His son died at that time, and his condition deteriorated more,
+
+615
+00:28:45,940 --> 00:28:47,940
+and he was going out and working a little,
+
+616
+00:28:47,940 --> 00:28:49,940
+and he get more confused,
+
+617
+00:28:49,940 --> 00:28:51,342
+and he go to another institute.
+
+618
+00:28:51,343 --> 00:28:54,914
+In the end, the man got to a point where here retired from mathematics
+
+619
+00:28:54,915 --> 00:28:57,400
+and he went to teach philosophy,
+
+620
+00:28:57,401 --> 00:28:59,939
+and then he left philosophy and taught literature,
+
+621
+00:28:59,940 --> 00:29:02,940
+and specialized in the literature of the time of Shakespeare and Queen Elizabeth,
+
+622
+00:29:02,940 --> 00:29:04,940
+and then he returned to mathematics again.
+
+623
+00:29:04,940 --> 00:29:06,940
+In the end, the man remained in mental institue,
+
+624
+00:29:06,940 --> 00:29:08,940
+and out of mental institue,
+
+625
+00:29:08,940 --> 00:29:10,940
+until he died in the last one of them,
+
+626
+00:29:10,940 --> 00:29:12,940
+he entered about 4 or 5 times,
+
+627
+00:29:12,940 --> 00:29:14,940
+and died in the end in a mental institue in 1918.
+
+628
+00:29:15,940 --> 00:29:17,940
+In the near end of his life,
+
+629
+00:29:17,940 --> 00:29:22,940
+people began to realize that this man was not crazy,
+
+630
+00:29:22,940 --> 00:29:24,940
+this man was speaking very important words,
+
+631
+00:29:24,940 --> 00:29:25,940
+and today,
+
+632
+00:29:25,940 --> 00:29:27,940
+one of the most important branches of mathematics,
+
+633
+00:29:27,940 --> 00:29:29,940
+and one of the most important branches of mathematics,
+
+634
+00:29:29,940 --> 00:29:31,940
+which is very advanced,
+
+635
+00:29:31,940 --> 00:29:34,940
+is the theories that this man is the founder of.
+
+636
+00:29:34,940 --> 00:29:36,940
+Why do we say this?
+
+637
+00:29:36,940 --> 00:29:40,940
+This man changed people's understanding of real numbers,
+
+638
+00:29:40,940 --> 00:29:42,940
+and as long as your understanding of real numbers changes,
+
+639
+00:29:42,940 --> 00:29:44,940
+your understanding of limits changes,
+
+640
+00:29:45,940 --> 00:29:47,940
+and if you want to understand limits correctly,
+
+641
+00:29:47,940 --> 00:29:50,940
+you must understand the next point,
+
+642
+00:29:50,940 --> 00:29:56,940
+which is the properties of,
+
+643
+00:29:56,940 --> 00:29:58,940
+I will not write real numbers here,
+
+644
+00:29:58,940 --> 00:30:02,940
+I will write numbers in general.
+
+645
+00:30:05,940 --> 00:30:07,940
+This is our course.
+
+646
+00:30:07,940 --> 00:30:11,940
+We will talk at the beginning about the properties of numbers,
+
+647
+00:30:11,940 --> 00:30:13,940
+then we will talk about functions,
+
+648
+00:30:13,940 --> 00:30:16,940
+of course, functions are the most important concept in mathematics in general,
+
+649
+00:30:16,940 --> 00:30:18,940
+so we will talk about functions,
+
+650
+00:30:18,940 --> 00:30:20,940
+I will write it here,
+
+651
+00:30:20,940 --> 00:30:22,940
+functions,
+
+652
+00:30:22,940 --> 00:30:24,940
+so we will talk here,
+
+653
+00:30:24,940 --> 00:30:26,940
+we will talk about functions,
+
+654
+00:30:26,940 --> 00:30:28,940
+and from functions we will talk about limits,
+
+655
+00:30:28,940 --> 00:30:30,940
+and from limits we will talk about differentiation and integration,
+
+656
+00:30:30,940 --> 00:30:33,940
+sequences and series are in different places in the course,
+
+657
+00:30:33,940 --> 00:30:35,940
+we will talk about complex numbers,
+
+658
+00:30:35,940 --> 00:30:41,940
+which is also related to the properties of numbers,
+
+659
+00:30:41,940 --> 00:30:45,940
+because they provide us with a new type of numbers,
+
+660
+00:30:45,940 --> 00:30:47,940
+so,
+
+661
+00:30:47,940 --> 00:30:55,940
+the purpose of this introduction was to show you that calculus is not just differentiation and integration,
+
+662
+00:30:55,940 --> 00:30:57,940
+and not just limits,
+
+663
+00:30:57,940 --> 00:30:59,940
+they are many things in each other,
+
+664
+00:30:59,940 --> 00:31:03,940
+because calculus as a subject is part of the largest branch in mathematics,
+
+665
+00:31:03,940 --> 00:31:06,940
+called real analysis,
+
+666
+00:31:06,940 --> 00:31:09,940
+and this is one of the very important fields in mathematics,
+
+667
+00:31:09,940 --> 00:31:11,940
+we do not have to go into it,
+
+668
+00:31:11,940 --> 00:31:15,940
+but at least we should understand this frame very well,
+
+669
+00:31:15,940 --> 00:31:21,940
+if you want to have a strong future in any study in physics,
+
+670
+00:31:21,940 --> 00:31:23,940
+and any study in engineering,
+
+671
+00:31:23,940 --> 00:31:25,940
+or of course,
+
+672
+00:31:25,940 --> 00:31:28,940
+I am sure it is in any advanced mathematics,
+
+673
+00:31:28,940 --> 00:31:30,940
+you will work in it, God willing, in the future,
+
+674
+00:31:30,940 --> 00:31:34,940
+we come to the source that we will work from in this course,
+
+675
+00:31:34,940 --> 00:31:36,940
+of course, there are many books,
+
+676
+00:31:36,940 --> 00:31:40,940
+the most famous book is considered as an introduction to calculus and real analysis,
+
+677
+00:31:40,940 --> 00:31:44,940
+a book by an American scientist named Michael Spivak,
+
+678
+00:31:44,940 --> 00:31:47,940
+I think this man is still alive, he was born in 1940,
+
+679
+00:31:47,940 --> 00:31:49,940
+he wrote the book that we will work from,
+
+680
+00:31:49,940 --> 00:31:51,940
+or the first copy or version of it,
+
+681
+00:31:51,940 --> 00:31:52,940
+he was 67,
+
+682
+00:31:52,940 --> 00:31:53,940
+he was 27 years old,
+
+683
+00:31:53,940 --> 00:31:55,940
+this is the year he took his PhD,
+
+684
+00:31:55,940 --> 00:31:57,940
+although he wrote this book when he was very young,
+
+685
+00:31:57,940 --> 00:32:00,940
+as I told you, this book is considered the calculus book for many people,
+
+686
+00:32:00,940 --> 00:32:02,940
+they consider that in order to study calculus,
+
+687
+00:32:02,940 --> 00:32:06,940
+you must read this book at a certain stage in your life,
+
+688
+00:32:06,940 --> 00:32:08,940
+in order to keep your name,
+
+689
+00:32:08,940 --> 00:32:11,940
+this is the book that we will work from, God willing,
+
+690
+00:32:11,940 --> 00:32:14,940
+see you in the next video,
+
+691
+00:32:14,940 --> 00:32:16,940
+peace be upon you.

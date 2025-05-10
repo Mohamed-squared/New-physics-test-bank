@@ -117,6 +117,9 @@
 
     --border-color: var(--color-gray-200);
     --border-color-dark: var(--color-gray-700);
+
+    /* --- NEW: Card Opacity --- */
+    --card-bg-alpha: 0.88; /* Default opacity, JS will override */
 }
 
 /* Basic Reset & Global Box Sizing */
@@ -142,14 +145,16 @@ html {
 
 body {
     font-family: var(--font-sans);
-    background-color: var(--color-gray-50);
+    /* MODIFIED: Make body background transparent to see app-background-layer */
+    background-color: transparent !important;
     color: var(--color-gray-700);
-    transition: background-color var(--transition-std), color var(--transition-std);
+    transition: /*background-color var(--transition-std),*/ color var(--transition-std); /* Removed background-color transition for body */
     height: 100vh;
 }
 
 .dark body {
-    background-color: var(--color-gray-900);
+    /* MODIFIED: Make body background transparent to see app-background-layer */
+    /* background-color: var(--color-gray-900); */ /* Original */
     color: var(--color-gray-300);
 }
 
@@ -207,12 +212,13 @@ main#main-content {
     flex-grow: 1;
     overflow-y: auto;
     overflow-x: hidden;
-    background-color: var(--color-gray-100); /* Slightly different from body */
-    transition: background-color var(--transition-std);
+    /* MODIFIED: Make main content background transparent */
+    background-color: transparent !important;
+    /* transition: background-color var(--transition-std); */ /* Removed background-color transition */
 }
-.dark main#main-content {
-     background-color: var(--color-gray-950); /* Slightly darker */
-}
+/* .dark main#main-content { */
+     /* background-color: var(--color-gray-950); */ /* Slightly darker - Original */
+/* } */
 main#main-content .container {
     max-width: 80rem; /* Limit content width */
     margin-left: auto;
@@ -990,34 +996,46 @@ input[type="radio"]:checked::before {
    ========================================================================== */
 
 .content-card {
-    background-color: var(--color-white);
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode: White with dynamic opacity */
+    -webkit-backdrop-filter: blur(5px); /* Frosted glass effect for Safari */
+    backdrop-filter: blur(5px);      /* Standard Frosted glass effect */
+
     padding: 1.5rem 2rem;
     border-radius: var(--border-radius-lg);
-    box-shadow: var(--shadow-md); /* Slightly more pronounced shadow */
+    box-shadow: var(--shadow-md);
     transition: background-color var(--transition-std), box-shadow var(--transition-std), border-color var(--transition-std);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--color-gray-200); /* Light border for definition */
     margin-bottom: 1.5rem;
 }
 .dark .content-card {
-    background-color: var(--color-gray-800);
-    border-color: var(--border-color-dark);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.15), 0 2px 4px -2px rgb(0 0 0 / 0.15); /* Adjusted dark shadow */
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-800) with dynamic opacity */
+    border-color: rgba(71, 85, 105, 0.5); /* Darker, slightly transparent border (var(--color-gray-600) with alpha) */
+    box-shadow: 0 4px 10px -1px rgba(0, 0, 0, 0.2), 0 2px 6px -2px rgba(0, 0, 0, 0.15); /* Slightly adjusted dark shadow for depth */
 }
 
 /* Card Header Area */
 #card-header {
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
+    margin-bottom: 1.5rem; /* This was original, but then overridden by more specific styles below */
+    padding-bottom: 1rem;   /* This was original, but then overridden by more specific styles below */
+
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode base white, dynamic alpha */
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    padding: 1rem;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    margin-bottom: 0; /* Overrides earlier margin-bottom */
     border-bottom: 1px solid var(--border-color);
+
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
-    transition: border-color var(--transition-std);
+    transition: border-color var(--transition-std), background-color var(--transition-std);
 }
 .dark #card-header {
-    border-bottom-color: var(--border-color-dark);
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode base var(--color-gray-800), dynamic alpha */
+    border-bottom-color: rgba(71, 85, 105, 0.5); /* From original dark mode style */
 }
 #subject-info p { margin-bottom: 0.1rem; }
 #subject-info .font-semibold { color: var(--color-gray-800); transition: color var(--transition-std); }
@@ -1040,6 +1058,7 @@ input[type="radio"]:checked::before {
     max-width: 28rem;
     margin: 2rem auto;
     padding: 1.5rem 2rem; /* Uses .content-card padding */
+    /* Login section inherits .content-card styles if it has the class */
 }
 
 /* Dynamic Content Area (#content) */
@@ -1048,22 +1067,30 @@ input[type="radio"]:checked::before {
 }
 /* Progress Dashboard Area (#dashboard) */
 #dashboard {
-    border: 1px solid var(--border-color);
+    background-color: rgba(248, 250, 252, var(--card-bg-alpha)); /* Light mode: var(--color-gray-50) with dynamic opacity */
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+
+    border: 1px solid var(--color-gray-200);
     border-radius: var(--border-radius-lg);
     margin-bottom: 1.5rem;
-    background-color: var(--color-gray-50);
     padding: 1.5rem;
     transition: background-color var(--transition-std), border-color var(--transition-std);
 }
 .dark #dashboard {
-    border-color: var(--border-color-dark);
-    background-color: var(--color-gray-800);
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-800) with dynamic opacity */
+    border-color: rgba(71, 85, 105, 0.5); /* From original dark mode style */
 }
+
+/* Inner cards of the Progress Dashboard */
 #dashboard-content .grid > div {
-    background-color: var(--color-white);
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode: White with dynamic opacity */
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+
     border-radius: var(--border-radius-md);
     box-shadow: var(--shadow);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--color-gray-200);
     min-height: 18rem;
     padding: 1rem;
     display: flex;
@@ -1071,9 +1098,15 @@ input[type="radio"]:checked::before {
     transition: background-color var(--transition-std), border-color var(--transition-std), box-shadow var(--transition-std);
 }
 .dark #dashboard-content .grid > div {
-    background-color: var(--color-gray-700);
+    background-color: rgba(51, 65, 85, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-700) with dynamic opacity */
+    border-color: rgba(100, 116, 139, 0.4); /* var(--color-gray-600) with alpha, from original */
+}
+/* Redundant dark style from original, now covered by the one above with var()
+.dark #dashboard-content .grid > div {
+    background-color: var(--color-gray-700); // This would be solid
     border-color: var(--border-color-dark);
 }
+*/
 #dashboard-content h3, #dashboard-content h4 {
     font-family: var(--font-sans);
     font-size: 0.9rem;
@@ -1097,7 +1130,7 @@ input[type="radio"]:checked::before {
 
 /* Online Test Area */
 #online-test-area .fixed {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.9); /* Fixed alpha, not using --card-bg-alpha for header/footer */
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-color: var(--border-color);
@@ -1106,7 +1139,7 @@ input[type="radio"]:checked::before {
     transition: background-color var(--transition-std), border-color var(--transition-std);
 }
 .dark #online-test-area .fixed {
-    background-color: rgba(15, 23, 42, 0.9);
+    background-color: rgba(15, 23, 42, 0.9); /* Fixed alpha */
     border-color: var(--border-color-dark);
 }
 #online-test-area #question-container {
@@ -1133,55 +1166,57 @@ input[type="radio"]:checked::before {
 
 /* Online Test Question Styling */
 #online-test-area .question-card {
-    background-color: var(--color-white);
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode: White with dynamic opacity */
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+
     padding: 1.5rem;
     border-radius: var(--border-radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border-color);
     margin-bottom: 1rem;
-    animation: fadeIn 0.3s ease-out forwards; /* Re-using global fadeIn */
+    animation: fadeIn 0.3s ease-out forwards;
     transition: background-color var(--transition-std), border-color var(--transition-std), box-shadow var(--transition-std);
 }
 .dark #online-test-area .question-card {
-    background-color: var(--color-gray-800);
-    border-color: var(--border-color-dark);
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-800) with dynamic opacity */
+    border-color: rgba(71, 85, 105, 0.5); /* From original dark mode style */
 }
+
+/* Styles for online test options - these maintain their own opacity for readability */
 #online-test-area .option-label {
     display: flex;
     align-items: flex-start;
     padding: 0.8rem 1rem;
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--color-gray-200);
     border-radius: var(--border-radius-md);
     cursor: pointer;
     transition: background-color var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
-    background-color: var(--color-gray-50);
+    background-color: rgba(248, 250, 252, 0.9); /* var(--color-gray-50) with fixed alpha */
     margin-bottom: 0.5rem;
 }
+.dark #online-test-area .option-label {
+    background-color: rgba(51, 65, 85, 0.9); /* var(--color-gray-700) with fixed alpha */
+    border-color: rgba(100, 116, 139, 0.4); /* var(--color-gray-600) with alpha */
+}
+
 #online-test-area .option-label:hover {
-    background-color: var(--color-gray-100);
+    background-color: rgba(241, 245, 249, 0.95); /* var(--color-gray-100) with fixed alpha */
     border-color: var(--color-gray-300);
 }
-#online-test-area input[type="radio"] {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
+.dark #online-test-area .option-label:hover {
+    background-color: rgba(71, 85, 105, 0.95); /* var(--color-gray-600) with fixed alpha */
+    border-color: var(--color-gray-500);
 }
+
 #online-test-area input[type="radio"]:checked + .option-label {
     border-color: var(--color-primary-500);
-    background-color: var(--color-primary-50);
+    background-color: rgba(240, 249, 255, 0.95); /* var(--color-primary-50) with fixed alpha */
     box-shadow: 0 0 0 1px var(--color-primary-500);
-}
-.dark #online-test-area .option-label {
-    background-color: var(--color-gray-700);
-    border-color: var(--border-color-dark);
-}
-.dark #online-test-area .option-label:hover {
-    background-color: var(--color-gray-600);
-    border-color: var(--color-gray-500);
 }
 .dark #online-test-area input[type="radio"]:checked + .option-label {
     border-color: var(--color-primary-400);
-    background-color: var(--color-primary-900);
+    background-color: rgba(12, 74, 110, var(--card-bg-alpha)); /* var(--color-primary-900) with dynamic alpha - Changed to use var, was originally fixed 0 alpha. Might need review if this element should be different. */
     box-shadow: 0 0 0 1px var(--color-primary-400);
 }
 #online-test-area .option-label::before {
@@ -1886,5 +1921,69 @@ details > div {
     background-color: var(--color-primary-700); /* Darker primary for active in dark mode */
     color: var(--color-primary-200);
 }
+
+#app-background-layer {
+    /* Base styles are set inline in index.html for fixed positioning */
+    /* JS will manage backgroundImage and backgroundColor for custom settings */
+    /* This transition applies to backgroundColor changes from default theme toggling */
+    transition: background-color var(--transition-std), background-image var(--transition-std);
+}
+
+/* If you add image previews or color previews in the settings UI */
+.background-setting-preview {
+    width: 100%;
+    height: 5rem; /* Adjust as needed */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+.dark .background-setting-preview {
+    border-color: var(--border-color-dark);
+    color: var(--color-gray-500);
+}
+
+/* Custom File Input Button Style */
+input[type="file"].form-control::file-selector-button {
+    font-weight: 500;
+    color: var(--color-white);
+    background-color: var(--color-primary-600);
+    border: 1px solid var(--color-primary-600);
+    padding: 0.5rem 1rem; /* Match .btn styles roughly */
+    border-radius: var(--border-radius-md);
+    margin-right: 0.75rem;
+    margin-left: -0.9rem; /* Pull to edge */
+    margin-top: -0.6rem; /* Pull to edge */
+    margin-bottom: -0.6rem; /* Pull to edge */
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+input[type="file"].form-control::file-selector-button:hover {
+    background-color: var(--color-primary-700);
+    border-color: var(--color-primary-700);
+}
+
+.dark input[type="file"].form-control::file-selector-button {
+    background-color: var(--color-primary-500);
+    border-color: var(--color-primary-500);
+    color: var(--color-white);
+}
+
+.dark input[type="file"].form-control::file-selector-button:hover {
+    background-color: var(--color-primary-400);
+    border-color: var(--color-primary-400);
+}
+
+/* Ensure text part of file input is styled correctly */
+input[type="file"].form-control {
+    padding-left: 0.9rem; /* Default padding unless button is there */
+}
+
 
 /* --- END OF FILE styles.css --- */
