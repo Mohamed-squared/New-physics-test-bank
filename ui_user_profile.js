@@ -1,5 +1,3 @@
-// --- START OF FILE ui_user_profile.js ---
-
 // ui_user_profile.js
 
 import { currentUser, db, auth, userCourseProgressMap, globalCourseDataMap } from './state.js'; // Added globalCourseDataMap
@@ -132,6 +130,16 @@ export function showUserProfileDashboard() {
                  <button onclick="window.signOutUserWrapper()" class="w-full btn-danger flex items-center justify-center">
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-2"><path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 0 1 5.25 2h5.5A2.25 2.25 0 0 1 13 4.25v2a.75.75 0 0 1-1.5 0v-2a.75.75 0 0 0-.75-.75h-5.5a.75.75 0 0 0-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 0 0 .75-.75v-2a.75.75 0 0 1 1.5 0v2A2.25 2.25 0 0 1 10.75 18h-5.5A2.25 2.25 0 0 1 3 15.75V4.25Z" clip-rule="evenodd" /><path fill-rule="evenodd" d="M6 10a.75.75 0 0 1 .75-.75h9.546l-1.048-.943a.75.75 0 1 1 1.004-1.114l2.5 2.25a.75.75 0 0 1 0 1.114l-2.5 2.25a.75.75 0 1 1-1.004-1.114l1.048-.943H6.75A.75.75 0 0 1 6 10Z" clip-rule="evenodd" /></svg>
                      Log Out
+                 </button>
+             </div>
+
+            <!-- Danger Zone - Delete Account -->
+            <div class="content-card mt-6 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/30">
+                 <h3 class="text-lg font-semibold mb-2 text-red-700 dark:text-red-300">Danger Zone</h3>
+                 <p class="text-sm text-red-600 dark:text-red-400 mb-3">Deleting your account is permanent and will remove all your data, including TestGen progress, course enrollments, notes, and chat history.</p>
+                 <button onclick="window.confirmSelfDeleteAccount()" class="btn-danger w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-2"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.177-2.34.294A2.25 2.25 0 0 0 1.66 6.22l-.13.44a.75.75 0 0 0 1.452.433l.13-.44a.75.75 0 0 1 .994-.512c.81-.126 1.645-.235 2.504-.313V15.25a.75.75 0 0 1-.75.75H3.75a.75.75 0 0 0 0 1.5h3.5a2.25 2.25 0 0 0 2.25-2.25V3.75a2.75 2.75 0 0 0-2.75-2.75Zm6.53 3.939a.75.75 0 0 0-1.06-1.06L12 6.19l-2.22-2.22a.75.75 0 0 0-1.06 1.06L10.94 7.25l-2.22 2.22a.75.75 0 1 0 1.06 1.06L12 8.31l2.22 2.22a.75.75 0 1 0 1.06-1.06L13.06 7.25l2.22-2.22Z" clip-rule="evenodd" /></svg>
+                    Delete My Account Permanently
                  </button>
              </div>
         </div>`;
@@ -335,7 +343,189 @@ export async function updateUserProfile(event) {
          setTimeout(() => { msgContainer.remove(); }, 6000);
     }
 }
+
+// Helper function to delete all documents in a subcollection
+async function deleteSubcollection(db, parentDocRef, subcollectionName) {
+    const subcollectionRef = parentDocRef.collection(subcollectionName);
+    const snapshot = await subcollectionRef.limit(500).get(); // Batch delete in chunks if needed
+    if (snapshot.size === 0) {
+        return; // Nothing to delete
+    }
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+    await batch.commit();
+    console.log(`Deleted ${snapshot.size} documents from ${parentDocRef.path}/${subcollectionName}`);
+    // Recursively delete if more documents exist (for very large subcollections)
+    if (snapshot.size >= 500) {
+        await deleteSubcollection(db, parentDocRef, subcollectionName);
+    }
+}
+
+
+async function confirmSelfDeleteAccount() {
+    if (!currentUser) {
+        console.warn("confirmSelfDeleteAccount: No current user.");
+        return;
+    }
+
+    const firstConfirm = confirm("WARNING: Are you absolutely sure you want to delete your account? This will permanently remove all your TestGen data, course progress, notes, AI chat history, and exam results. This action CANNOT be undone.");
+    if (!firstConfirm) {
+        return;
+    }
+
+    const secondConfirmInput = prompt("To confirm deletion, please type 'DELETE MY ACCOUNT' in the box below:");
+    if (secondConfirmInput === null || secondConfirmInput.trim().toUpperCase() !== "DELETE MY ACCOUNT") {
+        alert("Deletion cancelled or incorrect confirmation.");
+        return;
+    }
+
+    await handleSelfDeleteAccount();
+}
+
+async function handleSelfDeleteAccount() {
+    if (!currentUser || !db || !auth) {
+        alert("Error: Cannot delete account. User session or database connection is invalid.");
+        console.error("handleSelfDeleteAccount: currentUser, db, or auth is null.");
+        return;
+    }
+
+    const userEmail = currentUser.email;
+    if (!userEmail) {
+        alert("Error: User email not found. Cannot proceed with re-authentication for deletion.");
+        console.error("handleSelfDeleteAccount: currentUser.email is null.");
+        return;
+    }
+    
+    const authUserForReauth = auth.currentUser; // Use the auth.currentUser for re-authentication
+    if (!authUserForReauth) {
+        alert("Error: Authentication session error. Please try logging out and back in before deleting your account.");
+        console.error("handleSelfDeleteAccount: auth.currentUser is null.");
+        return;
+    }
+
+
+    const password = prompt("For security, please re-enter your password to confirm account deletion:");
+    if (!password) {
+        alert("Password required for deletion. Deletion cancelled.");
+        return;
+    }
+
+    showLoading("Verifying credentials & preparing for deletion...");
+
+    try {
+        const credential = firebase.auth.EmailAuthProvider.credential(userEmail, password);
+        await authUserForReauth.reauthenticateWithCredential(credential);
+        console.log("Re-authentication successful. Proceeding with account deletion.");
+        
+        showLoading("Deleting your account and data...");
+
+        const uidToDelete = authUserForReauth.uid; // Use the re-authenticated user's UID
+        let usernameToDelete = null;
+
+        // Fetch username from Firestore before deleting the user document
+        try {
+            const userDocSnap = await db.collection('users').doc(uidToDelete).get();
+            if (userDocSnap.exists) {
+                usernameToDelete = userDocSnap.data().username;
+            }
+        } catch (fetchError) {
+            console.warn("Could not fetch username before deletion, continuing...", fetchError);
+        }
+
+
+        console.log(`Starting data deletion for UID: ${uidToDelete}, Username: ${usernameToDelete || 'N/A'}`);
+
+        // Firestore Data Deletion
+        const userDocRef = db.collection('users').doc(uidToDelete);
+
+        // Subcollections to delete
+        const subcollections = [
+            'courses', // from userCourseProgress/{uid}/courses
+            'exams',   // from userExams/{uid}/exams
+            'aiChatSessions',
+            'userFormulaSheets',
+            'userChapterSummaries',
+            'creditLog'
+        ];
+        
+        // Delete userCourseProgress subcollection
+        const userCourseProgressDocRef = db.collection('userCourseProgress').doc(uidToDelete);
+        try {
+            await deleteSubcollection(db, userCourseProgressDocRef, 'courses');
+            await userCourseProgressDocRef.delete(); // Delete the parent doc if it exists
+            console.log(`Deleted subcollection userCourseProgress/${uidToDelete}/courses and its parent doc.`);
+        } catch (error) {
+             console.error(`Error deleting userCourseProgress for ${uidToDelete}:`, error);
+        }
+        
+        // Delete userExams subcollection
+        const userExamsDocRef = db.collection('userExams').doc(uidToDelete);
+         try {
+            await deleteSubcollection(db, userExamsDocRef, 'exams');
+            await userExamsDocRef.delete(); // Delete the parent doc if it exists
+            console.log(`Deleted subcollection userExams/${uidToDelete}/exams and its parent doc.`);
+        } catch (error) {
+             console.error(`Error deleting userExams for ${uidToDelete}:`, error);
+        }
+
+
+        for (const subcollectionName of ['aiChatSessions', 'userFormulaSheets', 'userChapterSummaries', 'creditLog']) {
+            try {
+                await deleteSubcollection(db, userDocRef, subcollectionName);
+            } catch (error) {
+                console.error(`Error deleting subcollection ${subcollectionName} for UID ${uidToDelete}:`, error);
+                // Continue to other deletions
+            }
+        }
+        
+        // Delete main user document
+        try {
+            await userDocRef.delete();
+            console.log(`Deleted main user document: users/${uidToDelete}`);
+        } catch (error) {
+            console.error(`Error deleting main user document users/${uidToDelete}:`, error);
+        }
+
+        // Delete username reservation
+        if (usernameToDelete) {
+            try {
+                await db.collection('usernames').doc(usernameToDelete.toLowerCase()).delete();
+                console.log(`Deleted username reservation: usernames/${usernameToDelete.toLowerCase()}`);
+            } catch (error) {
+                console.error(`Error deleting username reservation usernames/${usernameToDelete.toLowerCase()}:`, error);
+            }
+        }
+
+        // Delete Firebase Auth Account
+        console.log("Attempting to delete Firebase Auth account...");
+        await authUserForReauth.delete(); // This will trigger onAuthStateChanged
+        console.log("Firebase Auth account deleted successfully.");
+        alert("Your account and all associated data have been permanently deleted.");
+        // UI updates will be handled by onAuthStateChanged
+
+    } catch (error) {
+        console.error("Account deletion process failed:", error);
+        let message = "Account deletion failed. ";
+        if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            message += "Incorrect password or re-authentication failed.";
+        } else if (error.code === 'auth/requires-recent-login') {
+            message += "This operation is sensitive and requires recent authentication. Please sign out, sign back in, and try again.";
+        } else if (error.code === 'auth/user-disabled') {
+            message += "Your account is disabled.";
+        } else {
+            message += error.message;
+        }
+        alert(message);
+    } finally {
+        hideLoading();
+    }
+}
+
+
 window.updateUserProfile = updateUserProfile; // Assign to window for form submit
 window.signOutUserWrapper = signOutUser; // Assign sign out to window
+window.confirmSelfDeleteAccount = confirmSelfDeleteAccount; // Assign delete account function
 
 // --- END OF FILE ui_user_profile.js ---

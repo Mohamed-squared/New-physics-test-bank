@@ -885,6 +885,68 @@ export async function loadUserData(uid) {
 }
 
 /**
+ * Reloads user data after a change (e.g., username update, admin status toggle).
+ * Updates state and UI accordingly.
+ * @param {string} uid - The user's unique ID.
+ * @returns {Promise<void>}
+ */
+export async function reloadUserDataAfterChange(uid) {
+    if (!db) {
+        console.error("Firestore DB not initialized");
+        return;
+    }
+    if (!uid) {
+        console.error("reloadUserDataAfterChange called without UID.");
+        return;
+    }
+
+    try {
+        console.log(`Reloading user data for UID: ${uid}`);
+        
+        // Step 1: Reload core user app data
+        await loadUserData(uid);
+        
+        // Step 2: Reload AI chat settings
+        const aiSettings = await loadUserAiSettings(uid);
+        setUserAiChatSettings(aiSettings);
+        console.log(`[reloadUserDataAfterChange] Reloaded AI settings for UID: ${uid}`, aiSettings);
+        
+        // Step 3: If this is the current user, update currentUser state
+        if (currentUser && currentUser.uid === uid) {
+            const userRef = db.collection('users').doc(uid);
+            const doc = await userRef.get();
+            if (doc.exists) {
+                const userData = doc.data();
+                const updatedUser = {
+                    ...currentUser,
+                    email: userData.email || currentUser.email,
+                    displayName: userData.displayName || currentUser.displayName,
+                    photoURL: userData.photoURL || currentUser.photoURL,
+                    username: userData.username || currentUser.username,
+                    isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : currentUser.isAdmin,
+                    credits: userData.credits !== undefined ? Number(userData.credits) : currentUser.credits,
+                    onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : currentUser.onboardingComplete,
+                };
+                setCurrentUser(updatedUser);
+                console.log(`[reloadUserDataAfterChange] Updated currentUser state for UID: ${uid}`, updatedUser);
+            } else {
+                console.warn(`[reloadUserDataAfterChange] User doc not found for UID: ${uid} during currentUser update.`);
+            }
+        }
+        
+        // Step 4: Reload course progress
+        await loadAllUserCourseProgress(uid);
+        
+        // Step 5: Update UI
+        await fetchAndUpdateUserInfo();
+        console.log(`[reloadUserDataAfterChange] UI updated for UID: ${uid}`);
+    } catch (error) {
+        console.error(`[reloadUserDataAfterChange] Error reloading user data for UID: ${uid}:`, error);
+        alert(`Failed to reload user data: ${error.message}`);
+    }
+}
+
+/**
  * Initializes the user document in Firestore with default appData and profile info.
  */
 export async function initializeUserData(uid, email, username, displayName = null, photoURL = null, forceReset = false) {

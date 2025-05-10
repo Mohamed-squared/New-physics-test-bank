@@ -1,64 +1,50 @@
 // --- START OF FILE ui_online_test.js ---
 
-// --- START OF FILE ui_online_test.js ---
-
-// --- START OF FILE ui_online_test.js ---
-
-import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js'; // Added globalCourseDataMap and updateUserCourseProgress
-import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js'; // Added setActiveSidebarLink
-import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js'; // Added escapeHtml and getFormattedDate
-// MODIFIED: Added markChapterStudiedInCourse and saveUserCourseProgress
+import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js';
+import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
+import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js';
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
-// *** MODIFIED: Removed direct duration import, added pass thresholds ***
 import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
-// MODIFIED: Import necessary functions from exam_storage.js
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
-// AI Marking is handled within exam_storage.js now
 
 // --- Online Test UI & Logic ---
 
 export function launchOnlineTestUI() {
-    clearContent(); // Clear main content area first
+    clearContent();
     const testArea = document.getElementById('online-test-area');
     
-    // --- MODIFICATION: Check state and element ---
     if (!currentOnlineTestState) {
         console.error("launchOnlineTestUI Error: Online test state missing.");
-        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>", 'content'); // Display in main content area
+        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>", 'content');
         return;
     }
     if (!testArea) {
         console.error("launchOnlineTestUI Error: Test area element (#online-test-area) not found.");
-        // If the main container is missing, there's a fundamental issue.
         alert("Critical Error: Test UI container is missing from the page. Cannot launch test.");
         return;
     }
-    // --- END MODIFICATION ---
 
-    testArea.classList.remove('hidden'); // Show the test area
+    testArea.classList.remove('hidden');
 
     const totalQuestions = currentOnlineTestState.questions.length;
-    // *** MODIFIED: Get duration from the state object ***
-    const durationMinutes = currentOnlineTestState.durationMinutes; // Duration is now set when state is created
+    const durationMinutes = currentOnlineTestState.durationMinutes;
     if (!durationMinutes || durationMinutes <= 0) {
          console.error("Invalid duration in test state:", durationMinutes);
-         // Optionally set a fallback or alert user
-         currentOnlineTestState.durationMinutes = 60; // Fallback to 60 mins
+         currentOnlineTestState.durationMinutes = 60;
     }
     const durationMillis = currentOnlineTestState.durationMinutes * 60 * 1000;
     currentOnlineTestState.endTime = currentOnlineTestState.startTime + durationMillis;
-    currentOnlineTestState.status = 'active'; // Ensure status is active
+    currentOnlineTestState.status = 'active';
 
-    // Determine display title
     let displayTitle = currentOnlineTestState.examId;
     if (currentOnlineTestState.courseContext?.isSkipExam) {
         displayTitle = `Chapter ${currentOnlineTestState.courseContext.chapterNum} Skip Exam`;
     } else if (currentOnlineTestState.courseContext?.activityType) {
         const type = currentOnlineTestState.courseContext.activityType.replace(/_/g, ' ');
         const idPart = currentOnlineTestState.courseContext.activityId || '';
-        displayTitle = `${type.charAt(0).toUpperCase() + type.slice(1)} ${idPart}`; // e.g., "Assignment day1"
+        displayTitle = `${type.charAt(0).toUpperCase() + type.slice(1)} ${idPart}`;
         if(currentOnlineTestState.courseContext.courseId) {
             const courseName = globalCourseDataMap.get(currentOnlineTestState.courseContext.courseId)?.name || '';
             if(courseName) displayTitle += ` (${courseName})`;
@@ -68,12 +54,11 @@ export function launchOnlineTestUI() {
          displayTitle = `${subjectName} Test`;
     }
 
-    // Set the HTML structure for the test UI
     testArea.innerHTML =  `
     <div class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow z-40 border-b dark:border-gray-700">
         <div class="container mx-auto flex justify-between items-center">
             <span class="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate max-w-[calc(100% - 250px)]" title="${escapeHtml(currentOnlineTestState.examId)}">
-                ${escapeHtml(displayTitle)} <!-- Use generated display title -->
+                ${escapeHtml(displayTitle)}
             </span>
             <div class="flex items-center space-x-4">
                 <button id="force-submit-btn" onclick="window.confirmForceSubmit()" class="btn-danger-small hidden flex-shrink-0">Submit Now</button>
@@ -82,7 +67,6 @@ export function launchOnlineTestUI() {
         </div>
     </div>
     <div id="question-container" class="pt-20 pb-24 container mx-auto px-4">
-        <!-- Loading message -->
         <div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4">Loading first question...</p></div>
     </div>
     <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow-up z-40 border-t dark:border-gray-700">
@@ -104,23 +88,21 @@ export function launchOnlineTestUI() {
     </div>
     `;
 
-    startTimer(); // Start the countdown
-    displayCurrentQuestion(); // Load the first question's content
+    startTimer();
+    displayCurrentQuestion();
 }
 
 export function startTimer() {
     const timerElement = document.getElementById('timer');
-    // --- MODIFICATION: Check state and element ---
     if (!timerElement) {
         console.warn("startTimer: Timer element (#timer) not found. Cannot start timer display.");
         return;
     }
     if (!currentOnlineTestState) {
         console.warn("startTimer: currentOnlineTestState is null. Cannot start timer logic.");
-        timerElement.textContent = "Error"; // Indicate error
+        timerElement.textContent = "Error";
         return;
     }
-    // --- END MODIFICATION ---
 
     if (currentOnlineTestState.timerInterval) { clearInterval(currentOnlineTestState.timerInterval); }
 
@@ -128,7 +110,6 @@ export function startTimer() {
         if (!currentOnlineTestState || !currentOnlineTestState.endTime || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed') {
              if(currentOnlineTestState?.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
              currentOnlineTestState.timerInterval = null;
-             // Ensure timer shows 00:00:00 if stopped prematurely or completed
              if(timerElement) timerElement.textContent = "00:00:00";
              return;
         }
@@ -140,26 +121,24 @@ export function startTimer() {
             if (currentOnlineTestState.status !== 'submitting' && currentOnlineTestState.status !== 'completed') {
                  currentOnlineTestState.status = 'submitting';
                  alert("Time's up! Submitting test.");
-                 submitOnlineTest(); // Auto-submit
+                 submitOnlineTest();
             }
         } else {
             const h = Math.floor(remaining / 3600000); const m = Math.floor((remaining % 3600000) / 60000); const s = Math.floor((remaining % 60000) / 1000);
              if(timerElement) timerElement.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-             const forceSubmitBtn = document.getElementById('force-submit-btn'); if (forceSubmitBtn) { forceSubmitBtn.classList.toggle('hidden', remaining / 60000 >= 5); } // Show submit button in last 5 mins
+             const forceSubmitBtn = document.getElementById('force-submit-btn'); if (forceSubmitBtn) { forceSubmitBtn.classList.toggle('hidden', remaining / 60000 >= 5); }
               if(timerElement) timerElement.classList.remove('text-red-500');
         }
     }
-    updateTimerDisplay(); // Initial display
+    updateTimerDisplay();
     currentOnlineTestState.timerInterval = setInterval(updateTimerDisplay, 1000);
 }
 
 export async function displayCurrentQuestion() {
-    // *** MODIFIED: Add logging at the very beginning ***
-    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState || {}))); // Ensure state is not null for stringify
+    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState || {})));
     console.log("displayCurrentQuestion START");
     
     const container = document.getElementById('question-container');
-    // --- MODIFICATION: Check state and element ---
     if (!currentOnlineTestState) {
         console.error("displayCurrentQuestion HALTED: currentOnlineTestState is null.");
         if (container) container.innerHTML = '<p class="text-red-500 p-4">Error: Test state lost. Cannot display question.</p>';
@@ -170,7 +149,6 @@ export async function displayCurrentQuestion() {
          console.error("displayCurrentQuestion HALTED: Question container (#question-container) not found.");
          return;
      }
-    // --- END MODIFICATION ---
 
     const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
     
@@ -186,18 +164,16 @@ export async function displayCurrentQuestion() {
         return;
     }
 
-    // Ensure question has an ID, convert to string for consistency
     const questionId = String(question.id || `q-${index+1}`);
     console.log(`Displaying question ${questionId} (Index ${index}) - Type: ${question.isProblem ? 'Problem' : 'MCQ'}`);
     
-    // MODIFICATION: Log UserAnswers state before rendering
     console.log('[DisplayQuestion] Rendering QID:', questionId, 'UserAnswers state:', JSON.stringify(currentOnlineTestState.userAnswers));
 
     let imageHtml = question.image ? `<img src="${question.image}" alt="Question Image" class="max-w-full h-auto mx-auto my-4 border dark:border-gray-600 rounded" onerror="this.style.display='none';">` : '';
     let answerAreaHtml = '';
 
     if (question.isProblem) {
-         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || ''; // Assuming problem answers are also stored as strings or compatible types
+         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
          answerAreaHtml = `
          <div class="mt-4">
              <label for="problem-answer-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Answer / Solution Steps:</label>
@@ -207,21 +183,18 @@ export async function displayCurrentQuestion() {
                        oninput="window.recordAnswer('${questionId}', this.value)">${escapeHtml(currentAnswer)}</textarea>
               <p class="text-xs text-muted mt-1">Explain your reasoning and show key steps. Use basic text formatting and simple math notation (e.g., ^ for power, * for multiply). Full LaTeX is not supported here.</p>
          </div>`;
-    } else { // MCQ
+    } else {
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
-             // FIX: Retrieve stored answer as string, ensuring questionId is also treated as string for lookup
-             const storedAnswer = String(currentOnlineTestState.userAnswers[String(questionId)] ?? ''); // Ensure lookup key is string, default to empty string if undefined/null
+             const qIdStr = String(questionId);
+             const optLetterStr = String(opt.letter);
+             const storedAnswer = String(currentOnlineTestState.userAnswers[qIdStr] ?? '');
+             const isChecked = storedAnswer === optLetterStr;
              
-             // FIX: Compare as strings for isChecked
-             const optLetterStr = String(opt.letter); // Ensure option letter is string
-             const isChecked = storedAnswer === optLetterStr; // Strict comparison of strings
-             
-             // Logging inside the loop
-             console.log(`[DisplayQuestion] QID: ${questionId} | Option: ${optLetterStr} | Stored: ${storedAnswer} | Checked: ${isChecked}`);
+             console.log(`[DisplayQuestion MCQ] QID: ${qIdStr} | Option: ${optLetterStr} | Stored Answer: ${storedAnswer} | isChecked: ${isChecked}`);
              
              return `
-             <label class="flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150 option-label">
-                 <input type="radio" name="mcqOption-${questionId}" value="${opt.letter}" class="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 dark:bg-gray-700 dark:border-gray-600 shrink-0 mt-1" ${isChecked ? 'checked' : ''} onchange="window.recordAnswer('${questionId}', this.value)">
+             <input type="radio" id="radio-${qIdStr}-${optLetterStr}" name="mcqOption-${qIdStr}" value="${opt.letter}" class="hidden" ${isChecked ? 'checked' : ''} onchange="window.recordAnswer('${qIdStr}', this.value)">
+             <label for="radio-${qIdStr}-${optLetterStr}" class="option-label flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
                  <div class="flex items-baseline w-full"><span class="font-mono w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div>
              </label>`;
          }).join('') + `</div>` : '<p class="text-sm text-yellow-600 mt-4">(No MC options found)</p>';
@@ -235,10 +208,11 @@ export async function displayCurrentQuestion() {
         ${answerAreaHtml}
     </div>`;
 
-    container.innerHTML = htmlContent; console.log("innerHTML set.");
+    container.innerHTML = htmlContent;
+    console.log("innerHTML set.");
+
     try { await renderMathIn(container); console.log("MathJax rendered."); } catch (mathError) { console.error("MathJax render error:", mathError); }
 
-    // --- MODIFICATION: Update Navigation Buttons safely ---
     try {
         const counterEl = document.getElementById('question-counter');
         const prevBtn = document.getElementById('prev-btn');
@@ -248,13 +222,12 @@ export async function displayCurrentQuestion() {
         if (counterEl) counterEl.textContent = `Question ${index + 1} / ${totalQuestions}`; else console.warn("[DisplayQuestion] Element #question-counter not found");
         if (prevBtn) prevBtn.disabled = (index === 0); else console.warn("[DisplayQuestion] Element #prev-btn not found");
         if (nextBtn) nextBtn.classList.toggle('hidden', index === totalQuestions - 1); else console.warn("[DisplayQuestion] Element #next-btn not found");
-        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("[DisplayQuestion] Element #submit-btn not found");
+        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("[DisplayOption] Element #submit-btn not found");
 
         console.log("[DisplayQuestion] Navigation updated.");
     } catch (e) {
         console.error("[DisplayQuestion] Error updating navigation elements:", e);
     }
-    // --- END MODIFICATION ---
 
     console.log("displayCurrentQuestion END");
 }
@@ -266,25 +239,55 @@ export function navigateQuestion(direction) {
 }
 
 export function recordAnswer(questionId, answer) {
-    // MODIFICATION: Log questionId and answer
     console.log('[RecordAnswer] QID (raw):', questionId, 'Answer (raw):', answer, 'Type (raw):', typeof answer);
     if (!currentOnlineTestState) return;
 
-    // FIX: Ensure both questionId (as key) and answer (as value) are stored as strings
     const qIdStr = String(questionId);
     const ansStr = String(answer);
 
     currentOnlineTestState.userAnswers[qIdStr] = ansStr;
-    // Add log statement *after* updating the state to confirm the stored value and its type
     console.log(`[RecordAnswer] Stored answer for ${qIdStr}: '${ansStr}' (Type: ${typeof ansStr})`);
     console.log('[RecordAnswer] Updated userAnswers:', JSON.stringify(currentOnlineTestState.userAnswers));
+    
+    updateSelectedOption(qIdStr, ansStr);
+}
+
+function updateSelectedOption(questionId, selectedValue) {
+    const container = document.getElementById('question-container');
+    if (!container) {
+        console.warn("updateSelectedOption: Question container not found.");
+        return;
+    }
+
+    const radios = container.querySelectorAll(`input[type="radio"][name="mcqOption-${questionId}"]`);
+    if (!radios.length) {
+        console.warn(`updateSelectedOption: No radios found for question ${questionId}`);
+        return;
+    }
+
+    radios.forEach(radio => {
+        const isChecked = radio.value === selectedValue;
+        if (radio.checked !== isChecked) {
+            radio.checked = isChecked;
+            // Force style recalculation to apply CSS :checked rules
+            radio.style.display = 'none';
+            radio.offsetHeight; // Trigger reflow
+            radio.style.display = '';
+            console.log(`[UpdateSelectedOption] Set radio [${radio.value}] to checked=${isChecked}`);
+        }
+    });
+
+    // Debug: Verify the updated state
+    radios.forEach(radio => {
+        const label = document.querySelector(`label[for="${radio.id}"]`);
+        console.log(`[Post-Update Debug] Radio [${radio.value}] checked=${radio.checked}, label computed style=${getComputedStyle(label)?.backgroundColor || 'none'}`);
+    });
 }
 
 export function confirmSubmitOnlineTest() {
      if (!currentOnlineTestState) return;
-     // Count unanswered questions (null, undefined, or empty string for problems)
-    const unanswered = currentOnlineTestState.questions.filter(q => {
-        const answer = currentOnlineTestState.userAnswers[String(q.id)]; // Use string q.id for checking
+     const unanswered = currentOnlineTestState.questions.filter(q => {
+        const answer = currentOnlineTestState.userAnswers[String(q.id)];
         return answer === null || answer === undefined || (typeof answer === 'string' && answer.trim() === '');
     }).length;
     let msg = "Submit test?"; if (unanswered > 0) msg += `\n\n${unanswered} unanswered question(s).`;
@@ -292,42 +295,37 @@ export function confirmSubmitOnlineTest() {
 }
 export function confirmForceSubmit() { if (confirm("Submit test now?")) submitOnlineTest(); }
 
-/**
- * Handles the final submission of the online test, including marking and result storage.
- */
 export async function submitOnlineTest() {
-    if (!currentOnlineTestState || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed' || !currentUser) {
-        if (currentOnlineTestState?.status !== 'submitting' && currentOnlineTestState?.status !== 'completed') {
-             alert("Error: Missing test data, user session, or test already submitted.");
-        }
-        console.error("Submit Error: State missing, already submitting, or completed.");
-        hideLoading();
-        return;
-    }
-
     showLoading("Submitting and marking exam...");
-    currentOnlineTestState.status = 'submitting';
-    if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
-    currentOnlineTestState.timerInterval = null;
-
-    // --- MODIFICATION: Check test area before hiding ---
-    const testArea = document.getElementById('online-test-area');
-    if (testArea) {
-        testArea.classList.add('hidden');
-    } else {
-        console.warn("submitOnlineTest: Test area element (#online-test-area) not found during submission.");
-    }
-    // --- END MODIFICATION ---
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
-    const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
-    const courseId = currentOnlineTestState.courseContext?.courseId;
-    const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen';
-    const activityId = currentOnlineTestState.courseContext?.activityId;
-    const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
 
     try {
+        if (!currentOnlineTestState || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed' || !currentUser) {
+            if (currentOnlineTestState?.status !== 'submitting' && currentOnlineTestState?.status !== 'completed') {
+                 alert("Error: Missing test data, user session, or test already submitted.");
+            }
+            console.error("Submit Error: State missing, already submitting, or completed.");
+            return;
+        }
+
+        currentOnlineTestState.status = 'submitting';
+        if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
+        currentOnlineTestState.timerInterval = null;
+
+        const testArea = document.getElementById('online-test-area');
+        if (testArea) {
+            testArea.classList.add('hidden');
+        } else {
+            console.warn("submitOnlineTest: Test area element (#online-test-area) not found during submission.");
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
+        const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
+        const courseId = currentOnlineTestState.courseContext?.courseId;
+        const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen';
+        const activityId = currentOnlineTestState.courseContext?.activityId;
+        const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
+
         console.log(`Submitting exam ${currentOnlineTestState.examId} of type ${activityType}`);
         const examRecord = await storeExamResult(
             courseId,
@@ -336,17 +334,15 @@ export async function submitOnlineTest() {
         );
 
         if (!examRecord || !examRecord.markingResults) {
-             hideLoading();
-             if (isCourseActivity && courseId) {
-                 window.showCurrentAssignmentsExams?.(courseId);
-             } else {
-                 showTestGenerationDashboard();
-             }
-             setCurrentOnlineTestState(null);
-             return;
+            if (isCourseActivity && courseId) {
+                window.showCurrentAssignmentsExams?.(courseId);
+            } else {
+                showTestGenerationDashboard();
+            }
+            setCurrentOnlineTestState(null);
+            return;
         }
 
-        // Handle course activity progress updates
         if (isCourseActivity && courseId) {
             const progress = userCourseProgressMap.get(courseId);
             if (progress) {
@@ -354,14 +350,12 @@ export async function submitOnlineTest() {
                     ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100
                     : 0;
 
-                // Update appropriate score map based on activity type
                 switch (activityType) {
                     case 'assignment':
                         progress.assignmentScores = progress.assignmentScores || {};
                         progress.assignmentScores[activityId] = percentageScore;
                         console.log(`Updated assignment score for ${activityId}: ${percentageScore.toFixed(1)}%`);
 
-                        // Update daily progress for assignments
                         const todayStr = getFormattedDate();
                         progress.dailyProgress = progress.dailyProgress || {};
                         progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || {
@@ -381,46 +375,34 @@ export async function submitOnlineTest() {
                         console.log(`Updated weekly exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
 
-                    case 'final_exam': // This might be a single score or an array if multiple attempts are allowed
-                        // For simplicity, let's assume finalExamScore is a single value or the latest.
-                        // If it's an array, logic for appending/updating specific attempts would be needed.
-                        // progress.finalExamScores = progress.finalExamScores || [];
-                        // progress.finalExamScores.push(percentageScore); // Example for multiple attempts
-                        progress.finalExamScore = percentageScore; // Overwriting example for single/latest score
+                    case 'final_exam':
+                        progress.finalExamScore = percentageScore;
                         console.log(`Updated final exam score: ${percentageScore.toFixed(1)}%`);
                         break;
                     
-                    case 'midcourse': // Added this case for midcourse exams
+                    case 'midcourse':
                         progress.midcourseExamScores = progress.midcourseExamScores || {};
-                        progress.midcourseExamScores[activityId] = percentageScore; // Assuming activityId is relevant here (e.g. 'midcourse1')
+                        progress.midcourseExamScores[activityId] = percentageScore;
                         console.log(`Updated midcourse exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
 
                     case 'skip_exam':
-                        // Skip exam scores are handled in the existing code below
                         break;
 
                     default:
                         console.log(`Unhandled course activity type: ${activityType}`);
                 }
 
-                // Update local state and save to Firestore
                 updateUserCourseProgress(courseId, progress);
                 await saveUserCourseProgress(currentUser.uid, courseId, progress);
                 console.log(`Course progress updated and saved for ${courseId}`);
             }
         }
 
-        // Successfully stored and marked
         currentOnlineTestState.status = 'completed';
-        hideLoading();
 
-        // Display results UI using the stored/marked record
-        displayOnlineTestResults(examRecord);
+        await displayOnlineTestResults(examRecord);
 
-        // --- Post-submission logic ---
-
-        // 1. Handle Skip Exam pass/fail and update course progress
         if (isSkipExam && chapterNumForSkipExam && courseId && examRecord.markingResults.maxPossibleScore > 0) {
             const percentage = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100;
             const progress = userCourseProgressMap.get(courseId);
@@ -436,40 +418,35 @@ export async function submitOnlineTest() {
 
                  if (percentage >= SKIP_EXAM_PASSING_PERCENT) {
                      console.log(`Skip exam passed (${percentage.toFixed(1)}%). Marking chapter ${chapterNumForSkipExam} as studied.`);
-                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed"); // This also saves progress
+                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed");
                  } else {
                      console.log(`Skip exam not passed (${percentage.toFixed(1)}% < ${SKIP_EXAM_PASSING_PERCENT}%).`);
-                      // Save progress even on fail to record score/attempt count
-                      await saveUserCourseProgress(currentUser.uid, courseId, progress);
+                     await saveUserCourseProgress(currentUser.uid, courseId, progress);
                  }
             }
         }
-        // 2. Handle TestGen exam (update chapter stats in appData)
         else if (!isCourseActivity && currentSubject && data?.subjects?.[currentSubject.id]) {
              let chaptersDataModified = false;
-             const subjectToUpdate = data.subjects[currentSubject.id]; // Get reference to subject in data
+             const subjectToUpdate = data.subjects[currentSubject.id];
              if (examRecord.questions && examRecord.markingResults?.questionResults) {
                   examRecord.markingResults.questionResults.forEach(result => {
                       const question = examRecord.questions.find(q => q.id === result.questionId);
-                      if (question && question.chapter) { // Check if question has chapter info
+                      if (question && question.chapter) {
                            const chap = subjectToUpdate.chapters[question.chapter];
                            if (chap) {
-                                // Only update stats for MCQs in TestGen flow
                                 if (!question.isProblem) {
                                      chap.total_attempted = (chap.total_attempted || 0) + 1;
-                                     const isCorrect = result.score > 0; // Check if score is positive
+                                     const isCorrect = result.score > 0;
                                      if (!isCorrect) {
                                           chap.total_wrong = (chap.total_wrong || 0) + 1;
                                      }
-                                     // Update mastery/mistake history
                                      chap.mistake_history = chap.mistake_history || [];
-                                     chap.mistake_history.push(isCorrect ? 0 : 1); // Add 1 wrong if incorrect
+                                     chap.mistake_history.push(isCorrect ? 0 : 1);
                                      if (chap.mistake_history.length > 20) chap.mistake_history.shift();
                                      chap.consecutive_mastery = isCorrect ? (chap.consecutive_mastery || 0) + 1 : 0;
                                      chaptersDataModified = true;
 
-                                     // Remove the attempted MCQ from available_questions
-                                      if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
+                                     if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
                                           const qIndex = chap.available_questions.indexOf(question.number);
                                           if (qIndex > -1) {
                                                chap.available_questions.splice(qIndex, 1);
@@ -486,34 +463,30 @@ export async function submitOnlineTest() {
                   });
              }
              if (chaptersDataModified) {
-                  // Ensure sorting just in case
                   Object.values(subjectToUpdate.chapters).forEach(chap => chap.available_questions?.sort((a,b) => a-b));
-                  await saveUserData(currentUser.uid, data); // Save the updated 'data' object
+                  await saveUserData(currentUser.uid, data);
                   console.log("TestGen Exam: Updated chapter stats and removed used MCQs.");
              }
         }
-        // Note: Course assignments/exams results are stored in userCourseProgress and handled there.
 
-        // Clear the state AFTER successful submission and processing
         setCurrentOnlineTestState(null);
 
     } catch (error) {
-        hideLoading();
-        setCurrentOnlineTestState(null);
         console.error("Error finishing test:", error);
+        setCurrentOnlineTestState(null);
         alert("Error submitting test results. Please try again later. " + error.message);
+        const isCourseActivity = !!currentOnlineTestState?.courseContext?.isCourseActivity;
+        const courseId = currentOnlineTestState?.courseContext?.courseId;
         if (isCourseActivity && courseId) {
             window.showCurrentAssignmentsExams?.(courseId);
         } else {
-             showTestGenerationDashboard();
+            showTestGenerationDashboard();
         }
+    } finally {
+        hideLoading();
     }
 }
 
-/**
- * Displays the results page after an online test is submitted and marked.
- * @param {object} examRecord - The complete exam record, including markingResults.
- */
 export async function displayOnlineTestResults(examRecord) {
     clearContent();
     if (!examRecord || !examRecord.markingResults) {
@@ -522,7 +495,6 @@ export async function displayOnlineTestResults(examRecord) {
          return;
     }
 
-    // Ensure we have a valid exam ID
     const examId = examRecord.id || examRecord.examId;
     if (!examId) {
         console.error("Missing exam ID in record:", examRecord);
@@ -541,15 +513,13 @@ export async function displayOnlineTestResults(examRecord) {
     const isCourse = !!courseId;
     const isSkip = type === 'skip_exam';
 
-    // Determine context name (Course or Subject)
     const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId)
                        : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
                        : 'Standard Test';
 
-    // Determine passing threshold
-    let passThreshold = PASSING_GRADE_PERCENT; // Default
+    let passThreshold = PASSING_GRADE_PERCENT;
     if (isSkip) { passThreshold = SKIP_EXAM_PASSING_PERCENT; }
-    else if (isCourse) { passThreshold = PASSING_GRADE_PERCENT; } // Use general course pass mark for assignments/exams
+    else if (isCourse) { passThreshold = PASSING_GRADE_PERCENT; }
 
     const isPassing = parseFloat(percentage) >= passThreshold;
 
@@ -573,7 +543,6 @@ export async function displayOnlineTestResults(examRecord) {
                  ${isSkip && !isPassing ? `<p class="text-sm text-red-600 mt-1">Needed ${passThreshold}% to pass the skip exam.</p>` : ''}
             </div>
 
-            <!-- Overall Feedback -->
             ${markingResults.overallFeedback ? `
             <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700 overall-feedback-area">
                 <h3 class="text-lg font-semibold mb-4">Overall AI Feedback</h3>
@@ -608,13 +577,10 @@ export async function displayOnlineTestResults(examRecord) {
     if (overallFeedbackArea) await renderMathIn(overallFeedbackArea);
 }
 
-// Add window functions for the UI review/report buttons
-window.showExamReviewUI = showExamReviewUI; // Use the imported function directly
+window.showExamReviewUI = showExamReviewUI;
 window.showIssueReportingModal = showIssueReportingModal;
 window.submitIssueReport = submitIssueReport;
 
-
-// Export the state setter
 export { setCurrentOnlineTestState };
 
 // --- END OF FILE ui_online_test.js ---

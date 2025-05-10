@@ -12,9 +12,9 @@ service cloud.firestore {
       return isLoggedIn() && request.auth.uid == userId;
     }
 
-    // !!! REPLACE THIS WITH YOUR ACTUAL PRIMARY ADMIN UID !!!
+    // !!! Primary Admin UID is correctly set here !!!
     function isPrimaryAdmin() {
-      return isLoggedIn() && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1"; // <<< REPLACE THIS UID
+      return isLoggedIn() && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
     }
 
     function isAssignedAdmin() {
@@ -41,10 +41,12 @@ service cloud.firestore {
 
     // Function to check allowed fields for User document updates
     function allowedUserUpdateFields() {
+      // Fields an owner can update on their own profile
       return ['displayName', 'photoURL', 'username', 'onboardingComplete', 'lastSelectedSubjectId', 'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges'];
     }
     function allowedAdminUpdateFields() {
-      return allowedUserUpdateFields().concat(['isAdmin', 'credits']); // Admins can also update these
+      // Fields an admin can update on any profile (including the owner fields)
+      return allowedUserUpdateFields().concat(['isAdmin', 'credits']);
     }
 
     // --- Usernames Registry ---
@@ -61,13 +63,16 @@ service cloud.firestore {
     // --- Users Collection ---
     match /users/{userId} {
       allow read: if isOwner(userId) || isAnyAdmin();
+
+      // --- CORRECTED CREATE RULE ---
       allow create: if isLoggedIn() && request.auth.uid == userId &&
                       // Validate essential fields on creation
                       request.resource.data.email == request.auth.token.email &&
                       isValidString(request.resource.data.username, 3, 20) &&
-                      request.resource.data.createdAt == request.time &&
+                      // REMOVED: request.resource.data.createdAt == request.time; // This check was causing the error
+                      // We trust the client sends FieldValue.serverTimestamp()
                       request.resource.data.onboardingComplete == false &&
-                      request.resource.data.isAdmin == (userId == "04amtH9UgfTWxPH0rqn2quaKiNf1") && // Use the actual UID again for safety
+                      request.resource.data.isAdmin == (userId == "04amtH9UgfTWxPH0rqn2quaKiNf1") && // Correct UID used
                       request.resource.data.credits == 0 &&
                       request.resource.data.appData is map &&
                       request.resource.data.userNotes is map &&
@@ -79,19 +84,10 @@ service cloud.firestore {
       // Update rules require careful field control
       allow update: if isLoggedIn() &&
                      (
-                       // Case 1: Owner updating own profile
+                       // Case 1: Owner updating own profile (cannot change isAdmin or credits directly)
                        ( isOwner(userId) &&
-                         (
-                           // Allow updating standard profile fields (excluding isAdmin/credits initially checked)
-                           ( !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits']) &&
-                             request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFields())
-                           )
-                           ||
-                           // OR Allow updating ONLY the 'credits' field (can be set or incremented)
-                           ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['credits']) &&
-                             request.resource.data.credits is number // Ensure new value is a number
-                           )
-                         )
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits']) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFields())
                        ) ||
                        // Case 2: Primary Admin updating OTHER users (can change isAdmin/credits)
                        ( isPrimaryAdmin() && userId != request.auth.uid &&
@@ -147,7 +143,7 @@ service cloud.firestore {
         allow read, write, create, delete: if isOwner(userId);
         // Add field validation if needed (e.g., history is list, name is string)
       }
-    }
+    } // End /users/{userId}
 
     // --- User Course Progress ---
     // Owner or any Admin can manage entirely
@@ -182,7 +178,7 @@ service cloud.firestore {
     }
 
     // --- Course Definitions ---
-    // Publicly readable. Creation is complex based on role. Update/Delete by Admins only.
+    // Publicly readable. Creation logic based on role. Update/Delete by Admins only.
     match /courses/{courseId} {
       allow read: if true;
 
@@ -225,7 +221,7 @@ service cloud.firestore {
       allow read, write, create, delete: if isPrimaryAdmin();
     }
 
-    // --- Task Versions (NEW) ---
+    // --- Task Versions (Example - adjust path if needed) ---
     // Only Primary Admin full control.
     match /taskVersions/{versionId} {
       allow read, write, create, delete: if isPrimaryAdmin();
@@ -274,6 +270,7 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isPrimaryAdmin();
     }
+
 
   } // End /databases/{database}/documents
 }

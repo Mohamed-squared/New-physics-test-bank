@@ -76,7 +76,11 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
             score: 0,
             feedback: "No answer provided for this problem.",
             key_points: [],
-            improvement_suggestions: ["Attempt all problems for practice."]
+            improvement_suggestions: [
+                "The question required calculating the volume of a sphere using the formula \( V = \\frac{4}{3} \\pi r^3 \). Since no answer was provided, it’s possible you were unsure of the formula or the unit conversion from cm to m.",
+                "Practice converting units (e.g., 1.7 cm = 0.017 m) and applying the sphere volume formula to similar problems.",
+                "Review the concept of volume calculation for 3D shapes, focusing on the correct use of radius in meters."
+            ]
         };
     }
 
@@ -89,9 +93,8 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `2. Award a score between 0 and ${maxMarks}.\n`;
         prompt += `3. Be **generous** with partial marks. Award credit for correct formulas, partial steps, correct reasoning, or demonstrating understanding, even if the final answer is incorrect or incomplete.\n`;
         prompt += `4. Provide specific, constructive feedback explaining the score, highlighting both correct aspects and errors/misconceptions.\n`;
-        prompt += `5. List key points (correct steps/concepts identified) and specific areas for improvement.\n\n`;
-        
-        // --- MODIFICATION START: Detailed Improvement Suggestions ---
+        prompt += `5. List key points (correct steps/concepts identified) and specific errors or misconceptions found.\n`;
+        prompt += `6. Analyze the student's possible reasoning or logic behind their answer (or lack thereof), even if incorrect, and explain why it led to their result.\n\n`;
         prompt += `**For Improvement Suggestions:**\n`;
         prompt += `1. Carefully analyze the student's specific approach, calculations, and reasoning in their provided answer. Do not just compare the final result.\n`;
         prompt += `2. Identify the *root cause* of any errors (e.g., conceptual misunderstanding, calculation mistake, incorrect formula application, faulty reasoning step, misunderstanding the question).\n`;
@@ -103,14 +106,12 @@ async function markProblemAnswer(question, studentAnswer, maxMarks = MAX_MARKS_P
         prompt += `   - "Ensure all units are consistent before performing calculations."\n`;
         prompt += `5. Explain *why* their approach was incorrect in relation to the specific error.\n`;
         prompt += `6. If possible, suggest a specific problem-solving strategy or a way to verify their answer that would help prevent this type of error in the future.\n\n`;
-        // --- MODIFICATION END: Detailed Improvement Suggestions ---
-
         prompt += `**Output Format:** Provide your response ONLY in this strict JSON format:\n`;
         prompt += `{\n`;
         prompt += `    "score": [number between 0 and ${maxMarks}],\n`;
-        prompt += `    "feedback": "[Detailed justification for the score, explaining correct parts and errors.]",\n`;
+        prompt += `    "feedback": "[Detailed justification for the score, explaining correct parts and errors, including possible student reasoning.]",\n`;
         prompt += `    "key_points": ["[List of crucial correct steps/concepts identified]", "[List of specific errors or misconceptions found]"],\n`;
-        prompt += `    "improvement_suggestions": ["[Personalized, actionable advice based on their specific work and errors]"]\n`;
+        prompt += `    "improvement_suggestions": ["[Personalized, actionable advice based on their specific work and errors]", "[Another specific suggestion]"]\n`;
         prompt += `}\n`;
 
         // Request JSON output explicitly
@@ -205,7 +206,10 @@ export async function markFullExam(examData) {
                          score: score,
                          feedback: feedback,
                          key_points: [],
-                         improvement_suggestions: isCorrect ? [] : ["Review the concepts related to this question."]
+                         improvement_suggestions: isCorrect ? [] : [
+                             `The correct answer was ${question.correctAnswer}. Your choice (${studentAnswerStr}) suggests a possible misunderstanding of ${question.text.split('.')[0].toLowerCase()}.`,
+                             "Review the specific concept tested in this question and practice similar multiple-choice problems."
+                         ]
                      };
                      results.questionResults[i] = {
                          questionId: question.id,
@@ -216,15 +220,15 @@ export async function markFullExam(examData) {
                      results.totalScore += score;
                      console.log(`Result for MCQ Q${i+1}: Score=${score}/${maxMarks}`);
                  }
-             }
+            }
 
-             if (markingPromises.length > 0) {
+            if (markingPromises.length > 0) {
                   console.log(`Waiting for ${markingPromises.length} AI problem marking tasks...`);
                   const settledResults = await Promise.allSettled(markingPromises);
                   console.log("AI marking tasks settled.");
 
                   settledResults.forEach((settled, promiseIndex) => {
-                     if (settled.status === 'fulfilled') {
+                      if (settled.status === 'fulfilled') {
                           const { index, result } = settled.value;
                           const scoreToAdd = Number(result.score) || 0;
                           results.totalScore += scoreToAdd;
@@ -253,7 +257,7 @@ export async function markFullExam(examData) {
                             }
                       }
                   });
-             }
+            }
         } else {
              console.warn("No questions found in examData to mark.");
         }

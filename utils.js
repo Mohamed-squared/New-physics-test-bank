@@ -2,18 +2,30 @@
 
 // --- Loading Indicators ---
 export function showLoading(message) {
-    const overlay = document.getElementById('loading-overlay');
-    const msgElement = document.getElementById('loading-message');
-    if (overlay) {
-        if (msgElement) msgElement.textContent = message || "Processing...";
-        overlay.classList.remove('hidden');
-    } else {
-        console.warn("Loading overlay element not found.");
+    let overlay = document.getElementById('loading-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.innerHTML = `
+            <div>
+                <div class="loader"></div>
+                <p id="loading-message">Processing...</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
     }
+    const msgElement = document.getElementById('loading-message');
+    if (msgElement) msgElement.textContent = message || "Processing...";
+    overlay.classList.add('visible');
+    overlay.classList.remove('hidden');
 }
 
 export function hideLoading() {
-    document.getElementById('loading-overlay')?.classList.add('hidden');
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        overlay.classList.add('hidden');
+    }
 }
 
 // --- MathJax ---
@@ -115,8 +127,6 @@ export async function renderMathIn(element) {
         }
 
         // Clear previous typesetting results within the element to prevent conflicts
-        // Use MathJax.startup.document.clear() only if re-typesetting the entire document,
-        // otherwise use clearMathItemsWithin for targeted elements.
          if (element === document.body) {
               // Avoid clearing entire document unless necessary
               console.warn("renderMathIn: Attempting to clear MathItems for entire body - this might be inefficient.");
@@ -126,7 +136,6 @@ export async function renderMathIn(element) {
               console.log(`renderMathIn: Cleared previous MathJax items in [${element.id || element.tagName}]`);
          }
 
-
         // Typeset the specific element
         console.log(`renderMathIn: Calling MathJax.typesetPromise specific to [${element.id || element.tagName}]`);
         await MathJax.typesetPromise([element]);
@@ -134,12 +143,10 @@ export async function renderMathIn(element) {
 
     } catch (error) {
         console.error(`renderMathIn Error for ${element.id || element.tagName}:`, error);
-         // Avoid adding duplicate error messages
          if(element.querySelector && !element.querySelector('.mathjax-error-msg')) {
             const errorMsg = document.createElement('p');
             errorMsg.className = 'text-red-500 text-xs mt-1 mathjax-error-msg';
             errorMsg.textContent = '[Math rendering failed: Check console]';
-             // Append safely
              try {
                  element.appendChild(errorMsg);
              } catch (appendError) {

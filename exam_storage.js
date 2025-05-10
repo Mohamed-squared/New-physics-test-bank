@@ -1,30 +1,14 @@
-// --- START OF FILE exam_storage.js ---
-
-import { db, currentUser, globalCourseDataMap, currentSubject, data, setData } from './state.js'; // Added data and setData
+import { db, currentUser, globalCourseDataMap, currentSubject, data, setData, setCurrentSubject } from './state.js';
 import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
-// MODIFIED: Import AI marking and explanation generation
 import { markFullExam, generateExplanation } from './ai_exam_marking.js';
-import { renderMathIn } from './utils.js'; // Import MathJax renderer
-// MODIFIED: Import displayContent and setActiveSidebarLink
+import { renderMathIn } from './utils.js';
 import { displayContent, setActiveSidebarLink} from './ui_core.js';
 import { showProgressDashboard } from './ui_progress_dashboard.js';
-// MODIFIED: Import submitFeedback and saveUserData from firestore
-// MODIFIED: Added updateUserCredits
 import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
-// MODIFIED: Import config for MAX_MARKS etc.
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
-
 
 // --- Exam Storage and Retrieval Functions ---
 
-/**
- * Stores the completed exam data (including AI marking results) in Firestore.
- * Uses a dedicated subcollection: userExams/{userId}/exams/{examId}
- * @param {string|null} courseId - The ID of the course (or null for standard tests).
- * @param {object} examState - The final state of the online test.
- * @param {string} examType - Type of exam (e.g., 'practice', 'skip_exam', 'assignment', 'testgen').
- * @returns {Promise<object|null>} The stored exam record including marking results, or null on failure.
- */
 export async function storeExamResult(courseId, examState, examType) {
     if (!db || !currentUser) {
         console.error("Cannot store exam: DB or user not available.");
@@ -36,52 +20,43 @@ export async function storeExamResult(courseId, examState, examType) {
     }
 
     showLoading("Finalizing and Storing Exam...");
-    let examRecord; // Define examRecord in outer scope to log in catch if needed
+    let examRecord;
 
     try {
-        // Call the central marking function (which handles MCQ vs Problem internally)
         console.log(`[StoreExam] Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
         const markingResults = await markFullExam(examState);
         console.log(`[StoreExam] Marking complete for Exam ID: ${examState.examId}`);
 
-        // Prepare the complete record for Firestore
-        examRecord = { // Assign to outer scope variable
-            id: examState.examId, // Ensure ID is set
-            examId: examState.examId, // Add redundant ID field for compatibility
+        examRecord = {
+            id: examState.examId,
+            examId: examState.examId,
             userId: currentUser.uid,
-            courseId: courseId || null, // Store course ID if applicable
+            courseId: courseId || null,
             subjectId: examState.subjectId || null,
-            type: examType, // e.g., 'practice', 'skip_exam', 'assignment', 'testgen'
-            timestamp: examState.startTime, // Use start time as the main timestamp
+            type: examType,
+            timestamp: examState.startTime,
             durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
-            questions: examState.questions, // Full question details (should include correctAnswer)
-            userAnswers: examState.userAnswers, // User's selections/inputs
-            markingResults: markingResults, // Store the generated or AI marking object
-            status: 'completed', // Mark as completed
-            courseContext: examState.courseContext || null // Include course context if it exists
+            questions: examState.questions,
+            userAnswers: examState.userAnswers,
+            markingResults: markingResults,
+            status: 'completed',
+            courseContext: examState.courseContext || null
         };
 
-        // Save to the dedicated subcollection
         const examDocRef = db.collection('userExams').doc(currentUser.uid)
                            .collection('exams').doc(examState.examId);
 
-        // *** ADDED Specific Try/Catch for the Firestore write operation ***
         try {
             console.log("[StoreExam] Attempting to write exam record to Firestore path:", examDocRef.path);
-            // Ensure data is serializable right before saving
             const cleanExamRecord = JSON.parse(JSON.stringify(examRecord));
             await examDocRef.set(cleanExamRecord);
             console.log(`[StoreExam] Exam record ${examState.examId} saved successfully to userExams subcollection.`);
         } catch (writeError) {
             console.error(`[StoreExam] Firestore write error for exam ${examState.examId}:`, writeError);
-            // Log the data that failed to save for easier debugging of serialization issues
             try { console.error("[StoreExam] Data that failed to save:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Data that failed to save (could not stringify):", examRecord); }
-            // Re-throw a more specific error to be caught by the outer catch block
             throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
         }
-        // *** END Specific Try/Catch ***
 
-        // --- START: Award Credits ---
         let creditsAwarded = 0;
         let creditReason = "";
         switch (examType) {
@@ -105,34 +80,30 @@ export async function storeExamResult(courseId, examState, examType) {
                 creditsAwarded = 2;
                 creditReason = `Completed Skip Exam: Ch ${examState.courseContext?.chapterNum || 'Unknown'}`;
                 break;
-            case 'testgen': // Standard TestGen test
-            case 'practice': // Could be from TestGen or a general practice test
+            case 'testgen':
+            case 'practice':
                 creditsAwarded = 3;
                 creditReason = `Completed Practice Test: ${examState.subjectId || examState.examId}`;
                 break;
             default:
-                creditsAwarded = 1; // Default small amount for unknown types
+                creditsAwarded = 1;
                 creditReason = `Completed Exam: ${examType} - ${examState.examId}`;
         }
 
         if (creditsAwarded > 0) {
             await updateUserCredits(currentUser.uid, creditsAwarded, creditReason);
         }
-        // --- END: Award Credits ---
-
 
         hideLoading();
-        return examRecord; // Return the full record including marking
+        return examRecord;
 
-    } catch (error) { // Outer catch block handles marking errors or re-thrown write errors
+    } catch (error) {
         hideLoading();
         console.error(`[StoreExam] Error storing exam result ${examState.examId}:`, error);
-        // Log data if it was prepared before the error
         if (examRecord) {
              try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", examRecord);}
         }
-        // Provide specific user feedback
-        if (error.message.includes("Failed to save exam data to Firestore")) { // Check for our re-thrown error
+        if (error.message.includes("Failed to save exam data to Firestore")) {
              alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
              alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
@@ -143,12 +114,6 @@ export async function storeExamResult(courseId, examState, examType) {
     }
 }
 
-/**
- * Retrieves a specific exam record from Firestore.
- * @param {string} userId - The ID of the user.
- * @param {string} examId - The ID of the exam to retrieve.
- * @returns {Promise<object|null>} The exam data object or null if not found/error.
- */
 export async function getExamDetails(userId, examId) {
     if (!db || !userId || !examId) {
         console.error("[GetExamDetails] Cannot get exam details: Missing DB, userId, or examId.");
@@ -157,12 +122,10 @@ export async function getExamDetails(userId, examId) {
     try {
         const examDocRef = db.collection('userExams').doc(userId).collection('exams').doc(examId);
         const docSnap = await examDocRef.get();
-        // Use .exists property for compat SDK
         if (docSnap.exists) {
             console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
             return docSnap.data();
         } else {
-            // *** MODIFIED: Log path if not found ***
             console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
             return null;
         }
@@ -172,13 +135,6 @@ export async function getExamDetails(userId, examId) {
     }
 }
 
-/**
- * Retrieves the exam history for a user (optionally filtered by course or subject).
- * @param {string} userId - The ID of the user.
- * @param {string|null} [filterId=null] - Course ID or Subject ID to filter by.
- * @param {'course' | 'subject' | 'all'} [filterType='all'] - Type of filter.
- * @returns {Promise<Array<object>>} A promise resolving to an array of exam history summaries.
- */
 export async function getExamHistory(userId, filterId = null, filterType = 'all') {
     if (!db || !userId) {
         console.error("[GetExamHistory] Cannot get exam history: Missing DB or userId.");
@@ -191,28 +147,22 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
             query = query.where('courseId', '==', filterId);
             console.log(`[GetExamHistory] Filtering exam history by courseId: ${filterId}`);
         } else if (filterType === 'subject' && filterId) {
-            // Filter where courseId is explicitly null (TestGen) AND subjectId matches
             query = query.where('courseId', '==', null).where('subjectId', '==', filterId);
             console.log(`[GetExamHistory] Filtering exam history by subjectId: ${filterId} (and courseId == null)`);
         } else if (filterType === 'all') {
             console.log(`[GetExamHistory] Fetching all exam history for user ${userId}`);
-            // No specific filter applied here
         }
 
-        query = query.orderBy('timestamp', 'desc').limit(50); // Order by most recent, limit results
+        query = query.orderBy('timestamp', 'desc').limit(50);
 
         const snapshot = await query.get();
         const history = [];
         snapshot.forEach(doc => {
             const data = doc.data();
             const isCourseExam = !!data.courseId;
-            // Use global state 'data' to access subject names
-            // Safely access nested properties using optional chaining
             const subjectName = !isCourseExam && data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name ?? data.subjectId) : null;
             const courseName = isCourseExam ? (globalCourseDataMap?.get(data.courseId)?.name ?? data.courseId) : null;
 
-
-            // Estimate max score if missing or zero
             let maxScore = data.markingResults?.maxPossibleScore;
             if (!maxScore || maxScore <= 0) {
                  maxScore = (data.questions || []).reduce((sum, q) => {
@@ -222,12 +172,12 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
             }
 
             history.push({
-                id: data.id || doc.id, // Use doc.id as fallback
+                id: data.id || doc.id,
                 type: data.type || 'unknown',
                 timestamp: data.timestamp,
                 score: data.markingResults?.totalScore ?? 0,
-                maxScore: maxScore || 0, // Ensure maxScore is at least 0
-                name: courseName || subjectName || 'Unknown Context', // Display Course or Subject Name
+                maxScore: maxScore || 0,
+                name: courseName || subjectName || 'Unknown Context',
                 courseId: data.courseId,
                 subjectId: data.subjectId,
                 status: data.status || 'completed'
@@ -249,28 +199,21 @@ export async function getExamHistory(userId, filterId = null, filterType = 'all'
     }
 }
 
-// Initialize history tracking for the review UI
 if (!window.currentExplanationHistories) {
      window.currentExplanationHistories = {};
 }
 
-/**
- * Displays the detailed review UI for a specific exam from the `userExams` collection.
- * @param {string} userId - The ID of the user who took the exam.
- * @param {string} examId - The ID of the exam to review.
- */
 export async function showExamReviewUI(userId, examId) {
     console.log(`[showExamReviewUI] Starting review for User ID: ${userId}, Exam ID: ${examId}`);
     console.log(`[showExamReviewUI] Current timestamp: ${new Date().toISOString()}`);
 
     if (!userId || !examId) {
         console.error("[showExamReviewUI] Cannot show exam review: Missing userId or examId");
-        displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content'); // Display error in main area
+        displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content');
         return;
     }
-    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content'); // Keep Exams Dash active
+    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
     showLoading("Loading Exam Review...");
-    // Reset explanation history for this new review session
     window.currentExplanationHistories = {};
 
     try {
@@ -295,8 +238,6 @@ export async function showExamReviewUI(userId, examId) {
         const passThreshold = type === 'skip_exam' ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
         const isPassing = parseFloat(percentage) >= passThreshold;
 
-        // Determine context name (Course or Subject)
-        // Safely access nested properties
         const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
                            : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
                            : 'Standard Test';
@@ -306,9 +247,7 @@ export async function showExamReviewUI(userId, examId) {
         if (questions && questions.length > 0 && markingResults?.questionResults) {
             questionsHtml = '<div class="space-y-4">';
             questions.forEach((q, index) => {
-                 // Ensure question has an ID, fallback if needed
                  const questionId = q.id || `q-${index+1}`;
-                 // Find the corresponding marking result using questionId
                  const result = markingResults.questionResults.find(r => r.questionId === questionId);
                  const qScore = result?.score ?? 0;
                  const isProblemType = q.isProblem || !q.options || q.options.length === 0;
@@ -318,12 +257,11 @@ export async function showExamReviewUI(userId, examId) {
                  const improvements = result?.improvement_suggestions || [];
                  const userAnswer = userAnswers?.[questionId] || "<i>Not Answered</i>";
 
-                 // Determine visual style based on score vs max score
-                 let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'; // Default
-                 if (qMaxScore > 0) { // Only apply color if max score is positive
-                     if (qScore === qMaxScore) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30'; // Full marks
-                     else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'; // Partial marks
-                     else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30'; // Zero marks
+                 let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800';
+                 if (qMaxScore > 0) {
+                     if (qScore === qMaxScore) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30';
+                     else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30';
+                     else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30';
                  }
 
                  const imageHtml = q.image ? `<div class="my-3 flex justify-center"><img src="${q.image}" alt="Question Image" class="max-w-md h-auto border dark:border-gray-600 rounded" crossorigin="anonymous"></div>` : '';
@@ -332,7 +270,6 @@ export async function showExamReviewUI(userId, examId) {
                  if (isProblemType) {
                      optionsOrAnswerHtml = `<div class="mt-2"><p class="text-xs font-semibold mb-1">Your Answer:</p><div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 whitespace-pre-wrap">${escapeHtml(userAnswer)}</div></div>`;
                  } else {
-                     // MCQ Options
                      optionsOrAnswerHtml = '<ol class="list-none pl-0 space-y-1 my-3">';
                      optionsOrAnswerHtml += (q.options || []).map(opt => {
                          const isSelected = userAnswer === opt.letter;
@@ -368,7 +305,6 @@ export async function showExamReviewUI(userId, examId) {
                         <!-- AI Explanation Section (Hidden initially) -->
                         <div id="ai-explanation-${index}" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
                             <div class="ai-explanation-content-area bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700 space-y-3 max-h-80 overflow-y-auto">
-                                <!-- AI Explanation and follow-up input will load here -->
                                 <p class="text-sm italic text-muted">Loading explanation...</p>
                             </div>
                         </div>
@@ -387,10 +323,9 @@ export async function showExamReviewUI(userId, examId) {
                     </div>
                  `;
             });
-            questionsHtml += '</div>'; // Close space-y-4
+            questionsHtml += '</div>';
         }
 
-        // Overall Feedback Section
         let overallFeedbackHtml = '<p class="text-muted italic text-center my-4">No overall feedback available for this exam.</p>';
         if (markingResults.overallFeedback) {
             const fb = markingResults.overallFeedback;
@@ -411,7 +346,6 @@ export async function showExamReviewUI(userId, examId) {
 
         const reviewHtml = `
             <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
-                <!-- Summary Header -->
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
                     <div class="flex justify-between items-start mb-4">
                          <div>
@@ -430,10 +364,8 @@ export async function showExamReviewUI(userId, examId) {
                     </div>
                 </div>
 
-                <!-- Overall Feedback -->
                 ${overallFeedbackHtml}
 
-                <!-- Question Breakdown -->
                 <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
                     <h3 class="text-lg font-semibold mb-4">Question Breakdown</h3>
                     <div id="review-questions-container" class="max-h-[70vh] overflow-y-auto pr-2">
@@ -447,9 +379,7 @@ export async function showExamReviewUI(userId, examId) {
             </div>
         `;
 
-        // Use displayContent to render in the main area
         displayContent(reviewHtml, 'content');
-        // Render MathJax in the questions container
         const questionsContainer = document.getElementById('review-questions-container');
         if (questionsContainer) await renderMathIn(questionsContainer);
         const overallFeedbackContainer = document.querySelector('.overall-feedback-area');
@@ -480,7 +410,6 @@ async function generateAIExplanation(question, container) {
     }
 }
 
-// --- AI Explanation Display & Follow-up ---
 export const showAIExplanationSection = async (examId, questionIndex) => {
     console.log(`[showAIExplanationSection] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
 
@@ -495,21 +424,17 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
     const isHidden = explanationContainer.classList.contains('hidden');
     explanationContainer.classList.toggle('hidden');
 
-    // If hiding, just return
     if (!isHidden) {
         console.log('[showAIExplanationSection] Hiding explanation section');
         return;
     }
 
-    // Initialize or reset the conversation history for this question
     if (!window.currentExplanationHistories) {
         window.currentExplanationHistories = {};
     }
 
-    // If revealing and content is empty, fetch initial explanation
     if (!explanationContentArea.innerHTML.trim() || explanationContentArea.innerHTML.includes('Loading explanation...')) {
         try {
-            // Show loading state
             explanationContentArea.innerHTML = `<div class="flex items-center justify-center p-2">
                 <div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div>
                 <p class="ml-2 text-sm text-muted">Generating explanation...</p>
@@ -529,17 +454,14 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
             const studentAnswer = examData.userAnswers?.[question.id];
 
             console.log('[showAIExplanationSection] Generating explanation...');
-            // Initial call, empty history - Pass question object which now contains correctAnswer
-            const result = await generateExplanation(question, null, studentAnswer, []); // Pass null for deprecated correctAnswer param
+            const result = await generateExplanation(question, null, studentAnswer, []);
 
             if (!result || !result.explanationHtml) {
                 throw new Error('Failed to generate explanation');
             }
 
-            // Initialize the conversation history with the first explanation
             window.currentExplanationHistories[questionIndex] = result.history;
 
-            // Create the conversation container
             explanationContentArea.innerHTML = `
                 <div class="conversation-container space-y-4">
                     <div class="ai-message bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
@@ -579,10 +501,8 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
     }
 };
 
-// Assign to window for HTML onclick access
 window.showAIExplanationSection = showAIExplanationSection;
 
-// Handle follow-up questions
 export const askAIFollowUp = async (examId, questionIndex) => {
     console.log(`[askAIFollowUp] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
 
@@ -602,13 +522,11 @@ export const askAIFollowUp = async (examId, questionIndex) => {
         return;
     }
 
-    // Disable input while processing
     inputElement.disabled = true;
     const askButton = inputElement.nextElementSibling;
     if (askButton) askButton.disabled = true;
 
     try {
-        // Append user's question to the conversation
         conversationContainer.insertAdjacentHTML('beforeend', `
             <div class="user-message bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                 <p class="font-medium text-sm text-blue-700 dark:text-blue-300 mb-2">Your question:</p>
@@ -620,20 +538,15 @@ export const askAIFollowUp = async (examId, questionIndex) => {
             </div>
         `);
 
-        // Scroll to the latest message
-        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight;
 
-        // Get the conversation history
         const history = window.currentExplanationHistories[questionIndex] || [];
 
-        // Generate follow-up response
         const result = await generateExplanation(null, null, followUpText, history);
 
-        // Remove loading indicator
         const loadingDiv = conversationContainer.querySelector('.ai-message-loading');
         if (loadingDiv) loadingDiv.remove();
 
-        // Add AI's response
         conversationContainer.insertAdjacentHTML('beforeend', `
             <div class="ai-message bg-purple-50 dark:bg-purple-900/20 p-3 rounded-lg">
                 <p class="font-medium text-sm text-purple-700 dark:text-purple-300 mb-2">AI Response:</p>
@@ -641,24 +554,18 @@ export const askAIFollowUp = async (examId, questionIndex) => {
             </div>
         `);
 
-        // Update conversation history
         window.currentExplanationHistories[questionIndex] = result.history;
 
-        // Clear input
         inputElement.value = '';
 
-        // Render any math in the new response
         await renderMathIn(conversationContainer.lastElementChild);
 
-        // Scroll to the new response
-        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight;
 
     } catch (error) {
         console.error("[askAIFollowUp] Error:", error);
-        // Remove loading indicator if it exists
         conversationContainer.querySelector('.ai-message-loading')?.remove();
 
-        // Add error message
         conversationContainer.insertAdjacentHTML('beforeend', `
             <div class="error-message bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
                 <p class="font-medium text-sm text-red-700 dark:text-red-300">Error:</p>
@@ -666,21 +573,15 @@ export const askAIFollowUp = async (examId, questionIndex) => {
             </div>
         `);
 
-        // Scroll to error message
-        explanationContentArea.scrollTop = explanationContentArea.scrollHeight; // Scroll the parent area
+        explanationContentArea.scrollTop = explanationContentArea.scrollHeight;
     } finally {
-        // Re-enable input
         inputElement.disabled = false;
         if (askButton) askButton.disabled = false;
-        // Focus back on input for convenience
         inputElement.focus();
     }
 };
 
-// Assign to window for HTML onclick access
 window.askAIFollowUp = askAIFollowUp;
-
-// --- Issue Reporting ---
 
 export function showIssueReportingModal(examId, questionIndex) {
     document.getElementById('issue-report-modal')?.remove();
@@ -699,7 +600,7 @@ export function showIssueReportingModal(examId, questionIndex) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     document.getElementById('issue-description').focus();
 }
-window.showIssueReportingModal = showIssueReportingModal; // Assign to window
+window.showIssueReportingModal = showIssueReportingModal;
 
 export async function submitIssueReport(examId, questionIndex) {
     const issueType = document.getElementById('issue-type')?.value;
@@ -713,19 +614,17 @@ export async function submitIssueReport(examId, questionIndex) {
         const questionData = examData?.questions?.[questionIndex];
         const qId = questionData?.id || `Exam-${examId}-Q${questionIndex+1}`;
         const markingResultData = examData?.markingResults?.questionResults?.find(r => r.questionId === qId);
-        // Safely access subject/course names
         const subjectContext = examData?.courseId ? `Course: ${globalCourseDataMap?.get(examData.courseId)?.name ?? examData.courseId}`
                              : (examData?.subjectId ? `Subject: ${window.data?.subjects?.[examData.subjectId]?.name ?? examData.subjectId}` : 'N/A');
 
-
         const reportPayload = {
-            subjectId: subjectContext, // Use combined context
+            subjectId: subjectContext,
             questionId: qId,
             feedbackText: `Issue Type: ${issueType}\n\nDescription:\n${description}\n\n------ Context ------\nExam ID: ${examId}\nQuestion Index: ${questionIndex}\nQuestion Text Snippet: ${questionData?.text?.substring(0, 200) || 'N/A'}\nUser Answer Snippet: ${examData?.userAnswers?.[qId]?.substring(0, 200) || 'N/A'}\nAI Feedback Snippet: ${markingResultData?.feedback?.substring(0, 200) || 'N/A'}`,
             context: `Exam Issue Report (Exam: ${examId}, Q: ${questionIndex+1})`
         };
 
-        const success = await submitFeedback(reportPayload, currentUser); // submitFeedback now uses 'examIssues' collection
+        const success = await submitFeedback(reportPayload, currentUser);
         hideLoading();
         if(success) {
             alert('Report submitted successfully. Thank you!');
@@ -739,15 +638,10 @@ export async function submitIssueReport(examId, questionIndex) {
         alert(`Failed to submit report: ${error.message}`);
     }
 }
-window.submitIssueReport = submitIssueReport; // Assign to window
+window.submitIssueReport = submitIssueReport;
 
-/**
- * Deletes a completed exam from Firestore and updates local appData stats if it was a TestGen exam.
- * @param {string} examId - The ID of the exam to delete.
- * @returns {Promise<boolean>} True if deletion (and update) was successful, false otherwise.
- */
 export async function deleteCompletedExamV2(examId) {
-    if (!currentUser || !db || !data) { // Ensure data state is available
+    if (!currentUser || !db || !data) {
         console.error("[DeleteExam] Cannot delete exam: User, DB, or local data not available.");
         alert("Error deleting exam: Critical data missing.");
         return false;
@@ -757,7 +651,6 @@ export async function deleteCompletedExamV2(examId) {
     const examRef = db.collection('userExams').doc(currentUser.uid).collection('exams').doc(examId);
 
     try {
-        // Get exam data before deleting
         console.log(`[DeleteExam] Fetching exam data for ${examId}`);
         const examDoc = await examRef.get();
         if (!examDoc.exists) {
@@ -771,7 +664,6 @@ export async function deleteCompletedExamV2(examId) {
         let statsAttemptedUpdatedCount = 0;
         let statsWrongUpdatedCount = 0;
 
-        // --- START: Update local data.subjects stats for TestGen exams ---
         console.log(`[DeleteExam] Before stats update - Subject ${examData.subjectId} Chapters state (available):`, JSON.parse(JSON.stringify(data?.subjects?.[examData.subjectId]?.chapters || {})));
         if (!examData.courseId && examData.subjectId && data?.subjects?.[examData.subjectId]?.chapters) {
             const subjectToUpdate = data.subjects[examData.subjectId];
@@ -843,15 +735,28 @@ export async function deleteCompletedExamV2(examId) {
                         }
                     });
 
-                    // 1. Update local state
-                    setData({...data});
-                    console.log("[DeleteExam] Local state `data` updated via setData().");
+                    // Update local state with Promise to ensure completion
+                    await new Promise(resolve => {
+                        setData({...data});
+                        console.log("[DeleteExam] Local state `data` updated via setData().");
+                        resolve();
+                    });
 
-                    // 2. Save updated data to Firestore (BEFORE deleting exam doc)
-                    console.log(`[DeleteExam] Preparing to save updated app data (data.subjects) to Firestore because appDataModified is true...`);
+                    // Explicitly update currentSubject if it matches
+                    if (currentSubject && currentSubject.id === examData.subjectId) {
+                        await new Promise(resolve => {
+                            setCurrentSubject({...subjectToUpdate});
+                            console.log("[DeleteExam] Updated currentSubject to reflect the modified subject data.");
+                            resolve();
+                        });
+                    } else {
+                        console.log("[DeleteExam] currentSubject not updated; either not set or doesn't match the exam's subject ID.");
+                    }
+
+                    // Save updated data to Firestore
+                    console.log(`[DeleteExam] Saving updated app data to Firestore...`);
                     await saveUserData(currentUser.uid, data);
-                    console.log("[DeleteExam] UserData save attempt complete. Data state should now be updated in Firestore.");
-                    console.log(`[DeleteExam] After local state update & Firestore save attempt - Subject ${examData.subjectId} Chapters state (available):`, JSON.parse(JSON.stringify(data?.subjects?.[examData.subjectId]?.chapters || {})));
+                    console.log("[DeleteExam] UserData saved to Firestore.");
                 } else {
                      console.log(`[DeleteExam] No TestGen appData needed saving for exam ${examId}.`);
                 }
@@ -861,22 +766,23 @@ export async function deleteCompletedExamV2(examId) {
         } else {
              console.log(`[DeleteExam] Exam ${examId} is not a TestGen exam or relevant subject data missing. No local stats updated.`);
         }
-        // --- END: Update local data.subjects stats ---
 
-        // 3. Delete the exam document from Firestore
+        // Delete the exam document from Firestore
         console.log(`[DeleteExam] Deleting exam document ${examId} from Firestore...`);
         await examRef.delete();
         console.log(`[DeleteExam] Successfully deleted exam ${examId} from userExams collection.`);
 
-        // 4. Refresh the progress dashboard if data was modified
+        // Refresh the progress dashboard if data was modified
         if (appDataModified && typeof window.showProgressDashboard === 'function') {
             console.log("[DeleteExam] Preparing to refresh progress dashboard. Current subject ID:", currentSubject?.id);
             try {
                 const subjectStateForDashboard = JSON.stringify(data?.subjects?.[currentSubject?.id], null, 2);
-                console.log("[DeleteExam] Current subject data state being passed implicitly to dashboard:", subjectStateForDashboard.substring(0, 500) + (subjectStateForDashboard.length > 500 ? '...' : ''));
+                console.log("[DeleteExam] Current subject data state being passed to dashboard:", subjectStateForDashboard.substring(0, 500) + (subjectStateForDashboard.length > 500 ? '...' : ''));
             } catch (e) {
                 console.warn("[DeleteExam] Could not stringify current subject data for logging.");
             }
+            // Wait briefly to ensure state and DOM are ready
+            await new Promise(resolve => setTimeout(resolve, 100));
             console.log("[DeleteExam] Refreshing progress dashboard NOW...");
             window.showProgressDashboard();
         } else if (appDataModified) {
@@ -887,7 +793,6 @@ export async function deleteCompletedExamV2(examId) {
 
         hideLoading();
         alert(`Exam ${examId} deleted successfully.${appDataModified ? `\n(${questionsRestoredCount} MCQs restored, stats adjusted)` : ''}`);
-
         return true;
 
     } catch (error) {
@@ -897,7 +802,6 @@ export async function deleteCompletedExamV2(examId) {
         return false;
     }
 }
-// Make sure the function is available globally if called via onclick
 window.deleteCompletedExamV2 = deleteCompletedExamV2;
 
 // --- END OF FILE exam_storage.js ---

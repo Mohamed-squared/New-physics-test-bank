@@ -302,6 +302,12 @@ export function setupAuthListener() {
             }
         } else { // User is signed out
             console.log("User signed out. Showing public homepage.");
+            // --- MODIFICATION: Added specific log for account deletion scenario ---
+            const previousUser = window.currentUser; // Check if there was a currentUser before this state change
+            if (previousUser && !user) { // Check if a user was just signed out (could be deletion or normal sign out)
+                 console.log("Account deletion processed or user signed out. Showing login UI.");
+            }
+            // --- END MODIFICATION ---
             setCurrentUser(null); // Clear global user state immediately
             updateAdminPanelVisibility(); // Update admin link visibility
             clearUserSession();       
@@ -311,6 +317,10 @@ export function setupAuthListener() {
             document.querySelector('.app-layout')?.classList.add('hidden');
             
             setActiveSidebarLink(''); 
+            // Explicitly ensure login UI is visible when signed out, unless onboarding is active (which is handled elsewhere)
+            if (!document.getElementById('onboarding-container')) {
+                showLoginUI(); // This shows the #login-section
+            }
             hideLoading();            
         }
     });
