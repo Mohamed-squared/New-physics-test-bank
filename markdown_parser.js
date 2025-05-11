@@ -147,7 +147,7 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
     const extracted = { questions: [], answers: {} };
     // *** MODIFIED: Handle potentially empty/null mdContent gracefully ***
     if (!mdContent || !chapterScopeOrQuestionMap) {
-        // console.warn("extractQuestionsFromMarkdown: Invalid args or empty content/scope.");
+        console.warn("extractQuestionsFromMarkdown: Invalid args or empty content/scope.");
         return extracted;
     }
 

@@ -1986,4 +1986,212 @@ input[type="file"].form-control {
 }
 
 
+.problem-input-container {
+    position: relative;
+}
+
+.latex-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.25rem 0.5rem; /* Adjusted padding */
+    gap: 0.25rem;
+    margin-bottom: 0; /* Toolbar is directly on top of preview/input */
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--border-color);
+    border-bottom: none; /* No bottom border, connects to preview/input */
+    border-top-left-radius: var(--border-radius-md);
+    border-top-right-radius: var(--border-radius-md);
+    max-height: 80px;
+    overflow-y: auto;
+}
+.dark .latex-toolbar {
+    background-color: var(--color-gray-700);
+    border-color: var(--border-color-dark);
+}
+
+.latex-category-select {
+    padding: 0.25rem 0.5rem !important;
+    height: 28px;
+    margin-right: 0.25rem;
+    font-size: 0.75rem; /* text-xs */
+    /* Inherits btn-secondary-small, adjust if needed */
+}
+
+#latex-toolbar button { /* Targets buttons directly within the main toolbar div */
+    font-family: var(--font-sans);
+    font-size: 0.7rem !important;
+    padding: 2px 5px !important;
+    min-width: auto;
+}
+#latex-toolbar [id^="latex-category-buttons-"] button { /* Targets buttons in the category container */
+    font-family: var(--font-sans); /* or var(--font-mono) for symbols */
+    font-size: 0.7rem !important;
+    padding: 2px 5px !important;
+    min-width: auto;
+}
+#latex-toolbar button .font-mono {
+    font-size: 0.85rem;
+}
+
+/* --- NEW/MODIFIED GLOBAL MathJax STYLES --- */
+
+/* Base styles for ALL MathJax containers */
+mjx-container {
+    text-align: left !important; /* Usually good for math blocks */
+    max-width: 100%;          /* Prevent overflow */
+    line-height: 0;           /* IMPORTANT: Helps contain the SVG's height and improves vertical alignment.
+                                  If text around inline math becomes too condensed, remove this or apply
+                                  a 'normal' line-height to the parent of the inline math. */
+    vertical-align: middle;   /* Good starting point for vertical alignment */
+}
+
+/* Specific styles for INLINE MathJax containers */
+/* MathJax uses <mjx-container> without 'display="true"' for inline math */
+mjx-container:not([display="true"]) {
+    display: inline-block !important; /* CRITICAL for inline flow */
+    margin: 0 0.1em !important;       /* Minimal horizontal margin for breathing room */
+    padding: 0 !important;            /* No extra padding */
+    vertical-align: -0.2ex;         /* Fine-tune vertical alignment.
+                                      'ex' is relative to the x-height of the font.
+                                      Try values between -0.1ex and -0.3ex.
+                                      This helps align the math with the text baseline. */
+}
+
+/* Specific styles for DISPLAY MathJax containers */
+/* MathJax uses <mjx-container display="true"> for display math */
+mjx-container[display="true"] {
+    display: block !important;       /* CRITICAL for being on its own line */
+    margin: 0.75em auto !important;  /* Top/bottom margin, and 'auto' for centering */
+    padding: 0.25em 0;             /* Optional vertical padding */
+    overflow-x: auto;              /* Allow horizontal scrolling for very wide equations */
+    overflow-y: hidden;
+}
+
+/* Styling for the SVG elements within MathJax containers */
+mjx-container > svg {
+    max-width: 100%;
+    /* vertical-align is often better controlled on the mjx-container itself
+       or via more specific rules if needed, but 'middle' can be a good default for SVGs. */
+    vertical-align: middle;
+}
+
+/* --- Adjustments for .prose class if you use Tailwind Typography --- */
+/* This ensures inline MathJax behaves well within .prose styled text */
+.prose mjx-container:not([display="true"]) {
+    display: inline-block !important;
+    vertical-align: -0.15ex; /* You might need to tune this based on your prose font */
+    margin: 0 0.1em !important;
+    line-height: normal; /* Reset line-height if global mjx-container has line-height:0 */
+}
+
+.prose mjx-container[display="true"] {
+    margin: 1em auto !important; /* More margin for display math in prose */
+    line-height: normal; /* Reset */
+}
+
+
+/* Live Preview Area - Styled like a primary input */
+.problem-input-container [id^="problem-answer-preview-"] {
+    min-height: 120px; /* Default expanded height */
+    max-height: 250px;
+    overflow-y: auto;
+    background-color: var(--color-white); /* Looks like an input field */
+    padding: 0.75rem;
+    border: 1px solid var(--border-color); /* Standard border */
+    border-top: none; /* Connects to toolbar */
+    border-bottom-left-radius: var(--border-radius-md);
+    border-bottom-right-radius: var(--border-radius-md);
+    font-size: 0.95em; /* Slightly larger than raw code, adjust as desired */
+    line-height: 1.6;
+    cursor: text; /* Indicate it's an "input" area */
+    white-space: pre-wrap; 
+    word-wrap: break-word; 
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.dark .problem-input-container [id^="problem-answer-preview-"] {
+    background-color: var(--color-gray-750); /* Slightly different from textarea if needed */
+    border-color: var(--border-color-dark);
+    color: var(--color-gray-100);
+}
+.problem-input-container [id^="problem-answer-preview-"]:focus,
+.problem-input-container [id^="problem-answer-preview-"]:focus-within { /* For when child (like a MathJax element) gets focus */
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15); /* Softer focus ring */
+    outline: none;
+}
+.dark .problem-input-container [id^="problem-answer-preview-"]:focus,
+.dark .problem-input-container [id^="problem-answer-preview-"]:focus-within {
+    border-color: var(--color-primary-400);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+.problem-input-container [id^="problem-answer-preview-"] p {
+    margin-top: 0.2em;
+    margin-bottom: 0.2em;
+}
+.problem-input-container [id^="problem-answer-preview-"] mjx-container {
+    margin: 0.2em 0 !important;
+}
+
+
+/* Raw LaTeX Textarea - De-emphasized */
+.problem-input-container textarea[id^="problem-answer-input-"] {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.75rem; /* Smaller for raw code */
+    line-height: 1.5;
+    border-radius: var(--border-radius-sm); /* Standard smaller radius */
+    margin-top: 0.25rem; /* Space below the "Edit Raw LaTeX" label */
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-200);
+    color: var(--color-gray-700);
+    resize: vertical; /* Allow vertical resize if needed */
+    min-height: 60px; /* Start smaller */
+}
+.dark .problem-input-container textarea[id^="problem-answer-input-"] {
+    background-color: var(--color-gray-800);
+    border-color: var(--color-gray-600);
+    color: var(--color-gray-200);
+}
+/* Focus on raw textarea should still be clear */
+.problem-input-container textarea[id^="problem-answer-input-"]:focus {
+    border-color: var(--color-primary-400); /* Slightly less prominent than main preview focus */
+    box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.1);
+}
+.dark .problem-input-container textarea[id^="problem-answer-input-"]:focus {
+    border-color: var(--color-primary-300);
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+}
+
+/* General scrollbar styling for these elements */
+.latex-toolbar::-webkit-scrollbar,
+.problem-input-container [id^="problem-answer-preview-"]::-webkit-scrollbar,
+.problem-input-container textarea[id^="problem-answer-input-"]::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.latex-toolbar::-webkit-scrollbar-thumb,
+.problem-input-container [id^="problem-answer-preview-"]::-webkit-scrollbar-thumb,
+.problem-input-container textarea[id^="problem-answer-input-"]::-webkit-scrollbar-thumb {
+    background: var(--color-gray-400);
+    border-radius: 3px;
+}
+.dark .latex-toolbar::-webkit-scrollbar-thumb,
+.dark .problem-input-container [id^="problem-answer-preview-"]::-webkit-scrollbar-thumb,
+.dark .problem-input-container textarea[id^="problem-answer-input-"]::-webkit-scrollbar-thumb {
+    background: var(--color-gray-500);
+}
+.latex-toolbar,
+.problem-input-container [id^="problem-answer-preview-"],
+.problem-input-container textarea[id^="problem-answer-input-"] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-400) transparent;
+}
+.dark .latex-toolbar,
+.dark .problem-input-container [id^="problem-answer-preview-"],
+.dark .problem-input-container textarea[id^="problem-answer-input-"] {
+    scrollbar-color: var(--color-gray-500) transparent;
+}
+
+
+
 /* --- END OF FILE styles.css --- */

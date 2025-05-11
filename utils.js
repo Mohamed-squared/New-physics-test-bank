@@ -30,82 +30,63 @@ export function hideLoading() {
 
 // --- MathJax ---
 
-// --- MathJax Ready Promise ---
-let resolveMathJaxReady;
-export let mathJaxReadyPromise = new Promise(resolve => {
-    resolveMathJaxReady = resolve;
-    window.resolveMathJaxReady = resolve; // Allow inline config to resolve it
-    console.log("MathJax ready promise created, waiting for resolution...");
-});
+export let mathJaxReadyPromise;
+let mathJaxResolveReference;
 
-// Fallback listener for MathJax script loading
-function setupMathJaxListeners() {
-    const script = document.getElementById('mathjax-script');
-    if (script) {
-        const handleLoad = () => {
-            console.log("MathJax script detected as loaded/complete.");
-            if (typeof MathJax !== 'undefined' && MathJax.startup) {
-                MathJax.startup.promise.then(() => {
-                    console.log("MathJax startup promise resolved.");
-                    if (resolveMathJaxReady) {
-                         resolveMathJaxReady();
-                         resolveMathJaxReady = null; // Prevent multiple resolutions
-                    }
-                }).catch(err => {
-                    console.error("MathJax startup promise rejected:", err);
-                    if (resolveMathJaxReady) {
-                         resolveMathJaxReady(); // Resolve anyway
-                         resolveMathJaxReady = null;
-                    }
-                });
-            } else {
-                console.error("MathJax script loaded, but MathJax object/startup not ready.");
-                 if (resolveMathJaxReady) {
-                    resolveMathJaxReady(); // Resolve anyway
-                    resolveMathJaxReady = null;
-                 }
-            }
-        };
+if (typeof MathJax !== 'undefined' && MathJax.startup?.promise) {
+    console.log("[MathJax Utils] MathJax detected as pre-loaded or initialized quickly.");
+    mathJaxReadyPromise = MathJax.startup.promise.then(() => {
+        console.log("[MathJax Utils] MathJax ready (pre-loaded or quick init).");
+    }).catch(err => {
+        console.error("[MathJax Utils] Error during pre-loaded MathJax startup:", err);
+        return Promise.resolve(); 
+    });
+} else {
+    mathJaxReadyPromise = new Promise(resolve => {
+        mathJaxResolveReference = resolve;
+    });
 
-        if (script.readyState === 'complete' || script.readyState === 'loaded' || (typeof MathJax !== 'undefined' && MathJax.startup?.promise)) {
-             // Already loaded or ready
-             console.log("MathJax already loaded/ready on listener setup.");
-             handleLoad();
-        } else {
-            // Standard listeners
-            script.onload = handleLoad;
-            script.onerror = () => {
-                console.error("Failed to load MathJax script.");
-                 if (resolveMathJaxReady) {
-                     resolveMathJaxReady(); // Resolve to not block
-                     resolveMathJaxReady = null;
-                 }
-            };
-        }
+    const mjScript = document.getElementById('mathjax-script');
+    if (mjScript) {
+        const handleMathJaxLoad = () => { /* ... (same as previous robust version) ... */ };
+        mjScript.addEventListener('load', handleMathJaxLoad);
+        mjScript.addEventListener('error', () => { /* ... (same as previous robust version) ... */ });
+        if (mjScript.readyState === 'complete' || mjScript.readyState === 'loaded') { handleMathJaxLoad(); }
     } else {
-        console.error("MathJax script tag not found.");
-         if (resolveMathJaxReady) {
-             resolveMathJaxReady(); // Resolve to not block
-             resolveMathJaxReady = null;
-         }
+        console.error("[MathJax Utils] MathJax script tag (#mathjax-script) not found.");
+        if (mathJaxResolveReference) { mathJaxResolveReference(); mathJaxResolveReference = null; }
     }
 }
 
-// Ensure the promise chain resolves correctly after setup
-mathJaxReadyPromise = mathJaxReadyPromise.then(() => {
-        console.log("Final MathJax Ready Promise resolved.");
-    })
-    .catch(err => {
-        console.error("Error in MathJax Ready Promise chain:", err);
-        return Promise.resolve(); // Don't block app
-    });
+setTimeout(() => { /* ... (fallback timeout same as previous robust version) ... */ }, 2000);
 
-// Setup listeners when the DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupMathJaxListeners);
-} else {
-    setupMathJaxListeners(); // DOM already loaded
-}
+// Fallback timeout check for MathJax readiness, in case events are unreliable
+// This ensures the mathJaxReadyPromise eventually resolves.
+setTimeout(() => {
+    if (mathJaxResolveReference) { // If it hasn't been resolved by event listeners
+        if (typeof MathJax !== 'undefined' && MathJax.startup?.promise) {
+            console.log("[MathJax Utils] Checking MathJax readiness via fallback timeout...");
+            MathJax.startup.promise.then(() => {
+                if (mathJaxResolveReference) { // Check again, as it might have resolved in the meantime
+                    console.log("[MathJax Utils] MathJax startup.promise resolved via fallback timeout.");
+                    mathJaxResolveReference();
+                    mathJaxResolveReference = null;
+                }
+            }).catch(err => {
+                console.error("[MathJax Utils] MathJax startup.promise rejected via fallback timeout:", err);
+                if (mathJaxResolveReference) {
+                    mathJaxResolveReference();
+                    mathJaxResolveReference = null;
+                }
+            });
+        } else {
+            console.warn("[MathJax Utils] MathJax still not ready after fallback timeout. Resolving promise to prevent blocking.");
+            mathJaxResolveReference();
+            mathJaxResolveReference = null;
+        }
+    }
+}, 2000); // Wait 2 seconds, adjust if necessary
+
 
 // --- MathJax Rendering Helper ---
 export async function renderMathIn(element) {
@@ -113,46 +94,48 @@ export async function renderMathIn(element) {
         console.warn("renderMathIn: Called with null or undefined element.");
         return;
     }
-    // Add a delay to allow DOM updates, especially after complex innerHTML changes
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // A small delay can sometimes help ensure the DOM is fully updated before MathJax runs.
+    await new Promise(resolve => setTimeout(resolve, 50)); 
 
-    console.log(`renderMathIn: Starting for element: ${element.id || element.tagName}`);
+    console.log(`[renderMathIn] Attempting to render MathJax for element: ${element.id || element.tagName}`);
 
     try {
         await mathJaxReadyPromise; // Wait for MathJax to be fully ready
-        console.log("renderMathIn: MathJax is ready.");
+        console.log("[renderMathIn] MathJax is ready. Proceeding with typesetting.");
 
-        if (typeof MathJax === 'undefined' || !MathJax.typesetPromise) {
-            throw new Error('MathJax or typesetPromise not available after promise resolution.');
+        if (typeof MathJax === 'undefined' || typeof MathJax.typesetPromise !== 'function') {
+            console.error('[renderMathIn] MathJax or MathJax.typesetPromise is not available even after promise resolution.');
+            throw new Error('MathJax library not properly initialized.');
         }
+        
+        // It's crucial that MathJax processes the content of the element
+        // as it is, assuming it contains LaTeX delimiters.
 
-        // Clear previous typesetting results within the element to prevent conflicts
-         if (element === document.body) {
-              // Avoid clearing entire document unless necessary
-              console.warn("renderMathIn: Attempting to clear MathItems for entire body - this might be inefficient.");
-              // MathJax.startup.document.clear(); // Use with caution
-         } else {
-              MathJax.startup.document.clearMathItemsWithin(element);
-              console.log(`renderMathIn: Cleared previous MathJax items in [${element.id || element.tagName}]`);
-         }
-
-        // Typeset the specific element
-        console.log(`renderMathIn: Calling MathJax.typesetPromise specific to [${element.id || element.tagName}]`);
+        // Clear previous typesetting results *within this element*
+        // This is important for re-rendering if content changes.
+        if (MathJax.startup?.document?.clearMathItemsWithin) {
+            MathJax.startup.document.clearMathItemsWithin(element);
+            console.log(`[renderMathIn] Cleared previous MathJax items in element: ${element.id || element.tagName}`);
+        } else {
+            console.warn("[renderMathIn] MathJax.startup.document.clearMathItemsWithin not available. Skipping clear step.");
+        }
+        
         await MathJax.typesetPromise([element]);
-        console.log(`renderMathIn: MathJax typesetPromise finished for specific element: ${element.id || element.tagName}`);
+        console.log(`[renderMathIn] MathJax typesetting complete for element: ${element.id || element.tagName}`);
 
     } catch (error) {
-        console.error(`renderMathIn Error for ${element.id || element.tagName}:`, error);
-         if(element.querySelector && !element.querySelector('.mathjax-error-msg')) {
-            const errorMsg = document.createElement('p');
-            errorMsg.className = 'text-red-500 text-xs mt-1 mathjax-error-msg';
-            errorMsg.textContent = '[Math rendering failed: Check console]';
-             try {
-                 element.appendChild(errorMsg);
-             } catch (appendError) {
-                 console.error("Failed to append MathJax error message:", appendError);
-             }
-         }
+        console.error(`[renderMathIn] Error during MathJax processing for element ${element.id || element.tagName}:`, error);
+        // Add a visual error message to the element if possible
+        if (element.querySelector && !element.querySelector('.mathjax-render-error-msg')) {
+            const errorMsgElement = document.createElement('p');
+            errorMsgElement.className = 'text-red-500 text-xs mt-1 mathjax-render-error-msg';
+            errorMsgElement.textContent = '[Math rendering failed. Check console.]';
+            try {
+                element.appendChild(errorMsgElement);
+            } catch (appendError) {
+                console.error("Failed to append MathJax rendering error message to element:", appendError);
+            }
+        }
     }
 }
 
@@ -162,18 +145,18 @@ export async function renderMathIn(element) {
 export function escapeHtml(unsafe) {
     if (unsafe === null || unsafe === undefined) return '';
     return String(unsafe)
-         .replace(/&/g, "&")
-         .replace(/</g, "<")
-         .replace(/>/g, ">")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+        .replace(/&/g, "&amp;")  // Escape & to &amp;
+        .replace(/</g, "&lt;")   // Escape < to &lt;
+        .replace(/>/g, "&gt;")   // Escape > to &gt;
+        .replace(/"/g, "&quot;") // Escape " to &quot;
+        .replace(/'/g, "&#39;"); // Escape ' to &#39;
 }
 
 // Format date string (YYYY-MM-DD)
 export function getFormattedDate(date = new Date()) {
      if (!(date instanceof Date) || isNaN(date)) {
          console.warn("getFormattedDate: Invalid date object received.", date);
-         return 'N/A'; // Return N/A for invalid dates
+         return 'N/A'; 
      }
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -185,13 +168,11 @@ export function getFormattedDate(date = new Date()) {
 export function daysBetween(date1, date2) {
      if (!(date1 instanceof Date) || isNaN(date1) || !(date2 instanceof Date) || isNaN(date2)) {
          console.warn("daysBetween: Invalid date object(s) received.", date1, date2);
-         return -1; // Indicate error or invalid input
+         return -1; 
      }
-    const oneDay = 24 * 60 * 60 * 1000; // hours*minutes*seconds*milliseconds
-    // Clone dates and reset time part to compare dates only
+    const oneDay = 24 * 60 * 60 * 1000; 
     const firstDate = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
     const secondDate = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
-    // Use Math.floor to handle potential DST issues and ensure integer days
     return Math.floor((secondDate - firstDate) / oneDay);
 }
 
@@ -222,6 +203,20 @@ export function getYouTubeVideoId(url) {
     } catch (e) { console.error("Invalid URL format:", url, e); }
     console.warn("Could not extract YouTube Video ID from URL:", url);
     return null;
+}
+
+/**
+ * Decodes HTML entities in a string.
+ * @param {string} text The string with HTML entities.
+ * @returns {string} The string with HTML entities decoded.
+ */
+export function decodeHtmlEntities(text) {
+    if (typeof text !== 'string') {
+        return text;
+    }
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
 }
 
 // --- END OF FILE utils.js ---

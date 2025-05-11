@@ -52,7 +52,7 @@ async function getCurrentSubjectMarkdown() {
     }
 
     // Sanitize the MCQ filename itself using cleanTextForFilename for consistency
-    const safeMcqFileNameForPath = cleanTextForFilename(mcqFileName); 
+    const safeMcqFileNameForPath = cleanTextForFilename(mcqFileName);
 
     // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in path construction ***
     const url = `${COURSE_BASE_PATH}/${derivedCourseDirName}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileNameForPath}?t=${new Date().getTime()}`;
@@ -108,7 +108,7 @@ export function showTestGenerationDashboard() {
                     Test Studied Chapters Only
                 </button>
                 <button onclick="window.promptChapterSelectionForTest()" class="w-full btn-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1zm8.707 3.293a1 1 0 010 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414L10 14.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.25Z" clip-rule="evenodd" /></svg>
                     Test Specific Chapters
                 </button>
             </div>
@@ -651,6 +651,12 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
     } else { // PDF Test
         console.log("Preparing PDF Test files...");
         const { questionHtml, solutionHtml } = generatePdfHtml(examId, finalExamItems);
+
+        // --- ADDED LOGGING ---
+        console.log("Test Generation - Question HTML (first 500 chars):", (questionHtml || "").substring(0, 500));
+        console.log("Test Generation - Solution HTML (first 500 chars):", (solutionHtml || "").substring(0, 500));
+        // --- END ADDED LOGGING ---
+
         const { questionsTex, solutionsTex } = generateTexSource(examId, finalExamItems);
 
         currentSubject.pending_exams = currentSubject.pending_exams || [];
@@ -721,11 +727,16 @@ export async function startTestGeneration(mode, selectedChapters, testType) {
 
 window.downloadTexFileWrapper = (filename, base64Content) => {
      try {
-         const texContent = decodeURIComponent(escape(atob(base64Content)));
-         downloadTexFile(texContent, filename);
+        // The function downloadTexFile expects the raw content, not base64
+        // The base64 encoding/decoding should happen inside the onclick attribute or be passed differently.
+        // Original was: `downloadTexFile(texContent, filename);` which is incorrect.
+        // Correct usage is downloadTexFile(filename, base64Content) and let it decode.
+        // OR, decode here and pass raw content.
+        // The ui_pdf_generation.js's downloadTexFile expects filename, then base64content.
+         downloadTexFile(filename, base64Content); // Pass base64 directly
      } catch (e) {
-         console.error("Error decoding/downloading TeX file:", e);
-         alert("Failed to prepare TeX file for download. The content might be invalid.");
+         console.error("Error in downloadTexFileWrapper:", e);
+         alert("Failed to prepare TeX file for download. The content might be invalidly encoded or corrupted.");
      }
  };
 

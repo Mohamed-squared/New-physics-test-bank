@@ -10,6 +10,7 @@ const PREDEFINED_BACKGROUND_IMAGES = [ // Example predefined images
     { name: 'Light View', filename: 'light-view.jpg' },
     { name: 'Steps of Light', filename: 'steps-of-light.jpg' },
     { name: 'Default', filename: 'default.png' },
+    { name: 'Al-Aqsa Mosque', filename: 'Al-aqsa.jpg' }
 ];
 
 const DEFAULT_APP_BACKGROUND_IMAGE_URL = PREDEFINED_BACKGROUNDS_PATH + 'default.png';

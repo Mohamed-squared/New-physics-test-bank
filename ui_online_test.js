@@ -2,13 +2,15 @@
 
 import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js';
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
-import { showLoading, hideLoading, renderMathIn, escapeHtml, getFormattedDate } from './utils.js';
+// MODIFIED: renderMathIn is now directly available from window.renderMathIn setup in script.js
+// but it's good practice to import if it's a module. Assuming it's globally available for now.
+import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js'; 
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
 import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
-
+import { generateLatexToolbar } from './ui_latex_toolbar.js';
 // --- Online Test UI & Logic ---
 
 export function launchOnlineTestUI() {
@@ -172,18 +174,42 @@ export async function displayCurrentQuestion() {
     let imageHtml = question.image ? `<img src="${question.image}" alt="Question Image" class="max-w-full h-auto mx-auto my-4 border dark:border-gray-600 rounded" onerror="this.style.display='none';">` : '';
     let answerAreaHtml = '';
 
-    if (question.isProblem) {
-         const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
-         answerAreaHtml = `
-         <div class="mt-4">
-             <label for="problem-answer-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Your Answer / Solution Steps:</label>
-             <textarea id="problem-answer-${questionId}" name="problemAnswer" rows="8"
-                       class="w-full p-2 border rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500 font-mono text-sm"
-                       placeholder="Show your work and final answer here..."
-                       oninput="window.recordAnswer('${questionId}', this.value)">${escapeHtml(currentAnswer)}</textarea>
-              <p class="text-xs text-muted mt-1">Explain your reasoning and show key steps. Use basic text formatting and simple math notation (e.g., ^ for power, * for multiply). Full LaTeX is not supported here.</p>
-         </div>`;
-    } else {
+        if (question.isProblem) {
+        const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
+        answerAreaHtml = `
+        <div class="mt-4 problem-input-container">
+            <label for="problem-answer-preview-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Answer / Solution Steps (Live Preview):</label>
+            
+            <div id="latex-toolbar-${questionId}" class="latex-toolbar">
+                 <span class="text-xs text-gray-400 dark:text-gray-500 p-1">Loading LaTeX tools...</span>
+            </div>
+
+            <div id="problem-answer-preview-${questionId}" 
+                 tabindex="0" 
+                 class="min-h-[120px] p-3 border border-t-0 rounded-b-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 prose prose-sm dark:prose-invert max-w-none pretty-scrollbar overflow-auto focus:ring-2 focus:ring-primary-500 focus:border-primary-500" 
+                 style="max-height: 250px;"
+                 aria-label="Live LaTeX Preview of your answer"
+                 onclick="document.getElementById('problem-answer-input-${questionId}').focus();"
+                 onfocus="this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500');" 
+                 onblur="this.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500');"
+                 title="Click to edit raw LaTeX below. This area shows the rendered preview.">
+                 <!-- Preview will appear here. Click to focus raw editor below. -->
+            </div>
+            
+            <div class="mt-2">
+                <label for="problem-answer-input-${questionId}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Edit Raw LaTeX Code:</label>
+                <textarea id="problem-answer-input-${questionId}"
+                          name="problemAnswer"
+                          rows="3" 
+                          class="w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-50 font-mono text-xs leading-normal"
+                          placeholder="Type raw LaTeX here (e.g., $$\\frac{a}{b}$$ or $x^2$)"
+                          oninput="window.recordAnswer('${questionId}', this.value); window.updateLatexPreview('${questionId}')"
+                          spellcheck="false">${escapeHtml(currentAnswer)}</textarea>
+            </div>
+            <p class="text-xs text-muted mt-1">Use the toolbar or type LaTeX in the "Edit Raw LaTeX" box (include $delimiters$ for inline math or $$delimiters$$ for display math). The preview above updates automatically. Direct editing of the preview area is not supported; click the preview to focus the raw editor.</p>
+        </div>`;
+        
+    } else { // MCQ
          answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
              const qIdStr = String(questionId);
              const optLetterStr = String(opt.letter);
@@ -208,29 +234,156 @@ export async function displayCurrentQuestion() {
         ${answerAreaHtml}
     </div>`;
 
-    container.innerHTML = htmlContent;
-    console.log("innerHTML set.");
+    container.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-4 animate-fade-in question-card">
+        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Question ${index + 1} / ${totalQuestions} ${question.chapter ? `(Chapter ${question.chapter})` : ''}</p>
+        ${imageHtml}
+        <div class="prose dark:prose-invert max-w-none mb-4 question-text-container">${question.text}</div>
+        ${answerAreaHtml}
+    </div>`;
+    console.log("innerHTML set for question container.");
 
-    try { await renderMathIn(container); console.log("MathJax rendered."); } catch (mathError) { console.error("MathJax render error:", mathError); }
-
-    try {
-        const counterEl = document.getElementById('question-counter');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const submitBtn = document.getElementById('submit-btn');
-
-        if (counterEl) counterEl.textContent = `Question ${index + 1} / ${totalQuestions}`; else console.warn("[DisplayQuestion] Element #question-counter not found");
-        if (prevBtn) prevBtn.disabled = (index === 0); else console.warn("[DisplayQuestion] Element #prev-btn not found");
-        if (nextBtn) nextBtn.classList.toggle('hidden', index === totalQuestions - 1); else console.warn("[DisplayQuestion] Element #next-btn not found");
-        if (submitBtn) submitBtn.classList.toggle('hidden', index !== totalQuestions - 1); else console.warn("[DisplayOption] Element #submit-btn not found");
-
-        console.log("[DisplayQuestion] Navigation updated.");
-    } catch (e) {
-        console.error("[DisplayQuestion] Error updating navigation elements:", e);
+    if (question.isProblem) {
+        if (typeof window.generateLatexToolbar === 'function') {
+            window.generateLatexToolbar(questionId);
+        } else { console.error("generateLatexToolbar is not defined."); }
+        
+        if (typeof window.updateLatexPreview === 'function') {
+            window.updateLatexPreview(questionId); // Initial preview render
+        } else { console.error("updateLatexPreview is not defined."); }
     }
+
+    try { 
+        if (typeof window.renderMathIn === 'function') {
+            await window.renderMathIn(container); 
+            console.log("MathJax rendered for question container in displayCurrentQuestion.");
+        } else {
+            console.error("renderMathIn function is not available on window object in displayCurrentQuestion.");
+        }
+    } catch (mathError) { 
+        console.error("MathJax render error in displayCurrentQuestion:", mathError); 
+    }
+
+    // --- *** NEW CODE TO UPDATE NAVIGATION BAR *** ---
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const submitBtn = document.getElementById('submit-btn');
+    const counterSpan = document.getElementById('question-counter');
+
+    if (prevBtn) {
+        prevBtn.disabled = (index === 0);
+    }
+    if (counterSpan) {
+        counterSpan.textContent = `Question ${index + 1} / ${totalQuestions}`;
+    }
+    if (nextBtn && submitBtn) {
+        if (index === totalQuestions - 1) { // Last question
+            nextBtn.classList.add('hidden');
+            submitBtn.classList.remove('hidden');
+        } else {
+            nextBtn.classList.remove('hidden');
+            submitBtn.classList.add('hidden');
+        }
+    }
+    // --- *** END OF NEW CODE *** ---
 
     console.log("displayCurrentQuestion END");
 }
+
+// ui_online_test.js
+
+window.latexPreviewTimeouts = window.latexPreviewTimeouts || {};
+
+window.updateLatexPreview = async function(questionId) {
+    const textarea = document.getElementById(`problem-answer-input-${questionId}`);
+    const previewDiv = document.getElementById(`problem-answer-preview-${questionId}`);
+
+    if (!textarea || !previewDiv) {
+        console.warn("Textarea or preview div not found for LaTeX preview for QID:", questionId);
+        return;
+    }
+
+    const latexText = textarea.value;
+    
+    // *** NO automatic newline to \\ conversion ***
+    // Just pass the raw text. User must use \\ for LaTeX newlines.
+    // For plain text newlines, the CSS on previewDiv will handle it.
+    previewDiv.innerHTML = latexText; 
+    // ********************************************
+    
+    const existingErrorMsg = previewDiv.querySelector('.mathjax-render-error-msg');
+    if (existingErrorMsg) {
+        existingErrorMsg.remove();
+    }
+
+    if (window.latexPreviewTimeouts[questionId]) {
+        clearTimeout(window.latexPreviewTimeouts[questionId]);
+    }
+
+    window.latexPreviewTimeouts[questionId] = setTimeout(async () => {
+        console.log(`[updateLatexPreview] Debounced: Rendering MathJax for preview of QID: ${questionId}. Content:`, previewDiv.innerHTML.substring(0,100) + "...");
+        try {
+            if (typeof window.renderMathIn === 'function') {
+                await window.renderMathIn(previewDiv);
+            } else {
+                console.error("renderMathIn function is not available on window object.");
+                previewDiv.innerHTML += '<p class="text-red-500 text-xs mathjax-render-error-msg">Math rendering library error.</p>';
+            }
+        } catch (e) {
+            console.error("Error rendering MathJax in preview for QID " + questionId + ":", e);
+            const errorMsgElement = document.createElement('p');
+            errorMsgElement.className = 'text-red-500 text-xs mathjax-render-error-msg';
+            errorMsgElement.textContent = ' [MathJax Error - check console for details]';
+            if (!previewDiv.querySelector('.mathjax-render-error-msg')) {
+                previewDiv.appendChild(errorMsgElement);
+            }
+        }
+    }, 250); 
+};
+
+// Store timeout IDs to manage debouncing
+window.latexPreviewTimeouts = window.latexPreviewTimeouts || {}; // Ensure it's initialized globally
+
+window.updateLatexPreview = async function(questionId) {
+    const textarea = document.getElementById(`problem-answer-input-${questionId}`);
+    const previewDiv = document.getElementById(`problem-answer-preview-${questionId}`);
+
+    if (!textarea || !previewDiv) {
+        console.warn("Textarea or preview div not found for LaTeX preview for QID:", questionId);
+        return;
+    }
+
+    const latexText = textarea.value;
+    
+    // Set raw LaTeX as the content for MathJax to process.
+    // MathJax looks for its delimiters ($...$, $$...$$, etc.) within this raw text.
+    previewDiv.innerHTML = latexText; 
+    
+    if (window.latexPreviewTimeouts[questionId]) {
+        clearTimeout(window.latexPreviewTimeouts[questionId]);
+    }
+
+    window.latexPreviewTimeouts[questionId] = setTimeout(async () => {
+        console.log(`[updateLatexPreview] Debounced: Rendering MathJax for preview of QID: ${questionId}`);
+        try {
+            if (typeof window.renderMathIn === 'function') {
+                await window.renderMathIn(previewDiv); // Call the global renderMathIn
+            } else {
+                console.error("renderMathIn function is not available on window object.");
+                previewDiv.innerHTML += '<p class="text-red-500 text-xs">Math rendering library error.</p>';
+            }
+        } catch (e) {
+            console.error("Error rendering MathJax in preview for QID " + questionId + ":", e);
+            // Avoid overwriting the raw LaTeX if rendering fails, just append error.
+            const errorMsgElement = document.createElement('p');
+            errorMsgElement.className = 'text-red-500 text-xs mathjax-render-error-msg';
+            errorMsgElement.textContent = ' [MathJax Error]';
+            if (!previewDiv.querySelector('.mathjax-render-error-msg')) { // Append error only once
+                previewDiv.appendChild(errorMsgElement);
+            }
+        }
+    }, 250); // Slightly shorter debounce for better responsiveness
+};
 
 export function navigateQuestion(direction) {
     if (!currentOnlineTestState) return;
@@ -249,40 +402,33 @@ export function recordAnswer(questionId, answer) {
     console.log(`[RecordAnswer] Stored answer for ${qIdStr}: '${ansStr}' (Type: ${typeof ansStr})`);
     console.log('[RecordAnswer] Updated userAnswers:', JSON.stringify(currentOnlineTestState.userAnswers));
     
-    updateSelectedOption(qIdStr, ansStr);
+    // For MCQs, visually update the selected radio button's label style
+    const question = currentOnlineTestState.questions.find(q => String(q.id || `q-${currentOnlineTestState.questions.indexOf(q)+1}`) === qIdStr);
+    if (question && !question.isProblem) { // It's an MCQ
+        updateSelectedOptionUI(qIdStr, ansStr);
+    }
 }
 
-function updateSelectedOption(questionId, selectedValue) {
+// Renamed from updateSelectedOption to be more specific to UI
+function updateSelectedOptionUI(questionId, selectedValue) {
     const container = document.getElementById('question-container');
-    if (!container) {
-        console.warn("updateSelectedOption: Question container not found.");
-        return;
-    }
+    if (!container) return;
 
     const radios = container.querySelectorAll(`input[type="radio"][name="mcqOption-${questionId}"]`);
-    if (!radios.length) {
-        console.warn(`updateSelectedOption: No radios found for question ${questionId}`);
-        return;
-    }
-
-    radios.forEach(radio => {
-        const isChecked = radio.value === selectedValue;
-        if (radio.checked !== isChecked) {
-            radio.checked = isChecked;
-            // Force style recalculation to apply CSS :checked rules
-            radio.style.display = 'none';
-            radio.offsetHeight; // Trigger reflow
-            radio.style.display = '';
-            console.log(`[UpdateSelectedOption] Set radio [${radio.value}] to checked=${isChecked}`);
-        }
-    });
-
-    // Debug: Verify the updated state
     radios.forEach(radio => {
         const label = document.querySelector(`label[for="${radio.id}"]`);
-        console.log(`[Post-Update Debug] Radio [${radio.value}] checked=${radio.checked}, label computed style=${getComputedStyle(label)?.backgroundColor || 'none'}`);
+        if (label) {
+            const isChecked = radio.value === selectedValue;
+            // Add/remove a class for styling instead of direct style manipulation if possible
+            // For example, a class like 'option-selected'
+            label.classList.toggle('ring-2', isChecked); // Example: Tailwind ring for selection
+            label.classList.toggle('ring-primary-500', isChecked);
+            label.classList.toggle('bg-primary-50', isChecked);
+            label.classList.toggle('dark:bg-primary-700/30', isChecked);
+        }
     });
 }
+
 
 export function confirmSubmitOnlineTest() {
      if (!currentOnlineTestState) return;
@@ -374,19 +520,37 @@ export async function submitOnlineTest() {
                         progress.weeklyExamScores[activityId] = percentageScore;
                         console.log(`Updated weekly exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
-
-                    case 'final_exam':
-                        progress.finalExamScore = percentageScore;
-                        console.log(`Updated final exam score: ${percentageScore.toFixed(1)}%`);
+                    // MODIFIED: Changed 'final_exam' to 'final' to match ID generation in ui_course_assignments_exams.js
+                    case 'final':
+                        progress.finalExamScores = progress.finalExamScores || [];
+                        const finalExamNumMatch = activityId.match(/final(\d+)/);
+                        if (finalExamNumMatch) {
+                            const attemptIndex = parseInt(finalExamNumMatch[1], 10) - 1;
+                            if (attemptIndex >= 0) {
+                                 // Ensure array is long enough
+                                 while (progress.finalExamScores.length <= attemptIndex) {
+                                     progress.finalExamScores.push(null);
+                                 }
+                                 progress.finalExamScores[attemptIndex] = percentageScore;
+                                 console.log(`Updated final exam score (Attempt ${attemptIndex+1}): ${percentageScore.toFixed(1)}%`);
+                            } else {
+                                 console.warn(`Could not parse attempt number from final exam ID ${activityId}. Score not specifically logged.`);
+                            }
+                        } else {
+                             console.warn(`Invalid final exam ID format ${activityId}. Score not specifically logged for attempt.`);
+                             // Fallback: Add to array if not matching format, or handle error
+                             // progress.finalExamScores.push(percentageScore); // Less ideal
+                        }
                         break;
                     
-                    case 'midcourse':
+                    case 'midcourse': // Was midcourse_exam, changed to match ID gen
                         progress.midcourseExamScores = progress.midcourseExamScores || {};
                         progress.midcourseExamScores[activityId] = percentageScore;
                         console.log(`Updated midcourse exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
 
                     case 'skip_exam':
+                        // Skip exam specific logic handled below
                         break;
 
                     default:
@@ -421,6 +585,7 @@ export async function submitOnlineTest() {
                      await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed");
                  } else {
                      console.log(`Skip exam not passed (${percentage.toFixed(1)}% < ${SKIP_EXAM_PASSING_PERCENT}%).`);
+                     // Save progress even if not passed, to record attempt and score
                      await saveUserCourseProgress(currentUser.uid, courseId, progress);
                  }
             }
@@ -434,9 +599,9 @@ export async function submitOnlineTest() {
                       if (question && question.chapter) {
                            const chap = subjectToUpdate.chapters[question.chapter];
                            if (chap) {
-                                if (!question.isProblem) {
+                                if (!question.isProblem) { // Only update stats for MCQs from TestGen
                                      chap.total_attempted = (chap.total_attempted || 0) + 1;
-                                     const isCorrect = result.score > 0;
+                                     const isCorrect = result.score > 0; // For MCQs, score > 0 means correct
                                      if (!isCorrect) {
                                           chap.total_wrong = (chap.total_wrong || 0) + 1;
                                      }
@@ -446,8 +611,9 @@ export async function submitOnlineTest() {
                                      chap.consecutive_mastery = isCorrect ? (chap.consecutive_mastery || 0) + 1 : 0;
                                      chaptersDataModified = true;
 
+                                     // Remove from available_questions
                                      if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
-                                          const qIndex = chap.available_questions.indexOf(question.number);
+                                          const qIndex = chap.available_questions.indexOf(question.number); // Assuming q.number is the actual number
                                           if (qIndex > -1) {
                                                chap.available_questions.splice(qIndex, 1);
                                                console.log(`Removed MCQ Q${question.number} from Ch ${question.chapter} available list.`);
@@ -463,8 +629,13 @@ export async function submitOnlineTest() {
                   });
              }
              if (chaptersDataModified) {
-                  Object.values(subjectToUpdate.chapters).forEach(chap => chap.available_questions?.sort((a,b) => a-b));
-                  await saveUserData(currentUser.uid, data);
+                  // Ensure available_questions is sorted after modification
+                  Object.values(subjectToUpdate.chapters).forEach(chap => {
+                      if (chap.available_questions) {
+                          chap.available_questions.sort((a, b) => a - b);
+                      }
+                  });
+                  await saveUserData(currentUser.uid, data); // Save modified appData
                   console.log("TestGen Exam: Updated chapter stats and removed used MCQs.");
              }
         }
@@ -475,10 +646,12 @@ export async function submitOnlineTest() {
         console.error("Error finishing test:", error);
         setCurrentOnlineTestState(null);
         alert("Error submitting test results. Please try again later. " + error.message);
+        // Navigate back based on context
         const isCourseActivity = !!currentOnlineTestState?.courseContext?.isCourseActivity;
-        const courseId = currentOnlineTestState?.courseContext?.courseId;
-        if (isCourseActivity && courseId) {
-            window.showCurrentAssignmentsExams?.(courseId);
+        const courseIdOnError = currentOnlineTestState?.courseContext?.courseId;
+        if (isCourseActivity && courseIdOnError) {
+            // Attempt to show the assignments/exams page for the course
+            window.showCurrentAssignmentsExams?.(courseIdOnError);
         } else {
             showTestGenerationDashboard();
         }
@@ -495,7 +668,7 @@ export async function displayOnlineTestResults(examRecord) {
          return;
     }
 
-    const examId = examRecord.id || examRecord.examId;
+    const examId = examRecord.id || examRecord.examId; // Use 'id' if present (from history), else 'examId'
     if (!examId) {
         console.error("Missing exam ID in record:", examRecord);
         displayContent('<p class="text-red-500 p-4">Error: Could not find exam identifier.</p>');
@@ -505,21 +678,28 @@ export async function displayOnlineTestResults(examRecord) {
     console.log("Displaying results for exam:", examId);
 
     const { markingResults, courseContext, timestamp, type, subjectId, courseId } = examRecord;
-    const score = markingResults.totalScore;
-    const maxScore = markingResults.maxPossibleScore;
+    const score = markingResults?.totalScore ?? 0;
+    const maxScore = markingResults?.maxPossibleScore ?? 0;
     const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
-    const date = new Date(timestamp).toLocaleString();
-    const durationMinutes = examRecord.durationMinutes;
-    const isCourse = !!courseId;
+    const date = new Date(timestamp).toLocaleString(); // timestamp should be a JS Date or millis
+    const durationMinutes = examRecord.durationMinutes; // From examRecord directly
+    const isCourse = !!courseId; // Check if courseId exists
     const isSkip = type === 'skip_exam';
 
     const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId)
                        : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId)
                        : 'Standard Test';
 
-    let passThreshold = PASSING_GRADE_PERCENT;
-    if (isSkip) { passThreshold = SKIP_EXAM_PASSING_PERCENT; }
-    else if (isCourse) { passThreshold = PASSING_GRADE_PERCENT; }
+    // Determine pass threshold based on exam type
+    let passThreshold = PASSING_GRADE_PERCENT; // Default
+    if (isSkip) {
+        passThreshold = SKIP_EXAM_PASSING_PERCENT;
+    } else if (isCourse) {
+        // Could add specific pass thresholds for different course activity types if needed
+        // For now, uses general course passing grade for assignments, weekly, final etc.
+        passThreshold = PASSING_GRADE_PERCENT;
+    }
+    // No specific threshold for general TestGen tests, use general passing grade if desired for display
 
     const isPassing = parseFloat(percentage) >= passThreshold;
 
@@ -570,17 +750,19 @@ export async function displayOnlineTestResults(examRecord) {
                  ${!isCourse ? `<button onclick="window.showTestGenerationDashboard()" class="btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Generate New Test</button>` : ''}
             </div>
         </div>`;
-    displayContent(resultsHtml, 'content');
+    displayContent(resultsHtml, 'content'); // Ensure it's displayed in the main content area
+    // Set the correct sidebar link active
     setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'testgen-dropdown-content');
 
     const overallFeedbackArea = document.querySelector('.overall-feedback-area');
     if (overallFeedbackArea) await renderMathIn(overallFeedbackArea);
 }
 
-window.showExamReviewUI = showExamReviewUI;
-window.showIssueReportingModal = showIssueReportingModal;
-window.submitIssueReport = submitIssueReport;
+window.showExamReviewUI = showExamReviewUI; // From exam_storage.js
+window.showIssueReportingModal = showIssueReportingModal; // From exam_storage.js
+window.submitIssueReport = submitIssueReport; // From exam_storage.js
 
+// Ensure currentOnlineTestState is available for module functions
 export { setCurrentOnlineTestState };
 
 // --- END OF FILE ui_online_test.js ---

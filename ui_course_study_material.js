@@ -1703,9 +1703,10 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         // Check if generation seemed successful before enabling download/saving
         const generationFailed = sheetHtml.includes('Error generating') ||
                                  sheetHtml.includes('No text content available') ||
-                                 sheetHtml.includes('bigger than the model');
+                                 sheetHtml.includes('bigger than the model') ||
+                                 sheetHtml.includes('Loading Formula Sheet...'); // Check for loading message too
 
-        if (!generationFailed) {
+        if (!generationFailed && sheetHtml.trim() !== "") {
              try {
                 await renderMathIn(formulaContent); // Render MathJax
                 downloadBtn.classList.remove('hidden'); // Show download button
@@ -1724,8 +1725,9 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
                  downloadBtn.classList.add('hidden');
             }
         } else {
-            console.warn("AI generation indicated an issue, not caching or enabling download for formula sheet.");
-            downloadBtn.classList.add('hidden'); // Ensure download is hidden if generation failed
+            console.warn("AI generation indicated an issue, or content is empty. Not caching or enabling download for formula sheet.");
+            formulaContent.innerHTML = sheetHtml || '<p class="text-yellow-500 p-2">Formula sheet generation resulted in empty content or an error.</p>'; // Ensure some message is shown
+            downloadBtn.classList.add('hidden'); // Ensure download is hidden if generation failed or empty
         }
     } catch (error) {
         console.error("Error generating/displaying formula sheet:", error);
@@ -1756,19 +1758,24 @@ export async function downloadFormulaSheetPdf() {
          alert("Cannot download: Formula sheet content or course/chapter context missing.");
          return;
      }
-    // Get course name for filename, default if needed
     const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
-    // Generate filename
-    const filename = `Formula_Sheet_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`; // Sanitize name
+    const filename = `Formula_Sheet_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`;
 
     showLoading(`Generating ${filename}.pdf...`);
     try {
         let sheetHtml = formulaContentElement.innerHTML;
-        // Basic validation of content before proceeding
-        if (!sheetHtml || sheetHtml.includes('Error generating') || sheetHtml.includes('No text content available') || sheetHtml.includes('Loading Formula Sheet...')) {
+
+        // --- ADDED VALIDATION ---
+        if (!sheetHtml || sheetHtml.trim() === "" ||
+            sheetHtml.includes('Error generating') ||
+            sheetHtml.includes('No text content available') ||
+            sheetHtml.includes('Loading Formula Sheet...')) {
+            alert("Valid formula sheet content not available for PDF generation. Please ensure the sheet is loaded correctly.");
             throw new Error("Valid formula sheet content not available for PDF generation.");
         }
-        // Prepare HTML for PDF generation (basic structure + content)
+        console.log("Formula Sheet PDF - sheetHtml (first 500 chars):", sheetHtml.substring(0, 500));
+        // --- END ADDED VALIDATION ---
+
         const printHtml = `<!DOCTYPE html>
         <html>
         <head>
@@ -1783,11 +1790,9 @@ export async function downloadFormulaSheetPdf() {
             <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
             <style>
                 body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
-                .prose { max-width: none; } /* Ensure prose doesn't limit width */
-                /* Improve MathJax SVG alignment if needed */
+                .prose { max-width: none; }
                 mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
                 h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
-                /* Add any other print-specific styles here */
             </style>
         </head>
         <body>
@@ -1798,17 +1803,19 @@ export async function downloadFormulaSheetPdf() {
         </body>
         </html>`;
 
-        // Call the PDF generation utility
         await generateAndDownloadPdfWithMathJax(printHtml, filename);
 
     } catch (error) {
         console.error("Error generating formula sheet PDF:", error);
-        alert(`Failed to generate PDF for formula sheet: ${error.message}`);
+        // Alert is now conditional based on the error source. If it's from our validation, it's already alerted.
+        if (!error.message.includes("Valid formula sheet content not available")) {
+            alert(`Failed to generate PDF for formula sheet: ${error.message}`);
+        }
     } finally {
-        hideLoading(); // Ensure loading indicator is hidden
+        hideLoading();
     }
 }
-window.downloadFormulaSheetPdf = downloadFormulaSheetPdf; // Assign to window
+window.downloadFormulaSheetPdf = downloadFormulaSheetPdf;
 
 // MODIFIED: Use USER specific load/save
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
@@ -1826,10 +1833,9 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
     const summaryArea = document.getElementById('chapter-summary-area');
     const summaryContent = document.getElementById('chapter-summary-content');
     const downloadBtn = document.getElementById('download-summary-pdf-btn');
-    const regenerateBtn = document.querySelector('#chapter-summary-area button[onclick*="true"]'); // Find regenerate button
+    const regenerateBtn = document.querySelector('#chapter-summary-area button[onclick*="true"]');
 
 
-    // Ensure UI elements exist
     if (!summaryArea || !summaryContent || !downloadBtn || !regenerateBtn) {
         console.error("Missing UI elements for chapter summary display. Cannot proceed.");
         const mainContentArea = document.getElementById('study-material-content-area') || document.getElementById('course-dashboard-area');
@@ -1839,57 +1845,51 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         return;
     }
 
-    // Show area, set loading state
     summaryArea.classList.remove('hidden');
-    downloadBtn.classList.add('hidden'); // Hide download initially
-    regenerateBtn.disabled = true; // Disable regenerate during load
+    downloadBtn.classList.add('hidden');
+    regenerateBtn.disabled = true;
     summaryContent.innerHTML = `<div class="flex items-center justify-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading Chapter Summary...</p></div>`;
 
     let cachedSummary = null;
-    // Try loading cache unless forced
     if (!forceRegenerate) {
         try {
             console.log(`Attempting to load cached chapter summary for user ${currentUser.uid}, course ${courseId}, chapter ${chapterNum}`);
             cachedSummary = await loadUserChapterSummary(currentUser.uid, courseId, chapterNum);
         } catch (error) {
             console.error("Error loading cached user chapter summary:", error);
-            // Proceed to generate if cache fails
         }
     } else {
         console.log("Force regenerate flag set, skipping cache check for chapter summary.");
     }
 
-    // Display cached summary if found
     if (cachedSummary) {
         console.log("Using cached user chapter summary from Firestore.");
         summaryContent.innerHTML = cachedSummary;
         try {
-            await renderMathIn(summaryContent); // Render MathJax
-            downloadBtn.classList.remove('hidden'); // Show download
+            await renderMathIn(summaryContent);
+            downloadBtn.classList.remove('hidden');
         } catch (renderError) {
             console.error("Error rendering MathJax in cached summary:", renderError);
             summaryContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
         }
-        regenerateBtn.disabled = false; // Re-enable regenerate
-        return; // Stop here
+        regenerateBtn.disabled = false;
+        return;
     }
 
-    // Generate new summary if no cache or forced
     console.log(`Generating new chapter summary for course ${courseId}, chapter ${chapterNum}`);
     try {
         const summaryHtml = await generateChapterSummary(courseId, chapterNum);
         summaryContent.innerHTML = summaryHtml;
 
-        // Check for generation errors before enabling download/saving
         const generationFailed = summaryHtml.includes('Error generating') ||
                                  summaryHtml.includes('No text content available') ||
-                                 summaryHtml.includes('bigger than the model');
+                                 summaryHtml.includes('bigger than the model') ||
+                                 summaryHtml.includes('Loading Chapter Summary...');
 
-        if (!generationFailed) {
+        if (!generationFailed && summaryHtml.trim() !== "") {
              try {
-                 await renderMathIn(summaryContent); // Render MathJax
-                 downloadBtn.classList.remove('hidden'); // Show download
-                 // Attempt to save the new summary to user cache
+                 await renderMathIn(summaryContent);
+                 downloadBtn.classList.remove('hidden');
                  await saveUserChapterSummary(currentUser.uid, courseId, chapterNum, summaryHtml);
                  console.log("Successfully saved generated chapter summary to user document.");
              } catch (saveOrRenderError) {
@@ -1899,10 +1899,11 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
                   } else {
                      console.error("Failed to save generated chapter summary:", saveOrRenderError);
                   }
-                 downloadBtn.classList.add('hidden'); // Hide download on save/render error
+                 downloadBtn.classList.add('hidden');
              }
         } else {
-            console.warn("AI generation indicated an issue, not caching or enabling download for chapter summary.");
+            console.warn("AI generation indicated an issue, or content is empty. Not caching or enabling download for chapter summary.");
+            summaryContent.innerHTML = summaryHtml || '<p class="text-yellow-500 p-2">Chapter summary generation resulted in empty content or an error.</p>';
             downloadBtn.classList.add('hidden');
         }
     } catch (error) {
@@ -1918,10 +1919,9 @@ export async function displayChapterSummary(courseId, chapterNum, forceRegenerat
         `;
         downloadBtn.classList.add('hidden');
     } finally {
-        regenerateBtn.disabled = false; // Always re-enable regenerate button
+        regenerateBtn.disabled = false;
     }
 }
-// Wrapper function for window scope
 window.displayChapterSummaryWrapper = (courseId, chapterNum, forceRegenerate = false) => {
     displayChapterSummary(courseId, chapterNum, forceRegenerate);
 };
@@ -1934,15 +1934,23 @@ export async function downloadChapterSummaryPdf() {
          return;
      }
     const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
-    const filename = `Chapter_Summary_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`; // Sanitize
+    const filename = `Chapter_Summary_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`;
 
     showLoading(`Generating ${filename}.pdf...`);
     try {
         let summaryHtml = summaryContentElement.innerHTML;
-         if (!summaryHtml || summaryHtml.includes('Error generating') || summaryHtml.includes('No text content available') || summaryHtml.includes('Loading Chapter Summary...')) {
+
+        // --- ADDED VALIDATION ---
+        if (!summaryHtml || summaryHtml.trim() === "" ||
+            summaryHtml.includes('Error generating') ||
+            summaryHtml.includes('No text content available') ||
+            summaryHtml.includes('Loading Chapter Summary...')) {
+            alert("Valid summary content not available for PDF generation. Please ensure the summary is loaded correctly.");
             throw new Error("Valid summary content not available for PDF generation.");
         }
-        // Prepare HTML for PDF
+        console.log("Chapter Summary PDF - summaryHtml (first 500 chars):", summaryHtml.substring(0, 500));
+        // --- END ADDED VALIDATION ---
+
         const printHtml = `<!DOCTYPE html>
         <html>
         <head>
@@ -1957,7 +1965,7 @@ export async function downloadChapterSummaryPdf() {
             <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
             <style>
                  body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
-                 .prose { max-width: none; } /* Ensure prose doesn't limit width */
+                 .prose { max-width: none; }
                  mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
                  h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
             </style>
@@ -1972,82 +1980,68 @@ export async function downloadChapterSummaryPdf() {
         await generateAndDownloadPdfWithMathJax(printHtml, filename);
     } catch (error) {
         console.error("Error generating summary PDF:", error);
-        alert(`Failed to generate PDF for summary: ${error.message}`);
+        if (!error.message.includes("Valid summary content not available")) {
+            alert(`Failed to generate PDF for summary: ${error.message}`);
+        }
     } finally {
         hideLoading();
     }
 }
-window.downloadChapterSummaryPdf = downloadChapterSummaryPdf; // Assign to window
+window.downloadChapterSummaryPdf = downloadChapterSummaryPdf;
 
 export function navigateChapterMaterial(courseId, chapterNum) {
       const courseDef = globalCourseDataMap.get(courseId);
-      // Basic validation
       if (!courseDef || chapterNum < 1 || chapterNum > courseDef.totalChapters) {
           console.warn(`Navigation blocked: Invalid chapter ${chapterNum} for course ${courseId}. Max chapters: ${courseDef?.totalChapters}`);
           return;
       }
-      // Call the main function to display the target chapter
       showCourseStudyMaterial(courseId, chapterNum);
 }
 
-// --- NEW: Switch Video Function ---
 async function switchVideo(newIndex) {
-    // Ensure context is valid
      if (!currentCourseIdInternal || !currentChapterNumber || !chapterLectureVideos) {
          console.warn("switchVideo called without valid context.");
          return;
      }
-     // Ensure new index is within bounds
     if (newIndex >= 0 && newIndex < chapterLectureVideos.length) {
-        // Save progress for the *current* video before switching
         const progress = userCourseProgressMap.get(currentCourseIdInternal);
-        // Only save if not in viewer mode and player exists
         if (progress?.enrollmentMode !== 'viewer') {
             const currentPlayerElementId = `ytplayer-${currentChapterNumber}-${currentVideoIndex}`;
             const currentPlayerState = ytPlayers[currentPlayerElementId];
             if (currentPlayerState && currentPlayerState.player) {
-                // Await saving to ensure it completes before navigating away
                 try {
                      await saveVideoWatchProgress(currentPlayerState.videoId);
                      console.log(`Saved progress for video ${currentPlayerState.videoId} before switching.`);
                 } catch (saveError) {
                      console.error("Error saving video progress before switching:", saveError);
-                     // Decide if you want to proceed with switching even if save failed
                 }
             }
         }
-        // Navigate to the new video within the same chapter view by recalling showCourseStudyMaterial
         console.log(`Switching to video index ${newIndex} in Chapter ${currentChapterNumber}`);
         showCourseStudyMaterial(currentCourseIdInternal, currentChapterNumber, newIndex);
     } else {
          console.warn(`Attempted to switch to invalid video index: ${newIndex}`);
     }
 }
-window.switchVideo = switchVideo; // Assign to window scope
+window.switchVideo = switchVideo;
 
-// --- NEW: Helper to fetch video durations ---
 async function fetchVideoDurationsIfNeeded(videoIds) {
-    // Filter out IDs that are already cached (value is not undefined)
      const idsToFetch = videoIds.filter(id => videoDurationMap[id] === undefined);
     if (idsToFetch.length === 0) {
-        // console.log("All required video durations already cached.");
-        return; // Nothing to fetch
+        return;
     }
 
     console.log(`Fetching durations for ${idsToFetch.length} videos...`);
-    const apiKey = YOUTUBE_API_KEY; // Use imported key
+    const apiKey = YOUTUBE_API_KEY;
 
-    // Check if API key is configured
-    if (!apiKey || apiKey === "REPLACE_WITH_YOUR_YOUTUBE_API_KEY" || apiKey.startsWith("AIzaSyB8v1IX")) { // Added check for placeholder/potentially bad key
+    if (!apiKey || apiKey === "REPLACE_WITH_YOUR_YOUTUBE_API_KEY" || apiKey.startsWith("AIzaSyB8v1IX")) {
         console.warn("YouTube API Key not configured or potentially invalid. Cannot fetch video durations.");
-        // Mark IDs as null in the cache so we don't try fetching them again immediately
         idsToFetch.forEach(id => videoDurationMap[id] = null);
         return;
      }
 
-    const MAX_IDS_PER_REQUEST = 50; // YouTube API limit
+    const MAX_IDS_PER_REQUEST = 50;
     try {
-        // Fetch durations in chunks
         for (let i = 0; i < idsToFetch.length; i += MAX_IDS_PER_REQUEST) {
             const chunkIds = idsToFetch.slice(i, i + MAX_IDS_PER_REQUEST);
             const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id=${chunkIds.join(',')}&key=${apiKey}`;
@@ -2055,16 +2049,13 @@ async function fetchVideoDurationsIfNeeded(videoIds) {
             if (!response.ok) {
                  const errorData = await response.json();
                  console.error("YouTube API Error fetching durations:", response.status, errorData);
-                 // Throw error to stop fetching further chunks
                  throw new Error(`YouTube API Error: ${response.status} ${errorData?.error?.message || 'Failed'}`);
             }
             const data = await response.json();
             const fetchedDurationsInChunk = {};
-            // Process successful response
             data.items?.forEach(item => {
-                const durationStr = item.contentDetails?.duration; // ISO 8601 duration (e.g., PT1M30S)
+                const durationStr = item.contentDetails?.duration;
                 if (durationStr && item.id) {
-                    // Parse ISO 8601 duration string
                     const durationRegex = /PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/;
                     const matches = durationStr.match(durationRegex);
                     if (matches) {
@@ -2072,58 +2063,48 @@ async function fetchVideoDurationsIfNeeded(videoIds) {
                         const minutes = parseInt(matches[2] || '0');
                         const seconds = parseInt(matches[3] || '0');
                         const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-                        videoDurationMap[item.id] = totalSeconds; // Cache the duration
-                        fetchedDurationsInChunk[item.id] = totalSeconds; // For logging
+                        videoDurationMap[item.id] = totalSeconds;
+                        fetchedDurationsInChunk[item.id] = totalSeconds;
                     } else {
                          console.warn(`Could not parse duration string "${durationStr}" for video ${item.id}`);
-                         videoDurationMap[item.id] = null; // Cache null if parsing failed
+                         videoDurationMap[item.id] = null;
                     }
                 } else {
-                    // Cache null if duration or ID is missing in the response item
                      videoDurationMap[item.id] = null;
                 }
             });
             console.log("Fetched durations for chunk:", fetchedDurationsInChunk);
         }
-        // Ensure all initially requested IDs have *some* entry (even if null) after successful fetch loops
          idsToFetch.forEach(id => { if (videoDurationMap[id] === undefined) videoDurationMap[id] = null; });
     } catch (error) {
          console.error("Error fetching video durations:", error);
-         // Mark all IDs in the current fetch attempt as null on error to prevent repeated failed attempts
          idsToFetch.forEach(id => videoDurationMap[id] = null);
     }
 }
 
 
-// --- NEW: Ask AI about the entire PDF ---
 async function askAboutFullPdf() {
-      // Requires pdfDoc to be loaded (implicitly means path was valid)
       if (!pdfDoc || !currentCourseIdInternal || !currentChapterNumber) {
          alert("PDF document or course context is not available to ask about.");
          return;
      }
 
-     // Prompt user for question
      const userQuestion = prompt(`Ask a question about the entire Chapter ${currentChapterNumber} PDF document (this may take a moment to analyze):`);
      if (!userQuestion || userQuestion.trim() === "") return;
 
-     // Get UI elements for displaying response
      const explanationArea = document.getElementById('ai-explanation-area');
-     const explanationContent = document.getElementById('ai-explanation-content'); // Target inner content div
+     const explanationContent = document.getElementById('ai-explanation-content');
      if (!explanationArea || !explanationContent) {
          console.error("AI Explanation UI elements not found.");
          return;
      }
 
-     // Clear previous PDF explanation history
      currentPdfExplanationHistory = [];
 
-     // Show loading state in AI panel
      explanationContent.innerHTML = `<div class="flex items-center justify-center space-x-2 p-4"><div class="loader animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-purple-500"></div><p class="text-sm text-muted">Analyzing full PDF and generating explanation...</p></div>`;
-     explanationArea.classList.remove('hidden'); // Show panel
+     explanationArea.classList.remove('hidden');
 
      try {
-          // Determine the PDF path again (needed by the AI function)
           const courseDef = globalCourseDataMap.get(currentCourseIdInternal);
           if (!courseDef) throw new Error("Course definition not found.");
           const courseDirName = courseDef.courseDirName;
@@ -2140,25 +2121,19 @@ async function askAboutFullPdf() {
            }
 
           console.log(`Asking AI about full PDF: ${pdfPath}`);
-          // Call the imported AI function that handles full PDF analysis
-          // Pass the dynamically determined pdfPath
           const explanationResult = await askAboutPdfDocument(userQuestion, pdfPath, currentCourseIdInternal, currentChapterNumber);
 
-          currentPdfExplanationHistory = explanationResult.history; // Store history returned by AI function
-          explanationContent.innerHTML = `<div class="ai-chat-turn">${explanationResult.explanationHtml}</div>`; // Display AI response
-          await renderMathIn(explanationContent); // Render MathJax
+          currentPdfExplanationHistory = explanationResult.history;
+          explanationContent.innerHTML = `<div class="ai-chat-turn">${explanationResult.explanationHtml}</div>`;
+          await renderMathIn(explanationContent);
 
-          // Remove any existing follow-up input before adding a new one
           explanationArea.querySelector('.pdf-follow-up-container')?.remove();
-
-          // Add follow-up input area (using the same function as snapshot follow-up)
            const followUpInputHtml = `
                <div class="pdf-follow-up-container flex gap-2 mt-2 pt-2 border-t dark:border-gray-600 p-2 flex-shrink-0">
                    <input type="text" id="pdf-follow-up-input" class="flex-grow text-sm p-1 border rounded dark:bg-gray-700 dark:border-gray-600" placeholder="Ask a follow-up...">
                    <button onclick="window.askPdfFollowUp()" class="btn-secondary-small text-xs flex-shrink-0">Ask</button>
                </div>`;
            explanationArea.insertAdjacentHTML('beforeend', followUpInputHtml);
-
 
      } catch (error) {
           console.error("Error asking about PDF document:", error);
@@ -2167,37 +2142,26 @@ async function askAboutFullPdf() {
 }
 window.askAboutFullPdf = askAboutFullPdf;
 
-// --- Main UI Function ---
-/**
- * Displays the study material (videos, PDF, transcription) for a specific chapter.
- * @param {string} courseId - The ID of the course.
- * @param {number} chapterNum - The chapter number to display.
- * @param {number} [initialVideoIndex=0] - The index of the video to show initially within the chapter.
- */
 export async function showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex = 0) {
      console.log(`Showing study material for Course: ${courseId}, Chapter: ${chapterNum}, Video Index: ${initialVideoIndex}`);
-     // 1. Cleanup previous state
-     cleanupPdfViewer(); // Cleanup PDF state first
-     window.cleanupYouTubePlayers(); // Then cleanup YT players
+     cleanupPdfViewer();
+     window.cleanupYouTubePlayers();
 
-     // 2. Update internal state
      currentCourseIdInternal = courseId;
      currentChapterNumber = chapterNum;
-     currentVideoIndex = initialVideoIndex; // Set current video index
-     setLastViewedChapterForNotes(chapterNum); // Update notes panel context
+     currentVideoIndex = initialVideoIndex;
+     setLastViewedChapterForNotes(chapterNum);
 
-     // 3. Set sidebar link and show loading state
      setActiveSidebarLink('sidebar-study-material-link', 'sidebar-course-nav');
      displayContent(`<div id="study-material-content-area" class="animate-fade-in"><div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4 text-sm text-muted">Loading Chapter ${chapterNum} materials...</p></div></div>`, 'course-dashboard-area');
      const contentArea = document.getElementById('study-material-content-area');
 
-     // 4. Get Course Definition and Check Validity
      const courseDef = globalCourseDataMap.get(courseId);
      if (!courseDef) {
          contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course definition not found.</p>';
          return;
      }
-     const courseDirName = courseDef.courseDirName; // Essential for resource paths
+     const courseDirName = courseDef.courseDirName;
      if (!courseDirName) {
          console.error(`Course definition for ${courseId} is missing 'courseDirName'. Cannot determine resource paths.`);
          contentArea.innerHTML = '<p class="text-red-500 p-4">Error: Course configuration incomplete (missing directory name). Cannot load resources.</p>';
@@ -2205,93 +2169,72 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
      }
      console.log(`[Study Material] Using courseDirName: ${courseDirName}`);
 
-     // 5. Get Chapter Specific Data
-     // *** MODIFIED: Get Chapter Title from courseDef ***
-     // Assumes courseDef.chapters is an array of titles populated during course load
-     const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`; // Default if title missing
+     const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`;
 
      const chapterResources = courseDef.chapterResources?.[chapterNum] || {};
-     // Ensure lectureUrls exists and is an array before filtering/mapping
      chapterLectureVideos = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
                              .filter(lec => typeof lec === 'object' && lec.url && lec.title);
      const totalVideos = chapterLectureVideos.length;
 
-     // 6. Determine PDF Path
-     const pdfOverride = chapterResources.pdfPath; // Check for chapter-specific override
-     // Construct default path if no override
+     const pdfOverride = chapterResources.pdfPath;
      const defaultPdfPath = `${COURSE_BASE_PATH}/${courseDirName}/${DEFAULT_COURSE_PDF_FOLDER}/chapter${chapterNum}.pdf`;
      const pdfPath = pdfOverride ? pdfOverride : defaultPdfPath;
      console.log(`[Study Material Path Debug] Chapter ${chapterNum}: PDF path determined as: "${pdfPath}". Override value: "${pdfOverride}"`);
-     // Validate the final path looks like a PDF
      const isPdfPathValid = pdfPath && pdfPath.toLowerCase().endsWith('.pdf');
      if (!isPdfPathValid) {
           console.warn(`[Study Material] Invalid PDF path determined: "${pdfPath}". PDF viewer will show an error or 'not available'.`);
-          // pdfPath will be used later, let the initPdfViewer handle display
      }
 
-     // 7. Determine Video and Transcription Details for the *current* video index
      const currentVideo = chapterLectureVideos[initialVideoIndex];
      const videoId = currentVideo ? getYouTubeVideoId(currentVideo.url) : null;
-     currentTranscriptionData = []; // Reset transcription data for the new video
+     currentTranscriptionData = [];
 
      let srtFilename = null;
      if (currentVideo) {
-         // Prioritize pre-defined srtFilename from chapterResources override first
          if (chapterResources.lectureUrls?.[initialVideoIndex]?.srtFilename) {
              srtFilename = chapterResources.lectureUrls[initialVideoIndex].srtFilename.trim();
               console.log(`[SRT Filename] Using chapterResources override srtFilename: "${srtFilename}"`);
          } else {
-             // Fallback: Generate filename from video title using imported util
-             srtFilename = getSrtFilenameFromTitle(currentVideo.title); // Utility handles logging
+             srtFilename = getSrtFilenameFromTitle(currentVideo.title);
          }
      }
-     // Construct transcription path
      const transcriptionBasePath = `${COURSE_BASE_PATH}/${courseDirName}/${DEFAULT_COURSE_TRANSCRIPTION_FOLDER}/`;
      const srtPath = srtFilename ? `${transcriptionBasePath}${srtFilename}` : null;
      console.log('[SRT Load] Determined final SRT Path to fetch:', srtPath);
 
-     // 8. Get User Progress Context
      const progress = userCourseProgressMap.get(courseId);
      const isViewer = progress?.enrollmentMode === 'viewer';
 
-     // 9. Fetch necessary data (Transcription, Video Durations)
      if (srtPath) {
         try {
-             currentTranscriptionData = await fetchAndParseSrt(srtPath); // Call with the full, final path
-             if(currentTranscriptionData.length === 0 && srtFilename) { // Check filename existed
+             currentTranscriptionData = await fetchAndParseSrt(srtPath);
+             if(currentTranscriptionData.length === 0 && srtFilename) {
                  console.warn(`Transcription data for ${srtPath} was empty or failed to load. Check path, permissions, and file content.`);
              } else if (currentTranscriptionData.length > 0) {
                  console.log(`Successfully loaded ${currentTranscriptionData.length} transcription entries.`);
              }
         } catch (fetchError) {
              console.error(`Error fetching or parsing SRT file ${srtPath}:`, fetchError);
-             // No need to reset currentTranscriptionData, it's already []
         }
      } else if (currentVideo) {
          console.log(`Could not determine SRT path for video: "${currentVideo.title}". Transcription will not be available.`);
      }
-     // Fetch durations for *all* videos in the chapter if needed
      const videoIdsForChapter = chapterLectureVideos.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
-     await fetchVideoDurationsIfNeeded(videoIdsForChapter); // Updates global videoDurationMap
+     await fetchVideoDurationsIfNeeded(videoIdsForChapter);
 
-     // 10. Build HTML Structure
-     // Video Navigation (if multiple videos)
      let videoNavHtml = '';
      if (totalVideos > 1) {
           videoNavHtml = `<div class="flex justify-between items-center mt-2 mb-1 text-sm">`;
-          // Previous Button
           videoNavHtml += (initialVideoIndex > 0)
               ? `<button onclick="window.switchVideo(${initialVideoIndex - 1})" class="btn-secondary-small text-xs flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clip-rule="evenodd" /></svg> Prev</button>`
-              : `<span class="w-16"></span>`; // Placeholder for spacing
-          // Count
+              : `<span class="w-16"></span>`;
           videoNavHtml += `<span class="text-muted font-medium">${initialVideoIndex + 1} / ${totalVideos}</span>`;
-          // Next Button
           videoNavHtml += (initialVideoIndex < totalVideos - 1)
               ? `<button onclick="window.switchVideo(${initialVideoIndex + 1})" class="btn-secondary-small text-xs flex items-center gap-1">Next <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 1 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg></button>`
-              : `<span class="w-16"></span>`; // Placeholder for spacing
+              : `<span class="w-16"></span>`;
           videoNavHtml += `</div>`;
      }
-     const videoContainerId = `ytplayer-${chapterNum}-${initialVideoIndex}`; // Unique ID for YT player div
+     const videoContainerId = `ytplayer-${chapterNum}-${initialVideoIndex}`;
      const videoHtml = currentVideo ? `
         <div class="mb-4">
              <h4 class="text-md font-semibold mb-1 text-gray-800 dark:text-gray-300">${initialVideoIndex+1}. ${escapeHtml(currentVideo.title)}</h4>
@@ -2301,22 +2244,18 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
              </div>
         </div>` : '<p class="text-muted text-center p-4 bg-gray-100 dark:bg-gray-700 rounded">No primary video available for this chapter part.</p>';
 
-     // Transcription Section
      const transcriptionHtml = currentVideo ? `
         <div class="mt-4 border-t pt-3 dark:border-gray-700">
              <h4 class="text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Transcription</h4>
              <div id="transcription-content" class="text-xs leading-relaxed max-h-32 overflow-y-auto bg-gray-50 dark:bg-gray-700/50 p-2 rounded border dark:border-gray-600 scroll-smooth transition-all duration-300 ease-in-out">
                  ${!srtPath ? '<p class="text-sm text-muted italic p-1">No transcription file determined for this video.</p>' : (currentTranscriptionData.length === 0 ? '<p class="text-sm text-muted italic p-1">Loading transcription or none available...</p>' : '')}
-                 ${/* Lines will be rendered by renderTranscriptionLines */ ''}
              </div>
-             ${/* Only show toggle button if there's a valid SRT path */ ''}
              ${srtPath ? `<button id="transcription-toggle-btn" onclick="window.toggleTranscriptionView()" class="btn-secondary-small text-xs mt-1">Expand Transcription</button>` : ''}
          </div>` : '';
 
-     // PDF Section (HTML structure, initialization happens later if path is valid)
      let pdfHtml = '';
      let pdfInitializationNeeded = false;
-     if (isPdfPathValid) { // Check if the determined path is likely valid
+     if (isPdfPathValid) {
          pdfHtml = `
             <div class="mb-4 border-t pt-4 dark:border-gray-700">
                 <h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4>
@@ -2331,14 +2270,12 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                     <p class="text-center p-4 text-muted">Loading PDF...</p>
                 </div>
             </div>`;
-         pdfInitializationNeeded = true; // Mark for initialization
+         pdfInitializationNeeded = true;
      } else {
-         // Display message if PDF path is invalid or not found
          pdfHtml = `<div class="mb-4 border-t pt-4 dark:border-gray-700"><h4 class="text-md font-semibold mb-2 text-gray-800 dark:text-gray-300">Chapter PDF</h4><p class="text-muted text-center p-4 bg-gray-100 dark:bg-gray-700 rounded">${pdfPath ? `Error: Invalid path configured: <code>${escapeHtml(pdfPath)}</code>` : 'No PDF available for this chapter.'}</p></div>`;
          pdfInitializationNeeded = false;
      }
 
-     // AI Explanation Floating Panel
      const aiExplanationHtml = `
         <div id="ai-explanation-area" class="fixed bottom-4 right-4 w-80 max-w-[90vw] max-h-[60vh] bg-white dark:bg-gray-800 rounded-lg shadow-xl border dark:border-gray-600 hidden flex flex-col z-50 animate-fade-in">
              <div class="flex justify-between items-center p-2 border-b dark:border-gray-600 flex-shrink-0 bg-gray-50 dark:bg-gray-700 rounded-t-lg">
@@ -2348,17 +2285,12 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                  </button>
              </div>
              <div id="ai-explanation-content" class="p-3 overflow-y-auto text-sm flex-grow">
-                 <!-- AI content loads here -->
              </div>
-             <!-- Follow-up input will be added dynamically -->
          </div>`;
 
-     // Skip Exam Button (only if not viewer)
      const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
      const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGenerationWrapper('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
 
-     // Assemble full page content
-     // *** MODIFIED: Use chapterTitle in H2 ***
      contentArea.innerHTML = `
         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
              <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200" title="Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
@@ -2368,10 +2300,7 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
             </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <!-- Left Column: Video & Transcription -->
              <div class="space-y-4"> ${videoHtml} ${transcriptionHtml} </div>
-
-             <!-- Right Column: PDF & Quick Actions -->
              <div class="space-y-4"> ${pdfHtml}
                   <div class="border-t pt-4 dark:border-gray-700">
                       <h4 class="text-md font-medium mb-2 text-gray-800 dark:text-gray-300">Chapter Tools</h4>
@@ -2407,31 +2336,21 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
         ${aiExplanationHtml}
      `;
 
-     // 11. Initialize Dynamic Components
-     // Initialize YouTube Player if videoId exists
      if (videoId) {
-         createYTPlayer(videoContainerId, videoId); // YT API handles queueing if not ready
+         createYTPlayer(videoContainerId, videoId);
      }
-     // Render transcription lines if data was loaded
      if (currentVideo) {
-         renderTranscriptionLines(); // Render initial transcription state
-         highlightTranscriptionLine(); // Initial highlight attempt
+         renderTranscriptionLines();
+         highlightTranscriptionLine();
      }
 
-     // Initialize PDF Viewer if path was valid
      if (pdfInitializationNeeded) {
-         // Use await here to ensure PDF is attempted to load before potentially checking study status
          await initPdfViewer(pdfPath);
      } else {
-         hideLoading(); // Hide loading if no PDF to initialize
+         hideLoading();
      }
-
-     // Check study status after content is potentially loaded (PDF/Video)
-     // This relies on durations being available, might need adjustment if durations load late.
      checkAndMarkChapterStudied(courseId, chapterNum);
-
 }
-// Assign wrappers to window scope for onclick handlers
 window.showCourseStudyMaterialWrapper = (courseId, chapterNum, initialVideoIndex = 0) => showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex);
 window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;
 window.handleExplainSelection = handleExplainSelection;
@@ -2439,12 +2358,6 @@ window.askQuestionAboutTranscription = askQuestionAboutTranscription;
 window.showCurrentCourseDashboardWrapper = (courseId) => showCurrentCourseDashboard(courseId);
 
 
-/**
- * MODIFIED: triggerSkipExamGeneration
- * Generates and starts a skip exam for a chapter using existing MCQs from the subject's Markdown file.
- * @param {string} courseId - The ID of the course.
- * @param {number} chapterNum - The chapter number for the skip exam.
- */
 export async function triggerSkipExamGeneration(courseId, chapterNum) {
      if (!currentUser || !data) { alert("Log in and load data required."); return; }
      const courseDef = globalCourseDataMap.get(courseId);
@@ -2456,7 +2369,6 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
      showLoading(`Preparing Skip Exam for Chapter ${chapterNum}...`);
 
      try {
-         // 1. Get Subject Context and Markdown Filename
          const relatedSubjectId = courseDef.relatedSubjectId;
          if (!relatedSubjectId) throw new Error("Course definition is missing the related subject ID.");
          const subject = data.subjects?.[relatedSubjectId];
@@ -2464,7 +2376,6 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
          const subjectMdFilename = subject.fileName;
          if (!subjectMdFilename) throw new Error(`Markdown filename not found for subject: ${subject.name}`);
 
-         // 2. Fetch the Subject's Markdown Content
          let mdContent;
          try {
              const response = await fetch(`./${subjectMdFilename}?cacheBust=${Date.now()}`);
@@ -2479,7 +2390,6 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
              throw new Error(`Could not load questions file: ${subjectMdFilename}. ${fetchError.message}`);
          }
 
-         // 3. Get Available Questions for the Chapter
          const chapterData = subject.chapters?.[chapterNum];
          const availableQNumbers = chapterData?.available_questions;
          if (!availableQNumbers || availableQNumbers.length === 0) {
@@ -2487,19 +2397,16 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
          }
          console.log(`Available MCQs for Ch ${chapterNum}: ${availableQNumbers.join(', ')}`);
 
-         // 4. Select Random MCQs
-         const skipExamMcqCount = EXAM_QUESTION_COUNTS.skip_exam || 20; // Get count from config
+         const skipExamMcqCount = EXAM_QUESTION_COUNTS.skip_exam || 20;
          if (availableQNumbers.length < skipExamMcqCount) {
              console.warn(`Chapter ${chapterNum} has only ${availableQNumbers.length} available MCQs, less than the desired ${skipExamMcqCount}. Using all available.`);
          }
 
-         // --- Fisher-Yates Shuffle ---
-         const shuffledNumbers = [...availableQNumbers]; // Create a copy
+         const shuffledNumbers = [...availableQNumbers];
          for (let i = shuffledNumbers.length - 1; i > 0; i--) {
              const j = Math.floor(Math.random() * (i + 1));
              [shuffledNumbers[i], shuffledNumbers[j]] = [shuffledNumbers[j], shuffledNumbers[i]];
          }
-         // --- End Shuffle ---
 
          const selectedNumbersList = shuffledNumbers.slice(0, skipExamMcqCount);
          if (selectedNumbersList.length === 0) {
@@ -2507,7 +2414,6 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
          }
          console.log(`Selected ${selectedNumbersList.length} MCQs for Skip Exam: ${selectedNumbersList.join(', ')}`);
 
-         // 5. Create Selection Map and Extract Questions
          const selectedMcqMap = { [chapterNum]: selectedNumbersList };
          const extracted = extractQuestionsFromMarkdown(mdContent, selectedMcqMap);
 
@@ -2520,35 +2426,31 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
          }
          console.log(`Successfully extracted ${extracted.questions.length} MCQs for skip exam.`);
 
-         // 6. Prepare Online Test State
          const examId = `${courseId}-skip-ch${chapterNum}-${Date.now()}`;
-         // Use skip exam duration from config or calculate based on extracted count
          const durationMinutes = EXAM_DURATIONS_MINUTES.skip_exam || Math.max(15, Math.min(60, Math.round(extracted.questions.length * 1.5)));
 
          const onlineTestState = {
              examId: examId,
-             questions: extracted.questions, // Use the extracted MCQs
-             correctAnswers: extracted.answers, // Use answers from extraction
+             questions: extracted.questions,
+             correctAnswers: extracted.answers,
              userAnswers: {},
-             allocation: null, // No allocation map needed for single-chapter skip exam
+             allocation: null,
              startTime: Date.now(),
              timerInterval: null,
              currentQuestionIndex: 0,
              status: 'active',
              durationMinutes: durationMinutes,
-             subjectId: relatedSubjectId, // Store the related subject ID
-             // Updated Course Context
+             subjectId: relatedSubjectId,
              courseContext: {
                  isCourseActivity: true,
                  courseId: courseId,
-                 activityType: 'skip_exam', // Correct type
+                 activityType: 'skip_exam',
                  activityId: `chapter${chapterNum}`,
                  chapterNum: chapterNum,
-                 isSkipExam: true // Explicit flag
+                 isSkipExam: true
              }
          };
 
-         // 7. Set state and launch UI
          setCurrentOnlineTestState(onlineTestState);
          hideLoading();
          launchOnlineTestUI();
@@ -2559,9 +2461,7 @@ export async function triggerSkipExamGeneration(courseId, chapterNum) {
           alert(`Could not start Skip Exam: ${error.message}`);
      }
 }
-// Wrapper for window scope
 window.triggerSkipExamGenerationWrapper = (courseId, chapterNum) => triggerSkipExamGeneration(courseId, chapterNum);
-// Ensure Back button (showCurrentCourseDashboard) is available if needed
 window.showCurrentCourseDashboard = showCurrentCourseDashboard;
 
 // --- END OF FILE ui_course_study_material.js ---

@@ -12,21 +12,25 @@ service cloud.firestore {
       return isLoggedIn() && request.auth.uid == userId;
     }
 
-    // !!! Primary Admin UID is correctly set here !!!
-    function isPrimaryAdmin() {
-      return isLoggedIn() && request.auth.uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
+    function isPrimaryAdminUid(uid) {
+      // !!! Primary Admin UID is correctly set here !!!
+      // Replace "YOUR_PRIMARY_ADMIN_UID_HERE" with the actual UID from your config.js
+      return uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
     }
 
-    function isAssignedAdmin() {
-      // Checks if the requesting user's document has isAdmin == true
-      return isLoggedIn() &&
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    function isPrimaryAdmin() {
+      return isLoggedIn() && isPrimaryAdminUid(request.auth.uid);
+    }
+
+    function isAssignedAdmin(uid) {
+      // Checks if the given user's document has isAdmin == true
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+             get(/databases/$(database)/documents/users/$(uid)).data.isAdmin == true;
     }
 
     function isAnyAdmin() {
-      // User is either the fixed Primary Admin OR is marked as Admin in their user doc
-      return isPrimaryAdmin() || isAssignedAdmin();
+      // Requesting user is either the fixed Primary Admin OR is marked as Admin in their user doc
+      return isLoggedIn() && (isPrimaryAdminUid(request.auth.uid) || isAssignedAdmin(request.auth.uid));
     }
 
     // Function to check if a string is valid (non-empty and within length)
@@ -39,46 +43,58 @@ service cloud.firestore {
         return num is number && num >= minVal && num <= maxVal;
     }
 
-    // Function to check allowed fields for User document updates
-    function allowedUserUpdateFields() {
-      // Fields an owner can update on their own profile
-      return ['displayName', 'photoURL', 'username', 'onboardingComplete', 'lastSelectedSubjectId', 'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges'];
+    // Function to check allowed fields for User document updates by owner
+    function allowedUserUpdateFieldsOwner() {
+      return [
+        'displayName', 'photoURL', 'onboardingComplete', 'lastSelectedSubjectId',
+        'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges'
+        // Note: 'username' is NOT updatable by owner after initial set.
+      ];
     }
-    function allowedAdminUpdateFields() {
-      // Fields an admin can update on any profile (including the owner fields)
-      return allowedUserUpdateFields().concat(['isAdmin', 'credits']);
+    // Function to check allowed fields for User document updates by Primary Admin on OTHER users
+    function allowedAdminUpdateFieldsOnOtherUser() {
+      return allowedUserUpdateFieldsOwner().concat(['isAdmin', 'credits', 'username']); // Admin can update username on others
+    }
+    // Function to check allowed fields for User document updates by Primary Admin on OWN profile
+    function allowedAdminUpdateFieldsOnSelf() {
+        // Primary admin cannot change their own isAdmin status or username via profile update here.
+        // These are typically set at creation or through more specific admin actions.
+      return allowedUserUpdateFieldsOwner().concat(['credits']);
     }
 
+
     // --- Usernames Registry ---
-    match /usernames/{username} {
+    match /usernames/{usernameDocId} { // usernameDocId is the lowercase username
       allow read: if true; // Publicly readable to check for uniqueness
-      allow create: if request.auth != null && // User must be authenticated
-                       request.resource.data.userId is string && // userId field must be present
-                       (
-                         (request.resource.data.userId == request.auth.uid) || // Current user is creating their own username mapping
-                         (isPrimaryAdmin()) // Or Primary Admin is creating it (e.g. fixing data)
+
+      allow create: if isLoggedIn() &&
+                       request.resource.data.userId is string &&
+                       // User creating their own username (ID in doc matches auth UID)
+                       ( (request.resource.data.userId == request.auth.uid && usernameDocId == request.resource.data.username.lower()) ||
+                         // OR Primary Admin is creating/fixing a username entry for someone else
+                         isPrimaryAdmin()
                        );
-      allow update: if false; // Usernames are immutable once created. Change involves delete & re-create.
+
+      allow update: if false; // Usernames are immutable by direct update. Change involves delete & re-create by admin.
       allow delete: if isPrimaryAdmin(); // Only Primary Admin can delete username entries directly.
     }
 
     // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAnyAdmin();
+      allow read: if isOwner(userId) || isAnyAdmin(); // Owner or any admin can read
 
       // User creation: by the user themselves.
-      // All fields must be present and correctly typed as per what initializeUserData sets.
       allow create: if isLoggedIn() && request.auth.uid == userId &&
                       request.resource.data.email == request.auth.token.email &&
-                      request.resource.data.username is string && request.resource.data.username.size() >= 3 && request.resource.data.username.size() <= 20 &&
-                      request.resource.data.displayName is string &&
+                      isValidString(request.resource.data.username, 3, 20) && // Valid username format
+                      isValidString(request.resource.data.displayName, 1, 50) && // Display name should be reasonable
                       (request.resource.data.photoURL is string || request.resource.data.photoURL == null) &&
                       request.resource.data.createdAt == request.time &&
                       request.resource.data.onboardingComplete == false &&
-                      request.resource.data.isAdmin == (userId == "04amtH9UgfTWxPH0rqn2quaKiNf1") &&
+                      request.resource.data.isAdmin == isPrimaryAdminUid(userId) && // isAdmin is true ONLY if UID matches primary admin
                       request.resource.data.credits is number && request.resource.data.credits == 0 &&
                       request.resource.data.appData is map &&
-                      request.resource.data.appData.subjects is map && // Specifically check sub-structure if critical
+                      request.resource.data.appData.subjects is map &&
                       request.resource.data.userNotes is map &&
                       request.resource.data.userAiChatSettings is map &&
                       request.resource.data.userAiChatSettings.primaryModel is string &&
@@ -86,7 +102,7 @@ service cloud.firestore {
                       request.resource.data.userAiChatSettings.customSystemPrompts is map &&
                       request.resource.data.completedCourseBadges is list;
 
-      // User Deletion: Owner (self-deletion after re-auth) or Primary Admin.
+      // User Deletion: Owner (self-deletion after re-auth client-side) or Primary Admin.
       allow delete: if isOwner(userId) || isPrimaryAdmin();
 
       // User Updates:
@@ -94,49 +110,56 @@ service cloud.firestore {
                      (
                        // Case 1: Owner updating own profile
                        ( isOwner(userId) &&
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits', 'email', 'createdAt']) && // Owner cannot change these critical fields
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFields()) &&
-                         // Additional validation for specific fields being updated by owner
-                         (request.resource.data.displayName == null || isValidString(request.resource.data.displayName, 1, 50)) &&
-                         (request.resource.data.photoURL == null || request.resource.data.photoURL is string) &&
-                         (request.resource.data.appData == null || request.resource.data.appData is map) && // Allow clearing appData if needed, but mostly expect map
+                         // Owner cannot change these critical fields via direct profile update
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits', 'email', 'createdAt', 'username']) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFieldsOwner()) &&
+                         // Validate specific fields being updated by owner
+                         isValidString(request.resource.data.displayName, 1, 50) &&
+                         (request.resource.data.photoURL == null || request.resource.data.photoURL is string) && // Basic check for string or null
+                         (request.resource.data.appData == null || request.resource.data.appData is map) &&
                          (request.resource.data.userNotes == null || request.resource.data.userNotes is map) &&
                          (request.resource.data.userAiChatSettings == null || (
                             request.resource.data.userAiChatSettings is map &&
-                            request.resource.data.userAiChatSettings.primaryModel is string &&
-                            request.resource.data.userAiChatSettings.fallbackModel is string &&
+                            isValidString(request.resource.data.userAiChatSettings.primaryModel, 1, 50) &&
+                            isValidString(request.resource.data.userAiChatSettings.fallbackModel, 1, 50) &&
                             request.resource.data.userAiChatSettings.customSystemPrompts is map
                          ))
                        ) ||
-                       // Case 2: Primary Admin updating OTHER users
+                       // Case 2: Primary Admin updating OTHER users' profiles
                        ( isPrimaryAdmin() && userId != request.auth.uid &&
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'createdAt']) && // Primary admin also cannot change email/createdAt
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedAdminUpdateFields())
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'createdAt']) && // Admin cannot change email/createdAt
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedAdminUpdateFieldsOnOtherUser()) &&
+                         // Additional validation for fields an admin might update on others
+                         (request.resource.data.displayName == null || isValidString(request.resource.data.displayName, 1, 50)) &&
+                         (request.resource.data.username == null || isValidString(request.resource.data.username, 3, 20)) && // If admin changes username
+                         (request.resource.data.isAdmin == null || request.resource.data.isAdmin is bool) && // Admin can change isAdmin
+                         (request.resource.data.credits == null || request.resource.data.credits is number)  // Admin can change credits
                        ) ||
-                       // Case 3: Primary Admin updating OWN profile
+                       // Case 3: Primary Admin updating OWN profile (limited to what owner can, plus credits)
                        ( isPrimaryAdmin() && userId == request.auth.uid &&
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'email', 'createdAt']) && // Primary Admin cannot change own isAdmin status or email/createdAt
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedAdminUpdateFields())
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'email', 'createdAt', 'username']) && // Primary Admin cannot change own isAdmin status or username via this profile update
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedAdminUpdateFieldsOnSelf()) &&
+                         (request.resource.data.credits == null || request.resource.data.credits is number)
                        )
                      );
 
       // --- User Subcollections ---
       match /inbox/{messageId} {
         allow read: if isOwner(userId) || isAnyAdmin();
-        allow create: if isAnyAdmin(); // Only Admins send to inbox
-        allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+        allow create: if isAnyAdmin() || request.resource.data.senderId == 'system'; // Admins or 'system' can send to inbox
+        allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']) && request.resource.data.isRead == true;
         allow delete: if isOwner(userId) || isAnyAdmin();
       }
 
       match /userFormulaSheets/{sheetId} {
-        allow read: if isOwner(userId) || isAnyAdmin();
+        allow read: if isOwner(userId) || isAnyAdmin(); // Admins might need to read for support
         allow create, update: if isOwner(userId);
-        allow delete: if isOwner(userId) || isPrimaryAdmin(); // Primary Admin can delete
+        allow delete: if isOwner(userId) || isPrimaryAdmin();
       }
       match /userChapterSummaries/{summaryId} {
         allow read: if isOwner(userId) || isAnyAdmin();
         allow create, update: if isOwner(userId);
-        allow delete: if isOwner(userId) || isPrimaryAdmin(); // Primary Admin can delete
+        allow delete: if isOwner(userId) || isPrimaryAdmin();
       }
 
       match /creditLog/{logId} {
@@ -148,50 +171,61 @@ service cloud.firestore {
                          isValidString(request.resource.data.reason, 1, 200) &&
                          request.resource.data.performedBy is string &&
                          (
-                           (request.resource.data.performedBy == request.auth.uid && request.auth.uid == userId) || // User's own action (e.g. enrollment bonus)
-                           isPrimaryAdmin() // Or Primary Admin awarding/deducting
+                           // User's own action (e.g. enrollment, test completion bonuses)
+                           (request.resource.data.performedBy == request.auth.uid && request.auth.uid == userId) ||
+                           // OR System action
+                           (request.resource.data.performedBy == 'system') ||
+                           // OR Primary Admin awarding/deducting
+                           isPrimaryAdmin()
                          );
-        allow update, delete: if false;
+        allow update, delete: if false; // Logs are immutable
       }
 
       match /aiChatSessions/{sessionId} {
-        allow read, write, create, delete: if isOwner(userId);
-        // Add field validation if needed
-        // Example:
-        // allow create: if isOwner(userId) &&
-        //                  isValidString(request.resource.data.name, 1, 100) &&
-        //                  request.resource.data.history is list &&
-        //                  request.resource.data.createdAt == request.time &&
-        //                  request.resource.data.lastModified == request.time;
-        // allow update: if isOwner(userId) &&
-        //                  isValidString(request.resource.data.name, 1, 100) &&
-        //                  request.resource.data.history is list &&
-        //                  request.resource.data.lastModified == request.time;
+        allow read, create, update, delete: if isOwner(userId);
+        // Field validation for chat sessions
+        allow create: if isOwner(userId) &&
+                         isValidString(request.resource.data.name, 1, 100) &&
+                         request.resource.data.history is list &&
+                         request.resource.data.createdAt == request.time && // Initial createdAt
+                         request.resource.data.lastModified == request.time && // Initial lastModified
+                         isValidString(request.resource.data.systemPromptKey, 1, 100);
+        allow update: if isOwner(userId) &&
+                         isValidString(request.resource.data.name, 1, 100) &&
+                         request.resource.data.history is list &&
+                         request.resource.data.lastModified == request.time && // lastModified must be updated
+                         // Ensure createdAt and systemPromptKey are not changed during update
+                         request.resource.data.createdAt == resource.data.createdAt &&
+                         request.resource.data.systemPromptKey == resource.data.systemPromptKey;
       }
     } // End /users/{userId}
 
     // --- User Course Progress ---
+    // Path: /userCourseProgress/{userId}/courses/{courseId}
     match /userCourseProgress/{userId}/courses/{courseId} {
-      allow read, write, create, delete: if isLoggedIn() && (isOwner(userId) || isAnyAdmin());
-      // Example validation for create/update:
-      // allow create: if isLoggedIn() && isOwner(userId) &&
-      //                  request.resource.data.courseId == courseId &&
-      //                  request.resource.data.enrollmentDate == request.time &&
-      //                  request.resource.data.status == 'enrolled' &&
-      //                  request.resource.data.enrollmentMode is string && (request.resource.data.enrollmentMode == 'full' || request.resource.data.enrollmentMode == 'viewer');
-      // allow update: if isLoggedIn() && (isOwner(userId) || isAnyAdmin()); // Admins can update status/grade
+      allow read: if isLoggedIn() && (isOwner(userId) || isAnyAdmin());
+      allow create: if isLoggedIn() && isOwner(userId) &&
+                       request.resource.data.courseId == courseId &&
+                       request.resource.data.enrollmentDate == request.time &&
+                       request.resource.data.status == 'enrolled' &&
+                       request.resource.data.enrollmentMode is string && (request.resource.data.enrollmentMode == 'full' || request.resource.data.enrollmentMode == 'viewer');
+      allow update: if isLoggedIn() && (isOwner(userId) || isPrimaryAdmin()); // Only primary admin can update OTHER users' progress (e.g. mark complete)
+      allow delete: if isLoggedIn() && (isOwner(userId) || isPrimaryAdmin()); // Owner for unenroll, Primary Admin for cleanup
     }
 
     // --- User Exam Results ---
+    // Path: /userExams/{userId}/exams/{examId}
     match /userExams/{userId}/exams/{examId} {
       allow read: if isLoggedIn() && (isOwner(userId) || isAnyAdmin());
-      allow write, create, delete: if isLoggedIn() && isOwner(userId);
-      // Example validation for create:
-      // allow create: if isLoggedIn() && isOwner(userId) &&
-      //                  request.resource.data.userId == userId &&
-      //                  request.resource.data.examId == examId &&
-      //                  request.resource.data.questions is list &&
-      //                  request.resource.data.markingResults is map;
+      allow create: if isLoggedIn() && isOwner(userId) &&
+                       request.resource.data.userId == userId &&
+                       request.resource.data.examId == examId &&
+                       request.resource.data.questions is list &&
+                       request.resource.data.markingResults is map &&
+                       request.resource.data.status == 'completed' &&
+                       request.resource.data.timestamp is number; // Assuming timestamp is client-generated millis for exam start
+      allow update: if false; // Exam results should generally be immutable once stored. Overrides are part of markingResults.
+      allow delete: if isLoggedIn() && isOwner(userId); // User can delete their own exam history
     }
 
     // --- Feedback & Exam Issues ---
@@ -199,34 +233,34 @@ service cloud.firestore {
       allow create: if isLoggedIn() &&
                        request.resource.data.userId == request.auth.uid &&
                        request.resource.data.timestamp == request.time &&
-                       isValidString(request.resource.data.feedbackText, 1, 2000);
-      allow read, update, delete: if isAnyAdmin();
+                       isValidString(request.resource.data.feedbackText, 1, 5000);
+      allow read, update, delete: if isAnyAdmin(); // Admins manage feedback
     }
     match /examIssues/{issueId} {
       allow create: if isLoggedIn() &&
                        request.resource.data.userId == request.auth.uid &&
                        request.resource.data.timestamp == request.time &&
-                       isValidString(request.resource.data.feedbackText, 1, 2000);
-      allow read, update, delete: if isAnyAdmin();
+                       isValidString(request.resource.data.feedbackText, 1, 5000);
+      allow read, update, delete: if isAnyAdmin(); // Admins manage exam issues
     }
 
     // --- Course Definitions ---
     match /courses/{courseId} {
-      allow read: if true; // Publicly readable
+      allow read: if true; // Course definitions are public
 
       allow create: if isLoggedIn() &&
                        request.resource.data.creatorUid == request.auth.uid &&
                        (
-                         ( request.resource.data.status == 'pending' && !isAnyAdmin() ) ||
-                         ( (request.resource.data.status == 'approved' || request.resource.data.status == 'pending') && isAnyAdmin() )
+                         ( request.resource.data.status == 'pending' && !isAnyAdmin() ) || // Regular user suggests
+                         ( (request.resource.data.status == 'approved' || request.resource.data.status == 'pending') && isAnyAdmin() ) // Admin creates/suggests
                        ) &&
-                       isValidString(request.resource.data.name, 1, 100) &&
+                       isValidString(request.resource.data.name, 1, 150) &&
                        request.resource.data.createdAt == request.time &&
-                       request.resource.data.creatorName is string &&
-                       request.resource.data.courseDirName is string &&
+                       isValidString(request.resource.data.creatorName, 1, 50) &&
+                       isValidString(request.resource.data.courseDirName, 1, 100) &&
                        request.resource.data.totalChapters is number &&
                        request.resource.data.chapters is list &&
-                       request.resource.data.relatedSubjectId is string &&
+                       (request.resource.data.relatedSubjectId == null || request.resource.data.relatedSubjectId is string) &&
                        request.resource.data.prerequisites is list &&
                        request.resource.data.corequisites is list &&
                        request.resource.data.youtubePlaylistUrls is list &&
@@ -236,63 +270,73 @@ service cloud.firestore {
 
       allow update: if isAnyAdmin(); // Only Admins can update course definitions
 
-      allow delete: if isAnyAdmin() && resource.data.id != "fop_physics_v1"; // Any Admin can delete, EXCEPT FoP
+      // Any Admin can delete, EXCEPT the hardcoded FoP course (if it exists in Firestore, local config is fallback)
+      allow delete: if isAnyAdmin() && courseId != "fop_physics_v1";
     }
 
-    // --- Shared Notes ---
+    // --- Shared Notes --- (If you implement sharing)
     match /sharedCourseNotes/{noteId} {
-      allow read: if true;
+      allow read: if isLoggedIn(); // Logged-in users can read shared notes (or make public: if true)
       allow create: if isLoggedIn() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isLoggedIn() && (resource.data.userId == request.auth.uid || isAnyAdmin());
     }
 
     // --- Admin Tasks ---
     match /adminTasks/{taskId} {
-      allow read, write, create, delete: if isPrimaryAdmin();
+      allow read, create, update, delete: if isPrimaryAdmin(); // Only Primary Admin manages these
     }
 
-    // --- Task Versions (Example - adjust path if needed) ---
+    // --- Task Versions (Example, might not be needed) ---
     match /taskVersions/{versionId} {
-      allow read, write, create, delete: if isPrimaryAdmin();
+      allow read, write: if isPrimaryAdmin();
       match /tasks/{taskId} {
-         allow read, write, create, delete: if isPrimaryAdmin();
+         allow read, write: if isPrimaryAdmin();
       }
     }
 
     // --- Global Chat ---
     match /globalChatMessages/{messageId} {
-      allow read: if isLoggedIn();
+      allow read: if isLoggedIn(); // All logged-in users can read
       allow create: if isLoggedIn() &&
                        request.resource.data.senderId == request.auth.uid &&
                        isValidString(request.resource.data.text, 1, 1000) &&
                        request.resource.data.timestamp == request.time &&
-                       request.resource.data.isPinned == false;
+                       request.resource.data.isPinned == false &&
+                       request.resource.data.mentions is list; // Ensure mentions array exists
 
+      // Only Admins can update (e.g., to pin/unpin)
       allow update: if isAnyAdmin() &&
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isPinned']) &&
                        request.resource.data.isPinned is bool;
 
+      // Message owner or any Admin can delete
       allow delete: if isLoggedIn() && (resource.data.senderId == request.auth.uid || isAnyAdmin());
     }
 
-    // --- Settings ---
+    // --- Settings Collection (for global app settings) ---
     match /settings/{settingDocId} {
+      // 'aiPrompts' document: readable by logged-in users, writable only by Primary Admin
       allow read: if (settingDocId == 'aiPrompts' && isLoggedIn()) ||
-                     (settingDocId == 'chat' && isPrimaryAdmin()); // Chat settings readable only by primary admin
-      allow write: if (settingDocId == 'aiPrompts' && isPrimaryAdmin()) ||
-                      (settingDocId == 'chat' && isPrimaryAdmin());
+                     // 'chat' document (e.g., for auto-delete config): readable/writable only by Primary Admin
+                     (settingDocId == 'chat' && isPrimaryAdmin());
+
+      allow write: if isPrimaryAdmin() &&
+                      (settingDocId == 'aiPrompts' || settingDocId == 'chat');
 
       // Deny other documents in settings unless explicitly defined above
-      allow read, write: if false;
+      // This line implicitly denies other operations if not covered above.
+      // allow read, write: if false; // This is technically redundant if no other rules match
     }
 
-    // --- Deprecated Global Caches (consider removing if not used) ---
+    // --- Deprecated Global Caches (Plan for removal or secure if kept) ---
+    // If these are truly "global" and not user-specific, rules need to reflect that.
+    // For now, making them admin-writable and publicly readable (if necessary).
     match /globalFormulaSheets/{sheetId} {
-      allow read: if true;
+      allow read: if true; // Or isLoggedIn() if formulas are sensitive
       allow write: if isPrimaryAdmin();
     }
     match /globalChapterSummaries/{summaryId} {
-      allow read: if true;
+      allow read: if true; // Or isLoggedIn()
       allow write: if isPrimaryAdmin();
     }
 

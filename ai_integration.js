@@ -4,7 +4,7 @@
 
 // *** MODIFIED: Import new path constants ***
 import { GEMINI_API_KEY, PDF_WORKER_SRC, COURSE_BASE_PATH, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER, AVAILABLE_AI_MODELS, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL } from './config.js'; // Import the API key & Path Config
-import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Import UI helpers & escapeHtml
+import { showLoading, hideLoading, escapeHtml, decodeHtmlEntities } from './utils.js'; // Import UI helpers & escapeHtml
 import { globalCourseDataMap, currentUser, userAiChatSettings, globalAiSystemPrompts } from './state.js'; // Need course data map, current user, and AI settings
 // *** NEW: Import DEFAULT_AI_SYSTEM_PROMPTS from ai_prompts.js ***
 import { DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
@@ -216,10 +216,10 @@ export async function callGeminiTextAPI(prompt, history = null, systemPromptKey 
         const model = genAI.getGenerativeModel({ model: effectiveModelName });
 
         const safetySettings = [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ];
         const generationConfig = {
             temperature: 0.6, topK: 40, topP: 0.95, maxOutputTokens: 8192, stopSequences: ["\n\n\n"]
@@ -296,10 +296,10 @@ export async function callGeminiVisionAPI(promptParts) {
         const logParts = promptParts.map(p => p.inlineData ? `{inlineData: mimeType=${p.inlineData.mimeType}, length=${p.inlineData.data?.length}}` : p);
         console.log(`Sending VISION prompt (${VISION_MODEL_NAME}):`, logParts);
         const safetySettings = [
-             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
-             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_MEDIUM_AND_ABOVE' },
+             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
          ];
          const generationConfig = {
              temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 4096,

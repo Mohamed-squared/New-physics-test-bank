@@ -1,0 +1,3492 @@
+1
+00:00:12,289 --> 00:00:14,379
+for this course. We may have others.
+00:00:14,799 --> 00:00:16,939
+He did it last year as a pro at this.
+00:00:16,939 --> 00:00:18,269
+You're a senior this year, Peter?
+00:00:18,269 --> 00:00:20,529
+Okay. He knows everything about it.
+00:00:20,809 --> 00:00:28,319
+Now, I want to explain how the course is going to be given because uh I have too many responsibilities this year
+00:00:28,689 --> 00:00:30,969
+uh beyond just teaching in the math department.
+00:00:30,969 --> 00:00:33,699
+So I have to frequently go out on the road uh and
+00:00:33,919 --> 00:00:40,229
+so at those times Peter Green will substitute for me as a lecturer and in fact, he'll lecture for you on Friday.
+00:00:40,669 --> 00:00:47,569
+So you get an idea of his penetrating and lucid style of presentation before you have to decide whether you want to choose the course.
+00:00:47,569 --> 00:00:52,829
+I would imagine that Peter will be lecturing for me one out of every four or five lectures.
+00:00:53,399 --> 00:00:57,539
+But I don't know exactly when they're going to be now because I don't have my exact schedule.
+00:00:58,859 --> 01:00:919
+The way we're going to organize the course
+00:01:01,99 --> 01:05,999
+is that the textbook is going to be this nice algebra text by Mike Artin.
+00:01:06,559 --> 01:08,869
+So this is quite an advanced algebra text.
+01:08,869 --> 01:14,809
+I think it can be used profitably by students here and by students at MIT for whom it was written.
+01:15,129 --> 01:24,849
+Mike Artin is a senior uh guy in the MIT math department, one of the leading algebraists and algebraic geometers of the last 50 years.
+01:24,989 --> 01:36,949
+When you get further on, you'll learn about his work in the Artin representability theorem and you'll learn about his work with Grothendieck in settling the uh the foundations of of modern algebraic geometry.
+01:37,179 --> 01:43,269
+In any case, he wrote this book in mind to show really how algebra interacts with a lot of other subjects.
+01:43,269 --> 01:48,209
+And uh that's really the way it it does later in mathematics and I think it's a great viewpoint here.
+01:48,209 --> 01:50,279
+I think you'll find it a challenging text.
+01:50,679 --> 01:58,779
+By the way, Mike's father was Emil Artin, who was the greatest number theorist of the 20th century, invented the subject called class field theory.
+01:59,259 --> 02:03,19
+So he comes from a distinguished uh distinguished mathematical tradition.
+02:03,529 --> 02:08,249
+Um I think we're going to do homework assignments every class.
+02:08,609 --> 02:12,319
+Now I know most of you are coming out. What what is the background one should have for this? Everyone wants to know that.
+02:12,789 --> 02:18,109
+So, if you've come out of 23 or 25 or 55,
+02:18,639 --> 02:19,109
+you're fine.
+02:19,379 --> 02:22,49
+That you you clearly have the background to take this course.
+02:22,309 --> 02:29,839
+If you've been through 21 and you felt comfortable with the linear algebra in 21B, because I'm going to need some of that.
+02:30,669 --> 02:35,99
+And you you are willing to move to a slightly more abstract level of knowledge,
+02:35,689 --> 02:36,459
+this is good.
+02:36,739 --> 02:42,979
+Otherwise, I would suggest taking a course like a 121 or a 101 to get to that level of abstraction.
+02:42,979 --> 02:46,849
+But if you're coming out of 23, 25, or 55, it's fine.
+02:47,159 --> 02:56,19
+I know that those courses had weekly assignments and big long weekly assignments where everyone would devote all of Thursday night or all of Sunday night to finishing the assignment.
+02:56,439 --> 03:03,89
+I want to do it more on a every every lecture there'll be some assignments to keep people up to date.
+03:03,89 --> 03:10,779
+And the reason is that unlike 25 or 55 or or 23, taking an algebra course is like learning a new language.
+03:11,289 --> 03:14,329
+Algebra is really more of a language of modern mathematics.
+03:14,329 --> 03:17,649
+The way mathematics organizes itself and speaks to itself.
+03:17,959 --> 03:24,519
+And so when you learn a new language, you have to go to language lab a lot, you have to do a lot of keeping up and practicing.
+03:24,749 --> 03:26,359
+That's the way I've got it organized now.
+03:26,599 --> 03:31,339
+Peter is even going to arrange for some assignments due Wednesday and Friday.
+03:31,599 --> 03:33,569
+Those are optional assignments, right?
+03:33,569 --> 03:35,269
+Are they available now on the web page?
+03:35,269 --> 03:35,659
+Not yet.
+03:35,929 --> 03:37,689
+They will be available on the web page.
+03:37,979 --> 03:51,369
+Those are optional assignments, highly recommended so you can check whether you understood what I said today, but also to give you an idea of what the level of homework is going to be, so you can assess how much work there's going to be for the course before you decide to take it or not.
+03:51,799 --> 03:56,569
+And then once we get to Friday, we'll just start doing regular assignments due Monday and Wednesday and Friday.
+03:56,569 --> 04:05,949
+We'll also organize problem sessions, probably on Tuesday and Thursday once we get our CA situation straightened out and find out how many people are in the course and when they're free.
+04:06,329 --> 04:08,709
+But we're not going to do that um right now.
+04:09,849 --> 04:11,719
+There'll be two-hour exams in the course.
+04:12,139 --> 04:21,719
+Those weeks are marked on the web page. We're going to get a full syllabus up on the web page so you see exactly what date you're going to have the hour exam and there'll be a three-hour final in January.
+04:23,159 --> 04:26,669
+Questions in general before I start actually talking about the math in the course?
+04:28,969 --> 04:29,559
+That was easy.
+04:29,559 --> 04:29,889
+Okay.
+04:30,569 --> 04:32,579
+So what are we going to use from linear algebra?
+04:32,719 --> 04:39,279
+Well, if you want to review your linear algebra in a nice way, it's done in chapter one of this book.
+04:39,279 --> 04:46,209
+And I'm going to go through it and just tell you what we need from it so you can go back and find out what you remember and what you don't remember, etc.
+04:46,829 --> 04:53,409
+Um, because we need some linear algebra initially to generate examples of groups, which are the first topic of the course.
+04:53,869 --> 04:59,439
+And the linear algebra we're going to need all concerns the set of all n by n matrices.
+05:00,49 --> 05:02,909
+where n and n is the same number, so square matrices.
+05:06,529 --> 05:11,529
+Now, the entries of the matrix, if you're if you're in the ith row and you're in the jth column,
+05:12,29 --> 05:13,479
+the entry would be Aij.
+05:13,479 --> 05:15,319
+That that'll be the notation I'll use.
+05:15,669 --> 05:21,269
+So the first row looks like A11, A12, up to A1n.
+05:22,99 --> 05:26,269
+And then we have An1 down here all the way over to Ann.
+05:27,519 --> 05:30,19
+The entries of a matrix are numbers.
+05:30,199 --> 05:34,159
+That's what Artin says in the beginning. And they can be numbers in various different places.
+05:34,579 --> 05:41,909
+But before we get into the theory of rings or vector spaces or abstract fields, I'm going to take the entries all just to be real numbers.
+05:45,59 --> 05:50,169
+And the set of all n by n matrices, I'm going to denote M n R.
+05:51,599 --> 05:54,69
+So that's all collections of n by n matrices.
+05:54,579 --> 06:06,239
+So those of you who have studied linear algebra know that that's a vector space over the real numbers, it has dimension n squared because you have you have a basis for that vector space of the matrices that have zeros everywhere but a one in the ith jth place.
+06:08,29 --> 06:13,679
+So in particular, as a vector space, you can do a number of things in this in this uh set.
+06:13,929 --> 06:16,89
+For example, you can add matrices,
+06:16,749 --> 06:17,799
+A + B.
+06:17,979 --> 06:24,129
+So if you have a matrix where the entries are Aij and you have a matrix where the entries are Bij,
+06:24,619 --> 06:28,999
+then the sum of these two matrices has entries Aij + Bij.
+06:30,329 --> 06:32,939
+So you just add the elements in the ijth place.
+06:32,939 --> 06:37,609
+That's the addition law in the vector space of n by n matrices.
+06:37,609 --> 06:40,519
+And you can also multiply matrices by a real scalar.
+06:40,819 --> 06:45,609
+If you have a a real number alpha and you have an n by n matrix Aij,
+06:46,149 --> 06:51,759
+then you can multiply alpha times A and get the matrix where the entries are alpha times Aij.
+06:51,759 --> 06:53,709
+Namely, multiply every member by alpha.
+06:54,109 --> 06:57,99
+That's the scalar multiplication in the vector space.
+06:57,479 --> 07:5,779
+So that's what makes this a a real vector space of dimension n squared.
+07:6,129 --> 07:8,649
+As I say, you have to write down a basis, that's not difficult.
+07:8,719 --> 07:12,999
+Now, what's unusual, that would be true for n by m matrices too.
+07:13,269 --> 07:18,369
+You can add them, you can multiply them by scalars and the dimension is m times n.
+07:19,439 --> 07:27,309
+What's unusual about n by n matrices is not just that you can add them or multiply them by scalars, but that you can multiply them.
+07:28,429 --> 07:31,619
+So that's another thing I'm going to ask you to remember from linear algebra.
+07:31,619 --> 07:32,479
+Is it okay if I erase this?
+07:32,479 --> 07:40,959
+Because of the video setup today, which didn't know whether I was going to be using this or the blackboard, I have to stay somewhat on the left side of the board.
+07:41,289 --> 07:42,119
+With your apologies.
+07:42,369 --> 07:45,999
+So all that wonderful space, I'm aware of it, but I'm not going to use it.
+07:46,519 --> 07:47,79
+Okay?
+07:47,239 --> 07:48,699
+Is this okay the way I am?
+07:48,699 --> 07:49,279
+Good.
+07:50,919 --> 07:56,359
+Okay, so that's a a big thing about n by n matrices is that there's a multiplication,
+08:04,609 --> 08:10,949
+which is a fairly complicated operation. Namely, if you have two matrices A and B, you can define a new matrix A times B.
+08:16,459 --> 08:25,619
+So, uh those of you who've studied this since uh 10th grade, know that the uh if this has entries Cij,
+08:26,859 --> 08:31,699
+then you get the ijth entry of Cij in the following manner.
+08:31,699 --> 08:34,409
+You go across the ith column of A, ith row of A,
+08:34,659 --> 08:37,849
+you go down the jth column of B,
+08:37,849 --> 08:41,849
+you multiply this element by this element, then you multiply this element by this element and add those,
+08:41,849 --> 08:43,879
+you multiply and you add up.
+08:44,349 --> 08:53,639
+So the formula in mathematics, although it's not that useful, is the sum over K of uh what? Aik times Bkj.
+08:55,529 --> 09:2,409
+And you might wonder what the heck is that mean, but it certainly defines given two n by n matrices, a third.
+09:4,179 --> 09:5,419
+The matrix multiplication.
+09:5,889 --> 09:18,269
+Now, when you study linear algebra right, and we will review linear algebra done right, you get a little bit away, you step back from the theory of matrices and you see what matrices represent.
+09:19,29 --> 09:22,179
+And what matrices represent are linear operators.
+09:22,589 --> 09:29,989
+So in particular, this is the set of linear operators from an n-dimensional real vector space to itself.
+09:31,759 --> 09:37,19
+Every matrix is some a way of writing down a specific linear transformation.
+09:37,359 --> 09:40,469
+We'll do that later on, but it's good thing to bear in mind.
+09:40,869 --> 09:51,349
+Because if you understand that a matrix represents a linear transformation, then what multiplication of matrices represents is the composition of transformations.
+10:0,979 --> 10:5,919
+That's not obvious from this formula at all. You have to you have to unwind a million things to see that.
+10:6,719 --> 10:12,419
+So if A represents the transformation that of T from Rn to Rn,
+10:14,999 --> 10:20,19
+and B represents the transmit let's see, I'll do uh B first and A second.
+10:20,629 --> 10:24,199
+And B represents a transformation S from Rn to Rn,
+10:24,799 --> 10:30,549
+represented by B, and remind yourself how this works, and that's done in Artin too.
+10:33,729 --> 10:44,189
+Then the product, first do B, then do A, represents the composition of the transformations, first take the transformation S and compose it with the transformation T.
+10:45,789 --> 10:55,879
+Now, one thing that we emphasize a lot when you study linear algebra is that that may not be equal to first doing the transformation T and then doing the transformation S.
+10:56,829 --> 11:5,919
+So remember, and this is really important, that it is true that if you add A to B, it's the same as B to A.
+11:5,919 --> 11:12,739
+That's just the commutativity of the laws of addition, because matrix addition just takes place coordinate by coordinate.
+11:12,739 --> 11:13,219
+But
+11:14,429 --> 11:24,309
+it is not necessarily true that A times B is equal to B times A.
+11:24,639 --> 11:27,949
+There are examples where this is not equal.
+11:28,309 --> 11:32,999
+So the only way to really convince you of that is to write down a specific example.
+11:33,209 --> 11:36,859
+So I will write down a specific example for you, which Artin uses.
+11:37,179 --> 11:45,889
+If you multiply this matrix, you have to go to 2 by 2 matrices because multiplication of 1 by 1 matrices is just multiplication of real numbers.
+11:46,449 --> 11:49,489
+Right? I mean if if n is this is k goes from 1 to n.
+11:49,809 --> 11:58,489
+So if n is equal to 1, this is just you get this matrix by taking the product of the entry in A by the product of the entry in B. And multiplication of real numbers is commutative.
+11:58,829 --> 12:2,229
+But if you go to 2 by 2 matrices, it's no longer the case.
+12:2,539 --> 12:7,749
+So for example, if you multiply this matrix by this matrix,
+12:9,249 --> 12:18,79
+you'll find that the only non-zero entry you get is when you go across this row and down this column, right? So that would be an entry up here.
+12:18,749 --> 12:21,139
+And all the other entries you find to be zero.
+12:22,439 --> 12:24,439
+On the other hand, whoops, did I just do that wrong?
+12:24,989 --> 12:30,729
+Uh yeah, it should be, sorry, the last row, the top row and the yeah.
+12:33,309 --> 12:34,689
+They're all zero? No.
+12:35,449 --> 12:36,679
+0, 1.
+12:37,609 --> 12:44,439
+So if I go across this row and that column, I get a one, but in all the other cases, the one is multiplied by zero and I get zero.
+12:44,739 --> 12:50,619
+Let's try it in the other direction, see if I got this right. This would be typical where I work this example out wrong.
+12:50,949 --> 12:54,519
+So that's this matrix here, then this one goes up here.
+12:55,949 --> 12:58,409
+Are there any places where we get a non-zero entry here?
+12:58,409 --> 13:2,939
+This is zero, this is zero, this is zero, and this is zero.
+13:2,939 --> 13:4,669
+So this turns out to be the zero matrix.
+13:6,399 --> 13:11,309
+So, this is the product of A and B, this is the product of B and A. These matrices are clearly different.
+13:12,209 --> 13:14,889
+By the way, this matrix I'll just call the zero matrix.
+13:15,249 --> 13:17,519
+It's the zero element of the vector space.
+13:17,519 --> 13:22,919
+It's whatever, it's the element of the vector space such that when you add it to an arbitrary vector, you get the vector back.
+13:23,539 --> 13:24,809
+Because you're not changing anything.
+13:25,289 --> 13:33,569
+The matrix that looks like this, 1 1 1 1 1 all down the diagonal and zero elsewhere, I'll call that the the identity matrix.
+13:35,349 --> 13:37,519
+That's a distinguished matrix.
+13:37,839 --> 13:45,169
+And that has the property, if you work out this addition this multiplication law, that if you multiply anything by the identity matrix, you get it back.
+13:45,649 --> 13:48,509
+So um, I'm running out of room here, let's go here.
+13:53,209 --> 14:1,589
+So 0 + A is equal to A + 0 is equal to A. And no matter which side you multiply by the identity matrix, sorry, is I times A,
+14:4,649 --> 14:11,629
+sorry, this is, yeah, this is A, if you add zero, and if you multiply by I, you get A.
+14:12,309 --> 14:15,379
+So you have a multiplicative identity and an additive identity.
+14:17,719 --> 14:23,99
+Okay, some other laws of matrix multiplication uh and addition.
+14:23,359 --> 14:26,999
+For example, you have the distributive law and you have the associative law.
+14:26,999 --> 14:37,729
+So the distributive law says if you multiply A times B + C, it's the same as multiplying A by B and then adding the product of A by C.
+14:37,729 --> 14:49,939
+And the associative law, which is the most important, is that if you multiply A times B times C and you first multiply B times C and then times A, that's the same thing as multiplying A by B and then multiplying by C.
+14:50,909 --> 14:58,419
+So the normal laws of arithmetic, addition and multiplication, all hold except for the commutativity of multiplication.
+14:59,489 --> 15:2,219
+Now, you might ask, how do I prove something like this?
+15:2,739 --> 15:7,179
+Well, it's truly hideous if you try to do it with this formula for the matrix product.
+15:7,859 --> 15:15,259
+You know, but if you think of it in terms of composition of transformations, these are three different transformations. There's an S, T, and maybe an R.
+15:17,129 --> 15:20,99
+Mhm, or U, let's call it U for a transformation.
+15:21,739 --> 15:30,59
+And to do A composed with B and C would be first compose S with U and then compose with T.
+15:30,759 --> 15:40,49
+And to do this would be first compose U with S, uh sorry, S with T and then compose with U. But all all two ways of doing it are just giving you the composed
+15:40,499 --> 15:53,249
+transformation where you take U and then you take S and then you take T. Namely, the the effect of this on any given vector in Rn is to calculate T of S of U of V.
+15:54,299 --> 15:55,459
+No matter which way you do it.
+15:55,779 --> 16:4,789
+So if you think of it in terms of composition of transformations, this associative law is more or less clear. Same thing you can think of the distributive law if you want to.
+16:5,99 --> 16:19,59
+Uh, in any case, the way this was proved in the original world of linear algebra before people understood linear algebra uh linear transformations was just by computing with this formula, which as I say, is not the most pleasant thing to do.
+16:20,819 --> 16:21,199
+Okay.
+16:21,659 --> 16:27,369
+So these are what I want you to remember about multiplication and addition of n by m matrices.
+16:27,659 --> 16:32,649
+And as I say, it's all reviewed in chapter one, but I'm not going to go over that. I'm going to assume you've seen this.
+16:32,649 --> 16:34,29
+Have most of you seen this material?
+16:36,429 --> 16:36,779
+No.
+16:36,929 --> 16:39,889
+How many have not seen anything about n by n matrices? I'm just amused.
+16:39,889 --> 16:41,309
+Don't be embarrassed. I got to know.
+16:41,839 --> 16:42,189
+Okay.
+16:44,549 --> 16:49,419
+Now, a much trickier thing about n by n matrices is the question of inversion.
+16:50,539 --> 16:57,559
+So we say A is invertible, an n by n matrix,
+16:58,969 --> 17:12,659
+if and only if there exists a matrix B with the property that when you multiply on either side by B, you get to the identity matrix.
+17:16,859 --> 17:22,939
+So the it requires the existence of a second matrix.
+17:23,789 --> 17:26,619
+Now, invertibility is a tricky business.
+17:27,639 --> 17:29,269
+It's a tricky business in matrix theory.
+17:29,269 --> 17:31,219
+Not every matrix is invertible.
+17:31,219 --> 17:36,429
+For example, the zero matrix is never invertible because if you multiply any matrix by zero,
+17:38,699 --> 17:39,999
+you get zero.
+17:41,349 --> 17:46,919
+If you have zeros in all entries, no matter what the entries of A are, when you compute the matrix product, you get zero.
+17:47,509 --> 17:53,939
+So there's no way I could find another matrix to multiply by zero to get the identity, because any product with zero is zero.
+17:53,939 --> 17:57,599
+So, example, zero, I is invertible.
+17:58,369 --> 17:59,519
+There's a good case.
+18:0,439 --> 18:3,619
+You take B is equal to I.
+18:4,589 --> 18:7,499
+And zero is not invertible.
+18:11,749 --> 18:14,209
+But between those two, it's it's a tricky business.
+18:14,209 --> 18:19,779
+For example, for 1 by 1 matrices, it's an easy answer, but already for 2 by 2, it's quite complicated.
+18:20,219 --> 18:22,569
+So for 1 by 1 matrices,
+18:27,289 --> 18:29,389
+So the matrix just looks like A,
+18:30,369 --> 18:37,459
+uh is invertible if and only if A is not equal to zero.
+18:38,109 --> 18:43,779
+And then the inverse matrix is just given by the entry 1 over A.
+18:44,69 --> 18:49,369
+That's the only thing you could multiply A by and get to the identity matrix, which is just the the the thing one.
+18:49,779 --> 18:53,339
+So a real number is invertible if and only if it's non-zero.
+18:54,439 --> 18:55,789
+For 2 by 2 matrices,
+19:0,59 --> 19:10,429
+it turns out to be is invertible, I'll just give you the answer, if and only if a certain quantity is non-zero,
+19:11,19 --> 19:17,669
+namely if you take the product of A by D and you subtract off the quantity BC is not equal to zero.
+19:18,799 --> 19:24,629
+And in fact, if that's the case, I'll write down the inverse matrix for you.
+19:24,949 --> 19:31,729
+Usually, if you you don't want to just know if a matrix is invertible or not, you want to know what its inverse is. So if this is A,
+19:33,649 --> 19:43,539
+then A inverse is equal to 1 over AD - BC, and you can write that real number down because this number was non-zero, so it has an inverse,
+19:43,539 --> 19:50,319
+times the matrix D - B - C A.
+19:52,389 --> 19:56,669
+And this means you take the scalar product of this matrix by that real number.
+19:57,429 --> 19:58,579
+So we can check that.
+19:58,909 --> 20:2,939
+We ought to do at least one matrix multiplication in class to see that I can do it.
+20:3,689 --> 20:11,849
+So let's multiply the matrix ABCD by the matrix D - B - C and A.
+20:12,679 --> 20:13,719
+Okay, the entry here.
+20:15,679 --> 20:18,489
+I go across this row and down this column.
+20:18,719 --> 20:20,669
+I get AD - BC.
+20:23,669 --> 20:24,399
+The entry here.
+20:24,839 --> 20:27,879
+- AB + AB.
+20:27,879 --> 20:29,309
+So the entry here is zero.
+20:30,579 --> 20:31,169
+The entry here.
+20:31,579 --> 20:33,749
+I go across this row and down this column.
+20:33,749 --> 20:35,479
+CD - CD.
+20:35,919 --> 20:36,329
+Zero.
+20:36,809 --> 20:43,559
+And the entry here, I go across this row and here I get - BC + AD, same thing, AD - BC.
+20:46,709 --> 20:53,259
+So if I just took this matrix, I can multiply by my matrix and get something which isn't the identity, but looks pretty close to the identity.
+20:53,259 --> 20:55,339
+Namely, it's a scalar multiple of the identity.
+20:55,339 --> 21:1,729
+And the only problem might be that this scalar might be zero.
+21:1,729 --> 21:9,119
+But if this scalar is non-zero, then I could have taken this matrix and multiplied by one over it, and I would get the identity.
+21:9,699 --> 21:10,389
+Okay?
+21:11,729 --> 21:17,529
+Now, in general, the answer to the question of whether a matrix is invertible or not is the following.
+21:18,79 --> 21:27,199
+There's a certain function from the set of n by n matrices to the real numbers called the determinant,
+21:27,879 --> 21:36,499
+which I'll write just det, which maps n by n matrices over the reals to the real numbers.
+21:37,119 --> 21:43,889
+And the determinant of a matrix is a polynomial in its entries. It's a polynomial of degree n in its entries.
+21:45,
+21:46,139 --> 21:50,679
+So, for example, this is the determinant of the 2 by 2 matrix A.
+21:51,529 --> 22:19,199
+And you probably know the formula for the determinant of a 3 by 3 matrix or even generally the formula for the determinant of an n by n matrix. It's it's given by a formula, determinant of A is sum over n factorial terms with a plus or minus one in front of it, and then products of of n matrix entries.
+22:20,479 --> 22:30,349
+So n factorial, here is just two terms, but if you go to a 3 by 3 matrix, there are six terms in the determinant expression. 4 by 4, there are 24 terms. In short, it's a useless formula.
+22:30,889 --> 22:35,339
+Because once you get to 10 by 10 matrices, you don't want to be dealing with 10 factorial terms.
+22:36,499 --> 22:38,759
+Nonetheless, there is such a formula.
+22:38,989 --> 23:0,109
+And the the the key fact is A is invertible if and only if the determinant of A as a real number is not equal to zero,
+23:0,109 --> 23:0,769
+in which case there's a formula for the the inverse of A.
+23:2,569 --> 23:17,139
+And the formula looks very much like this formula. The formula then looks like you get, in fact, there's always a matrix, there is an unique matrix, that means there exists a unique matrix B such that AB is equal to BA is equal to the determinant of A times the identity matrix.
+23:17,539 --> 23:18,719
+There's always such a matrix.
+23:18,999 --> 23:28,799
+You can't always multiply something to get to the identity, but you can always find a unique matrix where the product is the determinant of A times the identity matrix.
+23:28,799 --> 23:39,389
+Well, no, I shouldn't say unique. I mean, if A were the zero matrix, then then anything would work. So sorry, there exists a there's a natural matrix. Let me just say that.
+23:39,709 --> 23:49,69
+And that B is sometimes called the matrix of cofactors, and you get its entries by taking partial determinants around A. Have you all seen that once or twice? So this is this is the matrix, for example, of cofactors of the original 2 by 2 matrix A.
+23:49,699 --> 23:56,509
+So there's always a matrix you can find where you multiply to get the determinant, and if this is non-zero, you divide B by the determinant and you found a matrix to multiply through to get the identity.
+23:57,99 --> 24:2,299
+Okay, so now I can make my first important definition in this course.
+24:2,299 --> 24:3,739
+So this vector space of n by n matrices is not what we're really interested in.
+24:3,739 --> 24:7,849
+We're interested in a subset that I'm going to call GLN of R,
+24:8,359 --> 24:12,349
+which is a subset of all n by n matrices over R.
+24:12,739 --> 24:19,309
+And this subset consists of all matrices A such that the determinant of A is not equal to zero.
+24:19,309 --> 24:25,369
+Or equivalently, A such that there is an inverse
+24:30,139 --> 24:32,209
+matrix A inverse.
+24:33,79 --> 24:39,49
+So for 1 by 1 matrices, the the set is everything but the zero matrix.
+24:39,499 --> 24:42,519
+But for 2 by 2 matrices, you have to throw away other matrices.
+24:42,519 --> 24:45,249
+For example, you have to throw away that matrix that we wrote down before like this.
+24:45,729 --> 24:50,569
+This is not in GL2 because its determinant is 0 * 0 - 1 * 0, which is 0.
+24:50,949 --> 25:2,749
+So this is a large set of n by n matrices.
+25:2,749 --> 25:5,949
+It's defined by the non-vanishing of a certain polynomial on this set.
+25:5,949 --> 25:9,49
+So almost everything's in it, but we just want to look at that set of matrices, the invertible ones.
+25:9,499 --> 25:11,749
+By the way, if an inverse exists, it's unique.
+25:12,269 --> 25:14,809
+Let's write that, let's prove that for ourselves.
+25:16,389 --> 25:20,49
+This again is all in Artin's chapter one.
+25:25,479 --> 25:31,449
+Exists, it is unique. So one can talk about the inverse of a matrix.
+25:31,449 --> 25:33,199
+There can't be two different matrices that serve as an inverse for a matrix.
+25:33,199 --> 25:36,319
+And the reason is the following. Suppose we had two inverses.
+25:36,319 --> 25:38,949
+So suppose I could say AB is equal to AC
+25:39,399 --> 25:40,999
+and it's also equal to I.
+25:41,369 --> 25:42,209
+Suppose that were the case.
+25:42,859 --> 25:44,669
+And I want to show B is equal to C.
+25:44,669 --> 25:49,989
+Well, remember that what an inverse is defined to be is not just a right inverse under multiplication, but a left inverse under multiplication.
+25:49,989 --> 25:54,519
+So if I took this thing and I multiplied on the left by any matrix that inverts A, for example, B,
+25:54,829 --> 25:57,409
+I could say, well, this implies that BAB
+25:58,69 --> 25:59,249
+is equal to BAC.
+26:0,409 --> 26:1,469
+And then I use the associative law to reassociate things.
+26:1,469 --> 26:5,189
+This on the other hand is BA times B,
+26:5,649 --> 26:7,299
+and this is BA times C.
+26:7,299 --> 26:11,389
+And since B was assumed to be an inverse for A,
+26:11,389 --> 26:16,569
+this is equal to the identity times B, and this is equal to the identity times C.
+26:16,569 --> 26:20,99
+And the identity times any matrix is itself, and therefore B has to equal C.
+26:20,449 --> 26:25,799
+So even though this matrix here doesn't have to be unique, as I said, if A were the zero matrix, any matrix B would work here.
+26:26,269 --> 26:32,329
+However, if you use the canonical one, the matrix of cofactors, and the determinant turns out to be non-zero so that you can divide by it, then that inverse is in fact unique.
+26:32,779 --> 26:36,139
+And so I should add that. There is an inverse matrix A inverse
+26:37,239 --> 26:38,589
+which is unique.
+26:40,279 --> 26:43,909
+All right, now let's look at the properties of this subset of uh
+26:44,309 --> 26:48,429
+the n by n matrices, because we gain things and we lose things.
+26:51,829 --> 26:54,479
+One thing that we lose right away
+26:56,99 --> 26:57,739
+is addition.
+26:58,129 --> 27:1,789
+There is no addition defined on the set GLNR.
+27:1,789 --> 27:2,129
+If you
+27:2,129 --> 27:6,819
+I mean, you even know that for one by one matrices,
+27:6,819 --> 27:11,709
+you could take a the matrix one and you could add it to the matrix minus one and both of those are invertible
+27:12,19 --> 27:13,699
+and their sum is the matrix zero which isn't invertible.
+27:13,699 --> 27:14,559
+So there's no addition law.
+27:14,559 --> 27:14,819
+So we lose the vector space,
+27:14,819 --> 27:15,139
+plus
+27:15,139 --> 27:15,319
+or
+27:15,319 --> 27:18,889
+scalar multiplication by zero.
+27:18,889 --> 27:20,819
+If you took a nice invertible matrix and you multiplied it by the zero scalar,
+27:20,819 --> 27:21,229
+you'd get down to zero which is not invertible.
+27:21,229 --> 27:21,739
+So forget about addition.
+27:21,739 --> 27:21,979
+However,
+27:22,619 --> 27:25,989
+the beautiful thing is that it's closed under multiplication.
+27:26,229 --> 27:26,479
+So I'll give you two proofs of that.
+27:26,479 --> 27:26,659
+Yeah,
+27:26,659 --> 27:26,929
+Peter,
+27:26,929 --> 27:27,289
+did you have a question?
+27:27,289 --> 27:27,629
+You're just stretching.
+27:27,629 --> 27:28,119
+Anyone else need to stretch?
+27:28,119 --> 27:28,339
+Here's
+27:28,339 --> 27:30,459
+here's a principle I like to do in my lectures.
+27:30,459 --> 27:33,239
+So, uh since it's a principle, um it'll apply.
+27:33,859 --> 27:37,209
+Um I go pretty fast
+27:37,559 --> 27:40,619
+and when nobody's stopping me, my tendency is to go faster.
+27:40,929 --> 27:45,339
+So, if you find yourself getting a minute behind, and then two minutes behind, and then three minutes behind in your notes,
+27:45,339 --> 27:47,39
+it's not a profitable experience
+27:47,39 --> 27:49,699
+because all you're doing is writing down gibberish which you're going to have to decipher later on.
+27:49,699 --> 27:50,699
+Much better that you're with me when I'm talking about it.
+27:50,699 --> 27:51,979
+So, the principle is that anyone can ask
+27:51,979 --> 27:53,279
+for a minute or two of silence.
+27:53,279 --> 27:55,539
+This may may not be repeated 30 times in the course of a lecture.
+27:55,799 --> 27:56,549
+But if you feel
+27:56,549 --> 28:0,819
+that you need two minutes to just catch up to what I've said on the board and digest it so that you can even ask me a meaningful question,
+28:0,819 --> 28:2,249
+you may just raise your hand and ask for some silence.
+28:2,249 --> 28:2,479
+Believe me,
+28:2,479 --> 28:3,899
+the other people in the class will appreciate it.
+28:3,899 --> 28:4,289
+And if you're confused,
+28:4,289 --> 28:5,739
+undoubtedly someone else is confused.
+28:5,739 --> 28:6,419
+So I've said something either too fast
+28:6,419 --> 28:7,69
+or incorrect.
+28:7,259 --> 28:8,619
+And I will make mistakes. That's why Peter's here.
+28:8,619 --> 28:8,829
+But he may miss it too.
+28:8,829 --> 28:9,219
+Okay.
+28:9,219 --> 28:9,449
+It's closed under multiplication.
+28:9,449 --> 28:9,759
+I'll give you two proofs.
+28:9,759 --> 28:10,139
+Here's the first proof.
+28:10,139 --> 28:10,419
+Suppose
+28:10,419 --> 28:11,439
+A and B are invertible.
+28:11,439 --> 28:11,709
+I have to prove
+28:11,709 --> 28:12,129
+that the product
+28:12,129 --> 28:12,499
+A times B
+28:12,499 --> 28:12,799
+is invertible.
+28:12,799 --> 28:13,139
+Well,
+28:13,139 --> 28:13,349
+to
+28:13,349 --> 28:13,669
+to prove something's invertible,
+28:13,669 --> 28:13,919
+I just have to find
+28:13,919 --> 28:14,229
+an inverse for it.
+28:14,229 --> 28:14,409
+Can someone suggest
+28:14,409 --> 28:14,819
+what would be a nice
+28:14,819 --> 28:15,499
+left inverse for it?
+28:15,689 --> 28:15,849
+Go ahead.
+28:15,849 --> 28:16,59
+Yes.
+28:16,59 --> 28:17,239
+B to the minus one.
+28:17,239 --> 28:17,649
+Yeah,
+28:17,649 --> 28:17,929
+B - 1 A inverse exists.
+28:17,929 --> 28:18,149
+So call this
+28:18,149 --> 28:18,319
+consider
+28:18,319 --> 28:18,639
+this product.
+28:18,639 --> 28:18,889
+And
+28:18,889 --> 28:19,249
+let's multiply
+28:19,249 --> 28:19,469
+it on the left
+28:19,469 --> 28:19,879
+times AB.
+28:19,879 --> 28:20,309
+So I have
+28:20,309 --> 28:20,539
+B inverse
+28:20,539 --> 28:20,919
+A inverse.
+28:20,919 --> 28:21,399
+This is the way it's associated,
+28:21,399 --> 28:21,749
+times
+28:21,749 --> 28:22,69
+AB.
+28:22,69 --> 28:22,319
+Now
+28:22,319 --> 28:22,549
+once you have
+28:22,549 --> 28:22,809
+the associative
+28:22,809 --> 28:23,159
+law for three
+28:23,159 --> 28:23,509
+for three
+28:23,509 --> 28:23,779
+products,
+28:23,779 --> 28:24,149
+you can reassociate
+28:24,149 --> 28:24,589
+for any number of products.
+28:24,589 --> 28:24,819
+That's
+28:24,819 --> 28:25,109
+a nice fact
+28:25,109 --> 28:25,459
+of about the associative
+28:25,459 --> 28:25,729
+law. So this
+28:25,729 --> 28:25,979
+can be written
+28:25,979 --> 28:26,329
+as B inverse
+28:26,329 --> 28:28,329
+times A inverse A times B.
+28:28,329 --> 28:28,509
+Which
+28:28,509 --> 28:29,39
+is B inverse
+28:29,39 --> 28:30,359
+times the identity matrix
+28:30,359 --> 28:30,719
+times B.
+28:30,719 --> 28:31,79
+Because
+28:31,79 --> 28:31,319
+A A inverse,
+28:31,319 --> 28:31,679
+A was invertible,
+28:31,679 --> 28:32,209
+so there's an identity
+28:32,209 --> 28:32,509
+matrix.
+28:32,509 --> 28:32,789
+And then
+28:32,789 --> 28:33,139
+the identity
+28:33,139 --> 28:33,449
+commutes with
+28:33,449 --> 28:33,719
+any matrix
+28:33,719 --> 28:34,89
+and so this B inverse I
+28:34,89 --> 28:34,819
+is I B inverse,
+28:34,819 --> 28:35,509
+so this is I
+28:35,509 --> 28:35,809
+times B inverse B.
+28:35,809 --> 28:36,139
+And then
+28:36,139 --> 28:36,489
+I associate
+28:36,489 --> 28:36,939
+these two together
+28:36,939 --> 28:37,549
+to get I times I
+28:37,549 --> 28:37,739
+which
+28:37,739 --> 28:38,19
+is the identity.
+28:38,19 --> 28:38,409
+So namely,
+28:38,409 --> 28:38,939
+this is the inverse.
+28:38,939 --> 28:39,149
+Notice
+28:39,149 --> 28:39,479
+that I have to take
+28:39,479 --> 28:39,749
+them in the opposite
+28:39,749 --> 28:40,199
+order. The inverse
+28:40,199 --> 28:40,539
+is not
+28:40,539 --> 28:40,939
+A inverse
+28:40,939 --> 28:41,289
+times B inverse,
+28:41,289 --> 28:41,599
+but B
+28:41,599 --> 28:41,839
+and then
+28:41,839 --> 28:42,149
+similarly,
+28:42,149 --> 28:42,489
+if you multiply
+28:42,489 --> 28:42,859
+on the right
+28:42,859 --> 28:43,179
+by this,
+28:43,179 --> 28:43,439
+first you multiply
+28:43,439 --> 28:43,879
+the B times B inverse,
+28:43,879 --> 28:44,199
+that cancels,
+28:44,199 --> 28:44,519
+then you multiply
+28:44,519 --> 28:45,369
+the A times A inverse.
+28:45,369 --> 28:45,599
+So that's the first proof.
+28:45,599 --> 28:45,859
+Suppose
+28:45,859 --> 28:46,129
+we took this
+28:46,129 --> 28:46,479
+definition
+28:46,479 --> 28:46,849
+of invertible.
+28:46,849 --> 28:47,79
+So we'd have to say
+28:47,79 --> 28:47,529
+that if we had
+28:47,529 --> 28:47,829
+two matrices,
+28:47,829 --> 28:48,169
+each of which
+28:48,169 --> 28:48,599
+had a non-zero
+28:48,599 --> 28:48,939
+determinant,
+28:48,939 --> 28:49,569
+their product
+28:49,569 --> 28:49,879
+had a non-zero
+28:49,879 --> 28:50,219
+determinant.
+28:50,219 --> 28:50,469
+That's what we're saying,
+28:50,469 --> 28:50,769
+right?
+28:50,769 --> 28:51,59
+If that previous
+28:51,59 --> 28:51,529
+condition
+28:51,529 --> 28:51,819
+for invertibility
+28:51,819 --> 28:52,299
+really worked,
+28:52,299 --> 28:52,599
+just being a non-zero
+28:52,599 --> 28:52,989
+determinant.
+28:52,989 --> 28:53,329
+How would we check
+28:53,329 --> 28:53,599
+that? That if
+28:53,599 --> 28:53,869
+two matrices
+28:53,869 --> 28:54,249
+had a non-zero
+28:54,249 --> 28:54,579
+determinant,
+28:54,579 --> 28:54,909
+their product
+28:54,909 --> 28:55,229
+had a non-zero
+28:55,229 --> 28:55,579
+determinant.
+28:55,579 --> 28:55,909
+Someone else?
+28:55,909 --> 28:56,119
+Yeah.
+28:56,119 --> 28:56,399
+We know
+28:56,399 --> 28:56,679
+from algebra
+28:56,679 --> 28:56,939
+that
+28:56,939 --> 28:57,219
+that A times
+28:57,219 --> 28:57,599
+that B is
+28:57,599 --> 28:57,899
+that AB.
+28:57,899 --> 28:58,119
+Exactly.
+28:58,119 --> 28:58,379
+So
+28:58,379 --> 28:58,579
+if you
+28:58,579 --> 28:58,929
+another
+28:58,929 --> 28:59,229
+this is the first
+28:59,229 --> 28:59,489
+proof,
+28:59,489 --> 28:59,799
+and the second
+28:59,799 --> 30:00,179
+proof is there's a famous
+30:00,179 --> 30:00,559
+identity
+30:00,559 --> 30:00,949
+for determinants
+30:00,949 --> 30:01,399
+that the determinant
+30:01,399 --> 30:01,829
+of a product
+30:01,829 --> 30:02,319
+of two matrices
+30:02,319 --> 30:02,649
+is the product
+30:02,649 --> 30:03,249
+of the determinants.
+30:03,249 --> 30:03,509
+Again,
+30:03,509 --> 30:03,829
+you can never prove
+30:03,829 --> 30:04,809
+that using
+30:04,809 --> 30:05,289
+the definition
+30:05,289 --> 30:05,669
+of determinant
+30:05,669 --> 30:06,79
+as the sum of n factorial
+30:06,79 --> 30:07,59
+terms,
+30:07,59 --> 30:07,339
+but we'll see how to prove
+30:07,339 --> 30:07,739
+that intelligently
+30:07,739 --> 30:08,149
+in a while.
+30:08,149 --> 30:08,449
+Now,
+30:08,449 --> 30:08,709
+if you know
+30:08,709 --> 30:09,9
+this,
+30:09,9 --> 30:09,459
+and each of these
+30:09,459 --> 30:09,819
+numbers
+30:09,819 --> 30:10,159
+are non-zero,
+30:10,159 --> 30:10,549
+the product of
+30:10,549 --> 30:10,829
+two non-zero
+30:10,829 --> 30:11,239
+real numbers
+30:11,239 --> 30:11,569
+is a non-zero
+30:11,569 --> 30:11,919
+real number.
+30:11,919 --> 30:12,159
+So
+30:12,159 --> 30:12,399
+then for
+30:12,399 --> 30:12,699
+this set
+30:12,699 --> 30:13,139
+is closed
+30:13,139 --> 30:13,459
+under multiplication.
+30:13,459 --> 30:13,749
+Exactly.
+30:13,749 --> 30:13,939
+What can we say
+30:13,939 --> 30:14,209
+about the multiplication
+30:14,209 --> 30:14,959
+on this set?
+30:15,739 --> 30:16,89
+Well,
+30:16,89 --> 30:16,359
+it has the following
+30:16,359 --> 30:16,809
+properties.
+30:16,809 --> 30:16,989
+Can I erase
+30:16,989 --> 30:17,339
+this now, guys?
+30:17,339 --> 30:17,569
+Normally I'll be using
+30:17,569 --> 30:17,879
+more board. We'll
+30:17,879 --> 30:18,129
+be set up
+30:18,129 --> 30:18,449
+a little bit better
+30:18,449 --> 30:18,819
+next time.
+30:18,819 --> 30:19,79
+It's closed
+30:19,79 --> 30:19,619
+under multiplication.
+30:19,619 --> 30:19,819
+Has
+30:19,819 --> 30:20,149
+a multiplicative
+30:20,149 --> 30:20,739
+identity
+30:20,739 --> 30:20,989
+which is the matrix
+30:20,989 --> 30:21,299
+I.
+30:21,299 --> 30:21,499
+I times
+30:21,499 --> 30:21,809
+anything
+30:21,809 --> 30:22,219
+is the
+30:22,219 --> 30:22,449
+something
+30:22,449 --> 30:22,749
+times I
+30:22,749 --> 30:23,59
+is itself.
+30:23,59 --> 30:23,279
+Uh
+30:23,279 --> 30:23,469
+has
+30:23,469 --> 30:23,729
+multiplicative
+30:23,729 --> 30:24,359
+inverses.
+30:24,359 --> 30:24,589
+A inverse,
+30:24,589 --> 30:24,889
+because
+30:24,889 --> 30:25,259
+that's how the set
+30:25,259 --> 30:25,609
+was defined.
+30:25,609 --> 30:26,179
+It's exactly
+30:26,179 --> 30:26,529
+the set of matrices
+30:26,529 --> 30:27,29
+that have a multiplicative
+30:27,29 --> 30:27,569
+inverse.
+30:27,569 --> 30:28,139
+So anything
+30:28,139 --> 30:28,429
+in this set,
+30:28,429 --> 30:28,789
+you can take
+30:28,789 --> 30:29,49
+products.
+30:29,49 --> 30:30,39
+There's a multiplicative
+30:30,39 --> 30:30,489
+identity
+30:30,489 --> 30:30,839
+on the set.
+30:30,839 --> 30:31,229
+Anything
+30:31,229 --> 30:31,539
+has an inverse.
+30:31,539 --> 30:31,839
+And finally,
+30:31,839 --> 30:32,229
+the product
+30:32,229 --> 30:32,609
+is associative.
+30:32,609 --> 30:32,869
+Because
+30:32,869 --> 30:33,209
+that was true
+30:33,209 --> 30:33,519
+of the product
+30:33,519 --> 30:34,49
+on the larger set
+30:34,49 --> 30:34,419
+of matrices.
+30:34,419 --> 30:34,639
+AB
+30:34,639 --> 30:35,69
+times C
+30:35,69 --> 30:36,39
+is A
+30:36,39 --> 30:36,719
+times
+30:36,719 --> 30:37,239
+BC.
+30:37,239 --> 30:37,469
+So,
+30:37,469 --> 30:37,809
+we have four
+30:37,809 --> 30:38,129
+properties
+30:38,129 --> 30:38,539
+of this
+30:38,539 --> 30:38,979
+subset
+30:38,979 --> 30:39,379
+of the set
+30:39,379 --> 30:39,729
+of matrices.
+30:39,729 --> 30:39,889
+It has
+30:39,889 --> 30:40,279
+a multiplication
+30:40,279 --> 30:40,629
+law. The multiplication
+30:40,629 --> 30:40,989
+law is associative.
+30:40,989 --> 30:41,349
+There's
+30:41,349 --> 30:41,669
+an identity
+30:41,669 --> 30:42,49
+element,
+30:42,49 --> 30:42,399
+and there's an inverse
+30:42,399 --> 30:42,769
+for every element.
+30:42,769 --> 30:42,999
+And
+30:42,999 --> 30:43,319
+those properties
+30:43,319 --> 30:43,669
+make up
+30:43,669 --> 30:44,89
+the properties
+30:44,89 --> 30:45,149
+of what we call
+30:45,149 --> 30:45,639
+a group.
+30:45,639 --> 30:45,829
+So
+30:45,829 --> 30:46,199
+this
+30:46,199 --> 30:46,419
+is the first
+30:46,419 --> 30:47,259
+and most important
+30:47,259 --> 30:47,549
+example
+30:47,549 --> 30:47,929
+of a group.
+30:47,929 --> 30:48,159
+So I'll now tell you
+30:48,159 --> 30:48,479
+what a group is.
+30:48,479 --> 30:48,709
+And that's why we need
+30:48,709 --> 30:49,89
+the linear algebra
+30:49,89 --> 30:50,279
+to generate
+30:50,279 --> 30:50,569
+for us
+30:50,569 --> 30:50,839
+immediately
+30:50,839 --> 30:51,319
+some good examples
+30:51,319 --> 30:51,679
+of groups.
+30:51,679 --> 30:51,989
+I'll give you some more
+30:51,989 --> 30:52,269
+examples,
+30:52,269 --> 30:52,619
+but that's our first
+30:52,619 --> 30:52,939
+example.
+30:52,939 --> 30:53,189
+So
+30:53,189 --> 30:53,419
+a group
+30:53,419 --> 30:53,589
+G
+30:53,589 --> 30:53,849
+is a set
+30:53,849 --> 30:54,119
+with
+30:54,119 --> 30:54,479
+a product
+30:54,479 --> 30:54,839
+operation.
+30:54,839 --> 30:55,149
+So
+30:55,149 --> 30:55,419
+if you have two elements
+30:55,419 --> 30:55,779
+in the set,
+30:55,779 --> 30:56,159
+you can take
+30:56,159 --> 30:56,449
+their product,
+30:56,449 --> 30:56,779
+not necessarily
+30:56,779 --> 30:57,209
+commutative.
+30:57,209 --> 30:57,439
+So g
+30:57,439 --> 30:57,739
+times
+30:57,739 --> 30:58,69
+h
+30:58,69 --> 30:58,259
+which is
+30:58,259 --> 30:58,479
+one
+30:58,479 --> 30:58,849
+associative,
+30:58,849 --> 30:59,149
+two
+30:59,149 --> 30:59,509
+has an identity
+30:59,509 --> 30:59,929
+element
+30:59,929 --> 31:00,279
+which is sometimes
+31:00,279 --> 31:00,619
+denoted
+31:00,619 --> 31:00,829
+E
+31:00,829 --> 31:01,119
+or sometimes
+31:01,119 --> 31:01,429
+denoted
+31:01,429 --> 31:01,669
+one,
+31:01,669 --> 31:01,879
+has
+31:01,879 --> 31:02,159
+inverses,
+31:02,159 --> 31:02,549
+namely every
+31:02,549 --> 31:02,879
+element
+31:02,879 --> 31:03,279
+in the group,
+31:03,279 --> 31:03,619
+there's
+31:03,619 --> 31:03,849
+another
+31:03,849 --> 31:04,239
+element
+31:04,239 --> 31:04,589
+called g
+31:04,589 --> 31:04,849
+inverse
+31:04,849 --> 31:05,259
+whose product
+31:05,259 --> 31:05,629
+with g
+31:05,629 --> 31:06,29
+is the identity
+31:06,29 --> 31:06,509
+element.
+31:06,509 --> 31:06,739
+That's it.
+31:06,739 --> 31:07,19
+Those are the properties
+31:07,19 --> 31:07,409
+of a group.
+31:07,409 --> 31:07,639
+A product,
+31:07,639 --> 31:08,29
+it has to be associative,
+31:08,29 --> 31:08,459
+there has to be
+31:08,459 --> 31:08,789
+an distinguished
+31:08,789 --> 31:09,289
+identity
+31:09,289 --> 31:09,539
+element
+31:09,539 --> 31:09,779
+there,
+31:09,779 --> 31:10,229
+and there have to be
+31:10,229 --> 31:10,529
+inverses
+31:10,529 --> 31:10,899
+for every element.
+31:10,899 --> 31:11,249
+It does
+31:11,249 --> 31:11,449
+not have to be
+31:11,449 --> 31:11,829
+commutative.
+31:11,829 --> 31:11,979
+If
+31:11,979 --> 31:12,169
+if
+31:12,169 --> 31:12,409
+GH
+31:12,409 --> 31:12,779
+is equal
+31:12,779 --> 31:13,159
+to HG
+31:13,159 --> 31:13,459
+for all
+31:13,459 --> 31:13,819
+pairs,
+31:13,819 --> 31:14,189
+you either
+31:14,189 --> 31:14,559
+say the group
+31:14,559 --> 31:14,779
+say
+31:14,779 --> 31:14,979
+G
+31:14,979 --> 31:15,229
+is commutative
+31:15,229 --> 31:15,489
+or sometimes
+31:15,489 --> 31:15,859
+abelian.
+31:15,859 --> 31:16,79
+Abelian
+31:16,79 --> 31:16,479
+comes
+31:16,479 --> 31:16,769
+from the great
+31:16,769 --> 31:16,979
+Norwegian
+31:16,979 --> 31:17,349
+mathematician
+31:17,349 --> 31:17,679
+Abel,
+31:17,679 --> 31:18,79
+who was one of
+31:18,79 --> 31:18,379
+the invent
+31:18,379 --> 31:18,709
+Niels Abel,
+31:18,709 --> 31:19,219
+early 19th century
+31:19,219 --> 31:19,619
+Norwegian
+31:19,619 --> 31:19,999
+mathematician,
+31:19,999 --> 31:20,239
+who uh
+31:20,239 --> 31:20,539
+was one of the
+31:20,539 --> 31:20,939
+originators
+31:20,939 --> 31:21,369
+of group theory.
+31:21,369 --> 31:22,69
+The great originator
+31:22,69 --> 31:22,479
+of group theory
+31:22,479 --> 31:22,899
+was the famous
+31:22,899 --> 31:23,219
+young
+31:23,219 --> 31:23,629
+French
+31:23,629 --> 31:24,69
+mathematician
+31:24,69 --> 31:24,539
+Evariste
+31:24,539 --> 31:24,929
+Galois.
+31:24,929 --> 31:25,239
+Both
+31:25,239 --> 31:25,529
+Abel
+31:25,529 --> 31:25,849
+and Galois
+31:25,849 --> 31:26,259
+lived in the early
+31:26,259 --> 31:26,619
+decades
+31:26,619 --> 31:26,969
+of the 19th century,
+31:26,969 --> 31:27,319
+both died
+31:27,319 --> 31:27,649
+in their 20s.
+31:27,649 --> 31:28,119
+Galois
+31:28,119 --> 31:28,379
+died
+31:28,379 --> 31:28,699
+as a result
+31:28,699 --> 31:29,139
+of a duel.
+31:29,139 --> 31:29,359
+Abel
+31:29,359 --> 31:29,559
+died
+31:29,559 --> 31:29,849
+basically
+31:29,849 --> 31:30,209
+because he was
+31:30,209 --> 31:30,579
+too poor
+31:30,579 --> 31:30,899
+and couldn't find
+31:30,899 --> 31:31,249
+employment
+31:31,249 --> 31:31,549
+for a Norwegian,
+31:31,549 --> 31:31,819
+it was very hard
+31:31,819 --> 31:32,179
+to find employment
+31:32,179 --> 31:32,459
+in mathematical
+31:32,459 --> 31:32,839
+Europe
+31:32,839 --> 31:33,129
+at the time.
+31:33,129 --> 31:33,429
+But together
+31:33,429 --> 31:33,849
+they really
+31:33,849 --> 31:34,199
+put together
+31:34,199 --> 31:34,619
+the foundations
+31:34,619 --> 31:35,79
+of group theory.
+31:35,79 --> 31:36,459
+Galois's
+31:36,459 --> 31:36,779
+work wasn't
+31:36,779 --> 31:37,169
+appreciated
+31:37,169 --> 31:37,509
+for about
+31:37,509 --> 31:37,909
+50 years.
+31:37,909 --> 31:38,209
+So he
+31:38,209 --> 31:38,469
+sent his work
+31:38,469 --> 31:38,839
+to the great
+31:38,839 --> 31:39,189
+mathematicians
+31:39,189 --> 31:39,579
+of the time,
+31:39,579 --> 31:39,829
+Gauss,
+31:39,829 --> 31:40,89
+Koshi,
+31:40,89 --> 31:40,549
+etc.,
+31:40,549 --> 31:40,889
+and they
+31:40,889 --> 31:41,229
+all put it
+31:41,229 --> 31:41,469
+aside.
+31:41,469 --> 31:41,729
+It was only
+31:41,729 --> 31:41,979
+at the end of
+31:41,979 --> 31:42,349
+the 19th century
+31:42,349 --> 31:42,659
+when French
+31:42,659 --> 31:42,949
+mathematician
+31:42,949 --> 31:43,259
+Jordan
+31:43,259 --> 31:43,619
+realized
+31:43,619 --> 31:43,989
+how fundamental
+31:43,989 --> 31:44,379
+Galois's
+31:44,379 --> 31:44,719
+discoveries
+31:44,719 --> 31:44,989
+were,
+31:44,989 --> 31:45,279
+many of which
+31:45,279 --> 31:45,629
+were written
+31:45,629 --> 31:45,939
+up in a letter
+31:45,939 --> 31:46,329
+he sent to a friend
+31:46,329 --> 31:46,659
+the night
+31:46,659 --> 31:47,19
+before he died
+31:47,19 --> 31:47,469
+in this duel.
+31:47,469 --> 31:47,739
+If any of
+31:47,739 --> 31:47,969
+you have been
+31:47,969 --> 31:48,239
+to Paris
+31:48,239 --> 31:48,869
+and take
+31:48,869 --> 31:49,169
+the Ligne de Sceaux,
+31:49,169 --> 31:49,429
+uh
+31:49,429 --> 31:49,689
+you pass
+31:49,689 --> 31:50,259
+through a beautiful
+31:50,259 --> 31:50,639
+or I shouldn't say
+31:50,639 --> 31:50,979
+beautiful,
+31:50,979 --> 31:51,389
+a disgusting
+31:51,389 --> 31:51,869
+Parisian
+31:51,869 --> 31:52,199
+suburb
+31:52,199 --> 31:52,599
+called
+31:52,599 --> 31:52,839
+Bourg-la-Reine
+31:52,839 --> 31:53,149
+where
+31:53,149 --> 31:53,479
+Galois's
+31:53,479 --> 31:53,779
+father
+31:53,779 --> 31:54,79
+was mayor
+31:54,79 --> 31:54,449
+and Galois
+31:54,449 --> 31:54,739
+born
+31:54,739 --> 31:55,89
+was born
+31:55,89 --> 31:55,479
+and lived
+31:55,479 --> 31:55,819
+much of his life.
+31:55,819 --> 31:56,159
+And
+31:56,159 --> 31:56,459
+there's a plaque
+31:56,459 --> 31:56,769
+in the most
+31:56,769 --> 31:57,119
+disgusting
+31:57,119 --> 31:57,509
+uh
+31:57,509 --> 31:57,819
+intersection
+31:57,819 --> 31:58,219
+in the middle of
+31:58,219 --> 31:58,539
+Bourg-la-Reine
+31:58,539 --> 31:58,929
+where the trucks
+31:58,929 --> 31:59,299
+are going
+31:59,299 --> 31:59,539
+by
+31:59,539 --> 31:59,989
+and it says,
+31:59,989 --> 32:00,239
+"Ici
+32:00,239 --> 32:00,579
+est né
+32:00,579 --> 32:01,29
+Evariste
+32:01,29 --> 32:01,359
+Galois,
+32:01,359 --> 32:01,639
+illustre
+32:01,639 --> 32:01,969
+mathématicien
+32:01,969 --> 32:02,449
+français."
+32:02,449 --> 32:02,659
+That's
+32:02,659 --> 32:02,949
+the way a country
+32:02,949 --> 32:03,269
+honors its heroes.
+32:03,269 --> 32:03,529
+Um,
+32:03,959 --> 32:04,309
+actually
+32:04,309 --> 32:04,639
+many streets
+32:04,639 --> 32:04,969
+in Paris
+32:04,969 --> 32:05,289
+are named
+32:05,289 --> 32:05,639
+after mathematicians.
+32:05,639 --> 32:05,919
+If any of
+32:05,919 --> 32:06,209
+you have been
+32:06,209 --> 32:06,559
+on the rue
+32:06,559 --> 32:06,829
+Monge,
+32:06,829 --> 32:07,179
+Monge
+32:07,179 --> 32:07,499
+was a great
+32:07,499 --> 32:07,839
+mathematician
+32:07,839 --> 32:08,229
+who accompanied
+32:08,229 --> 32:08,629
+Napoleon
+32:08,629 --> 32:08,969
+to Egypt
+32:08,969 --> 32:09,329
+to do surveying
+32:09,329 --> 32:09,869
+and Egyptology.
+32:09,869 --> 32:10,229
+But
+32:10,229 --> 32:10,499
+um,
+32:10,499 --> 32:10,809
+Galois
+32:10,809 --> 32:11,79
+is undoubtedly
+32:11,79 --> 32:11,479
+the most famous
+32:11,479 --> 32:11,899
+young
+32:11,899 --> 32:12,239
+mathematician
+32:12,239 --> 32:12,639
+to die young.
+32:12,639 --> 32:12,839
+But
+32:12,839 --> 32:13,129
+in his
+32:13,129 --> 32:13,459
+head,
+32:13,459 --> 32:13,779
+he discovered
+32:13,779 --> 32:14,149
+not only
+32:14,149 --> 32:14,589
+the theory
+32:14,589 --> 32:14,919
+of finite fields,
+32:14,919 --> 32:15,319
+which
+32:15,319 --> 32:15,559
+we'll cover
+32:15,559 --> 32:15,859
+later on,
+32:15,859 --> 32:16,289
+and wrote
+32:16,289 --> 32:16,629
+the treatment
+32:16,629 --> 32:16,969
+of finite fields,
+32:16,969 --> 32:17,289
+it's the best
+32:17,289 --> 32:17,609
+treatment
+32:17,609 --> 32:17,939
+in the literature
+32:17,939 --> 32:18,229
+today,
+32:18,229 --> 32:18,459
+but
+32:18,459 --> 32:18,729
+also
+32:18,729 --> 32:19,99
+discovered
+32:19,99 --> 32:19,459
+almost
+32:19,459 --> 32:19,799
+all the foundations
+32:19,799 --> 32:20,199
+of group theory.
+32:20,199 --> 32:20,489
+And
+32:20,489 --> 32:20,729
+it was Galois
+32:20,729 --> 32:21,149
+who realized
+32:21,149 --> 32:21,509
+there could be
+32:21,509 --> 32:21,859
+very interesting
+32:21,859 --> 32:22,279
+groups
+32:22,279 --> 32:22,679
+where GH
+32:22,679 --> 32:23,49
+was not equal
+32:23,49 --> 32:23,469
+to HG.
+32:23,469 --> 32:23,609
+Yeah.
+32:23,609 --> 32:23,789
+Is
+32:23,789 --> 32:23,979
+it required
+32:23,979 --> 32:24,289
+that the product
+32:24,289 --> 32:24,609
+operation
+32:24,609 --> 32:24,849
+is closed,
+32:24,849 --> 32:25,99
+is that assumed?
+32:25,99 --> 32:25,289
+Yeah,
+32:25,289 --> 32:25,519
+when I say
+32:25,519 --> 32:25,799
+a product
+32:25,799 --> 32:26,99
+operation,
+32:26,99 --> 32:26,419
+it means
+32:26,419 --> 32:26,919
+that for any two
+32:26,919 --> 32:27,209
+elements
+32:27,209 --> 32:27,529
+in the set
+32:27,529 --> 32:27,829
+G,
+32:27,829 --> 32:28,89
+there's
+32:28,89 --> 32:28,409
+a product
+32:28,409 --> 32:28,759
+GH
+32:28,759 --> 32:29,29
+which is in
+32:29,29 --> 32:29,449
+G.
+32:29,449 --> 32:29,649
+So,
+32:29,649 --> 32:30,89
+associated
+32:30,89 --> 32:30,459
+to any two
+32:30,459 --> 32:30,759
+elements,
+32:30,759 --> 32:31,39
+you get a third.
+32:31,39 --> 32:31,309
+I'm going to get
+32:31,309 --> 32:31,569
+Now this
+32:31,569 --> 32:32,9
+this is a very interesting
+32:32,9 --> 32:32,489
+group,
+32:32,489 --> 32:32,659
+the
+32:32,659 --> 32:32,959
+the group of
+32:32,959 --> 32:33,269
+invertible
+32:33,269 --> 32:33,589
+matrices,
+32:33,589 --> 32:34,309
+in that
+32:34,309 --> 32:34,629
+already
+32:34,629 --> 32:34,849
+when we get
+32:34,849 --> 32:35,169
+to 2 by 2
+32:35,169 --> 32:35,469
+matrices,
+32:35,469 --> 32:35,849
+we have a lot
+32:35,849 --> 32:36,249
+of non-commutative
+32:36,249 --> 32:36,709
+groups.
+32:36,709 --> 32:36,899
+Right?
+32:36,899 --> 32:37,249
+You can find
+32:37,249 --> 32:37,529
+two invertible
+32:37,529 --> 32:37,889
+matrices.
+32:37,889 --> 32:38,159
+The ones
+32:38,159 --> 32:38,399
+I wrote down
+32:38,399 --> 32:38,679
+by the way
+32:38,679 --> 32:38,899
+weren't invertible.
+32:38,899 --> 32:39,149
+So
+32:39,149 --> 32:39,409
+that'll be
+32:39,409 --> 32:39,669
+a challenge
+32:39,669 --> 32:40,99
+for you
+32:40,99 --> 32:40,449
+to find
+32:40,449 --> 32:40,879
+invertible
+32:40,879 --> 32:41,289
+matrices
+32:41,289 --> 32:41,649
+such that
+32:41,649 --> 32:41,989
+AB
+32:41,989 --> 32:42,259
+is not equal
+32:42,259 --> 32:42,619
+to BA.
+32:42,619 --> 32:42,819
+Good
+32:42,819 --> 32:43,129
+homework problem
+32:43,129 --> 32:43,439
+there,
+32:43,439 --> 32:43,629
+Peter.
+32:43,629 --> 32:43,789
+It's
+32:43,789 --> 32:43,959
+already there?
+32:43,959 --> 32:44,219
+The home
+32:44,219 --> 32:44,409
+it's
+32:44,409 --> 32:44,809
+he's ahead of me.
+32:44,809 --> 32:45,79
+Damn
+32:45,79 --> 32:45,339
+kids.
+32:45,339 --> 32:45,599
+Um,
+32:45,599 --> 32:45,879
+anyhow,
+32:45,879 --> 32:46,139
+uh
+32:46,139 --> 32:46,399
+so,
+32:46,399 --> 32:46,629
+uh,
+32:46,629 --> 32:46,899
+but good
+32:46,899 --> 32:47,159
+question.
+32:47,159 --> 32:47,399
+Yeah,
+32:47,399 --> 32:47,609
+that
+32:47,609 --> 32:47,839
+you must
+32:47,839 --> 32:48,9
+have you
+32:48,9 --> 32:48,469
+you have to stay
+32:48,469 --> 32:48,789
+in your set.
+32:48,789 --> 32:49,79
+For any two
+32:49,79 --> 32:49,399
+elements
+32:49,399 --> 32:49,689
+in the set,
+32:49,689 --> 32:49,969
+sorry,
+32:49,969 --> 32:50,209
+the
+32:50,209 --> 32:50,449
+product
+32:50,449 --> 32:50,769
+is defined
+32:50,769 --> 32:51,89
+and in the set,
+32:51,89 --> 32:51,429
+it's
+32:51,429 --> 32:51,689
+associative,
+32:51,689 --> 32:52,119
+G
+32:52,119 --> 32:52,439
+H
+32:52,439 --> 32:52,679
+K
+32:52,679 --> 32:53,149
+is the same
+32:53,149 --> 32:53,469
+as G
+32:53,469 --> 32:53,829
+H
+32:53,829 --> 32:54,279
+times K.
+32:54,279 --> 32:54,589
+There's
+32:54,589 --> 32:54,889
+an identity
+32:54,889 --> 32:55,259
+element
+32:55,259 --> 32:55,539
+E
+32:55,539 --> 32:55,819
+such that
+32:55,819 --> 32:56,159
+E
+32:56,159 --> 32:56,399
+G
+32:56,399 --> 32:56,729
+is equal
+32:56,729 --> 32:57,9
+to G
+32:57,9 --> 32:57,459
+E
+32:57,459 --> 32:57,779
+is equal
+32:57,779 --> 32:58,209
+to G
+32:58,209 --> 32:58,449
+for every
+32:58,449 --> 32:58,759
+element
+32:58,759 --> 32:59,109
+in the set.
+32:59,109 --> 32:59,369
+I
+32:59,369 --> 32:59,589
+let me give you
+32:59,589 --> 32:59,859
+a simpler
+32:59,859 --> 33:00,189
+example
+33:00,189 --> 33:00,499
+of a group
+33:00,499 --> 33:01,69
+because
+33:01,69 --> 33:01,389
+this seems
+33:01,389 --> 33:01,719
+awfully
+33:01,719 --> 33:01,979
+complicated
+33:01,979 --> 33:02,239
+uh
+33:02,239 --> 33:02,529
+to go through
+33:02,529 --> 33:02,909
+to get a group.
+33:02,909 --> 33:03,169
+So
+33:03,169 --> 33:03,339
+you've been doing
+33:03,339 --> 33:03,619
+groups
+33:03,619 --> 33:03,889
+all your lives.
+33:03,889 --> 33:04,129
+Um
+33:04,129 --> 33:04,389
+it's like
+33:04,389 --> 33:04,629
+speaking
+33:04,629 --> 33:04,879
+prose.
+33:04,879 --> 33:05,149
+So
+33:05,149 --> 33:05,339
+here's an example
+33:05,339 --> 33:05,709
+of a group.
+33:05,709 --> 33:05,899
+An abelian
+33:05,899 --> 33:06,219
+group.
+33:06,219 --> 33:06,469
+Why don't we do
+33:06,469 --> 33:06,799
+an abelian group?
+33:06,799 --> 33:06,999
+The
+33:06,999 --> 33:07,259
+simplest
+33:07,259 --> 33:07,629
+abelian
+33:07,629 --> 33:07,939
+group is
+33:07,939 --> 33:08,219
+the integers.
+33:08,219 --> 33:08,439
+So
+33:08,439 --> 33:08,709
+that's the
+33:08,709 --> 33:08,969
+you know,
+33:08,969 --> 33:09,229
+0
+33:09,229 --> 33:09,579
+plus or minus
+33:09,579 --> 33:09,849
+1,
+33:09,849 --> 33:10,169
+plus or minus
+33:10,169 --> 33:10,419
+2,
+33:10,419 --> 33:10,799
+plus or minus
+33:10,799 --> 33:11,179
+3,
+33:11,179 --> 33:11,469
+positive
+33:11,469 --> 33:11,819
+and negative
+33:11,819 --> 33:12,109
+integers
+33:12,109 --> 33:12,389
+denoted
+33:12,389 --> 33:12,699
+by a bold
+33:12,699 --> 33:13,99
+face Z
+33:13,99 --> 33:13,459
+here.
+33:13,459 --> 33:13,669
+So,
+33:13,669 --> 33:13,889
+uh
+33:13,889 --> 33:14,109
+the
+33:14,109 --> 33:14,339
+the
+33:14,339 --> 33:14,549
+the
+33:14,549 --> 33:14,729
+uh product
+33:14,729 --> 33:15,29
+operation
+33:15,29 --> 33:15,379
+in the integers
+33:15,379 --> 33:15,689
+is addition.
+33:15,689 --> 33:15,899
+You know,
+33:15,899 --> 33:16,129
+A + B.
+33:16,129 --> 33:16,349
+That's
+33:16,349 --> 33:16,639
+the product
+33:16,639 --> 33:16,929
+operation.
+33:16,929 --> 33:17,239
+Uh
+33:17,239 --> 33:17,509
+that's
+33:17,509 --> 33:17,789
+clearly
+33:17,789 --> 33:18,129
+associative.
+33:18,129 --> 33:18,499
+When you add
+33:18,499 --> 33:18,839
+three things,
+33:18,839 --> 33:19,169
+it doesn't make
+33:19,169 --> 33:19,429
+any difference
+33:19,429 --> 33:19,729
+which order
+33:19,729 --> 33:20,79
+you do the adding.
+33:20,79 --> 33:20,339
+What's
+33:20,339 --> 33:20,619
+the identity
+33:20,619 --> 33:20,939
+element
+33:20,939 --> 33:21,239
+for addition
+33:21,239 --> 33:21,539
+in the group
+33:21,539 --> 33:21,759
+Z?
+33:21,759 --> 33:21,959
+This
+33:21,959 --> 33:22,219
+kind of stupid.
+33:22,219 --> 33:22,399
+Zero.
+33:22,399 --> 33:22,689
+Exactly.
+33:22,689 --> 33:22,889
+The
+33:22,889 --> 33:23,209
+identity
+33:23,209 --> 33:23,529
+element
+33:23,529 --> 33:23,919
+is zero.
+33:23,919 --> 33:24,209
+If you add
+33:24,209 --> 33:24,529
+0 to A,
+33:24,529 --> 33:24,889
+you always
+33:24,889 --> 33:25,149
+get A.
+33:25,149 --> 33:25,429
+What's
+33:25,429 --> 33:25,709
+the inverse
+33:25,709 --> 33:25,999
+element?
+33:25,999 --> 33:26,319
+What is A
+33:26,319 --> 33:26,589
+inverse?
+33:26,589 --> 33:26,769
+minus
+33:26,769 --> 33:27,9
+A. So if you take
+33:27,9 --> 33:27,379
+the negative
+33:27,379 --> 33:27,649
+number, that's
+33:27,649 --> 33:27,959
+how that's
+33:27,959 --> 33:28,269
+why we have negative
+33:28,269 --> 33:28,619
+numbers
+33:28,619 --> 33:28,949
+really, to turn
+33:28,949 --> 33:29,279
+counting
+33:29,279 --> 33:29,569
+numbers
+33:29,569 --> 33:29,879
+into a group.
+33:29,879 --> 33:30,89
+If you think
+33:30,89 --> 33:30,339
+of it.
+33:30,339 --> 33:30,529
+Well,
+33:30,529 --> 33:30,739
+what is
+33:30,739 --> 33:30,959
+-3?
+33:30,959 --> 33:31,189
+It's the
+33:31,189 --> 33:31,409
+thing you
+33:31,409 --> 33:31,629
+add to three
+33:31,629 --> 33:31,999
+to get zero.
+33:31,999 --> 33:32,249
+Okay?
+33:32,249 --> 33:32,499
+And
+33:32,499 --> 33:32,729
+um
+33:32,729 --> 33:32,979
+well,
+33:32,979 --> 33:33,169
+that does
+33:33,169 --> 33:33,409
+it.
+33:33,409 --> 33:33,609
+So
+33:33,609 --> 33:33,869
+this is a very
+33:33,869 --> 33:34,209
+simple
+33:34,209 --> 33:34,449
+group
+33:34,449 --> 33:34,869
+which has the
+33:34,869 --> 33:35,179
+property
+33:35,179 --> 33:35,539
+that A + B
+33:35,539 --> 33:35,929
+is B + A.
+33:35,929 --> 33:36,219
+So groups
+33:36,219 --> 33:36,539
+like this,
+33:36,539 --> 33:36,819
+of course,
+33:36,819 --> 33:37,99
+were studied
+33:37,99 --> 33:37,449
+before there
+33:37,449 --> 33:37,689
+was a notion
+33:37,689 --> 33:37,999
+of a group.
+33:37,999 --> 33:38,229
+I
+33:38,229 --> 33:38,459
+I'll tell you
+33:38,459 --> 33:38,719
+a funny story.
+33:38,719 --> 33:39,9
+So
+33:39,9 --> 33:39,439
+a a great
+33:39,439 --> 33:39,769
+um
+33:39,769 --> 33:40,79
+great German
+33:40,79 --> 33:40,449
+mathematician
+33:40,449 --> 33:40,839
+who I've
+33:40,839 --> 33:41,149
+collaborated
+33:41,149 --> 33:41,539
+with many
+33:41,539 --> 33:41,789
+times
+33:41,789 --> 33:42,29
+and
+33:42,29 --> 33:42,419
+is an altogether
+33:42,419 --> 33:42,779
+um
+33:42,779 --> 33:43,59
+is
+33:43,59 --> 33:43,399
+is a rare
+33:43,399 --> 33:43,819
+example
+33:43,819 --> 33:44,89
+of a prodigy
+33:44,89 --> 33:44,489
+who actually
+33:44,489 --> 33:44,869
+worked
+33:44,869 --> 33:45,79
+out,
+33:45,79 --> 33:45,349
+uh
+33:45,349 --> 33:45,609
+his name is
+33:45,609 --> 33:45,879
+Don
+33:45,879 --> 33:46,139
+Zagier.
+33:46,139 --> 33:46,369
+Uh
+33:46,369 --> 33:46,619
+he's the director
+33:46,619 --> 33:46,959
+of the Max
+33:46,959 --> 33:47,299
+Planck Institute
+33:47,299 --> 33:47,559
+uh for
+33:47,559 --> 33:47,929
+mathematical
+33:47,929 --> 33:48,199
+research
+33:48,199 --> 33:48,409
+in in
+33:48,409 --> 33:48,829
+Bonn. And
+33:48,829 --> 33:49,199
+um
+33:49,639 --> 33:50,39
+Don
+33:50,449 --> 33:50,799
+went to
+33:50,799 --> 33:51,139
+uh
+33:51,579 --> 33:51,879
+schools
+33:51,879 --> 33:52,229
+in about
+33:52,229 --> 33:52,559
+seven
+33:52,559 --> 33:52,839
+different
+33:52,839 --> 33:53,169
+countries
+33:53,169 --> 33:53,569
+when he was
+33:53,569 --> 33:53,839
+young.
+33:53,839 --> 33:54,159
+By the age
+33:54,159 --> 33:54,479
+of 13,
+33:54,479 --> 33:54,939
+he was speaking
+33:54,939 --> 33:55,319
+nine
+33:55,319 --> 33:55,669
+different
+33:55,669 --> 33:55,969
+languages
+33:55,969 --> 33:56,319
+and
+33:56,319 --> 33:56,669
+applied
+33:56,669 --> 33:56,979
+to get
+33:56,979 --> 33:57,309
+his
+33:57,309 --> 33:57,589
+uh
+33:57,589 --> 33:57,939
+undergraduate
+33:57,939 --> 33:58,319
+degree
+33:58,319 --> 33:58,619
+at Oxford.
+33:58,619 --> 33:58,929
+And
+33:58,929 --> 33:59,179
+he had taken
+33:59,179 --> 33:59,499
+the A-levels
+33:59,499 --> 33:59,849
+and O-levels
+33:59,849 --> 34:00,129
+even though
+34:00,129 --> 34:00,449
+he'd never
+34:00,449 --> 34:00,699
+been to England,
+34:00,699 --> 34:00,979
+and
+34:00,979 --> 34:01,259
+uh
+34:01,259 --> 34:01,519
+he was denied
+34:01,519 --> 34:01,959
+admission
+34:01,959 --> 34:02,359
+on the grounds
+34:02,359 --> 34:02,749
+that no one
+34:02,749 --> 34:03,89
+could attend
+34:03,89 --> 34:03,449
+Oxford
+34:03,449 --> 34:03,829
+before the
+34:03,829 --> 34:04,209
+age of 16.
+34:04,209 --> 34:04,499
+So,
+34:04,499 --> 34:04,809
+he got into
+34:04,809 --> 34:05,149
+MIT
+34:05,149 --> 34:05,609
+and finished
+34:05,609 --> 34:05,959
+MIT
+34:05,959 --> 34:06,259
+in two years,
+34:06,259 --> 34:06,589
+and then applied
+34:06,589 --> 34:06,959
+to Oxford
+34:06,959 --> 34:07,339
+as a graduate
+34:07,339 --> 34:07,719
+student
+34:07,719 --> 34:08,59
+at 15,
+34:08,59 --> 34:08,459
+and there was no
+34:08,459 --> 34:08,829
+objection
+34:08,829 --> 34:09,209
+at that point
+34:09,209 --> 34:09,499
+because
+34:09,499 --> 34:09,789
+that was as
+34:09,789 --> 34:10,79
+a graduate student.
+34:10,79 --> 34:10,419
+So
+34:10,419 --> 34:10,629
+Don
+34:10,629 --> 34:10,819
+said
+34:10,819 --> 34:11,109
+when he recalled
+34:11,109 --> 34:11,489
+his algebra
+34:11,489 --> 34:11,809
+course
+34:11,809 --> 34:12,119
+from MIT,
+34:12,119 --> 34:12,419
+he
+34:12,419 --> 34:12,649
+was so
+34:12,649 --> 34:12,919
+confused
+34:12,919 --> 34:13,289
+the whole time
+34:13,289 --> 34:13,649
+he took the course,
+34:13,649 --> 34:13,979
+but he learned
+34:13,979 --> 34:14,349
+how to do it
+34:14,349 --> 34:14,619
+because
+34:14,619 --> 34:14,879
+he's a very
+34:14,879 --> 34:15,129
+good mathematician.
+34:15,129 --> 34:15,419
+He
+34:15,419 --> 34:15,659
+said that
+34:15,659 --> 34:16,29
+his idea
+34:16,29 --> 34:16,409
+of a group
+34:16,409 --> 34:16,939
+as he got out
+34:16,939 --> 34:17,229
+of this course
+34:17,229 --> 34:17,649
+was that a group
+34:17,649 --> 34:17,999
+was the integers.
+34:17,999 --> 34:18,329
+All
+34:18,329 --> 34:18,569
+groups
+34:18,569 --> 34:18,929
+were the integers.
+34:18,929 --> 34:19,209
+Except
+34:19,209 --> 34:19,629
+that somehow
+34:19,629 --> 34:19,939
+when you were doing
+34:19,939 --> 34:20,289
+the problems,
+34:20,289 --> 34:20,629
+you weren't
+34:20,629 --> 34:20,899
+allowed
+34:20,899 --> 34:21,229
+to use the
+34:21,229 --> 34:21,499
+fact that
+34:21,499 --> 34:21,819
+A + B
+34:21,819 --> 34:22,189
+was B + A.
+34:22,189 --> 34:22,449
+And he
+34:22,449 --> 34:22,659
+thought
+34:22,659 --> 34:22,949
+that this was
+34:22,949 --> 34:23,249
+very strange,
+34:23,249 --> 34:23,509
+and
+34:23,509 --> 34:23,819
+it was a strange
+34:23,819 --> 34:24,209
+way to teach,
+34:24,209 --> 34:24,529
+but if
+34:24,529 --> 34:24,779
+those were the
+34:24,779 --> 34:25,99
+rules of higher
+34:25,99 --> 34:25,449
+mathematics,
+34:25,449 --> 34:25,839
+he would go
+34:25,839 --> 34:26,59
+with it.
+34:26,59 --> 34:26,329
+So,
+34:26,329 --> 34:26,619
+I want to point
+34:26,619 --> 34:26,889
+out that sometimes
+34:26,889 --> 34:27,259
+you are allowed
+34:27,259 --> 34:27,589
+to use the rules
+34:27,589 --> 34:27,979
+that A + B
+34:27,979 --> 34:28,299
+is B + A
+34:28,299 --> 34:28,599
+when it holds.
+34:28,599 --> 34:28,859
+Another
+34:28,859 --> 34:29,179
+example
+34:29,179 --> 34:29,659
+of a group is
+34:29,659 --> 34:29,929
+any vector
+34:29,929 --> 34:30,319
+space.
+34:30,319 --> 34:30,509
+That's
+34:30,509 --> 34:30,779
+a group because
+34:30,779 --> 34:31,69
+you just forget
+34:31,69 --> 34:31,429
+about the scalar
+34:31,429 --> 34:31,789
+multiplication.
+34:31,789 --> 34:32,149
+The addition,
+34:32,149 --> 34:32,429
+the
+34:32,429 --> 34:32,679
+the binary
+34:32,679 --> 34:33,19
+operation
+34:33,19 --> 34:33,419
+is addition
+34:33,419 --> 34:33,799
+of vectors.
+34:33,799 --> 34:34,89
+The
+34:34,89 --> 34:34,409
+identity
+34:34,409 --> 34:34,739
+element
+34:34,739 --> 34:35,109
+is the zero
+34:35,109 --> 34:35,479
+vector.
+34:35,479 --> 34:35,719
+Right?
+34:35,719 --> 34:35,999
+You add the
+34:35,999 --> 34:36,249
+zero vector
+34:36,249 --> 34:36,549
+and any vector,
+34:36,549 --> 34:36,879
+you get the vector
+34:36,879 --> 34:37,149
+back.
+34:37,149 --> 34:37,339
+The
+34:37,339 --> 34:37,579
+the
+34:37,579 --> 34:37,799
+the
+34:37,799 --> 34:37,979
+the inverse
+34:37,979 --> 34:38,319
+element
+34:38,319 --> 34:38,649
+is the negative
+34:38,649 --> 34:38,999
+vector.
+34:38,999 --> 34:39,249
+Okay,
+34:39,249 --> 34:39,499
+so
+34:39,499 --> 34:39,829
+you just
+34:39,829 --> 34:40,129
+you just forget
+34:40,129 --> 34:40,489
+scalar
+34:40,489 --> 34:40,789
+multiplication.
+34:40,789 --> 34:40,999
+So
+34:40,999 --> 34:41,319
+it turns
+34:41,319 --> 34:41,579
+out that once
+34:41,579 --> 34:41,869
+you come up
+34:41,869 --> 34:42,209
+with this rather
+34:42,209 --> 34:42,559
+simple definition,
+34:42,559 --> 34:42,919
+there are groups
+34:42,919 --> 34:43,229
+all over
+34:43,229 --> 34:43,459
+the place.
+34:43,459 --> 34:43,709
+This is
+34:43,709 --> 34:43,969
+also an abelian
+34:43,969 --> 34:44,349
+group.
+34:44,349 --> 34:44,519
+In
+34:44,519 --> 34:44,729
+some sense,
+34:44,729 --> 34:45,99
+the most
+34:45,99 --> 34:45,439
+general
+34:45,439 --> 34:45,749
+group you
+34:45,749 --> 34:46,9
+get is
+34:46,9 --> 34:46,329
+as follows.
+34:46,329 --> 34:46,529
+Uh
+34:46,529 --> 34:46,739
+and
+34:46,739 --> 34:46,949
+this will be
+34:46,949 --> 34:47,219
+the last thing
+34:47,219 --> 34:47,529
+I'll talk about
+34:47,529 --> 34:47,869
+and then I'll
+34:47,869 --> 34:48,129
+let you get out
+34:48,129 --> 34:48,399
+of here.
+34:48,399 --> 34:48,599
+Uh
+34:48,599 --> 34:48,779
+if you
+34:48,779 --> 34:49,29
+start
+34:49,29 --> 34:49,369
+with any set,
+34:49,369 --> 34:49,629
+call
+34:49,629 --> 34:49,869
+it the set
+34:49,869 --> 34:50,139
+T.
+34:50,139 --> 34:50,289
+And
+34:50,289 --> 34:50,569
+you let
+34:50,569 --> 34:50,789
+G
+34:50,789 --> 34:51,219
+be the set
+34:51,219 --> 34:51,519
+of all
+34:51,519 --> 34:51,919
+bijections
+34:51,919 --> 34:52,229
+G
+34:52,229 --> 34:52,609
+from T
+34:52,609 --> 34:52,959
+to itself.
+34:52,959 --> 34:53,199
+So
+34:53,199 --> 34:53,519
+that means
+34:53,519 --> 34:53,859
+one to one
+34:53,859 --> 34:54,209
+and onto
+34:54,209 --> 34:54,569
+maps
+34:54,569 --> 34:54,879
+from a set
+34:54,879 --> 34:55,229
+to itself.
+34:55,229 --> 34:55,519
+All
+34:55,519 --> 34:55,929
+bijections.
+34:55,929 --> 34:56,199
+Then
+34:56,199 --> 34:56,529
+that's a group,
+34:56,529 --> 34:56,799
+it's sometimes
+34:56,799 --> 34:57,249
+I'll denote
+34:57,249 --> 34:57,569
+it by the symmetries
+34:57,569 --> 34:58,49
+of T.
+34:58,49 --> 34:58,329
+Or
+34:58,329 --> 34:58,559
+the symmetric
+34:58,559 --> 34:59,79
+group of the set
+34:59,79 --> 34:59,519
+T.
+34:59,519 --> 34:59,699
+is a group.
+34:59,699 --> 35:00,109
+Someone's
+35:00,109 --> 35:00,409
+got a phone call.
+35:00,409 --> 35:00,649
+I
+35:00,649 --> 35:00,889
+hope it's not me.
+35:00,889 --> 35:01,209
+Mine plays
+35:01,209 --> 35:01,609
+La Traviata.
+35:01,609 --> 35:01,869
+So
+35:01,869 --> 35:02,129
+occasionally
+35:02,129 --> 35:02,479
+there'll be an emergency,
+35:02,479 --> 35:02,809
+someone's
+35:02,809 --> 35:03,89
+about to jump
+35:03,89 --> 35:03,429
+off a bridge
+35:03,429 --> 35:03,769
+or something
+35:03,769 --> 35:03,999
+that requires
+35:03,999 --> 35:04,299
+the attention
+35:04,299 --> 35:04,549
+of the Dean.
+35:04,549 --> 35:04,779
+So
+35:04,779 --> 35:05,79
+you'll hear
+35:05,79 --> 35:05,289
+I figure
+35:05,289 --> 35:05,539
+I
+35:05,539 --> 35:05,829
+I wanted
+35:05,829 --> 35:06,149
+a cheerful
+35:06,149 --> 35:06,469
+tune.
+35:06,469 --> 35:06,699
+So
+35:06,699 --> 35:06,949
+to deal with it.
+35:06,949 --> 35:07,179
+So this is
+35:07,179 --> 35:07,449
+a group
+35:07,449 --> 35:07,799
+under composition.
+35:07,799 --> 35:08,99
+Composition
+35:08,99 --> 35:08,869
+of
+35:08,869 --> 35:09,259
+bijections.
+35:09,259 --> 35:09,549
+If you
+35:09,549 --> 35:09,829
+compose
+35:09,829 --> 35:10,119
+one bijection
+35:10,119 --> 35:10,479
+with another,
+35:10,479 --> 35:10,849
+you get a third
+35:10,849 --> 35:11,229
+because if two
+35:11,229 --> 35:11,479
+maps are one
+35:11,479 --> 35:11,759
+to one and you compose
+35:11,759 --> 35:12,139
+them, you get
+35:12,139 --> 35:12,409
+a third one
+35:12,409 --> 35:12,709
+to one map.
+35:12,709 --> 35:12,979
+If two maps
+35:12,979 --> 35:13,279
+are onto
+35:13,279 --> 35:13,539
+and you compose
+35:13,539 --> 35:13,859
+them you get another
+35:13,859 --> 35:14,129
+onto
+35:14,129 --> 35:14,419
+map.
+35:14,419 --> 35:14,619
+So that's
+35:14,619 --> 35:14,899
+the
+35:14,899 --> 35:15,259
+the composition
+35:15,259 --> 35:15,609
+law
+35:15,609 --> 35:16,89
+of transformations.
+35:16,89 --> 35:16,289
+The
+35:16,289 --> 35:16,589
+identity
+35:16,589 --> 35:16,899
+element
+35:16,899 --> 35:17,309
+is the
+35:17,309 --> 35:17,549
+identity
+35:17,549 --> 35:17,909
+transformation
+35:17,909 --> 35:18,229
+that takes
+35:18,229 --> 35:18,539
+every element
+35:18,539 --> 35:18,879
+in the set
+35:18,879 --> 35:19,219
+T to itself.
+35:19,219 --> 35:19,519
+That's
+35:19,519 --> 35:19,799
+certainly
+35:19,799 --> 35:20,129
+one to one and
+35:20,129 --> 35:20,369
+onto.
+35:20,369 --> 35:20,629
+The
+35:20,629 --> 35:20,889
+inverse element
+35:20,889 --> 35:21,269
+is the inverse
+35:21,269 --> 35:21,629
+transformation.
+35:21,629 --> 35:21,899
+If you have a
+35:21,899 --> 35:22,209
+transformation
+35:22,209 --> 35:22,569
+that's one to one and
+35:22,569 --> 35:22,799
+onto,
+35:22,799 --> 35:23,169
+you can send
+35:23,169 --> 35:23,469
+the transformation
+35:23,469 --> 35:23,809
+back.
+35:23,809 --> 35:24,79
+That's G
+35:24,79 --> 35:24,419
+inverse.
+35:24,419 --> 35:24,619
+And
+35:24,619 --> 35:24,879
+composition
+35:24,879 --> 35:25,249
+of maps
+35:25,249 --> 35:25,599
+is associative,
+35:25,599 --> 35:25,959
+just like
+35:25,959 --> 35:26,239
+we prove
+35:26,239 --> 35:26,529
+composition
+35:26,529 --> 35:26,959
+of linear
+35:26,959 --> 35:27,259
+maps
+35:27,259 --> 35:27,579
+is associative.
+35:27,579 --> 35:27,829
+Because
+35:27,829 --> 35:28,89
+if you have three
+35:28,89 --> 35:28,439
+maps,
+35:28,439 --> 35:28,709
+then
+35:28,709 --> 35:29,19
+and you compose
+35:29,19 --> 35:29,399
+them, no matter
+35:29,399 --> 35:29,629
+how which
+35:29,629 --> 35:29,959
+way you do it,
+35:29,959 --> 35:30,289
+then it's
+35:30,289 --> 35:30,569
+the final
+35:30,569 --> 35:30,849
+map that
+35:30,849 --> 35:31,149
+takes
+35:31,149 --> 35:31,439
+an element
+35:31,439 --> 35:31,719
+in T
+35:31,719 --> 35:31,989
+first to this
+35:31,989 --> 35:32,259
+map, then
+35:32,259 --> 35:32,549
+to that map,
+35:32,549 --> 35:32,839
+then to a third
+35:32,839 --> 35:33,169
+thing in T.
+35:33,169 --> 35:33,369
+So
+35:33,369 --> 35:33,609
+this is
+35:33,609 --> 35:33,899
+the most
+35:33,899 --> 35:34,209
+general
+35:34,209 --> 35:34,449
+group in
+35:34,449 --> 35:34,739
+some sense
+35:34,739 --> 35:35,79
+of the word.
+35:35,79 --> 35:35,319
+One second,
+35:35,319 --> 35:35,609
+I just want to
+35:35,609 --> 35:35,849
+finish.
+35:35,849 --> 35:36,149
+And
+35:36,149 --> 35:36,409
+all groups,
+35:36,409 --> 35:36,769
+all groups,
+35:36,769 --> 35:37,69
+we'll
+35:37,69 --> 35:37,439
+see somehow
+35:37,439 --> 35:37,809
+arise
+35:37,809 --> 35:38,249
+by putting
+35:38,249 --> 35:38,569
+extra
+35:38,569 --> 35:38,859
+conditions
+35:38,859 --> 35:39,299
+on this
+35:39,299 --> 35:39,589
+invertible
+35:39,589 --> 35:40,79
+bijection.
+35:40,79 --> 35:40,419
+So for
+35:40,419 --> 35:40,699
+example,
+35:40,699 --> 35:41,79
+this group
+35:41,79 --> 35:41,459
+GLNR,
+35:41,459 --> 35:41,709
+how did
+35:41,709 --> 35:41,979
+that come about?
+35:41,979 --> 35:42,279
+Well,
+35:42,279 --> 35:42,549
+I started
+35:42,549 --> 35:42,839
+out with a
+35:42,839 --> 35:43,139
+set
+35:43,139 --> 35:43,369
+which was
+35:43,369 --> 35:43,709
+Rn,
+35:43,709 --> 35:43,879
+the
+35:43,879 --> 35:44,149
+set which
+35:44,149 --> 35:44,409
+was Rn.
+35:44,409 --> 35:44,669
+And
+35:44,669 --> 35:44,889
+I considered
+35:44,889 --> 35:45,329
+all invertible
+35:45,329 --> 35:45,689
+maps
+35:45,689 --> 35:45,979
+from Rn
+35:45,979 --> 35:46,289
+to Rn
+35:46,289 --> 35:46,619
+which
+35:46,619 --> 35:46,939
+preserve
+35:46,939 --> 35:47,269
+the linearity.
+35:47,269 --> 35:47,509
+Which
+35:47,509 --> 35:47,829
+preserve
+35:47,829 --> 35:48,259
+the structure
+35:48,259 --> 35:48,609
+of a vector
+35:48,609 --> 35:48,939
+space. That's
+35:48,939 --> 35:49,199
+not all
+35:49,199 --> 35:49,459
+maps, but
+35:49,459 --> 35:49,729
+the ones that
+35:49,729 --> 35:49,999
+preserve
+35:49,999 --> 35:50,339
+some structure.
+35:50,339 --> 35:50,639
+And
+35:50,639 --> 35:50,979
+that's how I got
+35:50,979 --> 35:51,269
+invertible
+35:51,269 --> 35:51,639
+matrices.
+35:51,639 --> 35:51,929
+So
+35:51,929 --> 35:52,199
+we're going to
+35:52,199 --> 35:52,419
+see that
+35:52,419 --> 35:52,649
+this is
+35:52,649 --> 35:52,889
+somehow,
+35:52,889 --> 35:53,169
+and this was
+35:53,169 --> 35:53,449
+Galois's
+35:53,449 --> 35:53,799
+big idea
+35:53,799 --> 35:54,149
+that when
+35:54,149 --> 35:54,389
+you study
+35:54,389 --> 35:54,689
+maps or
+35:54,689 --> 35:54,979
+symmetries
+35:54,979 --> 35:55,349
+of a set,
+35:55,349 --> 35:55,719
+that was
+35:55,719 --> 35:55,959
+one group
+35:55,959 --> 35:56,259
+and then you could
+35:56,259 --> 35:56,509
+get very interesting
+35:56,509 --> 35:56,919
+groups by
+35:56,919 --> 35:57,299
+studying
+35:57,299 --> 35:57,579
+symmetries
+35:57,579 --> 35:57,959
+that preserve
+35:57,959 --> 35:58,309
+some extra
+35:58,309 --> 35:58,649
+structure
+35:58,649 --> 35:58,959
+in the set,
+35:58,959 --> 35:59,289
+like some
+35:59,289 --> 35:59,559
+linear
+35:59,559 --> 35:59,889
+structure
+35:59,889 --> 36:00,239
+on the set.
+36:00,239 --> 36:00,429
+And
+36:00,429 --> 36:00,669
+in particular,
+36:00,669 --> 36:01,109
+we're going to have
+36:01,109 --> 36:01,359
+one very
+36:01,359 --> 36:01,649
+famous
+36:01,649 --> 36:01,939
+group
+36:01,939 --> 36:02,269
+where this
+36:02,269 --> 36:02,499
+T
+36:02,499 --> 36:02,769
+is the set
+36:02,769 --> 36:03,159
+of
+36:03,159 --> 36:03,319
+an
+36:03,319 --> 36:03,539
+a finite
+36:03,539 --> 36:03,819
+set
+36:03,819 --> 36:04,109
+and all finite
+36:04,109 --> 36:04,469
+sets
+36:04,469 --> 36:04,949
+are determined
+36:04,949 --> 36:05,269
+by the number
+36:05,269 --> 36:05,579
+of elements
+36:05,579 --> 36:05,879
+in them.
+36:05,879 --> 36:06,79
+So the set
+36:06,79 --> 36:06,449
+from 1
+36:06,449 --> 36:06,709
+to n,
+36:06,709 --> 36:07,79
+then
+36:07,79 --> 36:07,319
+we'll call the
+36:07,319 --> 36:07,589
+symmetry
+36:07,589 --> 36:07,949
+group of T,
+36:07,949 --> 36:08,239
+the
+36:08,239 --> 36:08,519
+symmetric
+36:08,519 --> 36:08,879
+group S
+36:08,879 --> 36:09,149
+sub n.
+36:09,149 --> 36:09,379
+We'll
+36:09,379 --> 36:09,589
+just write
+36:09,589 --> 36:09,839
+it that way.
+36:09,839 --> 36:10,69
+And
+36:10,69 --> 36:10,349
+what is
+36:10,349 --> 36:10,599
+this turns
+36:10,599 --> 36:10,959
+out to be
+36:10,959 --> 36:11,239
+a group with
+36:11,239 --> 36:11,499
+only
+36:11,499 --> 36:11,739
+finitely
+36:11,739 --> 36:12,89
+many elements
+36:12,89 --> 36:12,519
+in it
+36:12,519 --> 36:12,689
+because
+36:12,689 --> 36:12,979
+there are only
+36:12,979 --> 36:13,259
+finitely
+36:13,259 --> 36:13,569
+many ways
+36:13,569 --> 36:13,919
+you can permute
+36:13,919 --> 36:14,249
+n different
+36:14,249 --> 36:14,589
+objects.
+36:14,589 --> 36:14,859
+How many
+36:14,859 --> 36:15,129
+ways are there
+36:15,129 --> 36:15,469
+permuting
+36:15,469 --> 36:15,799
+n different
+36:15,799 --> 36:16,99
+objects?
+36:16,99 --> 36:16,329
+N factorial.
+36:16,329 --> 36:16,539
+Yeah,
+36:16,539 --> 36:16,749
+so this is
+36:16,749 --> 36:16,999
+a group
+36:16,999 --> 36:17,299
+where
+36:17,299 --> 36:17,549
+it's a finite
+36:17,549 --> 36:17,949
+group
+36:17,949 --> 36:18,249
+of
+36:18,249 --> 36:18,519
+order
+36:18,519 --> 36:18,809
+N
+36:18,809 --> 36:19,139
+factorial
+36:19,139 --> 36:19,559
+and you'll find
+36:19,559 --> 36:19,859
+that it's non-abelian
+36:19,859 --> 36:20,179
+and you should
+36:20,179 --> 36:20,479
+check that
+36:20,479 --> 36:20,749
+once
+36:20,749 --> 36:21,69
+n
+36:21,69 --> 36:21,399
+is at least
+36:21,399 --> 36:21,719
+three.
+36:21,719 --> 36:21,919
+So
+36:21,919 --> 36:22,159
+once
+36:22,159 --> 36:22,359
+there's a finite
+36:22,359 --> 36:22,709
+group with
+36:22,709 --> 36:22,979
+six elements
+36:22,979 --> 36:23,359
+in it,
+36:23,359 --> 36:23,619
+that's
+36:23,619 --> 36:23,879
+non-abelian.
+36:23,879 --> 36:24,199
+The
+36:24,199 --> 36:24,509
+permutations,
+36:24,509 --> 36:24,859
+the
+36:24,859 --> 36:25,149
+one to one
+36:25,149 --> 36:25,389
+maps
+36:25,389 --> 36:25,689
+of a set
+36:25,689 --> 36:25,999
+of three
+36:25,999 --> 36:26,289
+things to
+36:26,289 --> 36:26,589
+itself.
+36:26,589 --> 36:26,789
+And
+36:26,789 --> 36:26,999
+you should play
+36:26,999 --> 36:27,329
+with that
+36:27,329 --> 36:27,599
+a little bit.
+36:27,599 --> 36:27,809
+Okay,
+36:27,809 --> 36:28,129
+this is
+36:28,129 --> 36:28,399
+our introduction.
+36:28,399 --> 36:28,699
+This gives
+36:28,699 --> 36:28,979
+you an idea
+36:28,979 --> 36:29,299
+of what groups
+36:29,299 --> 36:29,529
+are.
+36:29,529 --> 36:29,739
+Peter
+36:29,739 --> 36:29,979
+has some
+36:29,979 --> 36:30,279
+interesting
+36:30,279 --> 36:30,579
+things. Are
+36:30,579 --> 36:30,809
+you want to put
+36:30,809 --> 36:31,9
+them on the board?
+36:31,9 --> 36:31,169
+Why not?
+36:31,169 --> 36:31,399
+So
+36:31,399 --> 36:31,679
+here's the homework.
+36:31,679 --> 36:31,979
+Recommended,
+36:31,979 --> 36:32,389
+optional.
+36:32,389 --> 36:32,599
+And
+36:32,599 --> 36:32,779
+it'll be
+36:32,779 --> 36:33,9
+on the web
+36:33,9 --> 36:33,329
+page for
+36:33,329 --> 36:33,579
+those of you
+36:33,579 --> 36:33,809
+who have to run
+36:33,809 --> 36:34,99
+now, but
+36:34,99 --> 36:34,389
+I'll put it on the
+36:34,389 --> 36:34,609
+blackboard
+36:34,609 --> 36:34,879
+too.
+36:34,879 --> 36:35,109
+This will give
+36:35,109 --> 36:35,409
+you an idea
+36:35,409 --> 36:35,719
+of whether
+36:35,719 --> 36:35,999
+you're up
+36:35,999 --> 36:36,249
+to speed,
+36:36,249 --> 36:36,549
+whether this
+36:36,549 --> 36:36,829
+is the right
+36:36,829 --> 36:37,109
+course for
+36:37,109 --> 36:37,329
+you.
+36:37,329 --> 36:37,519
+And if you want to
+36:37,519 --> 36:37,769
+talk to me
+36:37,769 --> 36:38,39
+or Peter
+36:38,39 --> 36:38,299
+about it,
+36:38,299 --> 36:38,609
+please do.
+36:38,609 --> 36:38,819
+So
+36:38,819 --> 36:39,69
+read
+36:39,69 --> 36:39,539
+1.1
+36:39,539 --> 36:39,749
+and
+36:39,749 --> 36:40,29
+pages
+36:40,29 --> 36:40,319
+38
+36:40,319 --> 36:40,669
+to 42
+36:40,669 --> 36:40,929
+and
+36:40,929 --> 36:41,159
+the exercises
+36:41,159 --> 36:41,489
+1.1.7
+36:41,489 --> 36:41,809
+1.1.16
+36:41,809 --> 36:42,179
+and
+36:42,179 --> 36:42,439
+1.1.17.
+36:42,439 --> 36:42,729
+Do
+36:42,729 --> 36:42,949
+those three
+36:42,949 --> 36:43,279
+exercises.
+36:43,279 --> 36:43,609
+If you want to
+36:43,609 --> 36:43,829
+hand it
+36:43,829 --> 36:44,99
+in,
+36:44,99 --> 36:44,399
+Peter
+36:44,399 --> 36:44,659
+or Peter will
+36:44,659 --> 36:44,899
+take a look
+36:44,899 --> 36:45,139
+at them for
+36:45,139 --> 36:45,299
+you.
+36:45,299 --> 36:45,449
+Okay?
+36:45,449 --> 36:45,719
+Thanks Peter.
+36:45,719 --> 36:45,939
+See
+36:45,939 --> 36:46,199
+you guys
+36:46,199 --> 36:46,429
+on Wednesday.
+36:46,429 --> 36:46,649
+I think
+36:46,649 --> 36:46,819
+it was good.

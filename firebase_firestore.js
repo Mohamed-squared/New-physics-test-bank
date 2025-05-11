@@ -133,7 +133,11 @@ export async function saveUserData(uid, appDataToSave = data) {
         console.log("User appData saved successfully.");
     } catch (error) {
         console.error("Error saving user appData to Firestore. UID:", uid, "Error Name:", error.name, "Error Code:", error.code, "Error Message:", error.message, "Full Error:", error);
-        alert("Error saving progress: " + error.message);
+        let alertMessage = "Error saving progress: " + error.message;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = "Error saving progress: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+        }
+        alert(alertMessage);
     }
 }
 
@@ -240,7 +244,11 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
         return true;
     } catch (error) {
         console.error(`Error saving course progress for course ${courseId}:`, error);
-        alert(`Error saving course progress: ${error.message}`);
+        let alertMessage = `Error saving course progress: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Error saving course progress: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -340,7 +348,11 @@ export async function unenrollFromCourse(uid, courseId) {
         return true;
     } catch (error) {
         console.error(`Error unenrolling from course ${courseId}:`, error);
-        alert(`Failed to unenroll: ${error.message}`);
+        let alertMessage = `Failed to unenroll: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to unenroll: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -554,7 +566,11 @@ export async function saveUserAiSettings(userId, settings) {
         return true;
     } catch (error) {
         console.error(`[saveUserAiSettings] Error saving User AI Chat Settings for user ${userId}:`, error);
-        alert("Error saving AI settings: " + error.message);
+        let alertMessage = "Error saving AI settings: " + error.message;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = "Error saving AI settings: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -696,7 +712,11 @@ export async function saveGlobalAiPrompts(promptsObject) {
         return true;
     } catch (error) {
         console.error("[saveGlobalAiPrompts] Error saving global AI prompts:", error);
-        alert("Error saving global AI prompts: " + error.message);
+        let alertMessage = "Error saving global AI prompts: " + error.message;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = "Error saving global AI prompts: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -955,21 +975,15 @@ export async function initializeUserData(uid, email, username, displayName = nul
     let docExists = false; let existingUserData = null;
     if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) { console.error("Error checking user existence:", e); } }
     
-    // Ensure username is a string and lowercase for consistency.
-    // For new users (docExists is false), username comes from signup/google sign-in.
-    // For existing users being force-reset, username might come from existingUserData.
     let usernameLower;
     if (username && typeof username === 'string') {
         usernameLower = username.toLowerCase();
     } else if (docExists && forceReset && existingUserData && typeof existingUserData.username === 'string') {
         usernameLower = existingUserData.username.toLowerCase();
     } else {
-        // Fallback if username is somehow not provided or invalid type, especially for new users.
-        // This ensures 'username' field is always a string.
         usernameLower = (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
         console.warn(`[initializeUserData] Username was not a valid string, derived as: ${usernameLower}`);
     }
-
 
     let initialIsAdmin = (uid === ADMIN_UID); 
     if (docExists && forceReset && existingUserData && typeof existingUserData.isAdmin === 'boolean') {
@@ -983,36 +997,28 @@ export async function initializeUserData(uid, email, username, displayName = nul
     if (!docExists || forceReset) {
         console.log(`[initializeUserData] Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}, Email: ${email}`);
         
-        // Deep copy initialSubjectData to avoid modifying the template
         let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
         const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); 
         
-        // Adjust subjects in appData based on whether the user is admin
         if (defaultAppData.subjects && typeof defaultAppData.subjects === 'object') {
             Object.values(defaultAppData.subjects).forEach(subject => {
                 if (!isCurrentUserInitializingAdmin) {
                     subject.status = 'pending'; 
                     subject.creatorUid = uid;
-                    // Use provided displayName, then username, then derive from email for creatorName
                     subject.creatorName = displayName || usernameLower || (email ? email.split('@')[0] : 'New User');
-                    subject.createdAt = new Date().toISOString(); // For sub-property, ISO string is fine
+                    subject.createdAt = new Date().toISOString(); 
                 } else {
-                    // For admin, keep defaults from initialSubjectData (approved, System owner)
-                    subject.status = subject.status || 'approved'; // Ensure it's set
+                    subject.status = subject.status || 'approved'; 
                     subject.creatorUid = subject.creatorUid || ADMIN_UID;
                     subject.creatorName = subject.creatorName || 'System';
                     subject.createdAt = subject.createdAt || new Date(0).toISOString();
                 }
             });
         } else {
-            // Ensure appData.subjects is at least an empty map if initialSubjectData was problematic
             console.warn("[initializeUserData] initialSubjectData.subjects was not an object. Initializing appData.subjects as {}.");
             defaultAppData.subjects = {};
         }
         
-
-        // Fetch Markdown for default subjects if user is admin or subjects are approved (relevant for ADMIN_UID case)
-        // For non-admin, subjects are 'pending', so MD sync might not be immediately critical or allowed by rules
         if (defaultAppData.subjects) {
             for (const subjectId in defaultAppData.subjects) {
                 const defaultSubject = defaultAppData.subjects[subjectId];
@@ -1025,25 +1031,23 @@ export async function initializeUserData(uid, email, username, displayName = nul
         
         const dataToSet = {
              email: email, 
-             username: usernameLower, // Ensured string, lowercase
+             username: usernameLower, 
              displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`)),
              photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
              createdAt: firebase.firestore.FieldValue.serverTimestamp(),
              onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
-             appData: defaultAppData, // Contains subjects map, possibly empty or with defaults
+             appData: defaultAppData, 
              completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
              userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
-             isAdmin: initialIsAdmin, // boolean: (uid === ADMIN_UID) for new users
-             credits: initialCredits, // number: 0 for new users
-             userAiChatSettings: getDefaultAiSettings() // object with specific structure
+             isAdmin: initialIsAdmin, 
+             credits: initialCredits, 
+             userAiChatSettings: getDefaultAiSettings()
         };
 
-        // --- MODIFICATION: Added detailed logging before set ---
         console.log(`[initializeUserData] Data being set for new user ${uid}:`, JSON.stringify(dataToSet, null, 2));
 
         try {
             await userRef.set(dataToSet); 
-            // --- MODIFICATION: Added success log ---
             console.log(`[initializeUserData] User document successfully created/reset for ${uid}`);
             
             setData(defaultAppData);
@@ -1058,24 +1062,33 @@ export async function initializeUserData(uid, email, username, displayName = nul
                 updateSubjectInfo();
             }
             
-            // Reserve username if it's a valid string (should be, due to earlier checks)
-            if (usernameLower && typeof usernameLower === 'string') { 
-                try { 
-                    const usernameRef = db.collection('usernames').doc(usernameLower); 
-                    const usernameDocCheck = await usernameRef.get(); 
-                    if (!usernameDocCheck.exists) { 
-                        await usernameRef.set({ userId: uid }); 
+            if (usernameLower && typeof usernameLower === 'string') {
+                try {
+                    const usernameRef = db.collection('usernames').doc(usernameLower);
+                    const usernameDocCheck = await usernameRef.get();
+                    if (!usernameDocCheck.exists) {
+                        await usernameRef.set({ userId: uid });
+                        console.log(`[initializeUserData] Username '${usernameLower}' successfully reserved for ${uid}.`);
                     } else if (usernameDocCheck.data().userId !== uid) {
-                        console.warn(`[initializeUserData] Username ${usernameLower} was already taken by ${usernameDocCheck.data().userId} during initialization for ${uid}. This might happen in race conditions or if initial check failed.`);
+                        console.warn(`[initializeUserData] Username ${usernameLower} was already taken by user ${usernameDocCheck.data().userId} during initialization for ${uid}. The main user document was created/updated, but this username could not be reserved.`);
+                    } else {
+                        console.log(`[initializeUserData] Username '${usernameLower}' already reserved for ${uid}. No action needed.`);
                     }
-                } catch(userErr) { 
-                    console.error("Error reserving username during initialization:", userErr); 
-                } 
+                } catch(userErr) {
+                    console.error(`[initializeUserData] Error reserving username '${usernameLower}' for ${uid} (new user path):`, userErr, "This does not prevent user document creation/update.");
+                    if (userErr.code === 'permission-denied' || (userErr.message && userErr.message.toLowerCase().includes('permission'))) {
+                        console.error(`[initializeUserData] Permission denied while trying to reserve username '${usernameLower}' for ${uid}. User document creation itself was successful. Check Firestore rules for 'usernames' collection.`);
+                    }
+                }
             }
 
         } catch (error) { 
             console.error(`[initializeUserData] Error setting user data for ${uid}:`, error); 
-            alert("Error setting up initial user data: " + error.message); 
+            let alertMessage = "Error setting up initial user data: " + error.message;
+            if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+                alertMessage = "Error setting up initial user data: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+            }
+            alert(alertMessage); 
         }
     } else { // Document exists and not forceReset: Update missing fields if any
         let updatesNeeded = {};
@@ -1098,20 +1111,32 @@ export async function initializeUserData(uid, email, username, displayName = nul
          if (Object.keys(updatesNeeded).length > 0) {
              console.log(`[initializeUserData] Updating missing fields for existing user ${uid}:`, Object.keys(updatesNeeded));
              try {
-                 await userRef.update(updatesNeeded);
+                 await userRef.update(updatesNeeded); // Main user document updated here
+
                  if (updatesNeeded.username) { 
-                     try { 
-                         const usernameRef = db.collection('usernames').doc(updatesNeeded.username); 
-                         const usernameDoc = await usernameRef.get(); 
-                         if (!usernameDoc.exists) { 
-                             await usernameRef.set({ userId: uid }); 
-                         } 
-                     } catch (userErr) { 
-                         console.error("Error reserving username on update:", userErr);
-                     } 
+                     const usernameToReserve = updatesNeeded.username; // This is usernameLower
+                     try {
+                         const usernameRef = db.collection('usernames').doc(usernameToReserve);
+                         const usernameDocCheck = await usernameRef.get();
+                         if (!usernameDocCheck.exists) {
+                             await usernameRef.set({ userId: uid });
+                             console.log(`[initializeUserData] Username '${usernameToReserve}' successfully reserved for existing user ${uid} during field update.`);
+                         } else if (usernameDocCheck.data().userId !== uid) {
+                             console.warn(`[initializeUserData] Username '${usernameToReserve}' was already taken by user ${usernameDocCheck.data().userId} when trying to set it for existing user ${uid}. The user document's username field was updated to '${usernameToReserve}', but this username could not be exclusively reserved in the 'usernames' collection.`);
+                         } else {
+                             console.log(`[initializeUserData] Username '${usernameToReserve}' already reserved for existing user ${uid}. No action needed for reservation.`);
+                         }
+                     } catch (userErr) {
+                         console.error(`[initializeUserData] Error reserving username '${usernameToReserve}' for existing user ${uid} (update path):`, userErr, "This does not prevent other user field updates.");
+                         if (userErr.code === 'permission-denied' || (userErr.message && userErr.message.toLowerCase().includes('permission'))) {
+                            console.error(`[initializeUserData] Permission denied while trying to reserve username '${usernameToReserve}' for ${uid} during update. Other user fields were updated. Check Firestore rules for 'usernames' collection.`);
+                        }
+                     }
                  }
              } catch(updateError) { 
-                 console.error("[initializeUserData] Error updating existing user fields:", updateError); 
+                 console.error("[initializeUserData] Error updating existing user fields (main update):", updateError); 
+                 // Optionally alert if this main update fails, and it's critical.
+                 // For now, just console.error as it's often a background sync.
              }
          } else { 
              console.log(`[initializeUserData] User data already exists for ${uid}. No standard fields needed update.`); 
@@ -1134,7 +1159,14 @@ export async function checkOnboarding(uid) {
         } else if (doc.exists) {
             console.log("Onboarding complete or not applicable.");
         } else { console.warn("User doc not found during onboarding check."); }
-    } catch (error) { console.error("Error checking onboarding status:", error); alert("Error checking user setup: " + error.message); }
+    } catch (error) { 
+        console.error("Error checking onboarding status:", error); 
+        let alertMessage = "Error checking user setup: " + error.message;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = "Error checking user setup: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+        }
+        alert(alertMessage);
+    }
 }
 
 // --- Feedback Management ---
@@ -1146,7 +1178,15 @@ export async function submitFeedback(feedbackData, user) {
     try {
         await feedbackRef.set({ subjectId: feedbackData.subjectId || 'N/A', questionId: feedbackData.questionId || 'N/A', feedbackText: feedbackData.feedbackText, context: feedbackData.context || null, userId: user.uid, username: user.displayName || user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp(), status: 'new' });
         console.log(`Feedback/Issue submitted successfully to ${collectionName}:`, feedbackRef.id); return true;
-    } catch (error) { console.error(`Error submitting to ${collectionName}:`, error); alert(`Failed to submit: ${error.message}`); return false; }
+    } catch (error) { 
+        console.error(`Error submitting to ${collectionName}:`, error); 
+        let alertMessage = `Failed to submit: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to submit: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
+        return false; 
+    }
 }
 
 // --- Inbox/Messaging ---
@@ -1161,7 +1201,15 @@ export async function sendAdminReply(recipientUid, subject, body, adminUser) {
      try {
          await messageRef.set({ senderId: adminUser.uid, senderName: "Admin", timestamp: firebase.firestore.FieldValue.serverTimestamp(), subject: subject, body: body, isRead: false });
          console.log(`Admin reply sent to user ${recipientUid}.`); return true;
-     } catch (error) { console.error("Error sending admin reply:", error); alert("Failed to send reply: " + error.message); return false; }
+     } catch (error) { 
+         console.error("Error sending admin reply:", error); 
+         let alertMessage = "Failed to send reply: " + error.message;
+         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = "Failed to send reply: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
+         }
+         alert(alertMessage);
+         return false; 
+     }
 }
 export async function markMessageAsRead(messageId, user) {
       if (!db || !user || !messageId) { console.error("Cannot mark message read: Data missing."); return false; }
@@ -1299,7 +1347,11 @@ export async function updateCourseDefinition(courseId, updates) {
          return true;
      } catch (error) {
          console.error(`Error updating/setting course definition for ${courseId}:`, error);
-         alert(`Failed to update course: ${error.message}`);
+         let alertMessage = `Failed to update course: ${error.message}`;
+         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to update course: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+         }
+         alert(alertMessage);
          return false;
      }
 }
@@ -1381,7 +1433,14 @@ export async function addCourseToFirestore(courseData) {
         return { success: true, id: docRef.id, status: finalStatus };
     } catch (error) {
         console.error("Error adding course:", error);
-        return { success: false, message: error.message };
+        // Note: This function returns a message, it does not directly alert. 
+        // If an alert is desired here, it would need to be added based on the success flag in the calling code.
+        // For now, adhering to "alerts are generated on error" in *this* file.
+        let message = error.message;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            message = `Failed to add course: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        return { success: false, message: message };
     }
 }
 
@@ -1539,7 +1598,11 @@ export async function updateCourseStatusForUser(targetUserId, courseId, finalMar
         return true;
     } catch (error) {
         console.error(`Error updating course status/grade for user ${targetUserId}, course ${courseId}:`, error);
-        alert(`Failed to update course status: ${error.message}`);
+        let alertMessage = `Failed to update course status: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to update course status: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -1567,7 +1630,15 @@ export async function handleAddBadgeForUser(userId, courseId, courseName, grade,
          hideLoading(); alert("Badge added successfully!");
          const searchInput = document.getElementById('admin-user-search-badges');
          if (searchInput && (searchInput.value === userId || searchInput.value.toLowerCase() === userDoc.data()?.email?.toLowerCase())) { window.loadUserBadgesForAdmin(); }
-     } catch (error) { hideLoading(); console.error("Error adding badge:", error); alert(`Failed to add badge: ${error.message}`); }
+     } catch (error) { 
+         hideLoading(); 
+         console.error("Error adding badge:", error); 
+         let alertMessage = `Failed to add badge: ${error.message}`;
+         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to add badge: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+         }
+         alert(alertMessage);
+     }
 }
 
 export async function handleRemoveBadgeForUser(userId, courseId) {
@@ -1583,7 +1654,15 @@ export async function handleRemoveBadgeForUser(userId, courseId) {
          hideLoading(); alert("Badge removed successfully!");
          const searchInput = document.getElementById('admin-user-search-badges');
          if (searchInput && (searchInput.value === userId || searchInput.value.toLowerCase() === userDoc.data()?.email?.toLowerCase())) { window.loadUserBadgesForAdmin(); }
-     } catch (error) { hideLoading(); console.error("Error removing badge:", error); alert(`Failed to remove badge: ${error.message}`); }
+     } catch (error) { 
+         hideLoading(); 
+         console.error("Error removing badge:", error); 
+         let alertMessage = `Failed to remove badge: ${error.message}`;
+         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to remove badge: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+         }
+         alert(alertMessage);
+     }
 }
 
 // --- NEW: Admin Update Username ---
@@ -1652,7 +1731,15 @@ export async function adminUpdateUsername(userId, oldUsername, newUsername) {
         if (error.message.includes("already taken")) {
             throw error; 
         }
-        throw new Error(`Failed to update username: ${error.message}`);
+        // Note: This function throws an error. The calling UI code should handle alerting the user.
+        // If a direct alert is needed from here, it would be added here, checking for permission errors.
+        // For now, adhering to "alerts are generated on error" in *this* file.
+        // If this throw is caught and results in an alert in UI, that UI code would need the logic.
+        let errorMessage = `Failed to update username: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            errorMessage = `Failed to update username: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        throw new Error(errorMessage);
     }
 }
 
@@ -1777,7 +1864,11 @@ export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
              return true;
          } catch (setError) {
               console.error(`Error setting user notes after update failed:`, setError);
-              alert("Failed to save notes.");
+              let alertMessage = "Failed to save notes: " + setError.message;
+              if (setError.code === 'permission-denied' || (setError.message && setError.message.toLowerCase().includes('permission'))) {
+                  alertMessage = "Failed to save notes: Permission Denied. Please check Firestore security rules or contact support. Details: " + setError.message;
+              }
+              alert(alertMessage);
               return false;
          }
      }
@@ -1822,7 +1913,11 @@ export async function saveSharedNote(courseId, chapterNum, noteData, user) {
          return true;
      } catch (error) {
          console.error(`Error saving shared note ${docId}:`, error);
-         alert(`Failed to share note: ${error.message}`);
+         let alertMessage = `Failed to share note: ${error.message}`;
+         if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to share note: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+         }
+         alert(alertMessage);
          return false;
      }
 }
@@ -2107,7 +2202,11 @@ export async function deleteCourseActivityProgress(userId, courseId, activityTyp
         return true;
     } catch (error) {
         console.error(`Error deleting course activity progress:`, error);
-        alert(`Error deleting progress: ${error.message}`); 
+        let alertMessage = `Error deleting progress: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Error deleting progress: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage); 
         return false;
     }
 }
@@ -2173,7 +2272,11 @@ export async function addAdminTask(taskText) {
         return docRef.id;
     } catch (error) {
         console.error("Error adding admin task:", error);
-        alert(`Failed to add task: ${error.message}`);
+        let alertMessage = `Failed to add task: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to add task: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return null;
     }
 }
@@ -2204,7 +2307,11 @@ export async function updateAdminTaskStatus(taskId, newStatus) {
         return true;
     } catch (error) {
         console.error(`Error updating status for admin task ${taskId}:`, error);
-        alert(`Failed to update task status: ${error.message}`);
+        let alertMessage = `Failed to update task status: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to update task status: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -2247,7 +2354,11 @@ export async function deleteAdminTask(taskId) {
         return true;
     } catch (error) {
         console.error(`Error deleting admin task ${taskId}:`, error);
-        alert(`Failed to delete task: ${error.message}`);
+        let alertMessage = `Failed to delete task: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to delete task: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -2278,7 +2389,13 @@ export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
         return true;
     } catch (error) {
         console.error(`Error toggling admin status for user ${targetUserId}:`, error);
-        throw new Error(`Failed to toggle admin status: ${error.message}`);
+        // Note: This function throws an error. The calling UI code should handle alerting the user.
+        // If a direct alert is needed from here, it would be added here, checking for permission errors.
+        let errorMessage = `Failed to toggle admin status: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            errorMessage = `Failed to toggle admin status: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        throw new Error(errorMessage);
     }
 }
 
@@ -2324,7 +2441,11 @@ export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subje
         return true;
     } catch (error) {
         console.error(`Error updating subject status for user ${targetUserId}:`, error);
-        alert(`Failed to update subject status: ${error.message}`);
+        let alertMessage = `Failed to update subject status: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to update subject status: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -2392,7 +2513,11 @@ export async function updateUserCredits(userId, creditChange, reason) {
         return true;
     } catch (error) {
         console.error(`Error updating credits for user ${userId}:`, error);
-        alert(`Failed to update credits: ${error.message}`);
+        let alertMessage = `Failed to update credits: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to update credits: Permission Denied. Please check Firestore security rules or contact support. Details: ${error.message}`;
+        }
+        alert(alertMessage);
         return false;
     }
 }
@@ -2447,6 +2572,13 @@ export async function saveChatSession(userId, sessionId, sessionData) {
         console.log(`AI Chat session ${sessionId} saved successfully for user ${userId}.`);
     } catch (error) {
         console.error(`Error saving AI Chat session ${sessionId} for user ${userId}:`, error);
+        // This function currently throws error, UI should handle alert.
+        // If direct alert desired, add logic here like:
+        // let errorMessage = `Error saving AI Chat session: ${error.message}`;
+        // if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+        //     errorMessage = `Error saving AI Chat session: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        // }
+        // alert(errorMessage);
         throw error; 
     }
 }
@@ -2496,6 +2628,8 @@ export async function deleteChatSessionFromFirestore(userId, sessionId) {
         console.log(`AI Chat session ${sessionId} deleted successfully for user ${userId}.`);
     } catch (error) {
         console.error(`Error deleting AI Chat session ${sessionId} for user ${userId}:`, error);
+        // This function currently throws error, UI should handle alert.
+        // If direct alert desired, add logic here.
         throw error; 
     }
 }
