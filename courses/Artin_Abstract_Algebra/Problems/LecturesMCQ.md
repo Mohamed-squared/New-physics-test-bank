@@ -1,4 +1,4 @@
-### Chapter 1: Matrix Operations (Based on Lecture)
+### Chapter 1: Lec 1
 
 1.  The set of all $n \times n$ matrices with real entries is denoted as:
     A.  $GL_n(\mathbb{R})$
@@ -358,4 +358,440 @@
     C. Closure
     D. Existence of Identity
     E. Existence of Inverses
+    ans: C
+
+### Chapter 1: Lec 2
+
+1.  The General Linear Group $GL_n(\mathbb{R})$ consists of:
+    A.  All $n \times n$ matrices with real entries.
+    B.  All invertible $n \times n$ matrices with real entries.
+    C.  All symmetric $n \times n$ matrices with real entries.
+    D.  All $n \times n$ matrices with integer entries.
+    E.  All permutations of $n$ elements.
+    ans: B
+
+2.  Which operation forms the group operation for $GL_n(\mathbb{R})$?
+    A.  Matrix Addition
+    B.  Matrix Multiplication
+    C.  Scalar Multiplication
+    D.  Taking the Determinant
+    E.  Taking the Transpose
+    ans: B
+
+3.  What is the identity element in the group $GL_n(\mathbb{R})$?
+    A.  The zero matrix $0$.
+    B.  The matrix with all entries equal to 1.
+    C.  The identity matrix $I$.
+    D.  Any diagonal matrix.
+    E.  There is no single identity element.
+    ans: C
+
+4.  For a set $G$ with an operation $*$ to be a group, which property must hold for all $a, b, c \in G$?
+    A.  $a * b = b * a$ (Commutativity)
+    B.  $(a * b) * c = a * (b * c)$ (Associativity)
+    C.  $a * a = a$ (Idempotence)
+    D.  There exists $e$ such that $a * e = a$. (Right Identity only)
+    E.  For every $a$, there exists $a^{-1}$ such that $a * a^{-1} = e$. (Right Inverse only)
+    ans: B
+
+5.  Which of the following is NOT a required property for a set $G$ with operation $*$ to be a group?
+    A.  Closure: For all $a, b \in G$, $a * b \in G$.
+    B.  Associativity: For all $a, b, c \in G$, $(a * b) * c = a * (b * c)$.
+    C.  Identity Element: There exists $e \in G$ such that for all $a \in G$, $a * e = e * a = a$.
+    D.  Inverse Element: For each $a \in G$, there exists $a^{-1} \in G$ such that $a * a^{-1} = a^{-1} * a = e$.
+    E.  Commutativity: For all $a, b \in G$, $a * b = b * a$.
+    ans: E
+
+6.  The group $GL_n(\mathbb{R})$ satisfies all the group axioms because matrix multiplication is associative, the identity matrix $I$ serves as the identity element, every matrix $A \in GL_n(\mathbb{R})$ has an inverse $A^{-1} \in GL_n(\mathbb{R})$, and:
+    A.  Matrix multiplication is commutative.
+    B.  The product of two invertible matrices is invertible ($\det(AB) = \det(A)\det(B) \neq 0$).
+    C.  The sum of two invertible matrices is invertible.
+    D.  All matrices in $GL_n(\mathbb{R})$ are symmetric.
+    E.  The determinant of any matrix in $GL_n(\mathbb{R})$ is 1.
+    ans: B
+
+7.  Why is the set of ALL $n \times n$ matrices $M_n(\mathbb{R})$ NOT a group under matrix multiplication?
+    A.  Matrix multiplication is not associative.
+    B.  There is no identity matrix.
+    C.  Not all matrices have multiplicative inverses (e.g., the zero matrix).
+    D.  The set is not closed under multiplication.
+    E.  Matrix multiplication is not commutative.
+    ans: C
+
+8.  The definition of matrix multiplication $C=AB$ where $A=[a_{ik}]$ and $B=[b_{kj}]$ is:
+    A.  $c_{ij} = a_{ij} + b_{ij}$
+    B.  $c_{ij} = \sum_k a_{ik} b_{kj}$
+    C.  $c_{ij} = a_{ij} b_{ij}$
+    D.  $c_{ij} = \sum_k a_{ki} b_{jk}$
+    E.  $c_{ij} = \det(A) b_{ij}$
+    ans: B
+
+9.  Is the group $GL_n(\mathbb{R})$ generally Abelian (commutative)?
+    A.  Yes, for all $n$.
+    B.  Yes, for $n=1$ only.
+    C.  Yes, for $n=1$ and $n=2$.
+    D.  No, only if $n=1$. It is generally non-abelian for $n \ge 2$.
+    E.  No, it is never abelian.
+    ans: D
+
+10. The group $GL_n(\mathbb{C})$ consists of:
+    A.  Invertible $n \times n$ matrices with real entries.
+    B.  Invertible $n \times n$ matrices with integer entries.
+    C.  Invertible $n \times n$ matrices with rational entries.
+    D.  Invertible $n \times n$ matrices with complex entries.
+    E.  All $n \times n$ matrices with complex entries.
+    ans: D
+
+11. The group $GL_n(\mathbb{Q})$ consists of:
+    A.  Invertible $n \times n$ matrices with real entries.
+    B.  Invertible $n \times n$ matrices with integer entries.
+    C.  Invertible $n \times n$ matrices with rational entries.
+    D.  Invertible $n \times n$ matrices with complex entries.
+    E.  All $n \times n$ matrices with rational entries.
+    ans: C
+
+12. The set of integers $\mathbb{Z} = \{..., -1, 0, 1, ...\}$ forms a group under which operation?
+    A.  Multiplication
+    B.  Subtraction
+    C.  Division
+    D.  Addition
+    E.  Exponentiation
+    ans: D
+
+13. What is the identity element in the group $(\mathbb{Z}, +)$?
+    A.  1
+    B.  -1
+    C.  0
+    D.  There is no identity.
+    E.  It depends on the integer.
+    ans: C
+
+14. Is the group $(\mathbb{Z}, +)$ Abelian?
+    A.  Yes
+    B.  No
+    C.  Only for positive integers
+    D.  Only for even integers
+    E.  Sometimes
+    ans: A
+
+15. Any vector space $V$ forms an Abelian group under which operation?
+    A.  Scalar Multiplication
+    B.  Dot Product
+    C.  Cross Product
+    D.  Vector Addition
+    E.  Matrix Multiplication
+    ans: D
+
+16. Let $T$ be any set. The set $Sym(T)$ consists of:
+    A.  All functions from $T$ to $T$.
+    B.  All injective (one-to-one) functions from $T$ to $T$.
+    C.  All surjective (onto) functions from $T$ to $T$.
+    D.  All bijective (one-to-one and onto) functions from $T$ to $T$.
+    E.  All subsets of $T$.
+    ans: D
+
+17. What is the group operation in $Sym(T)$?
+    A.  Function addition
+    B.  Pointwise multiplication
+    C.  Composition of functions
+    D.  Set union
+    E.  Set intersection
+    ans: C
+
+18. What is the identity element in $Sym(T)$?
+    A.  The constant function $f(t) = t_0$ for some $t_0 \in T$.
+    B.  The zero function (if applicable).
+    C.  The identity map $id(t) = t$.
+    D.  The empty function.
+    E.  There might not be one.
+    ans: C
+
+19. If $f \in Sym(T)$, what is its inverse element $f^{-1}$ in the group?
+    A.  The function $1/f$.
+    B.  The function $-f$.
+    C.  The inverse function (which exists because $f$ is bijective).
+    D.  The identity map.
+    E.  The function $f$ itself.
+    ans: C
+
+20. In the context of the lecture, the term "automorphism" of a set $T$ is used synonymously with:
+    A.  Any function $T \to T$.
+    B.  An injective function $T \to T$.
+    C.  A surjective function $T \to T$.
+    D.  A bijective function $T \to T$.
+    E.  A homomorphism $T \to T$.
+    ans: D
+
+21. The Symmetric Group $S_n$ is defined as:
+    A.  $Sym(\mathbb{R}^n)$
+    B.  $Sym(\mathbb{Z})$
+    C.  $Sym(\{1, 2, ..., n\})$
+    D.  $GL_n(\mathbb{R})$
+    E.  The set of all $n \times n$ symmetric matrices.
+    ans: C
+
+22. An element of the Symmetric Group $S_n$ is called a:
+    A.  Matrix
+    B.  Vector
+    C.  Permutation
+    D.  Cycle
+    E.  Transposition
+    ans: C
+
+23. What is the order (number of elements) of the group $S_n$?
+    A.  $n$
+    B.  $n^2$
+    C.  $2n$
+    D.  $n!$
+    E.  Infinite
+    ans: D
+
+24. For which values of $n$ is the Symmetric Group $S_n$ Abelian?
+    A.  $n=1$ only
+    B.  $n=2$ only
+    C.  $n=1$ and $n=2$
+    D.  $n \ge 3$
+    E.  All $n$
+    ans: C
+
+25. $GL_n(\mathbb{R})$ is a subgroup of $Sym(\mathbb{R}^n)$ consisting of the bijections that preserve:
+    A.  Distances
+    B.  Angles
+    C.  The origin
+    D.  The linear (vector space) structure
+    E.  The coordinate axes
+    ans: D
+
+26. A subset $H$ of a group $G$ is a subgroup if:
+    A.  $H$ is non-empty.
+    B.  $H$ is closed under the group operation of $G$.
+    C.  $H$ contains the identity element of $G$.
+    D.  For every $h \in H$, its inverse $h^{-1}$ (from $G$) is also in $H$.
+    E.  All of the above (B, C, and D imply A).
+    ans: E
+
+27. Which of the following conditions is sufficient to show a non-empty subset $H$ of a group $G$ is a subgroup?
+    A.  For all $a, b \in H$, $a b \in H$.
+    B.  For all $a \in H$, $a^{-1} \in H$.
+    C.  For all $a, b \in H$, $a b^{-1} \in H$.
+    D.  $H$ contains the identity element $e$.
+    E.  $H$ is finite.
+    ans: C
+
+28. Every group $G$ has at least two subgroups (unless $G=\{e\}$). What are these "trivial" subgroups?
+    A.  The center $Z(G)$ and the commutator subgroup $[G,G]$.
+    B.  The subgroup containing only the identity $\{e\}$ and the group $G$ itself.
+    C.  The set of elements of finite order and the set of elements of infinite order.
+    D.  The set of invertible elements and the set of non-invertible elements.
+    E.  Abelian subgroups and non-abelian subgroups.
+    ans: B
+
+29. The group $S_1 = Sym(\{1\})$ contains how many elements?
+    A.  0
+    B.  1 (the identity)
+    C.  2
+    D.  $1! = 1$
+    E.  Both B and D are correct.
+    ans: E
+
+30. The group $S_2 = Sym(\{1, 2\})$ has order $2! = 2$. Its elements are the identity $e$ and the transposition $\tau = (1 2)$. What is $\tau^2$?
+    A.  $\tau$
+    B.  $e$
+    C.  A different element
+    D.  Undefined
+    E.  Depends on the representation.
+    ans: B
+
+31. Based on its multiplication table ($e*e=e, e*\tau=\tau, \tau*e=\tau, \tau*\tau=e$), the group $S_2$ is:
+    A.  Non-abelian
+    B.  Cyclic
+    C.  Abelian
+    D.  Infinite
+    E.  Both B and C are correct.
+    ans: E
+
+32. How many elements does the group $S_3 = Sym(\{1, 2, 3\})$ have?
+    A.  3
+    B.  6
+    C.  8
+    D.  9
+    E.  $3^2=9$
+    ans: B
+
+33. Which of the following is NOT an element of $S_3$? (Using cycle notation)
+    A.  $e$ (identity)
+    B.  $(1 2)$
+    C.  $(1 3)$
+    D.  $(2 3)$
+    E.  $(1 2 3 4)$
+    ans: E
+
+34. Let $\tau = (1 2)$ and $\sigma = (1 2 3)$ in $S_3$. The lecture computed $\tau\sigma$ (apply $\sigma$ then $\tau$) and found it sends $1 \to 1$, $2 \to 3$, $3 \to 2$. Which element is $\tau\sigma$?
+    A.  $e$
+    B.  $(1 2)$
+    C.  $(1 3)$
+    D.  $(2 3)$
+    E.  $(1 2 3)$
+    ans: D
+
+35. Let $\tau = (1 2)$ and $\sigma = (1 2 3)$ in $S_3$. The lecture computed $\sigma\tau$ (apply $\tau$ then $\sigma$) and found it sends $1 \to 3$, $2 \to 2$, $3 \to 1$. Which element is $\sigma\tau$?
+    A.  $e$
+    B.  $(1 2)$
+    C.  $(1 3)$
+    D.  $(2 3)$
+    E.  $(1 3 2)$
+    ans: C
+
+36. A permutation that exchanges exactly two elements and leaves all others fixed is called a:
+    A.  Cycle
+    B.  Rotation
+    C.  Reflection
+    D.  Transposition
+    E.  Identity
+    ans: D
+
+37. If $\tau$ is a transposition in $S_n$, what is $\tau^2$?
+    A.  $\tau$
+    B.  $e$ (the identity)
+    C.  $\tau^{-1}$ (which equals $\tau$)
+    D.  Another transposition
+    E.  Both B and C are correct.
+    ans: E
+
+38. The set $b\mathbb{Z} = \{ b k \mid k \in \mathbb{Z} \}$ consists of all integer multiples of $b$. This set forms a subgroup of $(\mathbb{Z}, +)$ because:
+    A.  It contains 0 ($b \times 0$).
+    B.  The sum of two multiples of $b$ is a multiple of $b$ ($bm + bn = b(m+n)$).
+    C.  The additive inverse of a multiple of $b$ is a multiple of $b$ ($-(bm) = b(-m)$).
+    D.  All of the above.
+    E.  It is finite.
+    ans: D
+
+39. A key theorem states that every subgroup of the additive group of integers $(\mathbb{Z}, +)$ is of the form:
+    A.  $\{0, 1, ..., n\}$ for some $n$.
+    B.  $\{ k \in \mathbb{Z} \mid k \text{ is prime} \}$.
+    C.  $\{ k \in \mathbb{Z} \mid k \text{ is even} \}$.
+    D.  $b\mathbb{Z}$ for some integer $b \ge 0$.
+    E.  $\{ k \in \mathbb{Z} \mid k \ge 0 \}$.
+    ans: D
+
+40. The proof that every subgroup $H$ of $(\mathbb{Z}, +)$ is $b\mathbb{Z}$ relies on considering $b$ to be:
+    A.  The largest element in $H$.
+    B.  Any element in $H$.
+    C.  The smallest positive element in $H$ (if $H \neq \{0\}$).
+    D.  An element not in $H$.
+    E.  The identity element 0.
+    ans: C
+
+41. How can $S_k$ (for $k < n$) be viewed as a subgroup of $S_n$?
+    A.  By considering only permutations that move elements $1, ..., k$.
+    B.  By considering permutations in $S_n$ that fix the elements $k+1, k+2, ..., n$.
+    C.  By adding the identity element $n-k$ times.
+    D.  By taking the first $k$ elements of each permutation in $S_n$.
+    E.  It cannot be viewed as a subgroup.
+    ans: B
+
+42. Consider the subgroup of $GL_2(\mathbb{R})$ consisting of matrices that stabilize the line $y=0$ (the x-axis). A matrix $\begin{pmatrix} a & b \\ c & d \end{pmatrix}$ is in this subgroup if and only if:
+    A.  $a=0$
+    B.  $b=0$
+    C.  $c=0$
+    D.  $d=0$
+    E.  $a=d=1$
+    ans: C (Correction: The lecture derived b=0. Let's recheck the transcript. Hmm, the transcript is confusing. 34:05 "What does it mean that it fixes the first basis vector? It means that the entry B in the matrix is zero." This refers to $A(1,0) = (a,c)$. For this to be a multiple of $(1,0)$, $c$ must be 0. Let's assume the lecturer misspoke/miswrote B for C.)
+    ans: C
+
+43. The set of matrices of the form $\begin{pmatrix} a & 0 \\ c & d \end{pmatrix}$ with $ad \neq 0$ forms a subgroup of $GL_2(\mathbb{R})$ because the product $\begin{pmatrix} a & 0 \\ c & d \end{pmatrix} \begin{pmatrix} a' & 0 \\ c' & d' \end{pmatrix}$ is:
+    A.  $\begin{pmatrix} aa' & 0 \\ cc' & dd' \end{pmatrix}$
+    B.  $\begin{pmatrix} aa' & 0 \\ ca'+dc' & dd' \end{pmatrix}$
+    C.  $\begin{pmatrix} aa' & ac'+cd' \\ 0 & dd' \end{pmatrix}$
+    D.  $\begin{pmatrix} aa' & bb' \\ cc' & dd' \end{pmatrix}$
+    E.  The identity matrix.
+    ans: B (Assuming c=0 was the condition from Q42. Rechecking transcript 35:04 "We better check that if we multiply two matrices that look like this [a b; c d] ... oh, [a 0; c d]... no wait, the lecture derived b=0 at 34:09, contradicting the derivation for fixing (1,0) needing c=0 at 34:06. Let's go with the $b=0$ derivation as stated later in the text 34:38 "So a matrix will fix this line if and only if the B entry is zero" and "AD is not equal to 0". Product: $\begin{pmatrix} a & 0 \\ c & d \end{pmatrix} \begin{pmatrix} a' & 0 \\ c' & d' \end{pmatrix} = \begin{pmatrix} aa' & 0 \\ ca'+dc' & dd' \end{pmatrix}$. This form does NOT have $b=0$. Let's assume the condition was $c=0$. Product: $\begin{pmatrix} a & b \\ 0 & d \end{pmatrix} \begin{pmatrix} a' & b' \\ 0 & d' \end{pmatrix} = \begin{pmatrix} aa' & ab'+bd' \\ 0 & dd' \end{pmatrix}$. This IS closed. Okay, the question must assume the condition for fixing $y=0$ requires $c=0$.)
+    ans: B (Based on calculation assuming $c=0$ form)
+
+44. The subgroup of $GL_2(\mathbb{R})$ consisting of matrices $\begin{pmatrix} a & b \\ 0 & d \end{pmatrix}$ (upper triangular) corresponds to linear transformations that stabilize (map to itself) which line?
+    A.  The y-axis ($x=0$)
+    B.  The x-axis ($y=0$)
+    C.  The line $y=x$
+    D.  The line $y=-x$
+    E.  The origin only
+    ans: B
+
+45. For an element $g$ in a group $G$, the cyclic subgroup generated by $g$, denoted $\langle g \rangle$, is:
+    A.  The set $\{e, g\}$.
+    B.  The set of all elements $x$ such that $xg = gx$.
+    C.  The set of all integer powers of $g$, $\{ g^k \mid k \in \mathbb{Z} \}$.
+    D.  The set $\{g, g^{-1}\}$.
+    E.  The group $G$ itself.
+    ans: C
+
+46. The cyclic subgroup $\langle g \rangle = \{ g^k \mid k \in \mathbb{Z} \}$ is always:
+    A.  Non-abelian
+    B.  Finite
+    C.  Infinite
+    D.  Abelian
+    E.  The trivial group $\{e\}$.
+    ans: D
+
+47. The order of an element $g$ in a group $G$ is:
+    A.  The number of elements in the group $G$.
+    B.  The smallest positive integer $m$ such that $g^m = g$.
+    C.  The smallest positive integer $m$ such that $g^m = e$ (the identity), if such an $m$ exists.
+    D.  The number of distinct powers $g^k$.
+    E.  Infinite, always.
+    ans: C
+
+48. If no positive integer $m$ exists such that $g^m = e$, the element $g$ is said to have:
+    A.  Order 0
+    B.  Order 1
+    C.  Prime order
+    D.  Infinite order
+    E.  Undefined order
+    ans: D
+
+49. In the group $S_3$, what is the order of the transposition $\tau = (1 2)$?
+    A.  1
+    B.  2 (since $\tau^2 = e$)
+    C.  3
+    D.  6
+    E.  Infinite
+    ans: B
+
+50. In the group $S_3$, what is the order of the 3-cycle $\sigma = (1 2 3)$?
+    A.  1
+    B.  2
+    C.  3 (since $\sigma^2 = (1 3 2)$ and $\sigma^3 = e$)
+    D.  6
+    E.  Infinite
+    ans: C
+
+51. A major theorem (Lagrange's Theorem, hinted at) states that in a finite group $G$, the order of any element $g$:
+    A.  Must be equal to the order of the group $|G|$.
+    B.  Must divide the order of the group $|G|$.
+    C.  Must be prime.
+    D.  Must be less than the order of the group $|G|$.
+    E.  Can be any integer.
+    ans: B
+
+52. The mathematician Niels Abel, after whom Abelian groups are named, made significant contributions before dying young from:
+    A.  A duel
+    B.  Tuberculosis
+    C.  A political execution
+    D.  Starvation
+    E.  Old age
+    ans: B (The lecture mentions Galois died in a duel, implicitly contrasting with Abel)
+
+53. Evariste Galois laid foundations for group theory and finite fields before dying at age 20 from:
+    A.  Tuberculosis
+    B.  A duel
+    C.  Smallpox
+    D.  Yellow fever
+    E.  A carriage accident
+    ans: B
+
+54. The lecture compares learning algebra, especially group theory with its definitions and structures, to:
+    A.  Memorizing formulas
+    B.  Learning a programming language
+    C.  Learning a natural language
+    D.  Solving puzzles
+    E.  Building with blocks
     ans: C

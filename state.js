@@ -209,6 +209,14 @@ export function clearUserSession() {
      document.getElementById('course-dashboard-area')?.classList.add('hidden');
 }
 
+export let courseExamDefaults = null; // Will hold defaults loaded from Firestore
+
+
+export function setCourseExamDefaults(newDefaults) {
+    courseExamDefaults = newDefaults;
+    console.log("[State] Course Exam Defaults set:", courseExamDefaults);
+}
+
 /** Structure Update Notes for currentUser (added username, isAdmin) */
 /*
 currentUser object:

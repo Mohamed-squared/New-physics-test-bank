@@ -4,7 +4,8 @@ import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
-    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap
+    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap,
+    setCourseExamDefaults
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -13,7 +14,7 @@ import {
     initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
-    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG
 } from './config.js';
 import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
@@ -31,6 +32,88 @@ const userCreditLogSubCollection = "creditLog";
 const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Chat
 const globalSettingsCollection = "settings";
 const aiPromptsDocId = "aiPrompts";
+
+const settingsCollection = "settings";
+const courseExamDefaultsDocId = "courseExamDefaults";
+
+export async function loadCourseExamDefaults() {
+    if (!db) {
+        console.error("[loadCourseExamDefaults] Firestore DB not initialized.");
+        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG }); // Use a deep copy of fallback
+        return;
+    }
+    const docRef = db.collection(settingsCollection).doc(courseExamDefaultsDocId);
+    try {
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            const defaultsFromDb = docSnap.data();
+            // Merge with fallback to ensure all exam types and their properties are present
+            const mergedDefaults = {};
+            for (const examType in FALLBACK_EXAM_CONFIG) {
+                mergedDefaults[examType] = {
+                    ...FALLBACK_EXAM_CONFIG[examType],         // Start with fallback structure
+                    ...(defaultsFromDb[examType] || {})        // Override with DB values if they exist
+                };
+                 // Ensure numeric fields are numbers
+                mergedDefaults[examType].questions = parseInt(mergedDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions;
+                mergedDefaults[examType].durationMinutes = parseInt(mergedDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes;
+                mergedDefaults[examType].mcqRatio = parseFloat(mergedDefaults[examType].mcqRatio) || FALLBACK_EXAM_CONFIG[examType].mcqRatio;
+                mergedDefaults[examType].textSourceRatio = parseFloat(mergedDefaults[examType].textSourceRatio) || FALLBACK_EXAM_CONFIG[examType].textSourceRatio;
+            }
+            setCourseExamDefaults(mergedDefaults);
+            console.log("Course exam defaults loaded from Firestore and merged with fallbacks.");
+        } else {
+            console.warn(`Course exam defaults document (${settingsCollection}/${courseExamDefaultsDocId}) not found. Using fallback values and attempting to create the document.`);
+            setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG });
+            try {
+                await docRef.set(FALLBACK_EXAM_CONFIG);
+                console.log(`Created ${courseExamDefaultsDocId} document in Firestore with fallback values.`);
+            } catch (e) {
+                console.error(`Failed to create ${courseExamDefaultsDocId} document with fallbacks:`, e);
+            }
+        }
+    } catch (error) {
+        console.error("Error loading course exam defaults from Firestore:", error);
+        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG }); // Fallback on error
+    }
+}
+
+export async function saveCourseExamDefaults(newDefaults) {
+    if (!db || !currentUser || !currentUser.isAdmin) {
+        alert("Admin privileges required to save exam defaults.");
+        return false;
+    }
+    if (!newDefaults || typeof newDefaults !== 'object') {
+        alert("Invalid data format for exam defaults.");
+        return false;
+    }
+    const docRef = db.collection(settingsCollection).doc(courseExamDefaultsDocId);
+    try {
+        // Sanitize and validate before saving
+        const defaultsToSave = {};
+        for (const examType in FALLBACK_EXAM_CONFIG) { // Iterate based on known structure
+            if (newDefaults[examType]) {
+                defaultsToSave[examType] = {
+                    questions: parseInt(newDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions,
+                    durationMinutes: parseInt(newDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes,
+                    mcqRatio: Math.max(0, Math.min(1, parseFloat(newDefaults[examType].mcqRatio))) || FALLBACK_EXAM_CONFIG[examType].mcqRatio,
+                    textSourceRatio: Math.max(0, Math.min(1, parseFloat(newDefaults[examType].textSourceRatio))) || FALLBACK_EXAM_CONFIG[examType].textSourceRatio,
+                };
+            } else {
+                defaultsToSave[examType] = { ...FALLBACK_EXAM_CONFIG[examType] }; // If a type is missing in input, revert to fallback
+            }
+        }
+        console.log("[saveCourseExamDefaults DEBUG] Data being sent to Firestore:", JSON.stringify(defaultsToSave, null, 2));
+        await docRef.set(defaultsToSave); // Overwrite with validated structure
+        setCourseExamDefaults(defaultsToSave); // Update local state
+        console.log("Course exam defaults saved to Firestore.");
+        return true;
+    } catch (error) {
+        console.error("Error saving course exam defaults:", error);
+        alert(`Failed to save exam defaults: ${error.message}`);
+        return false;
+    }
+}
 
 
 // --- Utilities ---
@@ -150,6 +233,8 @@ export async function saveUserData(uid, appDataToSave = data) {
  * @param {object} progressData - The progress data object to save/merge.
  * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
+
+
 export async function saveUserCourseProgress(uid, courseId, progressData) {
     if (!db) { console.error("Firestore DB not initialized"); return false; }
     if (!uid || !courseId || !progressData) {
@@ -158,90 +243,124 @@ export async function saveUserCourseProgress(uid, courseId, progressData) {
     }
     const progressRef = db.collection('userCourseProgress').doc(uid).collection('courses').doc(courseId);
     try {
-        const dataToSave = JSON.parse(JSON.stringify(progressData));
+        // Create a working copy. JSON.stringify will convert FieldValue.serverTimestamp()
+        // into a plain object like { ".sv": "timestamp" } or similar, or an empty object
+        // depending on the SDK version and how it serializes.
+        // The original progressData from ui_course_enrollment passes the actual FieldValue object.
+        let dataToSave = { ...progressData }; // Start with a shallow copy
 
-        if (dataToSave.enrollmentDate) {
-             if (dataToSave.enrollmentDate instanceof Date) { 
-                try {
-                    dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dataToSave.enrollmentDate);
-                    console.log("[saveUserCourseProgress] Converted enrollmentDate (JS Date) to Firestore Timestamp for saving.");
-                } catch (e) {
-                    console.error("[saveUserCourseProgress] Error converting enrollmentDate JS Date to Timestamp:", e, dataToSave.enrollmentDate);
-                    delete dataToSave.enrollmentDate; 
+        // --- Explicitly Handle Server Timestamps ---
+        // If enrollmentDate or lastActivityDate was intended to be a server timestamp
+        // by the calling code (ui_course_enrollment), re-assert it here.
+        // This is safer than trying to detect the placeholder after stringify/parse.
+
+        // If enrollmentDate from the input progressData was a FieldValue.serverTimestamp()
+        // or if we want to ensure it is for a new record:
+        if (progressData.enrollmentDate && typeof progressData.enrollmentDate === 'object' &&
+            typeof progressData.enrollmentDate.isEqual === 'function' && // Check if it's a FieldValue type
+            progressData.enrollmentDate._methodName === 'FieldValue.serverTimestamp') { // More specific check for v8 compat
+            dataToSave.enrollmentDate = firebase.firestore.FieldValue.serverTimestamp();
+            console.log("[saveUserCourseProgress] enrollmentDate re-asserted as serverTimestamp.");
+        } else if (progressData.enrollmentDate instanceof Date) {
+            dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(progressData.enrollmentDate);
+            console.log("[saveUserCourseProgress] Converted enrollmentDate (JS Date) to Firestore Timestamp.");
+        } else if (progressData.enrollmentDate) { // It's some other value, try to parse or nullify
+            try {
+                const dateObj = new Date(progressData.enrollmentDate);
+                if (!isNaN(dateObj)) {
+                    dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dateObj);
+                } else {
+                    console.warn("[saveUserCourseProgress] Invalid enrollmentDate value, setting to null:", progressData.enrollmentDate);
+                    dataToSave.enrollmentDate = null;
                 }
-             } else if (typeof dataToSave.enrollmentDate === 'object' && dataToSave.enrollmentDate?._methodName === 'serverTimestamp') {
-                 console.log("[saveUserCourseProgress] enrollmentDate is already a serverTimestamp, keeping as is.");
-             } else { // String or Number
-                 try {
-                     const dateObj = new Date(dataToSave.enrollmentDate);
-                     if (!isNaN(dateObj)) {
-                          dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dateObj);
-                          console.log("[saveUserCourseProgress] Converted enrollmentDate (String/Number) to Firestore Timestamp for saving.");
-                     } else {
-                          console.warn("[saveUserCourseProgress] Invalid enrollmentDate value (String/Number), deleting:", dataToSave.enrollmentDate);
-                          delete dataToSave.enrollmentDate;
-                     }
-                 } catch(e) {
-                      console.warn("[saveUserCourseProgress] Error processing non-Date/non-ServerTimestamp enrollmentDate, deleting:", e, dataToSave.enrollmentDate);
-                      delete dataToSave.enrollmentDate;
-                 }
-             }
+            } catch (e) {
+                console.warn("[saveUserCourseProgress] Error processing enrollmentDate, setting to null:", e, progressData.enrollmentDate);
+                dataToSave.enrollmentDate = null;
+            }
         }
+        // If enrollmentDate is not provided in progressData (e.g., for an update not touching it),
+        // it won't be in dataToSave, and thus won't be written, which is correct for updates.
+        // For CREATE, the calling function (handlePaceSelection) *must* provide it.
 
-         if (dataToSave.completionDate) {
-             if (dataToSave.completionDate instanceof Date) { 
-                try {
-                    dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
-                    console.log("[saveUserCourseProgress] Converted completionDate (JS Date) to Firestore Timestamp for saving.");
-                } catch (e) {
-                    console.error("[saveUserCourseProgress] Error converting completionDate JS Date to Timestamp:", e, dataToSave.completionDate);
-                    delete dataToSave.completionDate;
-                }
-             } else { // String or Number
-                 try {
-                     const dateObj = new Date(dataToSave.completionDate);
-                     if (!isNaN(dateObj)) {
-                         dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dateObj);
-                         console.log("[saveUserCourseProgress] Converted completionDate (String/Number) to Firestore Timestamp for saving.");
-                     } else {
-                         console.warn("[saveUserCourseProgress] Invalid completionDate value (String/Number), setting to null:", dataToSave.completionDate);
-                         dataToSave.completionDate = null; 
-                     }
-                 } catch (e) {
-                     console.warn("[saveUserCourseProgress] Error processing non-Date completionDate, setting to null:", e, dataToSave.completionDate);
-                     dataToSave.completionDate = null;
-                 }
-             }
-        } else if (dataToSave.completionDate === undefined) {
-             dataToSave.completionDate = null;
-        }
-
+        // Always set lastActivityDate to server timestamp for any save.
         dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
-        console.log("[saveUserCourseProgress] Setting lastActivityDate to serverTimestamp for save.");
+        console.log("[saveUserCourseProgress] lastActivityDate set to serverTimestamp.");
 
-        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full'; 
-        dataToSave.courseStudiedChapters = dataToSave.courseStudiedChapters || [];
-        dataToSave.watchedVideoUrls = dataToSave.watchedVideoUrls || {};
-        dataToSave.watchedVideoDurations = dataToSave.watchedVideoDurations || {};
-        dataToSave.pdfProgress = dataToSave.pdfProgress || {};
-        dataToSave.skipExamAttempts = dataToSave.skipExamAttempts || {};
-        dataToSave.lastSkipExamScore = dataToSave.lastSkipExamScore || {};
-        dataToSave.dailyProgress = dataToSave.dailyProgress || {};
-        dataToSave.assignmentScores = dataToSave.assignmentScores || {};
-        dataToSave.weeklyExamScores = dataToSave.weeklyExamScores || {};
-        dataToSave.midcourseExamScores = dataToSave.midcourseExamScores || {};
+        // Handle completionDate (can be null, a JS Date, or a Firestore Timestamp from previous load)
+        if (dataToSave.completionDate) {
+            if (dataToSave.completionDate instanceof Date) {
+                dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
+            } else if (typeof dataToSave.completionDate === 'object' && dataToSave.completionDate !== null && typeof dataToSave.completionDate.toDate === 'function') {
+                // Already a Firestore Timestamp, no change needed
+            } else if (typeof dataToSave.completionDate === 'string' || typeof dataToSave.completionDate === 'number') {
+                try {
+                    const dateObj = new Date(dataToSave.completionDate);
+                    dataToSave.completionDate = !isNaN(dateObj) ? firebase.firestore.Timestamp.fromDate(dateObj) : null;
+                } catch { dataToSave.completionDate = null; }
+            } else { // Unrecognized, set to null
+                dataToSave.completionDate = null;
+            }
+        } else {
+            dataToSave.completionDate = null; // Ensure it's explicitly null if not provided
+        }
+
+
+        // Default value initializations (ensure all expected fields for create are present)
+        // These should match what the security rule for 'create' expects.
+        dataToSave.courseId = dataToSave.courseId || courseId; // Ensure courseId is part of the object
+        dataToSave.status = dataToSave.status || 'enrolled';
+        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full';
+        dataToSave.selectedPace = dataToSave.selectedPace || 'mediocre';
+        dataToSave.customPaceDays = dataToSave.customPaceDays === undefined ? null : dataToSave.customPaceDays;
+        dataToSave.baseMediocrePace = dataToSave.baseMediocrePace === undefined ? null : dataToSave.baseMediocrePace;
+        dataToSave.currentPace = dataToSave.currentPace === undefined ? null : dataToSave.currentPace;
+        dataToSave.currentChapterTarget = dataToSave.currentChapterTarget || 1;
+        dataToSave.currentDayObjective = dataToSave.currentDayObjective || "Review Chapter 1 Study Material";
+        dataToSave.courseStudiedChapters = Array.isArray(dataToSave.courseStudiedChapters) ? dataToSave.courseStudiedChapters : [];
+        dataToSave.dailyProgress = typeof dataToSave.dailyProgress === 'object' && dataToSave.dailyProgress !== null ? dataToSave.dailyProgress : {};
+        dataToSave.watchedVideoUrls = typeof dataToSave.watchedVideoUrls === 'object' && dataToSave.watchedVideoUrls !== null ? dataToSave.watchedVideoUrls : {};
+        dataToSave.watchedVideoDurations = typeof dataToSave.watchedVideoDurations === 'object' && dataToSave.watchedVideoDurations !== null ? dataToSave.watchedVideoDurations : {};
+        dataToSave.pdfProgress = typeof dataToSave.pdfProgress === 'object' && dataToSave.pdfProgress !== null ? dataToSave.pdfProgress : {};
+        dataToSave.skipExamAttempts = typeof dataToSave.skipExamAttempts === 'object' && dataToSave.skipExamAttempts !== null ? dataToSave.skipExamAttempts : {};
+        dataToSave.lastSkipExamScore = typeof dataToSave.lastSkipExamScore === 'object' && dataToSave.lastSkipExamScore !== null ? dataToSave.lastSkipExamScore : {};
+        dataToSave.assignmentScores = typeof dataToSave.assignmentScores === 'object' && dataToSave.assignmentScores !== null ? dataToSave.assignmentScores : {};
+        dataToSave.weeklyExamScores = typeof dataToSave.weeklyExamScores === 'object' && dataToSave.weeklyExamScores !== null ? dataToSave.weeklyExamScores : {};
+        dataToSave.midcourseExamScores = typeof dataToSave.midcourseExamScores === 'object' && dataToSave.midcourseExamScores !== null ? dataToSave.midcourseExamScores : {};
         if (dataToSave.finalExamScores === undefined) { dataToSave.finalExamScores = null; }
-        Object.keys(dataToSave.dailyProgress).forEach(dateStr => {
-            dataToSave.dailyProgress[dateStr] = dataToSave.dailyProgress[dateStr] || {}; 
-            dataToSave.dailyProgress[dateStr].chaptersStudied = dataToSave.dailyProgress[dateStr].chaptersStudied || [];
-            dataToSave.dailyProgress[dateStr].skipExamsPassed = dataToSave.dailyProgress[dateStr].skipExamsPassed || [];
-            dataToSave.dailyProgress[dateStr].assignmentCompleted = dataToSave.dailyProgress[dateStr].assignmentCompleted ?? false;
-            dataToSave.dailyProgress[dateStr].assignmentScore = dataToSave.dailyProgress[dateStr].assignmentScore ?? null;
-        });
+        dataToSave.attendanceScore = dataToSave.attendanceScore !== undefined ? dataToSave.attendanceScore : 100;
+        dataToSave.extraPracticeBonus = dataToSave.extraPracticeBonus !== undefined ? dataToSave.extraPracticeBonus : 0;
+        dataToSave.totalMark = dataToSave.totalMark === undefined ? null : dataToSave.totalMark;
+        dataToSave.grade = dataToSave.grade === undefined ? null : dataToSave.grade;
+
 
         console.log(`[saveUserCourseProgress] Data ready for Firestore set for course ${courseId}. Keys: ${Object.keys(dataToSave).join(', ')}`);
-        await progressRef.set(dataToSave, { merge: true });
-        console.log(`User course progress saved successfully for course ${courseId}.`);
+        console.log(`[saveUserCourseProgress DEBUG] Data being sent to Firestore for operation on ${progressRef.path}:`, JSON.stringify(dataToSave, (key, value) => {
+            // Custom replacer to better show FieldValue objects in log
+            if (value && typeof value === 'object' && typeof value.isEqual === 'function') { // Heuristic for FieldValue
+                if (value._methodName === 'FieldValue.serverTimestamp') return "{SERVER_TIMESTAMP}";
+                return "{FIELD_VALUE_OBJECT}";
+            }
+            return value;
+        }, 2));
+
+        const docSnapshot = await progressRef.get();
+        if (!docSnapshot.exists) {
+            // This is a CREATE operation. Ensure enrollmentDate is a server timestamp if not already set from input.
+            if (!dataToSave.enrollmentDate || !(typeof dataToSave.enrollmentDate === 'object' && typeof dataToSave.enrollmentDate.isEqual === 'function')) {
+                dataToSave.enrollmentDate = firebase.firestore.FieldValue.serverTimestamp();
+                console.warn("[saveUserCourseProgress] enrollmentDate was not a server timestamp for create, setting it now.");
+            }
+            await progressRef.set(dataToSave);
+            console.log(`User course progress CREATED successfully for course ${courseId}.`);
+        } else {
+            // This is an UPDATE. enrollmentDate should not typically be updated here unless by an admin.
+            // If dataToSave contains enrollmentDate and it's different from existing, merge will update it.
+            // Our admin functions should handle enrollmentDate changes specifically.
+            // For user-triggered saves, enrollmentDate usually shouldn't change.
+            await progressRef.set(dataToSave, { merge: true });
+            console.log(`User course progress UPDATED successfully for course ${courseId}.`);
+        }
+
         return true;
     } catch (error) {
         console.error(`Error saving course progress for course ${courseId}:`, error);

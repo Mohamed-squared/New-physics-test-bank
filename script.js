@@ -1,6 +1,8 @@
 // script.js
 // --- Core State & Config Imports ---
-import { setAuth, setDb, auth, db, currentUser, currentSubject, activeCourseId, userCourseProgressMap, setGlobalAiSystemPrompts } from './state.js'; // Added userCourseProgressMap, setGlobalAiSystemPrompts
+import { setAuth, setDb, auth, db, currentUser,
+         currentSubject, activeCourseId, userCourseProgressMap,
+         setGlobalAiSystemPrompts, courseExamDefaults } from './state.js'; // Added userCourseProgressMap, setGlobalAiSystemPrompts
 import { ADMIN_UID, FOP_COURSE_ID } from './config.js';
 
 // --- Utility Imports ---
@@ -15,7 +17,8 @@ import {
     markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, 
     handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, 
     loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, 
-    sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts 
+    sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts,
+    loadCourseExamDefaults 
 } from './firebase_firestore.js';
 
 
@@ -231,7 +234,8 @@ async function initializeApp() {
             console.error("[initializeApp] Error loading Global AI System Prompts. Using defaults/empty.", error);
             setGlobalAiSystemPrompts({}); // Ensure state is at least an empty object
         }
-        // --- END MODIFICATION ---
+        await loadCourseExamDefaults(); // <<<< ADD THIS LINE
+        console.log("Initialized with Course Exam Defaults:", courseExamDefaults);
 
         setupAuthListener(); // This will handle UI changes based on auth state
     } catch (e) {

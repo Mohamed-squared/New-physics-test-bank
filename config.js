@@ -80,7 +80,13 @@ export const EXAM_DURATIONS_MINUTES = {
 
 // *** NEW: Ratio for Text vs Lecture sources in course exams ***
 export const COURSE_EXAM_TEXT_LECTURE_RATIO = 0.5; // 50% Text, 50% Lecture by default
-
+export const FALLBACK_EXAM_CONFIG = {
+    assignment: { questions: 4, durationMinutes: 40, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    weekly_exam: { questions: 8, durationMinutes: 75, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    midcourse: { questions: 12, durationMinutes: 120, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    final: { questions: 16, durationMinutes: 180, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    skip_exam: { questions: 20, durationMinutes: 30, mcqRatio: 0.5, textSourceRatio: 0.5 }
+};
 // Default structure for a *new* user's subject data if none exists
 export const initialSubjectData = {
     "subjects": {
