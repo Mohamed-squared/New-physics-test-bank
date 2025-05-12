@@ -3,7 +3,7 @@
 // ui_course_study_material.js
 
 // *** MODIFIED: Import 'data' state for subject access ***
-import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, userCourseProgressMap, updateUserCourseProgress, data } from './state.js';
+import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, videoDurationMap, userCourseProgressMap, updateUserCourseProgress, data } from './state.js';
 // MODIFIED: Import USER-SPECIFIC save/load functions for sheets/summaries
 import { saveUserCourseProgress, markChapterStudiedInCourse, saveUserFormulaSheet, loadUserFormulaSheet, saveUserChapterSummary, loadUserChapterSummary } from './firebase_firestore.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
@@ -36,7 +36,7 @@ let currentChapterNumber = null;
 let currentCourseIdInternal = null;
 let transcriptionHighlightInterval = null;
 let isTranscriptionExpanded = false;
-export let videoDurationMap = {}; // Cache for video durations - EXPORTED
+export {videoDurationMap}
 
 // PDF.js State
 let pdfDoc = null;
@@ -2025,7 +2025,7 @@ async function switchVideo(newIndex) {
 }
 window.switchVideo = switchVideo;
 
-async function fetchVideoDurationsIfNeeded(videoIds) {
+export async function fetchVideoDurationsIfNeeded(videoIds) {
      const idsToFetch = videoIds.filter(id => videoDurationMap[id] === undefined);
     if (idsToFetch.length === 0) {
         return;

@@ -1,0 +1,305 @@
+/* --- START OF FILE components.css --- */
+
+/* === components.css === */
+/* Styles for reusable UI components like cards, loaders, toasts, etc. */
+
+/* ==========================================================================
+   Main Application Card & Content Area
+   ========================================================================== */
+
+.content-card {
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode: White with dynamic opacity */
+    -webkit-backdrop-filter: blur(5px); /* Frosted glass effect for Safari */
+    backdrop-filter: blur(5px);      /* Standard Frosted glass effect */
+
+    padding: 1.5rem 2rem;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: background-color var(--transition-std), box-shadow var(--transition-std), border-color var(--transition-std);
+    border: 1px solid var(--color-gray-200); /* Light border for definition */
+    margin-bottom: 1.5rem;
+}
+.dark .content-card {
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-800) with dynamic opacity */
+    border-color: rgba(71, 85, 105, 0.5); /* Darker, slightly transparent border (var(--color-gray-600) with alpha) */
+    box-shadow: 0 4px 10px -1px rgba(0, 0, 0, 0.2), 0 2px 6px -2px rgba(0, 0, 0, 0.15); /* Slightly adjusted dark shadow for depth */
+}
+
+/* Card Header Area */
+#card-header {
+    /* Light mode base white, dynamic alpha */
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha));
+    -webkit-backdrop-filter: blur(4px); /* Keep blur consistent with content-card if desired */
+    backdrop-filter: blur(4px);         /* Keep blur consistent with content-card if desired */
+    padding: 1rem;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    transition: border-color var(--transition-std), background-color var(--transition-std);
+}
+.dark #card-header {
+    /* Dark mode base var(--color-gray-800), dynamic alpha */
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha));
+    border-bottom-color: rgba(71, 85, 105, var(--card-bg-alpha)); /* Keeping the slightly more opaque border for definition */
+}
+#subject-info p { margin-bottom: 0.1rem; }
+#subject-info .font-semibold { color: var(--color-gray-800); transition: color var(--transition-std); }
+.dark #subject-info .font-semibold { color: var(--color-gray-100); }
+
+#user-section #user-display img {
+    width: 2.25rem; height: 2.25rem;
+    border-radius: var(--border-radius-full);
+    object-fit: cover;
+    border: 2px solid var(--color-white);
+    box-shadow: var(--shadow-sm);
+    transition: border-color var(--transition-std);
+}
+.dark #user-section #user-display img {
+    border-color: var(--color-gray-700);
+}
+
+/* Dynamic Content Area (#content) */
+#content {
+    margin-top: 1rem;
+}
+
+/* Progress Dashboard Area (#dashboard) */
+#dashboard {
+    background-color: rgba(248, 250, 252, var(--card-bg-alpha)); /* Light mode: var(--color-gray-50) with dynamic opacity */
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--border-radius-lg);
+    margin-bottom: 1.5rem;
+    padding: 1.5rem;
+    transition: background-color var(--transition-std), border-color var(--transition-std);
+}
+.dark #dashboard {
+    background-color: rgba(30, 41, 59, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-800) with dynamic opacity */
+    border-color: rgba(71, 85, 105, 0.5); /* From original dark mode style */
+}
+
+/* Inner cards of the Progress Dashboard */
+#dashboard-content .grid > div {
+    background-color: rgba(255, 255, 255, var(--card-bg-alpha)); /* Light mode: White with dynamic opacity */
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--color-gray-200);
+    min-height: 18rem;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    transition: background-color var(--transition-std), border-color var(--transition-std), box-shadow var(--transition-std);
+}
+.dark #dashboard-content .grid > div {
+    background-color: rgba(51, 65, 85, var(--card-bg-alpha)); /* Dark mode: var(--color-gray-700) with dynamic opacity */
+    border-color: rgba(100, 116, 139, 0.4); /* var(--color-gray-600) with alpha, from original */
+}
+/* Redundant dark style from original, now covered by the one above with var()
+.dark #dashboard-content .grid > div {
+    background-color: var(--color-gray-700); // This would be solid
+    border-color: var(--border-color-dark);
+}
+*/
+#dashboard-content h3, #dashboard-content h4 {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--color-gray-700);
+    flex-shrink: 0;
+    transition: color var(--transition-std);
+}
+.dark #dashboard-content h3, .dark #dashboard-content h4 { color: var(--color-gray-300); }
+#dashboard-content .chart-container {
+    flex-grow: 1;
+    position: relative;
+    min-height: 150px;
+}
+
+/* ==========================================================================
+   Loading, Alerts, Misc UI
+   ========================================================================== */
+
+.loader {
+    border: 3px solid var(--color-primary-200);
+    border-left-color: var(--color-primary-500);
+    border-radius: 50%;
+    width: 1.75rem;
+    height: 1.75rem;
+    animation: spin 0.8s linear infinite;
+}
+.dark .loader {
+    border-color: var(--color-primary-800);
+    border-left-color: var(--color-primary-400);
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+#loading-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(248, 250, 252, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+}
+#loading-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+#loading-overlay > div {
+    background-color: var(--color-white);
+    padding: 1.5rem 2rem;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border-color);
+    transition: background-color var(--transition-std), border-color var(--transition-std);
+}
+#loading-overlay p {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    margin-bottom: 0;
+    transition: color var(--transition-std);
+}
+.dark #loading-overlay {
+    background-color: rgba(15, 23, 42, 0.7);
+}
+.dark #loading-overlay > div {
+    background-color: var(--color-gray-800);
+    border-color: var(--border-color-dark);
+}
+.dark #loading-overlay p {
+    color: var(--color-gray-200);
+}
+
+.toast-notification {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 110;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid transparent;
+    padding: 0.8rem 1.2rem;
+    display: flex;
+    align-items: center;
+    max-width: 350px;
+    animation: toastIn 0.4s ease-out forwards;
+    background-clip: padding-box;
+    transition: background-color var(--transition-std), color var(--transition-std), border-color var(--transition-std);
+}
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(100%); }
+}
+.toast-notification.fade-out {
+    animation: toastOut 0.4s ease-in forwards;
+}
+
+.toast-notification p { margin-bottom: 0; font-size: 0.9rem; }
+.toast-notification .toast-icon { width: 1.25rem; height: 1.25rem; margin-right: 0.75rem; flex-shrink: 0; }
+.toast-success { background-color: var(--color-success-100); color: var(--color-success-800); border-color: var(--color-success-300); }
+.dark .toast-success { background-color: var(--color-success-900); color: var(--color-success-100); border-color: var(--color-success-700); }
+.toast-error { background-color: var(--color-danger-100); color: var(--color-danger-800); border-color: var(--color-danger-300); }
+.dark .toast-error { background-color: var(--color-danger-900); color: var(--color-danger-100); border-color: var(--color-danger-700); }
+.toast-warning { background-color: var(--color-warning-100); color: var(--color-warning-800); border-color: var(--color-warning-300); }
+.dark .toast-warning { background-color: var(--color-warning-900); color: var(--color-warning-100); border-color: var(--color-warning-700); }
+.toast-info { background-color: var(--color-info-100); color: var(--color-info-800); border-color: var(--color-info-300); }
+.dark .toast-info { background-color: var(--color-info-900); color: var(--color-info-100); border-color: var(--color-info-700); }
+
+canvas { max-width: 100%; height: auto !important; display: block; }
+
+/* Admin Indicator Icon */
+.admin-icon {
+    display: inline-block;
+    margin-left: 0.3em;
+    color: var(--color-warning-500);
+    width: 0.8em;
+    height: 0.8em;
+    vertical-align: middle;
+    transition: color var(--transition-std);
+}
+.dark .admin-icon {
+    color: var(--color-warning-300);
+}
+
+/* Details/Summary disclosure widget */
+details > summary {
+    cursor: pointer;
+    padding: 0.5em 0;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    transition: color var(--transition-fast);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before {
+    content: '►'; display: inline-block; margin-right: 0.5em;
+    font-size: 0.7em; transition: transform var(--transition-fast), color var(--transition-fast);
+    color: var(--color-gray-400);
+    flex-shrink: 0;
+}
+details[open] > summary::before { transform: rotate(90deg); }
+.dark details > summary { color: var(--color-gray-300); }
+details > summary:hover { color: var(--color-primary-600); }
+.dark details > summary:hover { color: var(--color-primary-400); }
+details[open] > summary { margin-bottom: 0.5em; }
+details > div {
+    padding: 1em; background-color: var(--color-gray-50);
+    border-radius: var(--border-radius-md); border: 1px solid var(--border-color);
+    margin-top: 0.5em;
+    transition: background-color var(--transition-std), border-color var(--transition-std);
+}
+.dark details > div {
+    background-color: var(--color-gray-700); border-color: var(--border-color-dark);
+}
+
+/* Background Setting Preview */
+.background-setting-preview {
+    width: 100%;
+    height: 5rem; /* Adjust as needed */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-gray-400);
+    font-size: 0.875rem;
+}
+.dark .background-setting-preview {
+    border-color: var(--border-color-dark);
+    color: var(--color-gray-500);
+}
+
+
+/* --- END OF FILE components.css --- */

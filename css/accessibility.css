@@ -1,0 +1,42 @@
+/* --- START OF FILE accessibility.css --- */
+
+/* === accessibility.css === */
+/* Styles related to accessibility, including focus indicators and ARIA helpers */
+
+/* ==========================================================================
+   Accessibility & Misc Fixes
+   ========================================================================== */
+
+:focus { outline: none; }
+:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-sm); /* Use a small radius for general focus */
+}
+.dark :focus-visible {
+    outline-color: var(--color-primary-400);
+}
+
+/* Remove generic outline for elements with their own specific focus styles */
+.form-control:focus-visible, .btn:focus-visible, button:focus-visible, select:focus-visible, textarea:focus-visible, input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible {
+    outline: none; /* Rely on specific focus styles defined in forms.css, buttons.css */
+}
+
+/* Re-apply consistent focus ring for interactive non-form elements if needed */
+/* Note: Button/Link focus is defined in buttons.css and typography.css respectively */
+/* .sidebar-link:focus-visible, a.link:focus-visible {
+     outline: 2px solid var(--color-primary-500);
+     outline-offset: 2px;
+     border-radius: var(--border-radius-md);
+}
+.dark .sidebar-link:focus-visible, .dark a.link:focus-visible {
+    outline-color: var(--color-primary-400);
+} */
+
+
+/* ARIA attribute helper */
+[aria-hidden="true"]:not([role="presentation"]) { display: none !important; }
+/* .sr-only is defined in utilities.css */
+
+
+/* --- END OF FILE accessibility.css --- */

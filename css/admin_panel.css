@@ -1,0 +1,224 @@
+/* --- START OF FILE admin_panel.css --- */
+
+/* Styles for the redesigned admin panel layout */
+
+/* Admin Panel Main Container (within #content) */
+/* The outer .flex container is set by ui_admin_dashboard.js */
+
+/* Admin Panel Navigation Sidebar */
+#admin-panel-nav {
+    /* width, p-4, rounded-lg, shadow-md, flex-shrink-0, overflow-y-auto are set by Tailwind in JS */
+    /* background-color and border are set by inline style in JS using CSS variables */
+    /* Additional specific styles if needed */
+    border: 1px solid transparent; /* Base for JS to override with rgba */
+}
+
+#admin-panel-nav h2 {
+    /* Styles for "Admin Menu" title */
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 600; /* font-semibold */
+    margin-bottom: 1rem; /* mb-4 */
+    padding-bottom: 0.5rem; /* pb-2 */
+    /* color and border are set by Tailwind classes in JS */
+}
+
+.admin-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    border-radius: 0.375rem; /* rounded-md */
+    font-size: 0.9rem; /* text-sm */
+    font-weight: 500;
+    color: var(--color-gray-600); /* Base color for text and SVGs via currentColor */
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+    text-decoration: none;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.admin-nav-link svg {
+    width: 1.25rem;  /* w-5 equivalent */
+    height: 1.25rem; /* h-5 equivalent */
+    margin-right: 0.75rem; /* mr-3 equivalent */
+    flex-shrink: 0; /* Prevent SVG from shrinking */
+    /* currentColor will be inherited from the parent .admin-nav-link's color property */
+}
+
+
+.dark .admin-nav-link {
+    color: var(--color-gray-300); /* Dark mode base color */
+}
+
+.admin-nav-link:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-900); /* Hover text and SVG color */
+}
+.dark .admin-nav-link:hover {
+    background-color: var(--color-gray-700);
+    color: white; /* Dark mode hover text and SVG color */
+}
+
+.admin-nav-link.active {
+    background-color: var(--color-primary-500);
+    color: white !important; /* Active text and SVG color */
+    font-weight: 600;
+}
+/* No need for .admin-nav-link.active svg specific rule if currentColor is working due to inheritance */
+
+.dark .admin-nav-link.active {
+    background-color: var(--color-primary-600);
+    color: white !important; /* Dark mode active text and SVG color */
+}
+/* No need for .dark .admin-nav-link.active svg specific rule */
+
+
+/* Admin Panel Content Area */
+#admin-panel-content-area {
+    /* flex-1, p-6, rounded-lg, shadow-md, overflow-y-auto are set by Tailwind in JS */
+    /* background-color and border are set by inline style in JS using CSS variables */
+    border: 1px solid transparent; /* Base for JS to override with rgba */
+}
+
+#admin-panel-content-area > h3 { /* Targeting the main H3 inside content area, like "Admin Overview" */
+    color: var(--color-gray-800);
+    /* font-size, font-weight, margin-bottom set by Tailwind in JS */
+}
+.dark #admin-panel-content-area > h3 {
+    color: var(--color-gray-200);
+}
+
+
+.admin-overview-header {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem; /* mb-6 */
+    border-bottom: 1px solid rgba(var(--admin-content-border-rgb, 229, 231, 235), 0.3); /* More subtle border using JS-set RGBs */
+}
+.dark .admin-overview-header {
+    border-bottom-color: rgba(var(--admin-content-border-rgb, 55, 65, 81), 0.3);
+}
+
+
+#admin-panel-content-area section { /* Groupings like "List / Search Users" */
+    /* p-4, border, rounded-lg, bg-gray-50 dark:bg-gray-700/30 are set by Tailwind in JS */
+    /* This ensures the section itself is also transparent based on the card opacity */
+    background-color: rgba(var(--admin-section-bg-rgb, 249, 250, 251), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-50 default */
+    border: 1px solid rgba(var(--admin-section-border-rgb, 229, 231, 235), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-200 default */
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.dark #admin-panel-content-area section {
+    background-color: rgba(var(--admin-section-bg-rgb-dark, 55, 65, 81), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-700/30 default */
+    border: 1px solid rgba(var(--admin-section-border-rgb-dark, 75, 85, 99), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-600 default */
+}
+
+#admin-panel-content-area section h4 { /* Titles within sections */
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 500; /* font-medium */
+    margin-bottom: 0.75rem; /* mb-3 */
+    color: var(--color-gray-700);
+}
+.dark #admin-panel-content-area section h4 {
+    color: var(--color-gray-300);
+}
+
+/* Styling for input fields within admin panel if they need to be different */
+#admin-panel-content-area .form-control {
+    /* Uses global form.css styles by default */
+    font-size: 0.875rem; /* text-sm */
+}
+
+
+/* Stat Cards for Admin Overview */
+.stat-card {
+    /* background-color is set inline with RGBA and --card-bg-alpha */
+    /* border is set inline with RGBA and --card-bg-alpha */
+    border-radius: var(--border-radius-lg);
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); /* Standard Tailwind shadow-lg */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); /* Tailwind shadow-xl */
+}
+
+.stat-icon-wrapper {
+    margin-bottom: 0.75rem; /* mb-3 */
+}
+.stat-icon-wrapper svg { /* Ensure SVGs within this wrapper size correctly */
+    width: 2.5rem;  /* w-10 */
+    height: 2.5rem; /* h-10 */
+    /* Color is passed via Tailwind class in JS */
+}
+
+.stat-title {
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+    color: var(--color-gray-600);
+    margin-bottom: 0.25rem;
+}
+.dark .stat-title {
+    color: var(--color-gray-400);
+}
+
+.stat-value {
+    font-size: 2.25rem; /* text-4xl */
+    font-weight: 700; /* font-bold */
+    color: var(--color-gray-800);
+    line-height: 1.1;
+}
+.dark .stat-value {
+    color: var(--color-gray-100);
+}
+
+/* For the placeholder inside stats grid before stats load */
+.stat-card-placeholder {
+    /* background-color is set inline with RGBA and --card-bg-alpha */
+    border: 1px dashed rgba(var(--admin-stat-card-placeholder-border-rgb, 209, 213, 219), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-300 default */
+}
+.dark .stat-card-placeholder {
+    border-color: rgba(var(--admin-stat-card-placeholder-border-rgb-dark, 107, 114, 128), var(--card-bg-alpha)); /* Uses JS-set RGB for gray-600 default */
+}
+
+
+/* Custom Scrollbar for admin panel areas (already in utilities.css but can be reinforced here if needed) */
+#admin-panel-nav.custom-scrollbar,
+#admin-panel-content-area.custom-scrollbar,
+#admin-panel-content-area [id$="-area"].custom-scrollbar { /* Targets divs like admin-user-list-area */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-400) transparent;
+}
+.dark #admin-panel-nav.custom-scrollbar,
+.dark #admin-panel-content-area.custom-scrollbar,
+.dark #admin-panel-content-area [id$="-area"].custom-scrollbar {
+    scrollbar-color: var(--color-gray-500) transparent;
+}
+
+#admin-panel-nav.custom-scrollbar::-webkit-scrollbar,
+#admin-panel-content-area.custom-scrollbar::-webkit-scrollbar,
+#admin-panel-content-area [id$="-area"].custom-scrollbar::-webkit-scrollbar {
+    width: 6px; height: 6px;
+}
+#admin-panel-nav.custom-scrollbar::-webkit-scrollbar-thumb,
+#admin-panel-content-area.custom-scrollbar::-webkit-scrollbar-thumb,
+#admin-panel-content-area [id$="-area"].custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-400);
+    border-radius: 3px;
+    border: 1px solid transparent; /* Add border to make thumb look thinner */
+    background-clip: padding-box; /* Clip background to padding box */
+}
+.dark #admin-panel-nav.custom-scrollbar::-webkit-scrollbar-thumb,
+.dark #admin-panel-content-area.custom-scrollbar::-webkit-scrollbar-thumb,
+.dark #admin-panel-content-area [id$="-area"].custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-gray-500);
+}
+
+
+/* --- END OF FILE admin_panel.css --- */

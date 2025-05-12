@@ -1,0 +1,118 @@
+/* --- START OF FILE vendor.css --- */
+
+/* === vendor.css === */
+/* Contains styles specifically for third-party libraries like Cropper.js and global MathJax overrides */
+
+/* --- Cropper.js Circular Styling --- */
+#cropper-wrapper .cropper-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+.cropper-view-box {
+    border-radius: 50%;
+    outline: none;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+.cropper-crop-box {
+     outline: 1px solid #39f;
+     border-radius: 50%;
+     overflow: hidden;
+}
+.cropper-face,
+.cropper-dashed,
+.cropper-center {
+    display: none !important;
+}
+.cropper-line {
+     background-color: transparent !important;
+}
+.cropper-point {
+    background-color: #FFF;
+    opacity: 0.75;
+    height: 6px;
+    width: 6px;
+    border-radius: 50%;
+    box-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+.cropper-point.point-ne,
+.cropper-point.point-nw,
+.cropper-point.point-se,
+.cropper-point.point-sw {
+     opacity: 0.25;
+     pointer-events: none;
+}
+
+
+/* --- MathJax Base/Global Styles --- */
+.katex-display, mjx-container[display="true"] { /* Apply to both just in case */
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.5em 0;
+    display: block;
+    text-align: left !important;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+.katex-display > .katex { white-space: nowrap; } /* KaTeX specific if used */
+mjx-container > svg { vertical-align: baseline; max-width: 100%; }
+
+/* --- NEW/MODIFIED GLOBAL MathJax STYLES --- */
+
+/* Base styles for ALL MathJax containers */
+mjx-container {
+    text-align: left !important; /* Usually good for math blocks */
+    max-width: 100%;          /* Prevent overflow */
+    line-height: 0;           /* IMPORTANT: Helps contain the SVG's height and improves vertical alignment.
+                                  If text around inline math becomes too condensed, remove this or apply
+                                  a 'normal' line-height to the parent of the inline math. */
+    vertical-align: middle;   /* Good starting point for vertical alignment */
+}
+
+/* Specific styles for INLINE MathJax containers */
+/* MathJax uses <mjx-container> without 'display="true"' for inline math */
+mjx-container:not([display="true"]) {
+    display: inline-block !important; /* CRITICAL for inline flow */
+    margin: 0 0.1em !important;       /* Minimal horizontal margin for breathing room */
+    padding: 0 !important;            /* No extra padding */
+    vertical-align: -0.2ex;         /* Fine-tune vertical alignment.
+                                      'ex' is relative to the x-height of the font.
+                                      Try values between -0.1ex and -0.3ex.
+                                      This helps align the math with the text baseline. */
+}
+
+/* Specific styles for DISPLAY MathJax containers */
+/* MathJax uses <mjx-container display="true"> for display math */
+mjx-container[display="true"] {
+    display: block !important;       /* CRITICAL for being on its own line */
+    margin: 0.75em auto !important;  /* Top/bottom margin, and 'auto' for centering */
+    padding: 0.25em 0;             /* Optional vertical padding */
+    overflow-x: auto;              /* Allow horizontal scrolling for very wide equations */
+    overflow-y: hidden;
+}
+
+/* Styling for the SVG elements within MathJax containers */
+mjx-container > svg {
+    max-width: 100%;
+    /* vertical-align is often better controlled on the mjx-container itself
+       or via more specific rules if needed, but 'middle' can be a good default for SVGs. */
+    vertical-align: middle;
+}
+
+/* --- Adjustments for .prose class if you use Tailwind Typography --- */
+/* This ensures inline MathJax behaves well within .prose styled text */
+.prose mjx-container:not([display="true"]) {
+    display: inline-block !important;
+    vertical-align: -0.15ex; /* You might need to tune this based on your prose font */
+    margin: 0 0.1em !important;
+    line-height: normal; /* Reset line-height if global mjx-container has line-height:0 */
+}
+
+.prose mjx-container[display="true"] {
+    margin: 1em auto !important; /* More margin for display math in prose */
+    line-height: normal; /* Reset */
+}
+
+
+/* --- END OF FILE vendor.css --- */

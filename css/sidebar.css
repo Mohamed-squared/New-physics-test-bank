@@ -1,0 +1,352 @@
+/* --- START OF FILE sidebar.css --- */
+
+/* === sidebar.css === */
+/* Styles for the main sidebar navigation and the AI Chat Sessions sidebar */
+
+/* Sidebar Element Styles */
+aside#sidebar {
+    background-color: var(--color-white);
+    border-right: 1px solid var(--border-color);
+    /* Other layout styles (width, display, etc.) are in layout.css */
+}
+.dark aside#sidebar {
+    background-color: var(--color-gray-800);
+    border-right-color: var(--border-color-dark);
+}
+
+/* Sidebar header */
+#sidebar .sidebar-header {
+    padding: 1.25rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0; /* Prevent shrinking */
+    transition: border-color var(--transition-std);
+}
+#sidebar .sidebar-header a {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+#sidebar .sidebar-header h2 {
+    font-family: var(--font-display);
+    margin-bottom: 0;
+    color: var(--color-primary-600);
+    font-weight: 600;
+    font-size: 1.3rem;
+    transition: color var(--transition-std);
+}
+.dark #sidebar .sidebar-header {
+     border-bottom-color: var(--border-color-dark);
+}
+.dark #sidebar .sidebar-header h2 {
+    color: var(--color-primary-400);
+}
+/* Sidebar Header Logos */
+#sidebar .sidebar-header .logo-light-mode { display: block; }
+#sidebar .sidebar-header .logo-dark-mode { display: none; }
+.dark #sidebar .sidebar-header .logo-light-mode { display: none; }
+.dark #sidebar .sidebar-header .logo-dark-mode { display: block; }
+#sidebar .sidebar-header .logo-light-mode,
+#sidebar .sidebar-header .logo-dark-mode {
+    height: 1.75rem; /* Adjusted logo size */
+    width: auto;
+}
+
+/* Sidebar nav container */
+#sidebar nav {
+    flex-grow: 1;
+    margin-top: 1rem;
+    padding: 0 0.75rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-gray-300) transparent;
+}
+#sidebar nav::-webkit-scrollbar { width: 6px; }
+#sidebar nav::-webkit-scrollbar-track { background: transparent; }
+#sidebar nav::-webkit-scrollbar-thumb { background-color: var(--color-gray-300); border-radius: 3px; border: 1px solid transparent; background-clip: padding-box; }
+#sidebar nav::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-400); }
+
+.dark #sidebar nav { scrollbar-color: var(--color-gray-600) transparent; }
+.dark #sidebar nav::-webkit-scrollbar-thumb { background-color: var(--color-gray-600); }
+.dark #sidebar nav::-webkit-scrollbar-thumb:hover { background-color: var(--color-gray-500); }
+
+
+/* Sidebar links */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem; /* 14.4px */
+    font-weight: 500;
+    border-radius: var(--border-radius-md);
+    color: var(--color-gray-600);
+    transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+    text-decoration: none;
+    cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+}
+.sidebar-link svg:not(.dropdown-arrow) {
+    margin-right: 0.85rem;
+    flex-shrink: 0;
+    width: 1.125rem; /* 18px */
+    height: 1.125rem;
+    color: var(--color-gray-400);
+    transition: color var(--transition-fast);
+}
+
+.sidebar-link:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-900);
+}
+.sidebar-link:hover svg:not(.dropdown-arrow) {
+    color: var(--color-primary-500);
+}
+
+/* Dark mode sidebar links */
+.dark .sidebar-link {
+    color: var(--color-gray-300);
+}
+.dark .sidebar-link svg:not(.dropdown-arrow) {
+    color: var(--color-gray-500);
+}
+.dark .sidebar-link:hover {
+    background-color: var(--color-gray-700);
+    color: var(--color-white);
+}
+.dark .sidebar-link:hover svg:not(.dropdown-arrow) {
+    color: var(--color-primary-400);
+}
+
+/* Active sidebar link */
+.sidebar-link.active-link {
+    background-color: var(--color-primary-100); /* Slightly more prominent than -50 */
+    color: var(--color-primary-600);
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+.sidebar-link.active-link svg:not(.dropdown-arrow) {
+   color: var(--color-primary-600);
+}
+.dark .sidebar-link.active-link {
+    background-color: var(--color-primary-800); /* Lighter than -900 for better pop */
+    color: var(--color-primary-200); /* Brighter text */
+}
+.dark .sidebar-link.active-link svg:not(.dropdown-arrow) {
+   color: var(--color-primary-200);
+}
+
+/* Sidebar utility/theme area */
+#sidebar .sidebar-footer {
+    padding: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    margin-top: auto; /* Push to bottom */
+    flex-shrink: 0; /* Prevent shrinking */
+    transition: border-color var(--transition-std);
+}
+.dark #sidebar .sidebar-footer {
+    border-top-color: var(--border-color-dark);
+}
+
+/* Theme Toggle Button */
+#theme-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: var(--border-radius-md);
+    color: var(--color-gray-500);
+    background-color: transparent;
+    border: 1px solid transparent;
+    transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    cursor: pointer;
+}
+#theme-toggle:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-primary-500);
+    border-color: var(--border-color);
+}
+.dark #theme-toggle {
+    color: var(--color-gray-400);
+}
+.dark #theme-toggle:hover {
+    background-color: var(--color-gray-700);
+    color: var(--color-primary-400);
+    border-color: var(--border-color-dark);
+}
+#theme-toggle svg {
+    width: 1.25rem; /* 20px */
+    height: 1.25rem;
+}
+/* Theme Icon Visibility */
+html:not(.dark) #theme-icon-light { display: block; }
+html:not(.dark) #theme-icon-dark { display: none; }
+html.dark #theme-icon-light { display: none; }
+html.dark #theme-icon-dark { display: block; }
+
+/* Sidebar Inbox Badge */
+#inbox-unread-count {
+    background-color: var(--color-danger-500);
+    color: var(--color-white);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.1rem 0.4rem;
+    border-radius: var(--border-radius-full);
+    line-height: 1;
+    min-width: 1.2rem;
+    text-align: center;
+    margin-left: auto; /* Push to the right */
+}
+
+/* --- NEW/MODIFIED: Sidebar Dropdown Styles --- */
+.sidebar-dropdown-toggle {
+    background: none;
+    border: none;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    /* Inherits .sidebar-link styles for padding, color, etc. */
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+.sidebar-dropdown-toggle .dropdown-arrow {
+    transition: transform 0.2s ease-in-out;
+    margin-left: auto;
+    color: var(--color-gray-400);
+    width: 1rem; height: 1rem;
+}
+.dark .sidebar-dropdown-toggle .dropdown-arrow { color: var(--color-gray-500); }
+
+.sidebar-dropdown-toggle.open .dropdown-arrow {
+    transform: rotate(90deg);
+}
+.sidebar-dropdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease-out, margin-top 0.3s ease-out;
+    opacity: 0;
+    padding-left: 0.5rem;
+    margin-left: 0.85rem; /* Align indentation roughly under parent icon */
+    border-left: 1px dashed var(--color-gray-300);
+    margin-top: 0;
+    transition: border-color var(--transition-std);
+}
+.dark .sidebar-dropdown-content {
+    border-left-color: var(--color-gray-600);
+}
+.sidebar-dropdown-content.open {
+    max-height: 500px;
+    opacity: 1;
+    margin-top: 0.25rem;
+    transition: max-height 0.4s ease-in, opacity 0.3s ease-in, margin-top 0.3s ease-in;
+}
+/* Style for active parent toggle (when child is active) */
+.sidebar-dropdown-toggle.active-parent {
+     background-color: var(--color-primary-100); /* Matches active link style */
+     color: var(--color-primary-600);
+     font-weight: 600;
+}
+.dark .sidebar-dropdown-toggle.active-parent {
+     background-color: var(--color-primary-800); /* Matches active link style */
+     color: var(--color-primary-200);
+}
+ .sidebar-dropdown-toggle.active-parent svg:not(.dropdown-arrow) {
+    color: var(--color-primary-600);
+}
+.dark .sidebar-dropdown-toggle.active-parent svg:not(.dropdown-arrow) {
+   color: var(--color-primary-200);
+}
+
+/* Unread Indicator Pulse */
+.sidebar-link.has-unread::after {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--color-danger-500);
+    border-radius: 50%;
+    margin-left: 0.5rem;
+    animation: pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
+}
+
+/* --- AI Chat Studio Sidebar Styles --- */
+#ai-chat-sessions-sidebar {
+    background-color: var(--color-gray-50);
+    border-right: 1px solid var(--border-color);
+    transition: background-color var(--transition-std), border-color var(--transition-std);
+    padding: 0.5rem; /* Add some padding */
+    overflow-y: auto; /* Allow scrolling if many sessions */
+}
+.dark #ai-chat-sessions-sidebar {
+    background-color: var(--color-gray-800);
+    border-right-color: var(--border-color-dark);
+}
+
+#ai-chat-sessions-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#ai-chat-sessions-sidebar ul li a,
+#ai-chat-sessions-sidebar ul li button { /* Assuming sessions are links or buttons */
+    display: block; /* Full width clickable */
+    padding: 0.6rem 0.75rem; /* Consistent padding */
+    margin-bottom: 0.25rem; /* Space between items */
+    color: var(--color-gray-700);
+    border-radius: var(--border-radius-md); /* Match sidebar links */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500;
+    text-decoration: none;
+    transition: background-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Truncate long session names */
+}
+
+#ai-chat-sessions-sidebar ul li a:hover,
+#ai-chat-sessions-sidebar ul li button:hover {
+    background-color: var(--color-gray-100);
+    color: var(--color-primary-600);
+}
+
+#ai-chat-sessions-sidebar ul li a.active, /* For the currently active session */
+#ai-chat-sessions-sidebar ul li button.active {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-600);
+    font-weight: 600; /* Bolder for active */
+    box-shadow: var(--shadow-sm);
+}
+
+.dark #ai-chat-sessions-sidebar ul li a,
+.dark #ai-chat-sessions-sidebar ul li button {
+    color: var(--color-gray-300);
+}
+
+.dark #ai-chat-sessions-sidebar ul li a:hover,
+.dark #ai-chat-sessions-sidebar ul li button:hover {
+    background-color: var(--color-gray-700);
+    color: var(--color-primary-400);
+}
+
+.dark #ai-chat-sessions-sidebar ul li a.active,
+.dark #ai-chat-sessions-sidebar ul li button.active {
+    background-color: var(--color-primary-700); /* Darker primary for active in dark mode */
+    color: var(--color-primary-200);
+}
+
+
+/* --- END OF FILE sidebar.css --- */

@@ -1,0 +1,163 @@
+/* --- START OF FILE base.css --- */
+
+/* === base.css === */
+/* Contains CSS variables, base resets, and global styles for html/body */
+
+/* Import Fonts (Example: Inter & Lexend Deca) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lexend+Deca:wght@400;500;600&display=swap');
+
+/* ==========================================================================
+   CSS Variables and Base Styles
+   ========================================================================== */
+
+:root {
+    /* --- Primary Color Palette (Blue) --- */
+    --color-primary-50:  #f0f9ff; /* Lightest Blue */
+    --color-primary-100: #e0f2fe;
+    --color-primary-200: #bae6fd;
+    --color-primary-300: #7dd3fc;
+    --color-primary-400: #38bdf8;
+    --color-primary-500: #0ea5e9; /* Main Primary */
+    --color-primary-600: #0284c7; /* Darker Primary */
+    --color-primary-700: #0369a1;
+    --color-primary-800: #075985;
+    --color-primary-900: #0c4a6e; /* Darkest Blue */
+    --color-primary-950: #082f49;
+
+    /* --- Gray Scale Palette --- */
+    --color-gray-50:   #f8fafc;  /* Light BG */
+    --color-gray-100:  #f1f5f9;  /* Light BG / Borders */
+    --color-gray-200:  #e2e8f0;  /* Borders */
+    --color-gray-300:  #cbd5e1;  /* Subtle Borders / Disabled Text */
+    --color-gray-400:  #94a3b8;  /* Muted Text */
+    --color-gray-500:  #64748b;  /* Medium Text */
+    --color-gray-600:  #475569;  /* Body Text (Dark) / Dark Borders */
+    --color-gray-700:  #334155;  /* Darker Elements / Card BG (Dark) */
+    --color-gray-800:  #1e293b;  /* Darker Card BG (Dark) */
+    --color-gray-900:  #0f172a;  /* Dark BG */
+    --color-gray-950:  #020617;  /* Darkest BG */
+
+    /* --- Semantic Colors --- */
+    --color-white:     #ffffff;
+    --color-black:     #000000;
+
+    --color-success-50:  #f0fdf4; /* Lighter Success */
+    --color-success-100: #dcfce7;
+    --color-success-200: #bbf7d0;
+    --color-success-300: #86efac;
+    --color-success-400: #4ade80;
+    --color-success-500: #22c55e; /* Main Success */
+    --color-success-600: #16a34a;
+    --color-success-700: #15803d;
+    --color-success-800: #166534;
+    --color-success-900: #14532d;
+    --color-success-950: #052e16;
+
+    --color-danger-50:  #fff1f2; /* Lighter Danger */
+    --color-danger-100: #ffe4e6;
+    --color-danger-200: #fecdd3;
+    --color-danger-300: #fda4af;
+    --color-danger-400: #fb7185;
+    --color-danger-500: #f43f5e; /* Main Danger */
+    --color-danger-600: #e11d48;
+    --color-danger-700: #be123c;
+    --color-danger-800: #9f1239;
+    --color-danger-900: #881337;
+    --color-danger-950: #4c0519;
+
+    --color-warning-50:  #fffbeb; /* Lighter Warning */
+    --color-warning-100: #fef3c7;
+    --color-warning-200: #fde68a;
+    --color-warning-300: #fcd34d;
+    --color-warning-400: #fbbf24;
+    --color-warning-500: #f59e0b; /* Main Warning */
+    --color-warning-600: #d97706;
+    --color-warning-700: #b45309;
+    --color-warning-800: #92400e;
+    --color-warning-900: #78350f;
+    --color-warning-950: #451a03;
+
+    --color-info-50:  #eff6ff; /* Lighter Info */
+    --color-info-100: #dbeafe;
+    --color-info-200: #bfdbfe;
+    --color-info-300: #93c5fd;
+    --color-info-400: #60a5fa;
+    --color-info-500: #3b82f6; /* Main Info */
+    --color-info-600: #2563eb;
+    --color-info-700: #1d4ed8;
+    --color-info-800: #1e40af;
+    --color-info-900: #1e3a8a;
+    --color-info-950: #172554;
+
+    /* --- Fonts --- */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-display: 'Lexend Deca', var(--font-sans); /* Optional distinct display font */
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    /* --- Transitions --- */
+    --transition-fast: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-std:  all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* --- Shadows --- */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+    /* --- Borders --- */
+    --border-radius-sm: 0.25rem; /* 4px */
+    --border-radius:    0.375rem; /* 6px */
+    --border-radius-md: 0.5rem;   /* 8px */
+    --border-radius-lg: 0.75rem;  /* 12px */
+    --border-radius-xl: 1rem;    /* 16px */
+    --border-radius-full: 9999px;
+
+    --border-color: var(--color-gray-200);
+    --border-color-dark: var(--color-gray-700);
+
+    /* --- NEW: Card Opacity --- */
+    --card-bg-alpha: 0.88; /* Default opacity, JS will override */
+}
+
+/* Basic Reset & Global Box Sizing */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--border-color); /* Default border color */
+}
+.dark *, .dark *::before, .dark *::after {
+     border-color: var(--border-color-dark);
+}
+
+html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5; /* Base line height */
+    font-size: 16px; /* Base font size */
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: var(--font-sans);
+    /* MODIFIED: Make body background transparent to see app-background-layer */
+    background-color: transparent !important;
+    color: var(--color-gray-700);
+    transition: /*background-color var(--transition-std),*/ color var(--transition-std); /* Removed background-color transition for body */
+    height: 100vh;
+}
+
+.dark body {
+    /* MODIFIED: Make body background transparent to see app-background-layer */
+    /* background-color: var(--color-gray-900); */ /* Original */
+    color: var(--color-gray-300);
+}
+
+img { max-width: 100%; height: auto; vertical-align: middle; }
+
+
+/* --- END OF FILE base.css --- */

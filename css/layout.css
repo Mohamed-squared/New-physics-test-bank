@@ -1,0 +1,59 @@
+/* --- START OF FILE layout.css --- */
+
+/* === layout.css === */
+/* Styles for the main application layout structure */
+
+/* ==========================================================================
+   Main Layout
+   ========================================================================== */
+
+.app-layout { /* Applied to the main flex container */
+    display: flex;
+    height: 100vh;
+}
+
+/* Sidebar Container (Layout only) */
+aside#sidebar {
+    width: 16rem; /* w-64 */
+    /* Background, border, etc. in sidebar.css */
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: 100vh;
+    transition: width var(--transition-std), transform var(--transition-std), background-color var(--transition-std), border-color var(--transition-std);
+    box-shadow: var(--shadow-md);
+    z-index: 20; /* Ensure above content */
+}
+
+/* Main Content Area */
+main#main-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* MODIFIED: Make main content background transparent */
+    background-color: transparent !important;
+    /* transition: background-color var(--transition-std); */ /* Removed background-color transition */
+}
+/* .dark main#main-content { */
+     /* background-color: var(--color-gray-950); */ /* Slightly darker - Original */
+/* } */
+main#main-content .container {
+    max-width: 80rem; /* Limit content width */
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+@media (min-width: 640px) { main#main-content .container { padding-left: 1.5rem; padding-right: 1.5rem; } }
+@media (min-width: 1024px) { main#main-content .container { padding-left: 2rem; padding-right: 2rem; } }
+
+/* Background Layer */
+#app-background-layer {
+    /* Base styles are set inline in index.html for fixed positioning */
+    /* JS will manage backgroundImage and backgroundColor for custom settings */
+    /* This transition applies to backgroundColor changes from default theme toggling */
+    transition: background-color var(--transition-std), background-image var(--transition-std);
+}
+
+
+/* --- END OF FILE layout.css --- */

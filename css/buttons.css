@@ -1,0 +1,180 @@
+/* --- START OF FILE buttons.css --- */
+
+/* === buttons.css === */
+/* Contains all styles related to buttons */
+
+/* ==========================================================================
+   Button Styles
+   ========================================================================== */
+
+.btn,
+.btn-primary, .btn-secondary, .btn-danger, .btn-success, .btn-warning,
+.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 1.1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-radius: var(--border-radius-md);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+    user-select: none;
+    text-decoration: none;
+}
+
+/* Focus visible state */
+.btn:focus-visible,
+.btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-danger:focus-visible,
+.btn-success:focus-visible, .btn-warning:focus-visible,
+.btn-primary-small:focus-visible, .btn-secondary-small:focus-visible, .btn-danger-small:focus-visible,
+.btn-success-small:focus-visible, .btn-warning-small:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: var(--border-radius-md);
+}
+.dark .btn:focus-visible,
+.dark .btn-primary:focus-visible, .dark .btn-secondary:focus-visible, .dark .btn-danger:focus-visible,
+.dark .btn-success:focus-visible, .dark .btn-warning:focus-visible,
+.dark .btn-primary-small:focus-visible, .dark .btn-secondary-small:focus-visible, .dark .btn-danger-small:focus-visible,
+.dark .btn-success-small:focus-visible, .dark .btn-warning-small:focus-visible {
+    outline-color: var(--color-primary-400);
+}
+.btn-danger:focus-visible, .btn-danger-small:focus-visible { outline-color: var(--color-danger-500); }
+.dark .btn-danger:focus-visible, .dark .btn-danger-small:focus-visible { outline-color: var(--color-danger-400); }
+.btn-success:focus-visible, .btn-success-small:focus-visible { outline-color: var(--color-success-500); }
+.dark .btn-success:focus-visible, .dark .btn-success-small:focus-visible { outline-color: var(--color-success-400); }
+.btn-warning:focus-visible, .btn-warning-small:focus-visible { outline-color: var(--color-warning-500); }
+.dark .btn-warning:focus-visible, .dark .btn-warning-small:focus-visible { outline-color: var(--color-warning-400); }
+
+
+/* Disabled state */
+button:disabled, .btn:disabled, a.btn:disabled,
+.btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled, .btn-success:disabled, .btn-warning:disabled,
+.btn-primary-small:disabled, .btn-secondary-small:disabled, .btn-danger-small:disabled, .btn-success-small:disabled, .btn-warning-small:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none; /* No transform on disabled */
+}
+
+/* Primary Button */
+.btn-primary { background-color: var(--color-primary-600); color: var(--color-white); }
+.btn-primary:hover:not(:disabled) { background-color: var(--color-primary-700); box-shadow: var(--shadow); transform: translateY(-1px); }
+.dark .btn-primary { background-color: var(--color-primary-500); color: var(--color-white); }
+.dark .btn-primary:hover:not(:disabled) { background-color: var(--color-primary-400); }
+
+/* Secondary Button */
+.btn-secondary { background-color: var(--color-white); color: var(--color-gray-700); border-color: var(--color-gray-300); box-shadow: var(--shadow-sm); }
+.btn-secondary:hover:not(:disabled) { background-color: var(--color-gray-50); border-color: var(--color-gray-400); box-shadow: var(--shadow); transform: translateY(-1px); }
+.dark .btn-secondary { background-color: var(--color-gray-700); color: var(--color-gray-200); border-color: var(--color-gray-600); }
+.dark .btn-secondary:hover:not(:disabled) { background-color: var(--color-gray-600); border-color: var(--color-gray-500); }
+
+/* Danger Button */
+.btn-danger { background-color: var(--color-danger-600); color: var(--color-white); }
+.btn-danger:hover:not(:disabled) { background-color: var(--color-danger-700); box-shadow: var(--shadow); transform: translateY(-1px); }
+.dark .btn-danger { background-color: var(--color-danger-500); }
+.dark .btn-danger:hover:not(:disabled) { background-color: var(--color-danger-400); }
+
+/* Success Button */
+.btn-success { background-color: var(--color-success-600); color: var(--color-white); }
+.btn-success:hover:not(:disabled) { background-color: var(--color-success-700); box-shadow: var(--shadow); transform: translateY(-1px); }
+.dark .btn-success { background-color: var(--color-success-500); }
+.dark .btn-success:hover:not(:disabled) { background-color: var(--color-success-400); }
+
+/* Warning Button */
+.btn-warning { background-color: var(--color-warning-500); color: var(--color-gray-900); }
+.btn-warning:hover:not(:disabled) { background-color: var(--color-warning-600); box-shadow: var(--shadow); transform: translateY(-1px); }
+.dark .btn-warning { background-color: var(--color-warning-400); color: var(--color-gray-900); }
+.dark .btn-warning:hover:not(:disabled) { background-color: var(--color-warning-300); }
+
+/* Small Button Variants */
+.btn-primary-small, .btn-secondary-small, .btn-danger-small, .btn-success-small, .btn-warning-small {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 500; /* Medium */
+    box-shadow: none; /* Less shadow for small buttons */
+}
+
+/* --- CORRECTED RULE FOR SMALL BUTTON HOVER TRANSFORM/SHADOW --- */
+.btn-primary-small:hover:not(:disabled),
+.btn-secondary-small:hover:not(:disabled),
+.btn-danger-small:hover:not(:disabled),
+.btn-success-small:hover:not(:disabled),
+.btn-warning-small:hover:not(:disabled) {
+    transform: translateY(-1px); /* Subtle lift on hover for small too */
+    box-shadow: var(--shadow-sm); /* Slight shadow on hover for small */
+}
+/* --- END CORRECTION --- */
+
+.btn-success-small { background-color: var(--color-success-600); color: var(--color-white); }
+.btn-success-small:hover:not(:disabled) { background-color: var(--color-success-700); }
+.dark .btn-success-small { background-color: var(--color-success-500); }
+.dark .btn-success-small:hover:not(:disabled) { background-color: var(--color-success-400); }
+.btn-warning-small { background-color: var(--color-warning-500); color: var(--color-gray-900); }
+.btn-warning-small:hover:not(:disabled) { background-color: var(--color-warning-600); }
+.dark .btn-warning-small { background-color: var(--color-warning-400); color: var(--color-gray-900); }
+.dark .btn-warning-small:hover:not(:disabled) { background-color: var(--color-warning-300); }
+.btn-primary-small { background-color: var(--color-primary-600); color: var(--color-white); }
+.btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-700); }
+.dark .btn-primary-small { background-color: var(--color-primary-500); color: var(--color-white); }
+.dark .btn-primary-small:hover:not(:disabled) { background-color: var(--color-primary-400); }
+.btn-secondary-small { background-color: var(--color-white); color: var(--color-gray-700); border-color: var(--color-gray-300); }
+.btn-secondary-small:hover:not(:disabled) { background-color: var(--color-gray-50); }
+.dark .btn-secondary-small { background-color: var(--color-gray-700); color: var(--color-gray-200); border-color: var(--color-gray-600); }
+.dark .btn-secondary-small:hover:not(:disabled) { background-color: var(--color-gray-600); }
+.btn-danger-small { background-color: var(--color-danger-600); color: var(--color-white); }
+.btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-700); }
+.dark .btn-danger-small { background-color: var(--color-danger-500); }
+.dark .btn-danger-small:hover:not(:disabled) { background-color: var(--color-danger-400); }
+
+/* Icon Only Buttons (Example) */
+.btn-icon {
+    padding: 0.5rem;
+    line-height: 1;
+}
+.btn-icon svg { margin-right: 0 !important; width: 1.25rem; height: 1.25rem; }
+
+
+/* Button Icons */
+.btn svg,
+.btn-primary svg, .btn-secondary svg, .btn-danger svg, .btn-success svg, .btn-warning svg,
+.btn-primary-small svg, .btn-secondary-small svg, .btn-danger-small svg, .btn-success-small svg, .btn-warning-small svg {
+    width: 1.125em;
+    height: 1.125em;
+    flex-shrink: 0;
+}
+.btn svg:not(:only-child),
+.btn-primary svg:not(:only-child),
+.btn-secondary svg:not(:only-child),
+.btn-danger svg:not(:only-child),
+.btn-success svg:not(:only-child),
+.btn-warning svg:not(:only-child),
+.btn-primary-small svg:not(:only-child),
+.btn-secondary-small svg:not(:only-child),
+.btn-danger-small svg:not(:only-child),
+.btn-success-small svg:not(:only-child),
+.btn-warning-small svg:not(:only-child) {
+    margin-right: 0.5em;
+}
+
+/* Mobile Menu Button */
+#mobile-menu-button {
+    position: relative;
+}
+#mobile-menu-button .menu-ping {
+    top: 0px;
+    right: 0px;
+    width: 12px;
+    height: 12px;
+}
+#mobile-menu-button.has-notification .menu-ping {
+    display: inline-block !important;
+}
+
+
+/* --- END OF FILE buttons.css --- */

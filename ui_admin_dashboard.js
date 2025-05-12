@@ -1,41 +1,53 @@
-// ui_admin_dashboard.js
+// --- START OF FILE ui_admin_dashboard.js ---
 
-import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData, globalAiSystemPrompts, setGlobalAiSystemPrompts } from './state.js'; // Added currentUser, globalAiSystemPrompts, setGlobalAiSystemPrompts
-import { ADMIN_UID, YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL } from './config.js'; // Import YouTube API Key and DEFAULT_PROFILE_PIC_URL
-import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
+import { db, currentUser, globalCourseDataMap, userCourseProgressMap, updateGlobalCourseData, globalAiSystemPrompts, setGlobalAiSystemPrompts } from './state.js';
+import { YOUTUBE_API_KEY, DEFAULT_PROFILE_PIC_URL, ADMIN_UID } from './config.js';
+import { displayContent, clearContent, setActiveSidebarLink as setMainSidebarActive } from './ui_core.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js';
-// MODIFIED: Added imports for Admin Tasks and Global AI Prompts
-import {
-    sendAdminReply,
-    updateCourseStatusForUser,
-    handleAddBadgeForUser,
-    handleRemoveBadgeForUser,
-    updateCourseDefinition,
-    deleteUserFormulaSheet,
-    deleteUserChapterSummary,
-    deleteAllFeedbackMessages,
-    deleteAllExamIssues,
-    adminUpdateUsername,
-    fetchAdminTasks,      // MODIFIED: Import
-    addAdminTask,         // MODIFIED: Import
-    updateAdminTaskStatus,// MODIFIED: Import
-    deleteAdminTask,      // MODIFIED: Import
-    toggleUserAdminStatus, 
-    adminUpdateUserSubjectStatus,
-    saveGlobalAiPrompts
-} from './firebase_firestore.js'; 
-import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 
-// Import course functions needed by admin buttons
-import { handleCourseApproval, showCourseDetails, showEditCourseForm, showBrowseCourses, showAddCourseForm } from './ui_courses.js'; // Added showBrowseCourses, showAddCourseForm
-// Use the imported escapeHtml from utils.js
+// Import display functions from specialized admin modules
+import { displayFeedbackSection, loadFeedbackForAdmin, confirmDeleteItem as confirmDeleteFeedbackItem, promptAdminReply as promptAdminFeedbackReply } from './admin_moderation.js';
+import { displayCourseManagementSection, loadCoursesForAdmin as loadAdminCourses  } from './admin_course_content.js';
+import { handleCourseApproval as handleAdminCourseApproval, showAddCourseForm, showEditCourseForm as showAdminEditCourseForm } from './ui_courses.js' // Global course add/edit
+import { displayUserManagementSection, loadUserCoursesForAdmin, handleAdminMarkCourseComplete, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval, listAllUsersAdmin, viewUserDetailsAdmin, promptAdminChangeUsername as promptAdminUsernameChange, handleToggleAdminStatus } from './admin_user_management.js';
+import { displaySystemOperationsSection, loadAdminTasksUI, handleAddAdminTask, handleToggleAdminTaskStatus, handleDeleteAdminTask, renderGlobalAiPromptsAdminUI, handleSaveGlobalPromptsToFirestore, loadChatAutoDeleteSettingAdmin, saveChatAutoDeleteSettingAdmin } from './admin_system_operations.js';
+import { displayTestingAidsSection } from './admin_testing_aids.js';
+import { confirmDeleteAllFeedbackAndIssues } from './admin_moderation.js'
+import { populateAdminCourseSelect, loadPlaylistForAdmin, toggleSelectAllVideosAdmin as toggleSelectAllVideos, toggleVideoSelectionAdmin as toggleVideoSelection, handleAssignVideoToChapter, handleUnassignVideoFromChapter, handleDeleteUserFormulaSheetAdmin, handleDeleteUserChapterSummaryAdmin } from './admin_playlist_and_content_deletion.js';
+import { getAdminOverviewStats } from './firebase_firestore.js'
+// --- Main Admin Dashboard UI ---
 
-// State for Playlist Management section
-let selectedVideosForAssignment = []; // Array to hold { videoId, title }
-let currentLoadedPlaylistCourseId = null;
-let currentManagingUserIdForSubjects = null;
+// State for current active admin section
+let currentAdminSection = 'overview'; // Default section
 
-// --- Admin Dashboard UI ---
+// NEW function to set RGB CSS variables based on theme
+function updateAdminPanelBackgroundRGBs() {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+        // Dark mode RGB values (approximate Tailwind colors)
+        document.documentElement.style.setProperty('--admin-nav-bg-rgb', '30, 41, 59');       // gray-800
+        document.documentElement.style.setProperty('--admin-nav-border-rgb', '55, 65, 81');   // gray-700
+        document.documentElement.style.setProperty('--admin-content-bg-rgb', '30, 41, 59');   // gray-800
+        document.documentElement.style.setProperty('--admin-content-border-rgb', '55, 65, 81'); // gray-700
+        document.documentElement.style.setProperty('--admin-section-bg-rgb', '55, 65, 81');  // gray-700 (for sections inside content)
+        document.documentElement.style.setProperty('--admin-section-border-rgb', '75, 85, 99'); // gray-600
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-bg-rgb', '55, 65, 81'); // gray-700
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-border-rgb', '107, 114, 128'); // gray-600
+
+    } else {
+        // Light mode RGB values
+        document.documentElement.style.setProperty('--admin-nav-bg-rgb', '255, 255, 255');     // white
+        document.documentElement.style.setProperty('--admin-nav-border-rgb', '229, 231, 235'); // gray-200
+        document.documentElement.style.setProperty('--admin-content-bg-rgb', '255, 255, 255'); // white
+        document.documentElement.style.setProperty('--admin-content-border-rgb', '229, 231, 235'); // gray-200
+        document.documentElement.style.setProperty('--admin-section-bg-rgb', '249, 250, 251'); // gray-50
+        document.documentElement.style.setProperty('--admin-section-border-rgb', '229, 231, 235'); // gray-200
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-bg-rgb', '243, 244, 246'); // gray-100
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-border-rgb', '209, 213, 219'); // gray-300
+    }
+    console.log("Admin panel RGB CSS variables updated for current theme.");
+}
+
 
 export function showAdminDashboard() {
     if (!currentUser || !currentUser.isAdmin) {
@@ -43,1995 +55,240 @@ export function showAdminDashboard() {
         return;
     }
     clearContent();
-    setActiveSidebarLink('showAdminDashboard', 'sidebar-standard-nav');
+    setMainSidebarActive('showAdminDashboard', 'sidebar-standard-nav');
 
     const isPrimaryAdmin = currentUser.uid === ADMIN_UID;
 
-    displayContent(`
-        <div class="animate-fade-in space-y-8">
-            <h2 class="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">Admin Dashboard</h2>
+    const adminPanelHtml = `
+    <div class="flex flex-col md:flex-row gap-6 animate-fade-in h-[calc(100vh-150px)] md:h-[calc(100vh-120px)]">
+        <aside id="admin-panel-nav" class="w-full md:w-64 p-4 rounded-lg shadow-md flex-shrink-0 overflow-y-auto custom-scrollbar"
+                style="background-color: rgba(var(--admin-nav-bg-rgb, 255, 255, 255), var(--card-bg-alpha)); border: 1px solid rgba(var(--admin-nav-border-rgb, 229, 231, 235), var(--card-bg-alpha, 0.5));">
+            <h2 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400 border-b pb-2 dark:border-gray-700">Admin Menu</h2>
+            <nav class="space-y-1">
+                <a href="#" onclick="window.showAdminSection('overview'); return false;" data-section="overview" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" /></svg>
+                    Overview
+                </a>
+                <a href="#" onclick="window.showAdminSection('userManagement'); return false;" data-section="userManagement" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                    </svg>
+                    Users
+                </a>
+                <a href="#" onclick="window.showAdminSection('courseContent'); return false;" data-section="courseContent" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>
+                    Courses
+                </a>
+                <a href="#" onclick="window.showAdminSection('moderation'); return false;" data-section="moderation" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" /></svg>
+                    Moderation
+                </a>
+                <a href="#" onclick="window.showAdminSection('systemOperations'); return false;" data-section="systemOperations" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.646.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.43.992a6.759 6.759 0 0 1 0 1.255c-.008.379.138.75.43.992l1.004.827a1.125 1.125 0 0 1 .26 1.43l-1.296 2.247a1.125 1.125 0 0 1-1.37.491l-1.217-.456c-.355-.133-.75-.072-1.075.124a6.512 6.512 0 0 1-.22.127c-.333.183-.583.495-.646.87l-.213 1.28c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.646-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 0 1-1.37-.49l-1.296-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.758 6.758 0 0 1 0-1.255c.008-.379-.138-.75-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.296-2.247a1.125 1.125 0 0 1 1.37-.491l1.217.456c.355.133.75.072 1.075-.124a6.512 6.512 0 0 1 .22-.127c.333-.183.583-.495.646-.87l.213-1.281Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                    System
+                </a>
+                <a href="#" onclick="window.showAdminSection('testingAids'); return false;" data-section="testingAids" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
+                    Testing Aids
+                </a>
+            </nav>
+        </aside>
+        <main id="admin-panel-content-area" class="flex-1 p-6 rounded-lg shadow-md overflow-y-auto custom-scrollbar"
+                style="background-color: rgba(var(--admin-content-bg-rgb, 255, 255, 255), var(--card-bg-alpha)); border: 1px solid rgba(var(--admin-content-border-rgb, 229, 231, 235), var(--card-bg-alpha, 0.5));">
+            <!-- Content for the selected section will be loaded here -->
+        </main>
+    </div>
+`;
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    displayContent(adminPanelHtml);
+    updateAdminPanelBackgroundRGBs(); // IMPORTANT: Call this to set CSS vars for RGB
+    showAdminSection(currentAdminSection);
 
-                <!-- Feedback Management Card -->
-                <div class="content-card">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Recent Feedback Messages</h3>
-                    <div id="admin-feedback-area" class="max-h-96 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Loading feedback...</p>
-                    </div>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="window.loadFeedbackForAdmin()" class="btn-secondary-small text-xs">Refresh Feedback</button>
-                        <button onclick="window.confirmDeleteAllFeedback()" class="btn-danger-small text-xs">Delete ALL Feedback</button>
-                    </div>
-                </div>
-
-                <!-- Course Management Card -->
-                <div class="content-card">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Course Management</h3>
-                    <p class="text-sm text-muted mb-3">Review pending/reported courses or add new ones.</p>
-                    <div id="admin-courses-area" class="max-h-80 overflow-y-auto pr-2 mb-3">
-                        <p class="text-muted text-sm">Loading courses requiring attention...</p>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="window.loadCoursesForAdmin()" class="btn-secondary-small text-xs">Refresh List</button>
-                        <button onclick="window.showAddCourseForm()" class="btn-primary-small text-xs">Add New Course</button>
-                        <button onclick="window.showBrowseCourses()" class="btn-secondary-small text-xs">Browse All Courses</button>
-                    </div>
-                </div>
-
-                <!-- User Course Management Card -->
-                <div class="content-card">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Course Management</h3>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-user-search-courses" placeholder="Enter User ID or Email..." class="flex-grow text-sm">
-                        <button onclick="window.loadUserCoursesForAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Load User Courses</button>
-                    </div>
-                     <div id="admin-user-courses-area" class="max-h-80 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Enter a User ID or Email and click 'Load'.</p>
-                    </div>
-                </div>
-
-                <!-- User Badge Management Card -->
-                <div class="content-card">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Badge Management</h3>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-user-search-badges" placeholder="Enter User ID or Email..." class="flex-grow text-sm">
-                        <button onclick="window.loadUserBadgesForAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Load User Badges</button>
-                    </div>
-                     <div id="admin-user-badges-area" class="max-h-80 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Enter a User ID or Email and click 'Load'.</p>
-                    </div>
-                </div>
-
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Subject Management (Approval)</h3>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-user-search-subjects" placeholder="Enter User ID or Email..." class="flex-grow text-sm">
-                        <button onclick="window.loadUserSubjectsForAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Load User's Subjects</button>
-                    </div>
-                    <div id="admin-user-subjects-area" class="max-h-96 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Enter a User ID or Email to load their subjects for approval.</p>
-                    </div>
-                </div>
-
-
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">User Management</h3>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-user-list-search" placeholder="Search Users by Email or Name..." class="flex-grow text-sm">
-                        <button onclick="window.listAllUsersAdmin()" class="btn-secondary-small text-xs flex-shrink-0">Search / List Users</button>
-                    </div>
-                    <div id="admin-user-list-area" class="max-h-96 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Click 'Search / List Users' to load.</p>
-                    </div>
-                </div>
-
-                <!-- MODIFIED: Admin Tasks Card -->
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Errors / Features To Fix (Admin Tasks)</h3>
-                    <div class="flex gap-4 mb-4">
-                        <input type="text" id="admin-new-task-input" placeholder="Enter new task description..." class="flex-grow text-sm" ${!isPrimaryAdmin ? 'disabled title="Only Primary Admin can add tasks"' : ''}>
-                        <button onclick="window.handleAddAdminTask()" class="btn-primary-small text-xs flex-shrink-0" ${!isPrimaryAdmin ? 'disabled title="Only Primary Admin can add tasks"' : ''}>Add Task</button>
-                    </div>
-                    <div id="admin-tasks-area" class="max-h-96 overflow-y-auto pr-2">
-                        <p class="text-muted text-sm">Loading tasks...</p>
-                    </div>
-                </div>
-
-                <!-- Global AI System Prompts Card (Full Width) -->
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Global AI System Prompts</h3>
-                    <p class="text-sm text-muted mb-3">
-                        Define system prompts that will be used globally unless a user has a custom override for that specific function.
-                        Changes here affect all users.
-                        <strong>Only the Primary Admin (UID: ${ADMIN_UID}) can save these settings.</strong>
-                    </p>
-                    <div id="admin-global-ai-prompts-area" class="space-y-6">
-                        <p class="text-muted text-sm">Loading global AI prompts...</p>
-                    </div>
-                    <div class="mt-6 text-right">
-                        <button id="save-global-ai-prompts-btn" onclick="window.handleSaveGlobalPrompts()" class="btn-primary" ${!isPrimaryAdmin ? 'disabled' : ''}>
-                            Save Global Prompts
-                        </button>
-                    </div>
-                </div>
-
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Playlist & Chapter Assignment</h3>
-                     <div class="flex gap-4 mb-4">
-                        <select id="admin-playlist-course-select" class="flex-grow"><option value="">Select Course...</option></select>
-                        <button onclick="window.loadPlaylistForAdmin()" class="btn-secondary-small text-xs flex-shrink-0" disabled>Load Playlist Videos</button>
-                     </div>
-                     <div id="admin-playlist-videos-area" class="max-h-96 overflow-y-auto border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700/50 mb-3">
-                          <p class="text-muted text-sm">Select a course to load its associated YouTube playlist(s).</p>
-                     </div>
-                     <div id="admin-video-action-area" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
-                         <p id="admin-selected-video-count" class="text-sm font-medium mb-3">Selected Videos: 0</p>
-                         <div class="flex flex-wrap gap-3 items-center">
-                              <label for="admin-assign-chapter-num" class="self-center text-sm">Target Chapter:</label>
-                              <input type="number" id="admin-assign-chapter-num" min="1" class="w-20 text-sm">
-                              <button id="admin-assign-video-btn" onclick="window.handleAssignVideoToChapter()" class="btn-primary-small text-xs" disabled>Assign Selected</button>
-                              <button id="admin-unassign-video-btn" onclick="window.handleUnassignVideoFromChapter()" class="btn-danger-small text-xs" disabled>Unassign Selected</button>
-                         </div>
-                     </div>
-                </div>
-
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Delete Generated Content</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                            <label for="admin-delete-content-user" class="block text-sm font-medium mb-1">User ID or Email</label>
-                            <input type="text" id="admin-delete-content-user" class="w-full text-sm" placeholder="Enter User ID or Email...">
-                        </div>
-                        <div>
-                            <label for="admin-delete-content-course" class="block text-sm font-medium mb-1">Course ID</label>
-                            <input type="text" id="admin-delete-content-course" class="w-full text-sm" placeholder="e.g., fop_physics_v1">
-                        </div>
-                        <div>
-                            <label for="admin-delete-content-chapter" class="block text-sm font-medium mb-1">Chapter Number</label>
-                            <input type="number" id="admin-delete-content-chapter" class="w-full text-sm" min="1" placeholder="e.g., 1">
-                        </div>
-                    </div>
-                    <div class="flex gap-3">
-                        <button onclick="window.handleDeleteUserFormulaSheetAdmin()" class="btn-danger-small text-xs">Delete Formula Sheet</button>
-                        <button onclick="window.handleDeleteUserChapterSummaryAdmin()" class="btn-danger-small text-xs">Delete Chapter Summary</button>
-                    </div>
-                    <div id="admin-delete-content-status" class="mt-3 text-sm"></div>
-                </div>
-
-                <div class="content-card md:col-span-2">
-                    <h3 class="text-lg font-medium mb-3 border-b pb-2 dark:border-gray-700">Chat Auto-Deletion</h3>
-                    <p class="text-sm text-muted mb-3">
-                        Configure automatic deletion of old messages in the global chat.
-                        <strong>Note:</strong> This setting only stores the configuration. Actual deletion requires a backend Cloud Function (e.g., triggered daily) to read this setting and perform the deletions.
-                        This functionality requires the logged-in user to be the Primary Admin (UID: ${ADMIN_UID}).
-                    </p>
-                    <div class="flex flex-wrap items-center gap-4">
-                        <label for="chat-auto-delete-select" class="text-sm font-medium">Delete messages older than:</label>
-                        <select id="chat-auto-delete-select" class="flex-grow max-w-xs text-sm" ${!isPrimaryAdmin ? 'disabled' : ''}>
-                            <option value="0">Disabled</option>
-                            <option value="7">7 days</option>
-                            <option value="30">30 days</option>
-                            <option value="90">90 days</option>
-                        </select>
-                        <button onclick="window.saveChatAutoDeleteSetting()" class="btn-primary-small text-xs flex-shrink-0" ${!isPrimaryAdmin ? 'disabled' : ''}>Save Setting</button>
-                    </div>
-                    <div id="chat-auto-delete-status" class="mt-3 text-sm"></div>
-                </div>
-            </div>
-        </div>
-    `);
-    loadFeedbackForAdmin();
-    loadCoursesForAdmin();
-    populateAdminCourseSelect();
-    loadAdminTasks(); // MODIFIED: Call new function
-    renderGlobalAiPromptsAdmin();
-    loadChatAutoDeleteSetting();
-}
-
-// --- START: Global AI Prompts Management UI ---
-function renderGlobalAiPromptsAdmin() {
-    const promptsArea = document.getElementById('admin-global-ai-prompts-area');
-    if (!promptsArea) {
-        console.error("Admin Global AI Prompts area not found.");
-        return;
-    }
-
-    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
-    let html = '';
-
-    AI_FUNCTION_KEYS.forEach(key => {
-        const currentGlobalValue = globalAiSystemPrompts[key] || ""; // Use empty string if undefined
-        const defaultValue = DEFAULT_AI_SYSTEM_PROMPTS[key] || "No default defined.";
-        
-        const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '-');
-
-        html += `
-            <div class="prompt-item border-t dark:border-gray-600 pt-4">
-                <label for="global-prompt-${sanitizedKey}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    ${escapeHtml(key)}
-                </label>
-                <textarea id="global-prompt-${sanitizedKey}" 
-                          name="${escapeHtml(key)}"
-                          rows="4" 
-                          class="w-full text-sm p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:text-gray-200"
-                          placeholder="Enter custom global prompt for ${escapeHtml(key)}..."
-                          ${!isPrimaryAdmin ? 'readonly' : ''}>${escapeHtml(currentGlobalValue)}</textarea>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    <strong>Default:</strong> <span class="font-mono whitespace-pre-wrap">${escapeHtml(defaultValue)}</span>
-                </p>
-            </div>
-        `;
-    });
-
-    promptsArea.innerHTML = html || '<p class="text-muted text-sm">No AI function keys defined.</p>';
-}
-
-async function handleSaveGlobalPrompts() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Permission Denied: Only the Primary Admin can save these settings.");
-        return;
-    }
-
-    const newGlobalPrompts = {};
-    let allPromptsValid = true;
-
-    AI_FUNCTION_KEYS.forEach(key => {
-        const sanitizedKey = key.replace(/[^a-zA-Z0-9_]/g, '-');
-        const textarea = document.getElementById(`global-prompt-${sanitizedKey}`);
-        if (textarea) {
-            const value = textarea.value.trim();
-            newGlobalPrompts[key] = value;
-        } else {
-            console.warn(`Textarea for prompt key ${key} not found.`);
-            allPromptsValid = false; 
-        }
-    });
-
-    if (!allPromptsValid) {
-        alert("Error collecting prompt data. Please check console.");
-        return;
-    }
-
-    showLoading("Saving Global AI Prompts...");
-    try {
-        const success = await saveGlobalAiPrompts(newGlobalPrompts);
-        hideLoading();
-        if (success) {
-            setGlobalAiSystemPrompts(newGlobalPrompts); 
-            alert("Global AI System Prompts saved successfully!");
-            renderGlobalAiPromptsAdmin(); 
-        } else {
-            console.warn("Failed to save global AI prompts (firestore function returned false or threw error handled there).");
-        }
-    } catch (error) {
-        hideLoading();
-        console.error("Error in handleSaveGlobalPrompts:", error);
-        alert(`An unexpected error occurred: ${error.message}`);
-    }
-}
-// window.handleSaveGlobalPrompts = handleSaveGlobalPrompts; // Already assigned at the end
-// --- END: Global AI Prompts Management UI ---
-
-
-// --- Feedback ---
-async function loadFeedbackForAdmin() {
-    const feedbackArea = document.getElementById('admin-feedback-area');
-    if (!feedbackArea) return;
-    feedbackArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-
-    try {
-        const feedbackSnapshot = await db.collection('feedback')
-                                         .orderBy('timestamp', 'desc')
-                                         .limit(30)
-                                         .get();
-        const issuesSnapshot = await db.collection('examIssues')
-                                       .orderBy('timestamp', 'desc')
-                                       .limit(20)
-                                       .get();
-
-        if (feedbackSnapshot.empty && issuesSnapshot.empty) {
-            feedbackArea.innerHTML = '<p class="text-sm text-muted">No feedback messages or exam issues found.</p>';
-            return;
-        }
-
-        let combinedHtml = '<div class="space-y-3">';
-        const renderItem = (doc, type) => {
-            const data = doc.data();
-            const id = doc.id;
-            const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'N/A';
-            const collectionName = type === 'feedback' ? 'feedback' : 'examIssues';
-             const status = data.status || 'new';
-            const statusClass = status === 'new' ? 'bg-yellow-100 dark:bg-yellow-900/80 border-yellow-300 dark:border-yellow-700' : status === 'replied' ? 'bg-green-100 dark:bg-green-900/80 border-green-300 dark:border-green-700' : 'bg-gray-100 dark:bg-gray-700/80 border-gray-300 dark:border-gray-600';
-            const statusText = status === 'new' ? 'New' : status === 'replied' ? 'Replied' : (status || 'Unknown');
-            const senderName = escapeHtml(data.username || 'Unknown User');
-            const isPrimaryAdminSender = data.userId === ADMIN_UID;
-            const senderIsAssignedAdmin = data.isAdmin === true && data.userId !== ADMIN_UID;
-
-            let adminIconHtml = '';
-            if (isPrimaryAdminSender) {
-                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Primary Admin"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
-            } else if (senderIsAssignedAdmin) {
-                 adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Assigned Admin"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>`;
-            }
-
-            const textEscaped = escapeHtml(data.feedbackText || 'No text');
-            const replyTextEscaped = escapeHtml(data.replyText || '');
-             const itemTypeLabel = type === 'feedback' ? 'Feedback' : 'Exam Issue';
-             const itemTypeColor = type === 'feedback' ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-red-100 dark:bg-red-900/50';
-
-            return `
-                <div class="${statusClass} p-3 rounded-lg border shadow-sm text-sm">
-                    <div class="flex justify-between items-center mb-1">
-                        <span class="font-bold text-xs px-2 py-0.5 rounded ${itemTypeColor}">${itemTypeLabel}</span>
-                        <span class="text-xs font-semibold px-2 py-0.5 rounded ${statusText === 'New' ? 'bg-yellow-500 text-white' : statusText === 'Replied' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white'}">${statusText}</span>
-                    </div>
-                     <p class="text-xs font-mono text-gray-500 dark:text-gray-400 break-all mb-1">ID: ${id}</p>
-                    <p><strong>From:</strong> ${senderName}${adminIconHtml} (ID: ${data.userId || 'N/A'})</p>
-                    <p><strong>Subject ID:</strong> ${escapeHtml(data.subjectId || 'N/A')}</p>
-                    <p><strong>Question ID:</strong> ${escapeHtml(data.questionId || 'N/A')}</p>
-                    ${data.context ? `<p><strong>Context:</strong> ${escapeHtml(data.context)}</p>` : ''}
-                    <p><strong>Date:</strong> ${date}</p>
-                    <p class="bg-white dark:bg-gray-800 p-2 rounded border dark:border-gray-500 mt-1 whitespace-pre-wrap text-xs">${textEscaped}</p>
-                    ${data.replyText ? `<p class="mt-2 pt-2 border-t dark:border-gray-600 text-xs"><strong>Admin Reply:</strong> ${replyTextEscaped}</p>` : ''}
-                    <div class="mt-2 text-right space-x-1">
-                        ${status !== 'replied' ? `<button onclick="window.promptAdminReply('${collectionName}', '${id}', '${data.userId}')" class="btn-secondary-small text-xs">Reply</button>` : ''}
-                        <button onclick="window.confirmDeleteItem('${collectionName}', '${id}')" class="btn-danger-small text-xs" title="Delete this message">Delete</button>
-                    </div>
-                </div>
-            `;
-        };
-
-        feedbackSnapshot.forEach(doc => combinedHtml += renderItem(doc, 'feedback'));
-        issuesSnapshot.forEach(doc => combinedHtml += renderItem(doc, 'examIssue'));
-
-        combinedHtml += '</div>';
-        feedbackArea.innerHTML = combinedHtml;
-
-    } catch (error) {
-        console.error("Error loading feedback/issues for admin:", error);
-        feedbackArea.innerHTML = `<p class="text-red-500 text-sm">Error loading feedback/issues: ${error.message}</p>`;
-    }
- }
-// window.loadFeedbackForAdmin = loadFeedbackForAdmin; // Assigned at end
-
-export function promptAdminReply(collectionName, itemId, recipientUserId) {
-    if (!currentUser || !currentUser.isAdmin) {
-        alert("Action requires admin privileges.");
-        return;
-    }
-    const replyText = prompt(`Enter reply for item ID ${itemId} (in ${collectionName}):`);
-    if (replyText && replyText.trim()) {
-        handleAdminReply(collectionName, itemId, recipientUserId, replyText.trim());
-    } else if (replyText !== null) {
-        alert("Reply cannot be empty.");
-    }
-}
-// window.promptAdminReply = promptAdminReply; // Assigned at end
-
-async function handleAdminReply(collectionName, itemId, recipientUserId, replyText) {
-     if (!currentUser || !currentUser.isAdmin) {
-        alert("Action requires admin privileges.");
-        return;
-    }
-
-    showLoading("Sending reply...");
-    const subject = `Reply regarding ${collectionName === 'feedback' ? 'Feedback' : 'Exam Issue'} ${itemId}`;
-    const success = await sendAdminReply(recipientUserId, subject, replyText, currentUser);
-    if (success) {
-        try {
-            await db.collection(collectionName).doc(itemId).update({
-                status: 'replied',
-                replyText: replyText
-            });
-            console.log(`${collectionName} item ${itemId} status updated to replied.`);
-            alert("Reply sent successfully!");
-            loadFeedbackForAdmin();
-        } catch (updateError) {
-            console.error(`Error updating ${collectionName} status:`, updateError);
-            alert(`Reply sent, but failed to update ${collectionName} status.`);
-        }
-    }
-    hideLoading();
-}
-
-export function confirmDeleteItem(collectionName, itemId) {
-    if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
-    if (confirm(`Are you sure you want to permanently delete this ${collectionName === 'feedback' ? 'feedback message' : 'exam issue'} (ID: ${itemId})? This cannot be undone.`)) {
-        handleDeleteItem(collectionName, itemId);
-    }
-}
-// window.confirmDeleteItem = confirmDeleteItem; // Assigned at end
-
-async function deleteDbItem(collectionName, itemId) {
-    if (!db || !itemId || !collectionName) {
-        console.error("Cannot delete item: DB not available or ID/collection missing.");
-        return false;
-    }
-    if (!['feedback', 'examIssues'].includes(collectionName)) {
-         console.error("Invalid collection name for deletion:", collectionName);
-         return false;
-    }
-    const itemRef = db.collection(collectionName).doc(itemId);
-    try {
-        await itemRef.delete();
-        console.log(`Item ${itemId} in ${collectionName} deleted successfully.`);
-        return true;
-    } catch (error) {
-        console.error(`Error deleting item ${itemId} from ${collectionName}:`, error);
-        return false;
-    }
-}
-
-async function handleDeleteItem(collectionName, itemId) {
-     if (!currentUser || !currentUser.isAdmin || !itemId || !collectionName) return;
-     showLoading(`Deleting item from ${collectionName}...`);
-     const success = await deleteDbItem(collectionName, itemId);
-     hideLoading();
-     if (success) {
-         alert("Item deleted.");
-         loadFeedbackForAdmin();
-     } else {
-         alert("Failed to delete item.");
-     }
-}
-
-
-// --- Course Management ---
-async function loadCoursesForAdmin() {
-     const coursesArea = document.getElementById('admin-courses-area');
-     if (!coursesArea) return;
-     coursesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-     try {
-         const coursesSnapshot = await db.collection('courses')
-             .where('status', 'in', ['pending', 'reported'])
-             .orderBy('createdAt', 'desc')
-             .limit(50)
-             .get();
-
-         if (coursesSnapshot.empty) {
-             coursesArea.innerHTML = '<p class="text-sm text-muted">No courses currently require admin attention.</p>';
-             return;
-         }
-
-         let coursesHtml = '<div class="space-y-3">';
-         coursesSnapshot.forEach(doc => {
-             const course = doc.data();
-             const courseId = doc.id;
-             const date = course.createdAt ? new Date(course.createdAt.toDate()).toLocaleString() : 'N/A';
-             const statusClass = course.status === 'pending' ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/80' : 'border-red-400 bg-red-50 dark:bg-red-900/80';
-             const statusText = course.status === 'pending' ? 'Pending Approval' : 'Reported';
-             const creatorName = escapeHtml(course.creatorName || 'Unknown');
-             const isPrimaryAdminCreator = course.creatorUid === ADMIN_UID;
-             const creatorIsAssignedAdmin = course.creatorIsAdmin === true && course.creatorUid !== ADMIN_UID; // Note: course.creatorIsAdmin might not exist
-
-             let adminIconHtml = '';
-             if (isPrimaryAdminCreator) {
-                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-yellow-500 dark:text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Primary Admin"><path fill-rule="evenodd" d="M9.653 16.915l-.005-.003-.019-.01a20.759 20.759 0 01-1.162-.682 22.045 22.045 0 01-2.582-1.9C4.045 12.733 2 10.352 2 7.5a4.5 4.5 0 018-2.828A4.5 4.5 0 0118 7.5c0 2.852-2.044 5.233-3.885 6.82a22.049 22.049 0 01-3.744 2.582l-.019.01-.005.003h-.002a.739.739 0 01-.69.001l-.002-.001z" clip-rule="evenodd" /></svg>`;
-             } else if (creatorIsAssignedAdmin) { // This relies on a field that might not be consistently set.
-                adminIconHtml = `<svg class="admin-icon w-3 h-3 inline-block ml-1 text-blue-500 dark:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" title="Assigned Admin"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>`;
-             }
-             const courseName = escapeHtml(course.name || 'Unnamed Course');
-
-             coursesHtml += `
-                 <div class="course-card border rounded-lg p-3 shadow-sm text-sm ${statusClass}">
-                      <div class="flex justify-between items-center mb-2">
-                          <h4 class="font-semibold text-base text-primary-700 dark:text-primary-300">${courseName}</h4>
-                          <span class="text-xs font-bold px-2 py-0.5 rounded ${course.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'}">${statusText}</span>
-                      </div>
-                      <p><strong>Creator:</strong> ${creatorName}${adminIconHtml} (ID: ${course.creatorUid || 'N/A'})</p>
-                      <p><strong>Date:</strong> ${date}</p>
-                      <p><strong>Major:</strong> ${escapeHtml(course.majorTag || 'N/A')} | <strong>Subject:</strong> ${escapeHtml(course.subjectTag || 'N/A')}</p>
-                      ${course.status === 'reported' ? `<p class="text-xs mt-1"><strong>Report Reason:</strong> ${escapeHtml(course.reportReason || 'None provided.')}</p><p class="text-xs"><strong>Reported By:</strong> ${course.reportedBy?.length || 0} user(s)</p>` : ''}
-                      <div class="mt-3 pt-2 border-t dark:border-gray-600 text-right space-x-2">
-                           <button onclick="window.showCourseDetails('${courseId}')" class="btn-secondary-small text-xs">View Details</button>
-                           <button onclick="window.showEditCourseForm('${courseId}')" class="btn-secondary-small text-xs">Edit</button>
-                          ${course.status === 'pending' ? `
-                              <button onclick="window.handleCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Approve</button>
-                              <button onclick="window.handleCourseApproval('${courseId}', false)" class="btn-danger-small text-xs">Reject</button>
-                          ` : ''}
-                           ${course.status === 'reported' ? `
-                              <button onclick="window.handleCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Clear Report</button>
-                              <button onclick="window.handleCourseApproval('${courseId}', false, true)" class="btn-danger-small text-xs">Delete Course</button>
-                          ` : ''}
-                      </div>
-                 </div>
-             `;
-         });
-         coursesHtml += '</div>';
-         coursesArea.innerHTML = coursesHtml;
-     } catch (error) {
-         console.error("Error loading courses for admin:", error);
-         if (error.code === 'failed-precondition') {
-              coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: Missing Firestore index. Please create a composite index on 'courses' collection: <strong>status ASC, createdAt DESC</strong> (or DESC/DESC). Check browser console for a direct link to create it.</p>`;
-              console.error("Firestore index required for admin course query. Look for a URL in the Firestore error message to create it.");
-         } else {
-             coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}.</p>`;
-         }
-     }
- }
-// window.loadCoursesForAdmin = loadCoursesForAdmin; // Assigned at end
-
-// --- User Course Management ---
-export async function loadUserCoursesForAdmin() {
-    const searchInput = document.getElementById('admin-user-search-courses');
-    const userCoursesArea = document.getElementById('admin-user-courses-area');
-    if (!searchInput || !userCoursesArea) return;
-
-    const searchTerm = searchInput.value.trim();
-    if (!searchTerm) {
-        userCoursesArea.innerHTML = '<p class="text-yellow-500 text-sm">Please enter a User ID or Email.</p>';
-        return;
-    }
-
-    userCoursesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-    showLoading("Finding user and loading courses...");
-
-    let targetUserId = null;
-
-    try {
-        targetUserId = await findUserId(searchTerm);
-        if (!targetUserId) throw new Error("User not found with the provided ID or Email.");
-
-        const progressCollectionRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses');
-        const snapshot = await progressCollectionRef.get();
-        hideLoading();
-
-        if (snapshot.empty) {
-            userCoursesArea.innerHTML = `<p class="text-sm text-muted">User ${escapeHtml(searchTerm)} (ID: ${targetUserId}) is not enrolled in any courses.</p>`;
-            return;
-        }
-
-        let coursesHtml = `<h4 class="text-md font-medium mb-2">Courses for User: ${escapeHtml(searchTerm)} (ID: ${targetUserId})</h4><div class="space-y-2">`;
-        snapshot.forEach(doc => {
-            const progress = doc.data();
-            const courseId = doc.id;
-            const courseDef = globalCourseDataMap.get(courseId);
-            const courseName = courseDef?.name || `Course ${courseId}`;
-            const status = progress.status || 'enrolled';
-            const grade = progress.grade || 'N/A';
-
-            coursesHtml += `
-                <div class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm">
-                    <span class="font-medium flex-grow">${escapeHtml(courseName)}</span>
-                    <span class="text-xs text-muted">Status: ${escapeHtml(status)} | Grade: ${escapeHtml(grade)}</span>
-                    <button onclick="window.handleAdminMarkCourseComplete('${targetUserId}', '${courseId}')" class="btn-secondary-small text-xs" title="Mark Complete/Failed & Set Grade">
-                        Set Status/Grade
-                    </button>
-                </div>
-            `;
+    // Also call this when theme changes
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle && !themeToggle.dataset.adminBgListener) {
+        themeToggle.addEventListener('click', () => {
+            setTimeout(updateAdminPanelBackgroundRGBs, 50);
         });
-        coursesHtml += '</div>';
-        userCoursesArea.innerHTML = coursesHtml;
-
-    } catch (error) {
-        hideLoading();
-        console.error("Error loading user courses for admin:", error);
-        userCoursesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
+        themeToggle.dataset.adminBgListener = 'true';
     }
 }
-// window.loadUserCoursesForAdmin = loadUserCoursesForAdmin; // Assigned at end
 
-export async function handleAdminMarkCourseComplete(userId, courseId) {
-     const courseName = globalCourseDataMap.get(courseId)?.name || courseId;
-     const newStatus = prompt(`Set status for course "${courseName}" for user ${userId}:\nEnter 'completed', 'failed', or 'enrolled' (case-insensitive):`)?.toLowerCase();
+// Function to switch admin panel sections
+export async function showAdminSection(sectionName) {
+    currentAdminSection = sectionName;
+    const contentArea = document.getElementById('admin-panel-content-area');
+    const navLinks = document.querySelectorAll('#admin-panel-nav .admin-nav-link');
 
-     if (!newStatus || !['completed', 'failed', 'enrolled'].includes(newStatus)) {
-         alert("Invalid status entered."); return;
-     }
-
-     let finalMark = null;
-     if (newStatus === 'completed' || newStatus === 'failed') {
-         const markStr = prompt(`Enter final numerical mark (0-100+, e.g., 85.5) for course "${courseName}". Leave blank to auto-calculate based on current progress (if possible):`);
-         if (markStr !== null && markStr.trim() !== '') {
-             finalMark = parseFloat(markStr);
-             if (isNaN(finalMark)) { alert("Invalid mark entered."); return; }
-         }
-     }
-
-     showLoading(`Updating course status for user ${userId}...`);
-     const success = await updateCourseStatusForUser(userId, courseId, finalMark, newStatus);
-     hideLoading();
-
-     if (success) {
-         alert(`Successfully updated course "${courseName}" status to '${newStatus}' for user ${userId}.`);
-         const searchInput = document.getElementById('admin-user-search-courses');
-         const searchTerm = searchInput?.value.trim();
-         if (searchTerm) {
-             try {
-                const userDoc = await db.collection('users').doc(userId).get();
-                const userEmail = userDoc.data()?.email?.toLowerCase();
-                if (searchTerm === userId || (userEmail && searchTerm.toLowerCase() === userEmail)) {
-                    loadUserCoursesForAdmin();
-                }
-            } catch (e) { console.error("Error fetching user doc for course reload:", e); }
-         }
-     }
-}
-// window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete; // Assigned at end
-
-// --- User Badge Management ---
-async function findUserId(searchTerm) {
-     let targetUserId = null;
-     const lowerSearchTerm = searchTerm.toLowerCase();
-     if (!searchTerm) return null;
-
-     if (lowerSearchTerm.includes('@')) {
-         console.log(`Finding user by email: ${lowerSearchTerm}`);
-         const userQuery = await db.collection('users').where('email', '==', lowerSearchTerm).limit(1).get();
-         if (!userQuery.empty) {
-             targetUserId = userQuery.docs[0].id;
-             console.log(`Found user ID by email: ${targetUserId}`);
-         }
-     } else {
-         console.log(`Checking if ${searchTerm} is a valid user ID...`);
-         const userDoc = await db.collection('users').doc(searchTerm).get();
-         if (userDoc.exists) {
-             targetUserId = userDoc.id;
-             console.log(`Confirmed user ID: ${targetUserId}`);
-         } else {
-             console.log(`User ID ${searchTerm} not found directly. Trying username lookup...`);
-             const usernameQuery = await db.collection('usernames').doc(lowerSearchTerm).get();
-             if (usernameQuery.exists) {
-                 targetUserId = usernameQuery.data().userId;
-                 console.log(`Found user ID by username ${lowerSearchTerm}: ${targetUserId}`);
-             }
-         }
-     }
-     if (!targetUserId) console.log(`User not found for search term: ${searchTerm}`);
-     return targetUserId;
-}
-export async function loadUserBadgesForAdmin() {
-    const searchInput = document.getElementById('admin-user-search-badges');
-    const badgesArea = document.getElementById('admin-user-badges-area');
-    if (!searchInput || !badgesArea) return;
-
-    const searchTerm = searchInput.value.trim();
-    if (!searchTerm) {
-        badgesArea.innerHTML = '<p class="text-yellow-500 text-sm">Please enter a User ID or Email.</p>'; return;
-    }
-
-    badgesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-    showLoading("Finding user and loading badges...");
-
-    try {
-        const targetUserId = await findUserId(searchTerm);
-        if (!targetUserId) throw new Error("User not found with the provided ID, Email, or Username.");
-
-        const userDoc = await db.collection('users').doc(targetUserId).get();
-        if (!userDoc.exists) throw new Error("User document does not exist.");
-
-        const userData = userDoc.data();
-        const badges = userData.completedCourseBadges || [];
-        const displayName = escapeHtml(userData.displayName || userData.username || userData.email);
-        hideLoading();
-
-        let badgesHtml = `<h4 class="text-md font-medium mb-2">Badges for User: ${displayName} (ID: ${targetUserId})</h4>`;
-        if (badges.length === 0) {
-            badgesHtml += '<p class="text-sm text-muted">User has no completed course badges.</p>';
-        } else {
-            badgesHtml += '<ul class="space-y-2 list-none p-0">';
-            badges.forEach((badge, index) => {
-                const courseName = escapeHtml(badge.courseName || 'Unknown Course');
-                const grade = escapeHtml(badge.grade || 'N/A');
-                const dateStr = badge.completionDate?.toDate ? badge.completionDate.toDate().toLocaleDateString() : 'N/A';
-                const courseId = escapeHtml(badge.courseId || 'N/A');
-                badgesHtml += `
-                    <li class="border dark:border-gray-600 rounded p-2 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm">
-                        <span><strong>${courseName}</strong> (ID: ${courseId}) - Grade: ${grade} (${dateStr})</span>
-                        <button onclick="window.confirmRemoveBadge('${targetUserId}', '${courseId}')" class="btn-danger-small text-xs" title="Remove this badge">Remove</button>
-                    </li>`;
-            });
-            badgesHtml += '</ul>';
-        }
-        badgesHtml += `
-            <div class="mt-4 pt-3 border-t dark:border-gray-600">
-                 <button onclick="window.promptAddBadge('${targetUserId}')" class="btn-success-small text-xs">Add New Badge</button>
-             </div>`;
-        badgesArea.innerHTML = badgesHtml;
-    } catch (error) {
-        hideLoading();
-        console.error("Error loading user badges for admin:", error);
-        badgesArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
-    }
-}
-// window.loadUserBadgesForAdmin = loadUserBadgesForAdmin; // Assigned at end
-
-export function promptAddBadge(userId) {
-     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
-     const courseId = prompt(`Enter Course ID for the new badge (e.g., fop_physics_v1):`);
-     if (!courseId) return;
-     const courseName = prompt(`Enter Course Name for the badge (e.g., Fundamentals of Physics):`, globalCourseDataMap.get(courseId)?.name || '');
-     if (!courseName) return;
-     const grade = prompt(`Enter Grade (e.g., A+, B, C):`);
-     if (!grade) return;
-     const completionDateStr = prompt(`Enter Completion Date (YYYY-MM-DD, optional):`);
-     let completionDate = null;
-     if (completionDateStr) {
-         try {
-             if (!/^\d{4}-\d{2}-\d{2}$/.test(completionDateStr)) throw new Error("Invalid date format.");
-             completionDate = new Date(completionDateStr + 'T00:00:00Z');
-             if (isNaN(completionDate.getTime())) throw new Error("Invalid date value.");
-         } catch(e) { alert("Invalid date format. Please use YYYY-MM-DD."); return; }
-     }
-     handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate);
-}
-// window.promptAddBadge = promptAddBadge; // Assigned at end
-
-export function confirmRemoveBadge(userId, courseId) {
-     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; }
-     if (confirm(`Are you sure you want to remove the badge for course ID "${courseId}" for user ${userId}?`)) {
-         handleRemoveBadgeForUser(userId, courseId);
-     }
-}
-// window.confirmRemoveBadge = confirmRemoveBadge; // Assigned at end
-
-
-// MODIFIED: User Subject Management
-export async function loadUserSubjectsForAdmin() {
-    const searchInput = document.getElementById('admin-user-search-subjects');
-    const subjectsArea = document.getElementById('admin-user-subjects-area');
-    if (!searchInput || !subjectsArea) return;
-
-    const searchTerm = searchInput.value.trim();
-    if (!searchTerm) {
-        subjectsArea.innerHTML = '<p class="text-yellow-500 text-sm">Please enter a User ID or Email.</p>';
-        currentManagingUserIdForSubjects = null;
+    if (!contentArea) {
+        console.error("Admin panel content area not found!");
         return;
     }
 
-    subjectsArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-    showLoading("Finding user and loading subjects...");
-
-    try {
-        const targetUserId = await findUserId(searchTerm);
-        if (!targetUserId) {
-            currentManagingUserIdForSubjects = null;
-            throw new Error("User not found with the provided ID, Email, or Username.");
-        }
-        currentManagingUserIdForSubjects = targetUserId; // Store for actions
-
-        const userDoc = await db.collection('users').doc(targetUserId).get();
-        if (!userDoc.exists) {
-            currentManagingUserIdForSubjects = null;
-            throw new Error("User document does not exist.");
-        }
-
-        const userData = userDoc.data();
-        const userSubjects = userData.appData?.subjects || {};
-        const displayName = escapeHtml(userData.displayName || userData.username || userData.email);
-        hideLoading();
-
-        let subjectsHtml = `<h4 class="text-md font-medium mb-2">Subjects for User: ${displayName} (ID: ${targetUserId})</h4>`;
-        const subjectEntries = Object.entries(userSubjects);
-
-        if (subjectEntries.length === 0) {
-            subjectsHtml += '<p class="text-sm text-muted">User has no subjects defined.</p>';
-        } else {
-            subjectsHtml += '<ul class="space-y-2 list-none p-0">';
-            subjectEntries.forEach(([id, subject]) => {
-                const subjectName = escapeHtml(subject.name || 'Unnamed Subject');
-                const status = subject.status || 'approved';
-                const creatorName = escapeHtml(subject.creatorName || 'Unknown');
-                const createdAt = subject.createdAt ? new Date(subject.createdAt).toLocaleDateString() : 'N/A';
-
-                let statusBadgeClass = 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-200';
-                let statusText = 'Approved';
-                if (status === 'pending') {
-                    statusBadgeClass = 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-200';
-                    statusText = 'Pending';
-                } else if (status === 'rejected') {
-                    statusBadgeClass = 'bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-200';
-                    statusText = 'Rejected';
-                }
-
-                let adminActionsHtml = '';
-                if (status === 'pending') {
-                    adminActionsHtml = `
-                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'approved')" title="Approve Subject" class="btn-success-small text-xs">Approve</button>
-                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'rejected')" title="Reject Subject" class="btn-danger-small text-xs">Reject</button>
-                    `;
-                } else if (status === 'rejected') {
-                    adminActionsHtml = `
-                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'approved')" title="Re-approve Subject" class="btn-success-small text-xs">Re-approve</button>
-                    `;
-                } else { // Approved
-                     adminActionsHtml = `
-                        <button onclick="window.handleAdminSubjectApproval('${targetUserId}', '${id}', 'rejected')" title="Revoke (Reject) Subject" class="btn-warning-small text-xs">Revoke</button>
-                    `;
-                }
-
-
-                subjectsHtml += `
-                    <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex justify-between items-center gap-2 text-sm flex-wrap">
-                        <div class="flex-grow">
-                            <span class="font-medium">${subjectName}</span>
-                            <span class="text-xs px-1.5 py-0.5 rounded-full ${statusBadgeClass} ml-2">${statusText}</span>
-                            <span class="block text-xs text-muted">Created by: ${creatorName} on ${createdAt} (UID: ${subject.creatorUid || 'N/A'})</span>
-                        </div>
-                        <div class="flex space-x-1 flex-shrink-0">
-                            ${adminActionsHtml}
-                        </div>
-                    </li>`;
-            });
-            subjectsHtml += '</ul>';
-        }
-        subjectsArea.innerHTML = subjectsHtml;
-    } catch (error) {
-        hideLoading();
-        console.error("Error loading user subjects for admin:", error);
-        subjectsArea.innerHTML = `<p class="text-red-500 text-sm">Error: ${error.message}</p>`;
-        currentManagingUserIdForSubjects = null;
-    }
-}
-// window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; // Assigned at end
-
-export async function handleAdminSubjectApproval(targetUserId, subjectId, newStatus) {
-    if (!currentUser || !currentUser.isAdmin || !targetUserId || !subjectId || !newStatus) {
-        alert("Invalid operation or missing parameters.");
-        return;
-    }
-    if (targetUserId !== currentManagingUserIdForSubjects) { // Ensure context is correct
-        alert("User context mismatch. Please reload subjects for the correct user.");
-        return;
-    }
-
-    const subjectNameElement = document.querySelector(`#admin-user-subjects-area li div.flex-grow span.font-medium`); // This might be too generic
-    // To be safer, find the specific LI for that subjectId if possible, or use subjectId directly.
-    // For now, let's assume there might be only one or the first one matches, or use the ID.
-    let subjectNameForAlert = `Subject ID ${subjectId}`;
-    const subjectLi = Array.from(document.querySelectorAll('#admin-user-subjects-area li button[onclick*="handleAdminSubjectApproval"]'))
-                        .find(btn => btn.getAttribute('onclick').includes(`'${targetUserId}', '${subjectId}'`))
-                        ?.closest('li');
-    if (subjectLi) {
-        const nameEl = subjectLi.querySelector('span.font-medium');
-        if (nameEl) subjectNameForAlert = nameEl.textContent;
-    }
-
-
-    const action = newStatus === 'approved' ? 'approve' : (newStatus === 'rejected' ? 'reject' : 'update');
-
-    if (confirm(`Are you sure you want to ${action} the subject "${escapeHtml(subjectNameForAlert)}" for this user?`)) {
-        showLoading("Updating subject status...");
-        try {
-            const success = await adminUpdateUserSubjectStatus(currentUser.uid, targetUserId, subjectId, newStatus);
-            hideLoading();
-            if (success) {
-                alert(`Subject "${escapeHtml(subjectNameForAlert)}" has been ${newStatus}.`);
-                loadUserSubjectsForAdmin(); // Refresh the list for the current user
-            } else {
-                alert(`Failed to update subject status.`); // Firestore function should alert more specific errors
-            }
-        } catch (error) {
-            hideLoading();
-            console.error("Error handling admin subject approval:", error);
-            alert(`Failed to update subject status: ${error.message}`);
-        }
-    }
-}
-// window.handleAdminSubjectApproval = handleAdminSubjectApproval; // Assigned at end
-
-
-// --- Admin Tasks Management (NEW) ---
-async function loadAdminTasks() {
-    const tasksArea = document.getElementById('admin-tasks-area');
-    if (!tasksArea) return;
-    tasksArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
-
-    try {
-        const tasks = await fetchAdminTasks();
-
-        if (tasks.length === 0) {
-            tasksArea.innerHTML = '<p class="text-sm text-muted">No admin tasks found.</p>';
-            return;
-        }
-
-        let tasksHtml = '<ul class="space-y-2 list-none p-0">';
-        tasks.forEach(task => {
-            const taskId = task.id;
-            const taskText = escapeHtml(task.text);
-            const isDone = task.status === 'done';
-            const dateStr = task.createdAt ? task.createdAt.toLocaleDateString() : 'N/A';
-            const statusClass = isDone ? 'bg-green-100 dark:bg-green-900/50 line-through text-muted' : 'bg-yellow-50 dark:bg-yellow-900/50';
-            
-            const toggleButtonTitle = isDone ? 'Mark as Pending' : 'Mark as Done';
-            const toggleButtonDisabled = !isPrimaryAdmin ? 'disabled title="Only Primary Admin can change status"' : `title="${toggleButtonTitle}"`;
-            const deleteButtonDisabled = !isPrimaryAdmin || !isDone ? 'disabled' : '';
-            const deleteButtonTitle = !isPrimaryAdmin ? "Only Primary Admin can delete tasks" : (!isDone ? "Task must be 'done' to delete" : "Delete Task");
-
-
-            const buttonIcon = isDone ?
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-green-600 dark:text-green-400"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd" /></svg>' :
-                '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 text-gray-500 dark:text-gray-400"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
-
-            tasksHtml += `
-                <li class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 ${statusClass}">
-                    <button
-                        onclick="window.handleToggleAdminTask('${taskId}', ${isDone})"
-                        class="btn-icon flex-shrink-0 p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 ${!isPrimaryAdmin ? 'cursor-not-allowed opacity-50' : ''}"
-                        ${toggleButtonDisabled}>
-                        ${buttonIcon}
-                    </button>
-                    <span class="text-sm flex-grow ${isDone ? 'opacity-70' : ''}">${taskText}</span>
-                    <span class="text-xs text-muted flex-shrink-0 pr-2">${dateStr}</span>
-                    <button
-                        onclick="window.handleDeleteAdminTask('${taskId}')"
-                        class="btn-danger-small text-xs flex-shrink-0 ${(!isPrimaryAdmin || !isDone) ? 'opacity-50 cursor-not-allowed' : ''}"
-                        title="${deleteButtonTitle}"
-                        ${deleteButtonDisabled}>
-                        Delete
-                    </button>
-                </li>
-            `;
-        });
-        tasksHtml += '</ul>';
-        tasksArea.innerHTML = tasksHtml;
-
-    } catch (error) {
-        console.error("Error loading admin tasks:", error);
-        tasksArea.innerHTML = `<p class="text-red-500 text-sm">Error loading tasks: ${error.message}</p>`;
-    }
-}
-
-async function handleAddAdminTask() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Permission Denied: Only the Primary Admin can add tasks.");
-        return;
-    }
-    const input = document.getElementById('admin-new-task-input');
-    if (!input) return;
-    const taskText = input.value.trim();
-    if (!taskText) {
-        alert("Please enter task text.");
-        input.focus();
-        return;
-    }
-
-    showLoading("Adding task...");
-    try {
-        const newTaskId = await addAdminTask(taskText);
-        if (newTaskId) {
-            input.value = '';
-            loadAdminTasks();
-        }
-    } catch (error) { // Errors from addAdminTask (e.g. permission) are already alerted there
-        console.error("Error in handleAddAdminTask UI:", error);
-    } finally {
-        hideLoading();
-    }
-}
-
-async function handleToggleAdminTask(taskId, isCurrentlyDone) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Permission Denied: Only the Primary Admin can change task status.");
-        return;
-    }
-    const newStatus = isCurrentlyDone ? 'pending' : 'done';
-    showLoading(`Updating task status to ${newStatus}...`);
-    try {
-        const success = await updateAdminTaskStatus(taskId, newStatus);
-        if (success) {
-            loadAdminTasks();
-        }
-    } catch (error) { // Errors from updateAdminTaskStatus are already alerted there
-        console.error("Error in handleToggleAdminTask UI:", error);
-    } finally {
-        hideLoading();
-    }
-}
-
-async function handleDeleteAdminTask(taskId) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Permission Denied: Only the Primary Admin can delete tasks.");
-        return;
-    }
-    if (!confirm(`Are you sure you want to delete this completed task (ID: ${taskId})? This action requires the task to be 'done'.`)) {
-        return;
-    }
-
-    showLoading("Deleting task...");
-    try {
-        const success = await deleteAdminTask(taskId);
-        if (success) {
-            loadAdminTasks();
-        }
-    } catch (error) { // Errors from deleteAdminTask are already alerted there
-        console.error("Error in handleDeleteAdminTask UI:", error);
-    } finally {
-        hideLoading();
-    }
-}
-
-
-// --- Playlist Management ---
-function populateAdminCourseSelect() {
-    const select = document.getElementById('admin-playlist-course-select');
-    if (!select) return;
-    select.innerHTML = '<option value="">Select Course...</option>';
-    globalCourseDataMap.forEach((course, courseId) => {
-        if (course.youtubePlaylistUrls?.length > 0 || course.youtubePlaylistUrl) {
-             const option = document.createElement('option');
-             option.value = courseId;
-             option.textContent = escapeHtml(course.name || courseId);
-             select.appendChild(option);
-        }
+    navLinks.forEach(link => {
+        link.classList.toggle('active', link.dataset.section === sectionName);
     });
-     const loadButton = document.querySelector('button[onclick="window.loadPlaylistForAdmin()"]');
-     if(loadButton) loadButton.disabled = select.options.length <= 1;
+
+    contentArea.innerHTML = `<div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-2 text-muted">Loading ${escapeHtml(sectionName)}...</p></div>`;
+
+    switch (sectionName) {
+        case 'overview':
+            contentArea.innerHTML = `
+                <div class="admin-overview-header mb-8">
+                    <h3 class="text-2xl font-semibold text-gray-800 dark:text-gray-200">Admin Overview</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Welcome back, ${escapeHtml(currentUser.displayName || 'Admin')}. Here's a snapshot of the platform activity.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="admin-stats-grid">
+                    <div class="stat-card-placeholder p-6 rounded-lg text-center col-span-full"
+                         style="background-color: rgba(var(--admin-stat-card-placeholder-bg-rgb, 243, 244, 246), var(--card-bg-alpha)); border: 1px dashed rgba(var(--admin-stat-card-placeholder-border-rgb, 209, 213, 219), var(--card-bg-alpha));">
+                        <div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto mb-2"></div>
+                        <p class="text-muted">Loading statistics...</p>
+                    </div>
+                </div>
+            `;
+            updateAdminStatCardPlaceholderRGB(); // Set RGB for placeholder
+            loadAdminOverviewStats();
+            break;
+        case 'userManagement':
+            displayUserManagementSection(contentArea);
+            break;
+        case 'courseContent':
+            displayCourseManagementSection(contentArea);
+            break;
+        case 'moderation':
+            displayFeedbackSection(contentArea);
+            break;
+        case 'systemOperations':
+            displaySystemOperationsSection(contentArea);
+            break;
+        case 'testingAids':
+            displayTestingAidsSection(contentArea);
+            break;
+        default:
+            contentArea.innerHTML = `<p class="text-red-500 p-4">Error: Unknown admin section "${sectionName}".</p>`;
+    }
 }
 
-function extractPlaylistId(url) {
-     if (!url) return null;
-     try {
-         const urlObj = new URL(url);
-         if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('list')) {
-             return urlObj.searchParams.get('list');
-         }
-     } catch (e) { console.error("Error parsing playlist URL:", url, e); }
-     return null;
-}
-
-async function fetchPlaylistItems(playlistId, apiKey, pageToken = null) {
-    const MAX_RESULTS = 50;
-    let url = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=${MAX_RESULTS}&playlistId=${playlistId}&key=${apiKey}`;
-    if (pageToken) {
-        url += `&pageToken=${pageToken}`;
-    }
-    console.log("Fetching playlist items from:", url);
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error("YouTube API Error Response:", errorData);
-            throw new Error(`YouTube API Error: ${response.status} ${response.statusText} - ${errorData?.error?.message || 'Unknown error'}`);
-        }
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error("Error fetching playlist items:", error);
-        throw error;
-    }
-}
-
-async function loadPlaylistForAdmin() {
-    const select = document.getElementById('admin-playlist-course-select');
-    const videosArea = document.getElementById('admin-playlist-videos-area');
-    const actionArea = document.getElementById('admin-video-action-area');
-    if (!select || !videosArea || !actionArea) return;
-
-    const courseId = select.value;
-    if (!courseId) {
-        videosArea.innerHTML = '<p class="text-muted text-sm">Please select a course.</p>';
-        actionArea.classList.add('hidden');
-        return;
-    }
-
-    const courseDef = globalCourseDataMap.get(courseId);
-    const playlistUrls = courseDef?.youtubePlaylistUrls?.length > 0 ? courseDef.youtubePlaylistUrls : (courseDef?.youtubePlaylistUrl ? [courseDef.youtubePlaylistUrl] : []);
-
-    if (playlistUrls.length === 0) {
-         videosArea.innerHTML = `<p class="text-warning text-sm">No YouTube playlist URL defined for course "${escapeHtml(courseDef?.name || courseId)}".</p>`;
-         actionArea.classList.add('hidden');
-         return;
-    }
-
-     if (!YOUTUBE_API_KEY || YOUTUBE_API_KEY === "YOUR_API_KEY_HERE") {
-          alert("YouTube API Key is not configured in config.js. Cannot load playlist.");
-          videosArea.innerHTML = `<p class="text-danger text-sm">YouTube API Key missing in configuration.</p>`;
-          return;
-     }
-
-    videosArea.innerHTML = `<div class="flex justify-center items-center p-4"><div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500"></div><p class="ml-3 text-sm text-muted">Loading videos...</p></div>`;
-    actionArea.classList.add('hidden');
-    selectedVideosForAssignment = [];
-    updateSelectedVideoCount();
-    currentLoadedPlaylistCourseId = courseId;
-
-    let allVideos = [];
-    let fetchError = null;
-
-    try {
-        showLoading("Loading Playlist Videos...");
-        for (const url of playlistUrls) {
-             const playlistId = extractPlaylistId(url);
-             if (!playlistId) {
-                  console.warn(`Invalid playlist URL or could not extract ID: ${url}`);
-                  continue;
-             }
-
-             let nextPageToken = null;
-             let positionOffset = allVideos.length;
-             do {
-                  const data = await fetchPlaylistItems(playlistId, YOUTUBE_API_KEY, nextPageToken);
-                  if (data.items) {
-                      allVideos.push(...data.items
-                          .filter(item => item.snippet?.resourceId?.videoId)
-                          .map(item => ({
-                           videoId: item.snippet.resourceId.videoId,
-                           title: item.snippet.title,
-                           thumbnail: item.snippet.thumbnails?.default?.url,
-                           position: (item.snippet.position ?? 0) + positionOffset
-                      })));
-                  }
-                  nextPageToken = data.nextPageToken;
-             } while (nextPageToken);
-        }
-        hideLoading();
-
-    } catch (error) {
-        hideLoading();
-        console.error("Error loading playlist videos:", error);
-        fetchError = error;
-    }
-
-    if (fetchError) {
-         videosArea.innerHTML = `<p class="text-danger text-sm">Error loading playlist: ${fetchError.message}. Check API Key, playlist ID, and quotas.</p>`;
-    } else if (allVideos.length === 0) {
-         videosArea.innerHTML = '<p class="text-muted text-sm">No valid videos found in the specified playlist(s).</p>';
+// NEW function for stat card placeholder background and border
+function updateAdminStatCardPlaceholderRGB() {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-bg-rgb', '55, 65, 81'); // gray-700
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-border-rgb', '107, 114, 128'); // gray-600
     } else {
-         allVideos.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-         renderPlaylistVideos(allVideos, videosArea);
-         actionArea.classList.remove('hidden');
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-bg-rgb', '243, 244, 246'); // gray-100
+        document.documentElement.style.setProperty('--admin-stat-card-placeholder-border-rgb', '209, 213, 219'); // gray-300
     }
 }
-// window.loadPlaylistForAdmin = loadPlaylistForAdmin; // Assigned at end
-
-function renderPlaylistVideos(videos, container) {
-     let videosHtml = `
-     <div class="flex justify-end mb-2">
-         <button onclick="window.toggleSelectAllVideos(true)" class="btn-secondary-small text-xs mr-1">Select All</button>
-         <button onclick="window.toggleSelectAllVideos(false)" class="btn-secondary-small text-xs">Select None</button>
-     </div>
-     <ul class="space-y-1 list-none p-0">`;
-     videos.forEach(video => {
-         if (!video.videoId || !video.title) return;
-         const escapedTitle = escapeHtml(video.title.replace(/'/g, "\\'"));
-         videosHtml += `
-              <li id="admin-video-${video.videoId}" class="flex items-center gap-3 p-2 rounded border dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer" onclick="window.toggleVideoSelection(this, '${video.videoId}', '${escapedTitle}')">
-                  <input type="checkbox" class="admin-video-select flex-shrink-0 pointer-events-none" value="${video.videoId}" data-title="${escapeHtml(video.title)}">
-                  <img src="${video.thumbnail || ''}" alt="Thumb" class="w-16 h-9 object-cover rounded flex-shrink-0 bg-gray-200 dark:bg-gray-700" onerror="this.style.display='none'">
-                  <span class="text-xs flex-grow">${escapeHtml(video.title)}</span>
-              </li>
-         `;
-     });
-     videosHtml += '</ul>';
-     container.innerHTML = videosHtml;
-}
-
-function toggleSelectAllVideos(select) {
-    const checkboxes = document.querySelectorAll('#admin-playlist-videos-area input[type="checkbox"]');
-    checkboxes.forEach(cb => {
-        if (cb.checked !== select) {
-            cb.checked = select;
-            const videoId = cb.value;
-            const videoTitle = cb.dataset.title;
-            updateSelectionState(videoId, videoTitle, select);
-            cb.closest('li')?.classList.toggle('ring-2', select);
-            cb.closest('li')?.classList.toggle('ring-primary-500', select);
-        }
-    });
-    updateSelectedVideoCount();
-}
-// window.toggleSelectAllVideos = toggleSelectAllVideos; // Assigned at end
 
 
-function toggleVideoSelection(listItem, videoId, videoTitle) {
-     const checkbox = listItem.querySelector('input[type="checkbox"]');
-     if (!checkbox) return;
-     checkbox.checked = !checkbox.checked;
+async function loadAdminOverviewStats() {
+    const statsGrid = document.getElementById('admin-stats-grid');
+    if (!statsGrid) return;
 
-     const actualTitle = checkbox.dataset.title;
-     updateSelectionState(videoId, actualTitle, checkbox.checked);
-
-     listItem.classList.toggle('ring-2', checkbox.checked);
-     listItem.classList.toggle('ring-primary-500', checkbox.checked);
-
-     updateSelectedVideoCount();
-}
-// window.toggleVideoSelection = toggleVideoSelection; // Assigned at end
-
-function updateSelectionState(videoId, videoTitle, isSelected) {
-     const index = selectedVideosForAssignment.findIndex(v => v.videoId === videoId);
-     if (isSelected && index === -1) {
-          selectedVideosForAssignment.push({ videoId, title: videoTitle });
-     } else if (!isSelected && index > -1) {
-          selectedVideosForAssignment.splice(index, 1);
-     }
-}
-
-function updateSelectedVideoCount() {
-    const countArea = document.getElementById('admin-selected-video-count');
-    const assignBtn = document.getElementById('admin-assign-video-btn');
-    const unassignBtn = document.getElementById('admin-unassign-video-btn');
-    const count = selectedVideosForAssignment.length;
-
-    if (countArea) {
-        countArea.textContent = `Selected Videos: ${count}`;
-    }
-    const chapterNumInput = document.getElementById('admin-assign-chapter-num');
-    const chapterNumValid = chapterNumInput && parseInt(chapterNumInput.value) > 0;
-
-    if (assignBtn) {
-        assignBtn.disabled = count === 0 || !chapterNumValid;
-    }
-     if (unassignBtn) {
-          unassignBtn.disabled = count === 0 || !chapterNumValid;
-     }
-     if (chapterNumInput && !chapterNumInput.dataset.listenerAttached) {
-         chapterNumInput.addEventListener('input', updateSelectedVideoCount);
-         chapterNumInput.dataset.listenerAttached = 'true';
-     }
-}
-
-async function handleAssignVideoToChapter() {
-     if (selectedVideosForAssignment.length === 0 || !currentLoadedPlaylistCourseId) {
-          alert("Please select at least one video and ensure a course playlist was loaded.");
-          return;
-     }
-     const chapterNumInput = document.getElementById('admin-assign-chapter-num');
-     const chapterNum = parseInt(chapterNumInput?.value);
-     const courseDef = globalCourseDataMap.get(currentLoadedPlaylistCourseId);
-     const totalChapters = courseDef?.totalChapters;
-
-     if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (totalChapters && chapterNum > totalChapters)) {
-          alert(`Please enter a valid chapter number (1-${totalChapters || '?'}).`);
-          chapterNumInput?.focus();
-          return;
-     }
-
-     showLoading(`Assigning ${selectedVideosForAssignment.length} video(s) to Chapter ${chapterNum}...`);
-
-     try {
-          const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
-          const currentCourseData = courseDoc.data() || {};
-
-          const chapterResources = { ...(currentCourseData.chapterResources || {}) };
-          chapterResources[chapterNum] = chapterResources[chapterNum] || {};
-          let currentLectures = chapterResources[chapterNum].lectureUrls || [];
-          currentLectures = currentLectures.filter(lec => typeof lec === 'object' && lec.url && lec.title);
-
-          let addedCount = 0;
-          selectedVideosForAssignment.forEach(video => {
-               const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-               if (!currentLectures.some(lec => lec.url === videoUrl)) {
-                    currentLectures.push({ url: videoUrl, title: video.title });
-                    addedCount++;
-               }
-          });
-
-          if (addedCount === 0) {
-               hideLoading();
-               alert("Selected video(s) are already assigned to this chapter.");
-               return;
-          }
-
-          chapterResources[chapterNum].lectureUrls = currentLectures;
-          const updates = { chapterResources };
-          const success = await updateCourseDefinition(currentLoadedPlaylistCourseId, updates);
-
-          if (success) {
-               hideLoading();
-               alert(`${addedCount} video(s) successfully assigned to Chapter ${chapterNum} for course "${escapeHtml(courseDef?.name || currentLoadedPlaylistCourseId)}".`);
-               selectedVideosForAssignment = [];
-               updateSelectedVideoCount();
-               document.querySelectorAll('#admin-playlist-videos-area input[type="checkbox"]').forEach(cb => cb.checked = false);
-               document.querySelectorAll('#admin-playlist-videos-area li').forEach(li => li.classList.remove('ring-2', 'ring-primary-500'));
-          } else {
-               hideLoading();
-          }
-     } catch (error) {
-          hideLoading();
-          console.error(`Error assigning videos to chapter ${chapterNum}:`, error);
-          alert(`Failed to assign videos: ${error.message}`);
-     }
-}
-// window.handleAssignVideoToChapter = handleAssignVideoToChapter; // Assigned at end
-
-async function handleUnassignVideoFromChapter() {
-     if (selectedVideosForAssignment.length === 0 || !currentLoadedPlaylistCourseId) {
-          alert("Please select at least one video to unassign.");
-          return;
-     }
-     const chapterNumInput = document.getElementById('admin-assign-chapter-num');
-     const chapterNum = parseInt(chapterNumInput?.value);
-     const courseDef = globalCourseDataMap.get(currentLoadedPlaylistCourseId);
-     const totalChapters = courseDef?.totalChapters;
-
-
-      if (!chapterNumInput || isNaN(chapterNum) || chapterNum < 1 || (totalChapters && chapterNum > totalChapters)) {
-          alert(`Please enter a valid chapter number (1-${totalChapters || '?'}) from which to unassign videos.`);
-          chapterNumInput?.focus();
-          return;
-      }
-
-     if (!confirm(`Are you sure you want to unassign ${selectedVideosForAssignment.length} selected video(s) from Chapter ${chapterNum}?`)) {
-          return;
-     }
-
-     showLoading(`Unassigning ${selectedVideosForAssignment.length} video(s) from Chapter ${chapterNum}...`);
-
-     try {
-          const courseDoc = await db.collection('courses').doc(currentLoadedPlaylistCourseId).get();
-          const currentCourseData = courseDoc.data() || {};
-
-          const chapterResources = { ...(currentCourseData.chapterResources || {}) };
-
-          if (!chapterResources[chapterNum] || !chapterResources[chapterNum].lectureUrls || chapterResources[chapterNum].lectureUrls.length === 0) {
-               hideLoading();
-               alert("No videos are currently assigned to this chapter.");
-               return;
-          }
-
-          let currentLectures = chapterResources[chapterNum].lectureUrls.filter(lec => typeof lec === 'object' && lec.url && lec.title);
-          const selectedUrlsToRemove = selectedVideosForAssignment.map(v => `https://www.youtube.com/watch?v=${v.videoId}`);
-          let removedCount = 0;
-
-          const updatedLectures = currentLectures.filter(lec => {
-               if (selectedUrlsToRemove.includes(lec.url)) {
-                    removedCount++;
-                    return false;
-               }
-               return true;
-          });
-
-          if (removedCount === 0) {
-               hideLoading();
-               alert("None of the selected videos were found assigned to this chapter.");
-               return;
-          }
-
-          chapterResources[chapterNum].lectureUrls = updatedLectures;
-
-          const updates = { chapterResources };
-          const success = await updateCourseDefinition(currentLoadedPlaylistCourseId, updates);
-
-          if (success) {
-               hideLoading();
-               alert(`${removedCount} video(s) successfully unassigned from Chapter ${chapterNum}.`);
-               selectedVideosForAssignment = [];
-               updateSelectedVideoCount();
-               document.querySelectorAll('#admin-playlist-videos-area input[type="checkbox"]').forEach(cb => cb.checked = false);
-               document.querySelectorAll('#admin-playlist-videos-area li').forEach(li => li.classList.remove('ring-2', 'ring-primary-500'));
-          } else {
-               hideLoading();
-          }
-     } catch (error) {
-          hideLoading();
-          console.error(`Error unassigning videos from chapter ${chapterNum}:`, error);
-          alert(`Failed to unassign videos: ${error.message}`);
-     }
-}
-// window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter; // Assigned at end
-
-
-async function handleDeleteUserFormulaSheetAdmin() {
-    if (!currentUser?.isAdmin) {
-        alert("Admin privileges required.");
-        return;
-    }
-
-    const userInput = document.getElementById('admin-delete-content-user')?.value.trim();
-    const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
-    const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
-    const statusArea = document.getElementById('admin-delete-content-status');
-    statusArea.innerHTML = '';
-
-    if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
-        statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
-        return;
-    }
+    const isDark = document.documentElement.classList.contains('dark');
 
     try {
-        showLoading("Finding user...");
-        const targetUserId = await findUserId(userInput);
-        if (!targetUserId) {
-            hideLoading();
-            statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
-            return;
-        }
-        hideLoading();
+        const stats = await getAdminOverviewStats();
 
-        if (!confirm(`Are you sure you want to delete the formula sheet for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
-            return;
-        }
-
-        showLoading("Deleting formula sheet...");
-        const success = await deleteUserFormulaSheet(targetUserId, courseId, chapterNum);
-        hideLoading();
-
-        if (success) {
-            statusArea.innerHTML = '<p class="text-green-500">Formula sheet deleted successfully.</p>';
-        } else {
-            statusArea.innerHTML = '<p class="text-red-500">Failed to delete formula sheet. Check console for details.</p>';
-        }
-    } catch (error) {
-        hideLoading();
-        console.error("Error in handleDeleteUserFormulaSheetAdmin:", error);
-        statusArea.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-    }
-}
-
-async function handleDeleteUserChapterSummaryAdmin() {
-    if (!currentUser?.isAdmin) {
-        alert("Admin privileges required.");
-        return;
-    }
-
-    const userInput = document.getElementById('admin-delete-content-user')?.value.trim();
-    const courseId = document.getElementById('admin-delete-content-course')?.value.trim();
-    const chapterNum = parseInt(document.getElementById('admin-delete-content-chapter')?.value);
-    const statusArea = document.getElementById('admin-delete-content-status');
-    statusArea.innerHTML = '';
-
-
-    if (!userInput || !courseId || isNaN(chapterNum) || chapterNum < 1) {
-        statusArea.innerHTML = '<p class="text-red-500">Please fill in all fields with valid values.</p>';
-        return;
-    }
-
-    try {
-        showLoading("Finding user...");
-        const targetUserId = await findUserId(userInput);
-        if (!targetUserId) {
-            hideLoading();
-            statusArea.innerHTML = '<p class="text-red-500">User not found.</p>';
-            return;
-        }
-        hideLoading();
-
-        if (!confirm(`Are you sure you want to delete the chapter summary for:\nUser: ${userInput} (ID: ${targetUserId})\nCourse: ${courseId}\nChapter: ${chapterNum}?`)) {
-            return;
-        }
-
-        showLoading("Deleting chapter summary...");
-        const success = await deleteUserChapterSummary(targetUserId, courseId, chapterNum);
-        hideLoading();
-
-        if (success) {
-            statusArea.innerHTML = '<p class="text-green-500">Chapter summary deleted successfully.</p>';
-        } else {
-            statusArea.innerHTML = '<p class="text-red-500">Failed to delete chapter summary. Check console for details.</p>';
-        }
-    } catch (error) {
-        hideLoading();
-        console.error("Error in handleDeleteUserChapterSummaryAdmin:", error);
-        statusArea.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-    }
-}
-
-// Add new functions to window scope
-// window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin; // Assigned at end
-// window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin; // Assigned at end
-
-// --- NEW: Delete All Feedback ---
-export function confirmDeleteAllFeedback() {
-    if (!currentUser || !currentUser.isAdmin) {
-        alert("Admin privileges required.");
-        return;
-    }
-
-    if (confirm("⚠️ WARNING: This will permanently delete ALL feedback messages AND exam issue reports. This action cannot be undone. Are you absolutely sure?")) {
-        handleDeleteAllFeedback();
-    }
-}
-// window.confirmDeleteAllFeedback = confirmDeleteAllFeedback; // Assigned at end
-
-async function handleDeleteAllFeedback() {
-    if (!currentUser || !currentUser.isAdmin) return;
-
-    showLoading("Deleting all feedback & issues...");
-    try {
-        const [feedbackCount, issuesCount] = await Promise.all([
-            deleteAllFeedbackMessages(),
-            deleteAllExamIssues()
-        ]);
-
-        hideLoading();
-        alert(`Successfully deleted:\n- ${feedbackCount} feedback messages\n- ${issuesCount} exam issues`);
-        loadFeedbackForAdmin(); // Refresh the list
-    } catch (error) {
-        hideLoading();
-        console.error("Error deleting all feedback/issues:", error);
-        alert(`Failed to delete all feedback/issues: ${error.message}`);
-    }
-}
-
-// Function to list users for admin
-async function listAllUsersAdmin() {
-    if (!currentUser || !currentUser.isAdmin) return;
-    const userListArea = document.getElementById('admin-user-list-area');
-    const searchInput = document.getElementById('admin-user-list-search');
-    if (!userListArea || !searchInput) return;
-
-    const searchTerm = searchInput.value.trim().toLowerCase();
-    userListArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-    showLoading("Loading users...");
-
-    try {
-        let query;
-         if (searchTerm.includes('@')) {
-            query = db.collection('users').where('email', '==', searchTerm);
-         } else if (searchTerm) {
-            console.warn("Admin user search by name is basic: case-sensitive, prefix match on displayName.");
-            query = db.collection('users').orderBy('displayName').startAt(searchTerm).endAt(searchTerm + '\uf8ff');
-         } else {
-             query = db.collection('users').orderBy('displayName').limit(100);
-         }
-
-
-        const snapshot = await query.limit(100).get();
-        hideLoading();
-
-        if (snapshot.empty) {
-            userListArea.innerHTML = `<p class="text-sm text-muted">No users found${searchTerm ? ' matching "' + escapeHtml(searchTerm) + '"' : ''}.</p>`;
-            return;
-        }
-
-        let usersHtml = '<ul class="space-y-2 list-none p-0">';
-        snapshot.forEach(doc => {
-            const userData = doc.data();
-            const userId = doc.id;
-            const displayName = escapeHtml(userData.displayName || userData.username || 'N/A');
-            const email = escapeHtml(userData.email || 'N/A');
-            const username = escapeHtml(userData.username || '-');
-            const createdAt = userData.createdAt?.toDate ? userData.createdAt.toDate().toLocaleDateString() : 'N/A';
-            const userIsAdmin = userData.isAdmin || false;
-            const isPrimaryAdminUser = userId === ADMIN_UID;
-
-            let adminBadgeHtml = '';
-            if (isPrimaryAdminUser) {
-                adminBadgeHtml = '<span class="text-xs bg-yellow-400 text-yellow-900 dark:bg-yellow-600 dark:text-yellow-100 px-1.5 py-0.5 rounded-full font-semibold">Primary Admin</span>';
-            } else if (userIsAdmin) {
-                adminBadgeHtml = '<span class="text-xs bg-blue-200 text-blue-800 dark:bg-blue-700 dark:text-blue-200 px-1.5 py-0.5 rounded-full">Admin</span>';
-            }
-
-            let toggleAdminButtonHtml = '';
-            if (currentUser.uid === ADMIN_UID && !isPrimaryAdminUser) { 
-                const buttonText = userIsAdmin ? 'Remove Admin' : 'Make Admin';
-                const buttonClass = userIsAdmin ? 'btn-warning-small' : 'btn-success-small';
-                const titleAttr = userIsAdmin ? 'title="Remove Admin Privileges"' : 'title="Grant Admin Privileges"';
-                toggleAdminButtonHtml = `<button onclick="window.handleToggleAdminStatus('${userId}', ${userIsAdmin})" class="${buttonClass} text-xs ml-2" ${titleAttr}>${buttonText}</button>`;
-            }
-
-            usersHtml += `
-                <li class="border dark:border-gray-600 rounded p-3 bg-gray-50 dark:bg-gray-700 flex items-center gap-3 text-sm flex-wrap">
-                    <img src="${escapeHtml(userData.photoURL || DEFAULT_PROFILE_PIC_URL)}" alt="${displayName}'s avatar" class="w-10 h-10 rounded-full object-cover border dark:border-gray-600 flex-shrink-0" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
-                    <div class="flex-grow min-w-[200px]">
-                        <span class="font-medium">${displayName}</span> ${adminBadgeHtml}<br>
-                         <span class="text-xs text-muted">Username: ${username}</span><br>
-                        <span class="text-xs text-muted">Email: ${email}</span><br>
-                        <span class="text-xs text-muted">UID: ${userId}</span><br>
-                        <span class="text-xs text-muted">Created: ${createdAt}</span>
-                    </div>
-                    <div class="flex-shrink-0 flex flex-col items-end gap-1">
-                        <button onclick="window.viewUserDetailsAdmin('${userId}')" class="btn-secondary-small text-xs">View Details</button>
-                        ${toggleAdminButtonHtml}
-                    </div>
-                </li>
-            `;
-        });
-        usersHtml += '</ul>';
-        userListArea.innerHTML = usersHtml;
-
-    } catch (error) {
-        hideLoading();
-        console.error("Error listing users for admin:", error);
-         if (error.code === 'failed-precondition' && searchTerm && !searchTerm.includes('@')) {
-             userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: Searching by display name requires a Firestore index on 'displayName'.</p>`;
-         } else {
-             userListArea.innerHTML = `<p class="text-red-500 text-sm">Error listing users: ${error.message}</p>`;
-         }
-    }
-}
-// window.listAllUsersAdmin = listAllUsersAdmin; // Assigned at end
-
-async function handleToggleAdminStatus(targetUserId, currentIsAdmin) {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Permission Denied: Only the primary admin can perform this action.");
-        return;
-    }
-    if (targetUserId === ADMIN_UID) {
-        alert("The primary admin's status cannot be changed.");
-        return;
-    }
-
-    const actionText = currentIsAdmin ? "remove admin privileges from" : "grant admin privileges to";
-    let targetUserDisplayName = `User ID ${targetUserId}`;
-    const userListItem = document.querySelector(`#admin-user-list-area li button[onclick*="'${targetUserId}'"]`)?.closest('li');
-    if (userListItem) {
-        const nameElement = userListItem.querySelector('.font-medium');
-        if (nameElement) targetUserDisplayName = nameElement.textContent.trim();
-    }
-
-
-    if (confirm(`Are you sure you want to ${actionText} ${escapeHtml(targetUserDisplayName)}?`)) {
-        showLoading("Updating admin status...");
-        try {
-            const success = await toggleUserAdminStatus(targetUserId, currentIsAdmin); 
-            hideLoading();
-            if (success) {
-                alert("Admin status updated successfully.");
-                listAllUsersAdmin(); 
-            } else {
-                alert("Failed to update admin status. The operation might have been denied or an error occurred.");
-            }
-        } catch (error) {
-            hideLoading();
-            console.error("Error toggling admin status:", error);
-            alert(`Failed to toggle admin status: ${error.message}`);
-        }
-    }
-}
-// window.handleToggleAdminStatus = handleToggleAdminStatus; // Assigned at end
-
-
-async function viewUserDetailsAdmin(userId) {
-    if (!currentUser || !currentUser.isAdmin || !userId) return; 
-
-    document.getElementById('user-details-modal')?.remove();
-    showLoading(`Loading details for user ${userId}...`);
-
-    try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        const progressSnapshot = await db.collection('userCourseProgress').doc(userId).collection('courses').get();
-
-        if (!userDoc.exists) {
-            hideLoading();
-            alert("User document not found.");
-            return;
-        }
-
-        const userData = userDoc.data();
-        const courseProgress = {};
-        progressSnapshot.forEach(doc => {
-            courseProgress[doc.id] = doc.data();
-        });
-
-        const displayUserData = { ...userData };
-        if (displayUserData.createdAt?.toDate) displayUserData.createdAt = displayUserData.createdAt.toDate().toISOString();
-        if (displayUserData.lastAppDataUpdate?.toDate) displayUserData.lastAppDataUpdate = displayUserData.lastAppDataUpdate.toDate().toISOString();
-        const cleanCourseProgress = JSON.parse(JSON.stringify(courseProgress, (key, value) => {
-             if (value && typeof value === 'object' && value.hasOwnProperty('seconds') && value.hasOwnProperty('nanoseconds')) {
-                 try { return new Date(value.seconds * 1000 + value.nanoseconds / 1000000).toISOString(); } catch(e){ return value; }
-             }
-             return value;
-        }));
-
-        hideLoading();
-
-        const userProfileHtml = `
-            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="col-span-2 bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <dt class="text-xs font-medium text-blue-700 dark:text-blue-300">User ID</dt>
-                    <dd class="text-sm mt-1 font-mono">${escapeHtml(userId)}</dd>
-                </div>
-                <div class="col-span-2 flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
-                    <dt class="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 flex-shrink-0">Avatar</dt>
-                    <dd class="text-sm mt-1">
-                        <img src="${escapeHtml(displayUserData.photoURL || DEFAULT_PROFILE_PIC_URL)}"
-                             alt="${escapeHtml(displayUserData.displayName || 'User')}'s avatar"
-                             class="w-10 h-10 rounded-full object-cover border dark:border-gray-500"
-                             onerror="this.onerror=null; this.src='${DEFAULT_PROFILE_PIC_URL}';">
-                    </dd>
-                </div>
-                ${Object.entries(displayUserData).map(([key, value]) => {
-                    if (['completedCourseBadges', 'appData', 'userNotes', 'photoURL'].includes(key)) return '';
-                    let displayValue = '';
-                    if (value === null || value === undefined) {
-                        displayValue = '<span class="text-gray-400 dark:text-gray-500 italic">null</span>';
-                    } else if (typeof value === 'boolean') {
-                        if (key === 'isAdmin') {
-                            if (userId === ADMIN_UID) {
-                                displayValue = '<span class="text-yellow-600 dark:text-yellow-400 font-semibold">TRUE (Primary Admin)</span>';
-                            } else {
-                                displayValue = value ? '<span class="text-blue-600 dark:text-blue-400 font-semibold">TRUE (Admin)</span>' : '<span class="text-red-600 dark:text-red-400">false (User)</span>';
-                            }
-                        } else {
-                            displayValue = value ? '<span class="text-green-600 dark:text-green-400">true</span>' : '<span class="text-red-600 dark:text-red-400">false</span>';
-                        }
-                    } else if (Array.isArray(value)) {
-                        displayValue = `<span class="text-purple-600 dark:text-purple-400">Array(${value.length})</span>`;
-                        if (value.length > 0) {
-                            displayValue += `<ul class="mt-1 ml-4 list-disc text-xs space-y-1 max-h-20 overflow-y-auto">
-                                ${value.slice(0, 10).map(item => `<li>${escapeHtml(String(item))}</li>`).join('')}
-                                ${value.length > 10 ? `<li class="text-muted">... and ${value.length - 10} more items</li>` : ''}
-                            </ul>`;
-                        }
-                    } else if (typeof value === 'object') {
-                         displayValue = '<pre class="text-xs bg-gray-100 dark:bg-gray-900 p-1 rounded max-h-24 overflow-auto">' + escapeHtml(JSON.stringify(value, null, 2)) + '</pre>';
-                    } else {
-                        displayValue = escapeHtml(String(value));
-                    }
-                     let editButton = '';
-                     if (key === 'username' && currentUser.uid === ADMIN_UID) {
-                          editButton = `<button onclick="window.promptAdminChangeUsername('${userId}', '${escapeHtml(String(value || ''))}')" class="btn-secondary-small text-xs ml-2">Edit</button>`;
-                     }
-                    return `
-                        <div class="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg border dark:border-gray-600">
-                            <dt class="text-xs font-medium text-gray-700 dark:text-gray-300">${escapeHtml(key)}</dt>
-                            <dd class="text-sm mt-1 flex items-center">${displayValue} ${editButton}</dd>
-                        </div>
-                    `;
-                }).join('')}
-            </dl>
+        statsGrid.innerHTML = `
+            ${createStatCard('Total Users', stats.totalUsers, 'users', isDark ? '49, 46, 129' : '224, 231, 255', 'text-indigo-500 dark:text-indigo-300')}
+            ${createStatCard('Pending Courses', stats.pendingCourses, 'courses', isDark ? '59, 18, 18' : '254, 252, 232', 'text-yellow-600 dark:text-yellow-300')}
+            ${createStatCard('Approved Courses', stats.approvedCourses, 'check-badge', isDark ? '20, 44, 33' : '220, 252, 231', 'text-green-600 dark:text-green-300')}
+            ${createStatCard('Reported Courses', stats.reportedCourses, 'flag', isDark ? '60, 23, 27' : '254, 226, 226', 'text-red-600 dark:text-red-300')}
+            ${createStatCard('Total TestGen Subjects', stats.totalSubjects, 'academic-cap', isDark ? '37, 99, 235' : '219, 239, 255', 'text-blue-600 dark:text-blue-300')}
+            ${createStatCard('Total Exams Taken', stats.totalExamsTaken, 'clipboard-document-check', isDark ? '56, 26, 82' : '245, 243, 255', 'text-purple-600 dark:text-purple-300')}
+            ${createStatCard('Pending Feedback/Issues', stats.pendingFeedback, 'chat-bubble-left-ellipsis', isDark ? '67, 20, 7' : '255, 237, 213', 'text-orange-600 dark:text-orange-300')}
+            ${createStatCard('Number of Admins', stats.adminCount, 'shield-check', isDark ? '17, 56, 61' : '204, 251, 241', 'text-teal-600 dark:text-teal-300')}
         `;
+    } catch (error) {
+        console.error("Error loading admin overview stats:", error);
+        statsGrid.innerHTML = `<p class="text-red-500 col-span-full text-center">Could not load platform statistics: ${error.message}</p>`;
+    }
+}
 
-        const badgesHtml = displayUserData.completedCourseBadges?.length ? `
-            <div class="mt-4">
-                <h4 class="text-sm font-semibold mb-2 text-primary-600 dark:text-primary-400">Completed Course Badges (${displayUserData.completedCourseBadges.length})</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${displayUserData.completedCourseBadges.map(badge => {
-                         let completionDateStr = 'N/A';
-                         if (badge.completionDate) {
-                              try {
-                                   const dateObj = badge.completionDate.toDate ? badge.completionDate.toDate() : new Date(badge.completionDate);
-                                   if (!isNaN(dateObj)) completionDateStr = dateObj.toLocaleDateString();
-                              } catch(e){ console.warn("Error parsing badge completion date:", badge.completionDate, e); }
-                         }
-                         return `
-                            <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-800 text-sm">
-                                <p class="font-medium text-green-700 dark:text-green-300">${escapeHtml(badge.courseName || 'Unnamed Course')}</p>
-                                <p class="text-xs mt-1 text-green-600 dark:text-green-400">
-                                    <span class="font-medium">Grade:</span> ${escapeHtml(badge.grade || 'N/A')} |
-                                    <span class="font-medium">Course ID:</span> ${escapeHtml(badge.courseId || 'N/A')}
-                                </p>
-                                <p class="text-xs text-green-600 dark:text-green-400">
-                                    <span class="font-medium">Completed:</span> ${completionDateStr}
-                                </p>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
+// Helper to create stat card HTML
+function createStatCard(title, value, iconType, baseBgRgbString, iconColorClass) {
+    const iconSvg = getStatIcon(iconType, iconColorClass);
+    // Use baseBgRgbString directly for the base of RGBA
+    return `
+        <div class="stat-card p-6 rounded-lg shadow-lg flex flex-col items-center justify-center text-center transition-all hover:scale-105"
+             style="background-color: rgba(${baseBgRgbString}, var(--card-bg-alpha)); border: 1px solid rgba(var(--admin-content-border-rgb, 229, 231, 235), calc(var(--card-bg-alpha) * 0.5));">
+            <div class="stat-icon-wrapper mb-3">
+                ${iconSvg}
             </div>
-        ` : '';
-
-        const courseProgressHtml = Object.entries(cleanCourseProgress).length ? `
-            <div class="grid grid-cols-1 gap-4">
-                ${Object.entries(cleanCourseProgress).map(([courseId, progress]) => {
-                    const courseDef = globalCourseDataMap.get(courseId);
-                    const courseName = courseDef?.name || courseId;
-                    const studiedChapters = progress.courseStudiedChapters?.length || 0;
-                    const totalChapters = courseDef?.totalChapters || '?';
-                     const status = progress.status || 'enrolled';
-                    const statusClass = status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                                      status === 'failed' ? 'text-red-600 dark:text-red-400' :
-                                      'text-blue-600 dark:text-blue-400';
-                    let lastActivityStr = 'N/A';
-                    if (progress.lastActivityDate) {
-                         try { lastActivityStr = new Date(progress.lastActivityDate).toLocaleDateString(); } catch(e){}
-                    }
-                    return `
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border dark:border-gray-600 shadow-sm">
-                            <div class="flex justify-between items-start mb-2">
-                                <h5 class="font-medium text-sm">${escapeHtml(courseName)}</h5>
-                                <span class="text-xs font-medium ${statusClass}">${escapeHtml(status)}</span>
-                            </div>
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                                <div>
-                                    <span class="text-muted block">Enrollment</span>
-                                    <span class="font-medium">${escapeHtml(progress.enrollmentMode || 'standard')}</span>
-                                </div>
-                                <div>
-                                    <span class="text-muted block">Grade</span>
-                                    <span class="font-medium">${escapeHtml(progress.grade || 'N/A')}</span>
-                                </div>
-                                <div>
-                                    <span class="text-muted block">Progress</span>
-                                    <span class="font-medium">${studiedChapters} / ${totalChapters} chapters</span>
-                                </div>
-                                <div>
-                                    <span class="text-muted block">Last Active</span>
-                                    <span class="font-medium">${lastActivityStr}</span>
-                                </div>
-                            </div>
-                            ${progress.dailyProgress && Object.keys(progress.dailyProgress).length ? `
-                                <div class="mt-2 pt-2 border-t dark:border-gray-600">
-                                    <span class="text-xs text-muted">Daily Progress Entries: ${Object.keys(progress.dailyProgress).length}</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        ` : '<p class="text-sm text-muted">No course progress data available.</p>';
-
-        const modalHtml = `
-            <div id="user-details-modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[80] p-4 animate-fade-in" aria-labelledby="user-details-title" role="dialog" aria-modal="true">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-5 w-full max-w-4xl transform transition-all flex flex-col max-h-[90vh]">
-                    <div class="flex justify-between items-center mb-4 flex-shrink-0 pb-3 border-b dark:border-gray-600">
-                        <h3 id="user-details-title" class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
-                            User Details: ${escapeHtml(userData.displayName || userData.username || userId)}
-                        </h3>
-                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-icon text-xl" aria-label="Close user details modal">×</button>
-                    </div>
-                    <div class="flex-grow overflow-y-auto mb-4 space-y-6 pr-2">
-                        <div>
-                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">User Profile Data</h4>
-                            ${userProfileHtml}
-                            ${badgesHtml}
-                        </div>
-                        <div>
-                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Course Progress</h4>
-                            ${courseProgressHtml}
-                        </div>
-                         <div>
-                            <h4 class="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Raw User Data (Excerpt)</h4>
-                             <pre class="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded max-h-60 overflow-auto border dark:border-gray-700"><code>${escapeHtml(JSON.stringify({ email: userData.email, displayName: userData.displayName, username: userData.username, photoURL: userData.photoURL, createdAt: userData.createdAt, onboardingComplete: userData.onboardingComplete, isAdmin: userData.isAdmin, credits: userData.credits }, null, 2))}</code></pre>
-                        </div>
-                    </div>
-                    <div class="flex justify-end gap-3 flex-shrink-0 pt-3 border-t dark:border-gray-600">
-                        <button onclick="document.getElementById('user-details-modal').remove()" class="btn-secondary">Close</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-
-    } catch (error) {
-        hideLoading();
-        console.error(`Error viewing details for user ${userId}:`, error);
-        alert(`Failed to load user details: ${error.message}`);
-    }
+            <p class="stat-title text-sm font-medium text-gray-600 dark:text-gray-400">${escapeHtml(title)}</p>
+            <p class="stat-value text-3xl font-bold text-gray-800 dark:text-gray-100">${value !== null && value !== undefined ? escapeHtml(value.toLocaleString()) : 'N/A'}</p>
+        </div>
+    `;
 }
-// window.viewUserDetailsAdmin = viewUserDetailsAdmin; // Assigned at end
-
-function promptAdminChangeUsername(userId, currentUsername) {
-    if (!currentUser || !currentUser.isAdmin) { 
-        alert("Admin privileges required.");
-        return;
-    }
-    if (currentUser.uid !== ADMIN_UID) {
-        alert("Only the Primary Admin can change usernames directly.");
-        return;
-    }
 
 
-    const newUsername = prompt(`Enter new username for user ${userId} (current: "${currentUsername}").\nMust be 3-20 alphanumeric characters or underscores:`);
+// Helper to get SVG for stat cards
+function getStatIcon(type, iconColorClass = 'text-gray-500 dark:text-gray-400') {
+    // Using Heroicons Outline (24x24 viewBox)
+    // The `iconColorClass` sets the text color, which `currentColor` inherits for the stroke.
+    const baseClasses = `w-10 h-10 ${iconColorClass}`; // Adjusted for desired display size in stat card
 
-    if (newUsername === null) return;
-
-    const trimmedUsername = newUsername.trim();
-    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/;
-
-    if (!usernameRegex.test(trimmedUsername)) {
-        alert("Invalid username format. Please use 3-20 alphanumeric characters or underscores.");
-        return;
-    }
-
-    if (trimmedUsername.toLowerCase() === currentUsername.toLowerCase()) {
-        alert("New username is the same as the current one.");
-        return;
-    }
-
-    handleAdminChangeUsername(userId, currentUsername, trimmedUsername);
-}
-// window.promptAdminChangeUsername = promptAdminChangeUsername; // Assigned at end
-
-async function handleAdminChangeUsername(userId, currentUsername, newUsername) {
-    showLoading("Updating username...");
-    try {
-        const success = await adminUpdateUsername(userId, currentUsername, newUsername);
-        if (success) {
-            hideLoading();
-            alert(`Username successfully changed to "${newUsername}".`);
-            if (document.getElementById('user-details-modal')) {
-                 const modalTitle = document.getElementById('user-details-title');
-                 if (modalTitle && modalTitle.textContent.includes(userId)) {
-                     viewUserDetailsAdmin(userId);
-                 }
-            }
-             const userListArea = document.getElementById('admin-user-list-area');
-             if (userListArea && userListArea.innerHTML.includes(userId)) {
-                  listAllUsersAdmin();
-             }
-        } else {
-            hideLoading();
-            // adminUpdateUsername should throw specific errors that are caught and alerted by it
-            // or here if it returns false without throwing.
-            alert("An unexpected issue occurred while updating the username.");
-        }
-    } catch (error) {
-        hideLoading();
-        console.error("Error handling admin username change:", error);
-        alert(`Failed to change username: ${error.message}`);
+    switch (type) {
+        case 'users': // heroicons/outline/user-group
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>`;
+        case 'courses': // heroicons/outline/rectangle-stack
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" /></svg>`;
+        case 'check-badge': // heroicons/outline/check-badge
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`;
+        case 'flag': // heroicons/outline/flag
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v1.5M3 21v-6m0 0 2.77-.693a9 9 0 0 1 6.208.682l.108.054a9 9 0 0 0 6.086.71l3.114-.732a48.524 48.524 0 0 1-.005-10.499l-3.11.732a9 9 0 0 1-6.085-.711l-.108-.054a9 9 0 0 0-6.208-.682L3 4.5M3 15V4.5" /></svg>`;
+        case 'academic-cap': // heroicons/outline/academic-cap
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5" /></svg>`;
+        case 'clipboard-document-check': // heroicons/outline/clipboard-document-check
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M10.125 2.25h-4.5c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125v-9M10.125 2.25H13.5m0 0 3.375 3.375M13.5 2.25v3.375c0 .621.504 1.125 1.125 1.125h3.375M9 15l2.25 2.25L15 12" /></svg>`;
+        case 'chat-bubble-left-ellipsis': // heroicons/outline/chat-bubble-left-ellipsis
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M20 2H4C2.9 2 2 2.9 2 4V16C2 17.1 2.9 18 4 18H8L12 22L16 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM20 16H14.8L12 19.2L9.2 16H4V4H20V16Z" /></svg>`;
+        case 'shield-check': // heroicons/outline/shield-check
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.4-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.4-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.4 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.4.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>`;
+        default: // heroicons/outline/squares-2x2
+            return `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="${baseClasses}"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6A2.25 2.25 0 0 1 15.75 3.75h2.25A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25A2.25 2.25 0 0 1 13.5 8.25V6ZM13.5 15.75A2.25 2.25 0 0 1 15.75 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" /></svg>`;
     }
 }
 
 
-// --- NEW: Chat Auto-Deletion Functions ---
-async function loadChatAutoDeleteSetting() {
-    const selectElement = document.getElementById('chat-auto-delete-select');
-    const statusArea = document.getElementById('chat-auto-delete-status');
-    if (!selectElement || !statusArea) return;
-
-    statusArea.innerHTML = `<span class="text-muted text-xs">Loading setting...</span>`;
-
-    try {
-        if (!db) {
-            console.error("Firestore db instance is not available.");
-            statusArea.innerHTML = `<p class="text-red-500 text-xs">Error: Database connection not available.</p>`;
-            return;
-        }
-        const settingsRef = db.collection('settings').doc('chat');
-        const docSnap = await settingsRef.get();
-
-        let currentDays = 0;
-        if (docSnap.exists) {
-            currentDays = docSnap.data()?.autoDeleteDays ?? 0;
-        }
-
-        const validOptions = Array.from(selectElement.options).map(opt => parseInt(opt.value));
-        if (validOptions.includes(currentDays)) {
-            selectElement.value = currentDays.toString();
-        } else {
-            console.warn(`Stored autoDeleteDays value (${currentDays}) not found in options. Defaulting to Disabled.`);
-            selectElement.value = "0";
-        }
-        statusArea.innerHTML = '';
-        console.log("[Admin] Loaded chat auto-delete setting:", selectElement.value);
-
-    } catch (error) {
-        console.error("Error loading chat auto-delete setting:", error);
-        statusArea.innerHTML = `<p class="text-red-500 text-xs">Error loading setting: ${error.message}</p>`;
-        selectElement.value = "0";
-    }
-}
-
-export async function saveChatAutoDeleteSetting() {
-    if (!currentUser || currentUser.uid !== ADMIN_UID) {
-        alert("Primary Admin privileges required to change chat auto-delete settings.");
-        return;
-    }
-
-    const selectElement = document.getElementById('chat-auto-delete-select');
-    const statusArea = document.getElementById('chat-auto-delete-status');
-    if (!selectElement || !statusArea) return;
-
-    const selectedValue = parseInt(selectElement.value);
-    if (isNaN(selectedValue) || ![0, 7, 30, 90].includes(selectedValue)) {
-        alert("Invalid selection. Please choose a valid option.");
-        return;
-    }
-
-    statusArea.innerHTML = '';
-    showLoading("Saving setting...");
-
-    try {
-        if (!db) {
-            hideLoading();
-            console.error("Firestore db instance is not available for saving.");
-            statusArea.innerHTML = `<p class="text-red-500 text-xs">Error: Database connection not available.</p>`;
-            return;
-        }
-        const settingsRef = db.collection('settings').doc('chat');
-        await settingsRef.set({ autoDeleteDays: selectedValue }, { merge: true });
-        hideLoading();
-        statusArea.innerHTML = `<p class="text-green-500 text-xs">Setting saved successfully!</p>`;
-        console.log("[Admin] Saved chat auto-delete setting:", selectedValue);
-        setTimeout(() => { if(statusArea) statusArea.innerHTML = ''; }, 3000);
-
-    } catch (error) {
-        hideLoading();
-        console.error("Error saving chat auto-delete setting:", error);
-        statusArea.innerHTML = `<p class="text-red-500 text-xs">Error saving setting: ${error.message}</p>`;
-        alert(`Failed to save setting: ${error.message}`);
-    }
-}
-// window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting; // Assigned at end
+export { confirmRemoveBadge, handleAdminMarkCourseComplete, handleAdminUserSubjectApproval as handleAdminSubjectApproval, loadUserBadgesForAdmin, loadUserCoursesForAdmin, loadUserSubjectsForAdmin, promptAddBadge, promptAdminFeedbackReply as promptAdminReply,  }
 
 
-// --- Assign ALL handlers to window scope ---
+
 window.showAdminDashboard = showAdminDashboard;
-window.loadFeedbackForAdmin = loadFeedbackForAdmin;
-window.promptAdminReply = promptAdminReply;
-window.confirmDeleteItem = confirmDeleteItem;
-window.loadCoursesForAdmin = loadCoursesForAdmin;
+window.showAdminSection = showAdminSection;
+
+window.listAllUsersAdmin = listAllUsersAdmin;
+window.viewUserDetailsAdmin = viewUserDetailsAdmin;
+window.promptAdminChangeUsername = promptAdminUsernameChange;
+window.handleToggleAdminStatus = handleToggleAdminStatus;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 window.promptAddBadge = promptAddBadge;
 window.confirmRemoveBadge = confirmRemoveBadge;
+window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
+window.handleAdminUserSubjectApproval = handleAdminUserSubjectApproval;
+
+window.loadAdminCourses = loadAdminCourses;
+window.handleAdminCourseApproval = handleAdminCourseApproval;
+window.showGlobalAddCourseForm = showAddCourseForm;
+window.showAdminEditCourseForm = showAdminEditCourseForm;
+
+window.loadFeedbackForAdmin = loadFeedbackForAdmin;
+window.promptAdminFeedbackReply = promptAdminFeedbackReply;
+window.confirmDeleteFeedbackItem = confirmDeleteFeedbackItem;
+window.confirmDeleteAllFeedbackAndIssues = confirmDeleteAllFeedbackAndIssues;
+
+window.handleAddAdminTask = handleAddAdminTask;
+window.handleToggleAdminTaskStatus = handleToggleAdminTaskStatus;
+window.handleDeleteAdminTask = handleDeleteAdminTask;
+window.handleSaveGlobalPrompts = handleSaveGlobalPromptsToFirestore;
+window.saveChatAutoDeleteSettingAdmin = saveChatAutoDeleteSettingAdmin;
+
+window.populateAdminCourseSelect = populateAdminCourseSelect;
 window.loadPlaylistForAdmin = loadPlaylistForAdmin;
 window.toggleSelectAllVideos = toggleSelectAllVideos;
 window.toggleVideoSelection = toggleVideoSelection;
@@ -2039,23 +296,5 @@ window.handleAssignVideoToChapter = handleAssignVideoToChapter;
 window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
 window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin;
 window.handleDeleteUserChapterSummaryAdmin = handleDeleteUserChapterSummaryAdmin;
-window.confirmDeleteAllFeedback = confirmDeleteAllFeedback;
-window.listAllUsersAdmin = listAllUsersAdmin;
-window.viewUserDetailsAdmin = viewUserDetailsAdmin;
-window.promptAdminChangeUsername = promptAdminChangeUsername;
-window.handleToggleAdminStatus = handleToggleAdminStatus;
-window.handleCourseApproval = handleCourseApproval;
-window.showCourseDetails = showCourseDetails;
-window.showEditCourseForm = showEditCourseForm;
-window.showBrowseCourses = showBrowseCourses;
-window.showAddCourseForm = showAddCourseForm;
-window.handleAddAdminTask = handleAddAdminTask; // MODIFIED: Add new handler
-window.handleToggleAdminTask = handleToggleAdminTask; // MODIFIED: Add new handler
-window.handleDeleteAdminTask = handleDeleteAdminTask; // MODIFIED: Add new handler
-window.loadAdminTasks = loadAdminTasks; // This is typically called internally, but added if required by prompt explicitly
-window.saveChatAutoDeleteSetting = saveChatAutoDeleteSetting;
-window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin; 
-window.handleAdminSubjectApproval = handleAdminSubjectApproval; 
-window.handleSaveGlobalPrompts = handleSaveGlobalPrompts;
 
 // --- END OF FILE ui_admin_dashboard.js ---

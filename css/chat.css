@@ -1,0 +1,200 @@
+/* --- START OF FILE chat.css --- */
+
+/* === chat.css === */
+/* Styles specific to the global chat feature, mentions, popups, messages */
+
+/* --- Chat Mention Styles --- */
+.mention {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+    font-weight: 500;
+    padding: 0.1em 0.3em;
+    border-radius: var(--border-radius-sm);
+    cursor: default;
+    display: inline-block;
+    transition: background-color var(--transition-std), color var(--transition-std);
+}
+.dark .mention {
+    background-color: var(--color-primary-800);
+    color: var(--color-primary-200);
+}
+
+.mention-everyone {
+    background-color: var(--color-warning-100);
+    color: var(--color-warning-700);
+    font-weight: 600;
+}
+.dark .mention-everyone {
+    background-color: var(--color-warning-700);
+    color: var(--color-warning-100);
+}
+
+.mention-me {
+    background-color: var(--color-success-100);
+    color: var(--color-success-700);
+    font-weight: 600;
+}
+.dark .mention-me {
+    background-color: var(--color-success-800);
+    color: var(--color-success-100);
+}
+
+/* --- Mention Suggestion Popup Styles --- */
+#mention-suggestion-popup {
+    position: absolute;
+    z-index: 80;
+    background-color: var(--color-white);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-lg);
+    max-height: 150px;
+    overflow-y: auto;
+    min-width: 180px;
+    transition: background-color var(--transition-std), border-color var(--transition-std);
+}
+.dark #mention-suggestion-popup {
+    background-color: var(--color-gray-700);
+    border-color: var(--border-color-dark);
+}
+
+#mention-suggestion-popup ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#mention-suggestion-popup li {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+    color: var(--color-gray-700);
+}
+.dark #mention-suggestion-popup li {
+    color: var(--color-gray-200);
+}
+
+
+#mention-suggestion-popup li:hover,
+#mention-suggestion-popup li.active {
+    background-color: var(--color-primary-100);
+    color: var(--color-primary-700);
+}
+.dark #mention-suggestion-popup li:hover,
+.dark #mention-suggestion-popup li.active {
+    background-color: var(--color-primary-700);
+    color: var(--color-primary-100);
+}
+
+#mention-suggestion-popup li img {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: var(--border-radius-full);
+    margin-right: 0.5rem;
+    vertical-align: middle;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+
+#mention-suggestion-popup li .font-medium {
+    flex-grow: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#mention-suggestion-popup li .text-xs {
+    color: var(--color-gray-500);
+    flex-shrink: 0;
+    margin-left: 0.25rem;
+    transition: color var(--transition-fast);
+}
+.dark #mention-suggestion-popup li .text-xs {
+    color: var(--color-gray-400);
+}
+#mention-suggestion-popup li.active .text-xs,
+#mention-suggestion-popup li:hover .text-xs {
+    color: var(--color-primary-500);
+}
+.dark #mention-suggestion-popup li.active .text-xs,
+.dark #mention-suggestion-popup li:hover .text-xs {
+    color: var(--color-primary-200);
+}
+
+
+.pinned-message-highlight {
+    background-color: rgba(251, 191, 36, 0.05);
+    transition: background-color var(--transition-std);
+}
+.dark .pinned-message-highlight {
+    background-color: rgba(245, 158, 11, 0.1);
+}
+
+.reply-context {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.reply-context strong { font-weight: 600; }
+.reply-context span.line-clamp-1 {
+    display: inline;
+}
+
+.message-bubble {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+}
+.message-content-holder {
+     word-wrap: break-word;
+     overflow-wrap: break-word;
+     white-space: normal;
+}
+.message-content-holder pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+#global-chat-input {
+    line-height: 1.4;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+}
+
+#global-chat-modal .logo-light-mode { display: block; }
+#global-chat-modal .logo-dark-mode { display: none; }
+.dark #global-chat-modal .logo-light-mode { display: none; }
+.dark #global-chat-modal .logo-dark-mode { display: block; }
+#global-chat-modal .logo-light-mode,
+#global-chat-modal .logo-dark-mode {
+    width: 1.25rem; height: 1.25rem;
+}
+
+.notification-ping {
+    display: none; /* Hidden by default */
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--color-danger-500);
+    position: absolute;
+    border: 1px solid var(--color-white);
+    animation: ping-pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+    transition: border-color var(--transition-std);
+}
+.dark .notification-ping {
+    border-color: var(--color-gray-800);
+}
+
+.sidebar-link { /* Needed for absolute positioning of ping */
+    position: relative;
+}
+
+@keyframes ping-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+}
+
+
+/* --- END OF FILE chat.css --- */

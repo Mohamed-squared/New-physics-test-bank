@@ -4,7 +4,7 @@ import {
     db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
-    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts
+    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown } from './markdown_parser.js';
@@ -20,6 +20,7 @@ import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
 import { showOnboardingUI } from './ui_onboarding.js';
 import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
 import { cleanTextForFilename } from './filename_utils.js';
+import { fetchVideoDurationsIfNeeded, getYouTubeVideoId } from './ui_course_study_material.js';
 
 // --- Constants ---
 const userFormulaSheetSubCollection = "userFormulaSheets";
@@ -2631,6 +2632,397 @@ export async function deleteChatSessionFromFirestore(userId, sessionId) {
         // This function currently throws error, UI should handle alert.
         // If direct alert desired, add logic here.
         throw error; 
+    }
+}
+
+// --- Admin Testing Aid Functions ---
+
+export async function adminMarkTestGenChaptersStudied(targetUserId, subjectId) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const userRef = db.collection('users').doc(targetUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) throw new Error("Target user not found.");
+
+    const userData = userDoc.data();
+    const appData = userData.appData || { subjects: {} };
+    const subject = appData.subjects?.[subjectId];
+    if (!subject || !subject.chapters) throw new Error("Subject or chapters not found for user.");
+
+    Object.keys(subject.chapters).forEach(chapNum => {
+        if (!subject.studied_chapters.includes(chapNum)) {
+            subject.studied_chapters.push(chapNum);
+        }
+    });
+    subject.studied_chapters.sort((a, b) => parseInt(a) - parseInt(b));
+    await userRef.update({ appData: appData });
+}
+
+export async function adminResetTestGenSubjectProgress(targetUserId, subjectId) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const userRef = db.collection('users').doc(targetUserId);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) throw new Error("Target user not found.");
+
+    const userData = userDoc.data();
+    const appData = userData.appData || { subjects: {} };
+    const subject = appData.subjects?.[subjectId];
+    if (!subject || !subject.chapters) throw new Error("Subject or chapters not found for user.");
+
+    for (const chapNum in subject.chapters) {
+        const chap = subject.chapters[chapNum];
+        chap.total_attempted = 0;
+        chap.total_wrong = 0;
+        chap.mistake_history = [];
+        chap.consecutive_mastery = 0;
+        chap.available_questions = Array.from({ length: chap.total_questions || 0 }, (_, j) => j + 1);
+    }
+    // Optionally, clear studied_chapters as well if "full reset"
+    // subject.studied_chapters = [];
+    await userRef.update({ appData: appData });
+}
+
+export async function adminMarkCourseChapterStudied(targetUserId, courseId, chapterToMark) {
+    if (!currentUser || !currentUser.isAdmin) throw new Error("Admin privileges required.");
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId);
+    const progressDoc = await progressRef.get();
+    if (!progressDoc.exists) throw new Error("User course progress not found.");
+
+    const progressData = progressDoc.data();
+    progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
+    
+    const courseDef = globalCourseDataMap.get(courseId); // Get course definition
+    if (!courseDef) throw new Error("Course definition not found for video duration fetching.");
+
+    const chaptersToUpdate = [];
+    if (chapterToMark === 'all') {
+        for (let i = 1; i <= (courseDef.totalChapters || 0); i++) chaptersToUpdate.push(i);
+    } else {
+        const chapNum = parseInt(chapterToMark);
+        if (isNaN(chapNum) || chapNum < 1 || chapNum > (courseDef.totalChapters || 0)) throw new Error("Invalid chapter number.");
+        chaptersToUpdate.push(chapNum);
+    }
+
+    let changed = false;
+
+    // Fetch video durations for all relevant videos first
+    const videoIdsToFetch = [];
+    chaptersToUpdate.forEach(cn => {
+        const lectures = courseDef.chapterResources?.[cn]?.lectureUrls || [];
+        lectures.forEach(lec => {
+            const videoId = getYouTubeVideoId(lec.url); // Ensure getYouTubeVideoId is robust
+            if (videoId && videoDurationMap[videoId] === undefined) { // Only fetch if not already in cache
+                videoIdsToFetch.push(videoId);
+            }
+        });
+    });
+
+    if (videoIdsToFetch.length > 0) {
+        console.log(`[Admin Action] Fetching durations for ${videoIdsToFetch.length} videos for user ${targetUserId}...`);
+        await fetchVideoDurationsIfNeeded(videoIdsToFetch); // This populates the global videoDurationMap
+        console.log("[Admin Action] Video durations fetched/updated for admin operation.");
+    }
+
+    chaptersToUpdate.forEach(cn => {
+        if (!progressData.courseStudiedChapters.includes(cn)) {
+            progressData.courseStudiedChapters.push(cn);
+            changed = true;
+        }
+        // Also set PDF and Video progress to 100% for these chapters
+        progressData.pdfProgress = progressData.pdfProgress || {};
+        // If PDF exists, mark all pages read, otherwise set a default completed state
+        const chapterPdfInfo = courseDef.chapterResources?.[cn]?.pdfInfo; // Assuming pdfInfo { totalPages: X } exists
+        progressData.pdfProgress[cn] = { 
+            currentPage: chapterPdfInfo?.totalPages || 1, // Mark as if last page read or 1 if no info
+            totalPages: chapterPdfInfo?.totalPages || 1  // Store total pages or 1
+        };
+        changed = true;
+
+        progressData.watchedVideoDurations = progressData.watchedVideoDurations || {};
+        progressData.watchedVideoDurations[cn] = progressData.watchedVideoDurations[cn] || {};
+        const lectures = courseDef.chapterResources?.[cn]?.lectureUrls || [];
+        lectures.forEach(lec => {
+            const videoId = getYouTubeVideoId(lec.url);
+            if (videoId) {
+                 const duration = videoDurationMap[videoId]; // Read from the now-populated global map
+                 if (typeof duration === 'number' && duration > 0) {
+                     progressData.watchedVideoDurations[cn][videoId] = duration;
+                 } else {
+                     // If duration is still unknown (e.g., API error, private video), use a placeholder.
+                     // This indicates completion but acknowledges duration wasn't fetched.
+                     console.warn(`[Admin Action] Duration for video ${videoId} (Ch ${cn}) is unknown or invalid (${duration}) after fetch attempt. Setting to placeholder 99999.`);
+                     progressData.watchedVideoDurations[cn][videoId] = 99999; 
+                 }
+            }
+        });
+        changed = true; 
+    });
+
+    if (changed) {
+        progressData.courseStudiedChapters.sort((a, b) => a - b);
+        await progressRef.update({
+            courseStudiedChapters: progressData.courseStudiedChapters,
+            pdfProgress: progressData.pdfProgress,
+            watchedVideoDurations: progressData.watchedVideoDurations,
+            lastActivityDate: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`[Admin Action] User ${targetUserId}, Course ${courseId}, Chapter(s) ${chapterToMark} marked as studied with full media progress.`);
+    } else {
+         console.log(`[Admin Action] No effective change for User ${targetUserId}, Course ${courseId}, Chapter(s) ${chapterToMark}.`);
+    }
+}
+export async function adminCompleteCourseActivity(targetUserId, courseId, activityType, activityId, score) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId);
+    const progressDoc = await progressRef.get();
+    if (!progressDoc.exists) throw new Error("User course progress not found.");
+
+    const progressData = progressDoc.data();
+    const updates = { lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() };
+
+    switch (activityType) {
+        case 'assignment':
+            progressData.assignmentScores = progressData.assignmentScores || {};
+            progressData.assignmentScores[activityId] = score;
+            updates.assignmentScores = progressData.assignmentScores;
+            // Also log in daily progress for attendance
+            const dayNumMatch = activityId.match(/day(\d+)/);
+            if (dayNumMatch && progressData.enrollmentDate) {
+                const dayNum = parseInt(dayNumMatch[1]);
+                const activityDate = new Date(progressData.enrollmentDate.toDate()); // Convert timestamp to Date
+                activityDate.setDate(activityDate.getDate() + dayNum - 1);
+                const dateStr = getFormattedDate(activityDate); // Assuming getFormattedDate exists
+                progressData.dailyProgress = progressData.dailyProgress || {};
+                progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {};
+                progressData.dailyProgress[dateStr].assignmentCompleted = true;
+                progressData.dailyProgress[dateStr].assignmentScore = score;
+                updates.dailyProgress = progressData.dailyProgress;
+            }
+            break;
+        case 'weekly_exam':
+            progressData.weeklyExamScores = progressData.weeklyExamScores || {};
+            progressData.weeklyExamScores[activityId] = score;
+            updates.weeklyExamScores = progressData.weeklyExamScores;
+            break;
+        case 'midcourse':
+            progressData.midcourseExamScores = progressData.midcourseExamScores || {};
+            progressData.midcourseExamScores[activityId] = score;
+            updates.midcourseExamScores = progressData.midcourseExamScores;
+            break;
+        case 'final':
+            progressData.finalExamScores = progressData.finalExamScores || [];
+            const finalIndexMatch = activityId.match(/final(\d+)/);
+            if (finalIndexMatch) {
+                const attemptIndex = parseInt(finalIndexMatch[1]) - 1;
+                while (progressData.finalExamScores.length <= attemptIndex) progressData.finalExamScores.push(null);
+                progressData.finalExamScores[attemptIndex] = score;
+                updates.finalExamScores = progressData.finalExamScores;
+            } else { throw new Error("Invalid final exam ID format for admin completion."); }
+            break;
+        case 'skip_exam': // e.g., activityId is "chapter3"
+            const chapterNumMatch = activityId.match(/chapter(\d+)/);
+            if (!chapterNumMatch) throw new Error("Invalid skip exam activity ID format.");
+            const chapterNum = parseInt(chapterNumMatch[1]);
+            progressData.lastSkipExamScore = progressData.lastSkipExamScore || {};
+            progressData.lastSkipExamScore[chapterNum] = score;
+            progressData.skipExamAttempts = progressData.skipExamAttempts || {};
+            progressData.skipExamAttempts[chapterNum] = (progressData.skipExamAttempts[chapterNum] || 0) + 1;
+            updates.lastSkipExamScore = progressData.lastSkipExamScore;
+            updates.skipExamAttempts = progressData.skipExamAttempts;
+            // If passed, also mark chapter studied
+            const courseDef = globalCourseDataMap.get(courseId);
+            const skipThreshold = courseDef?.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
+            if (score >= skipThreshold) {
+                progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
+                if (!progressData.courseStudiedChapters.includes(chapterNum)) {
+                    progressData.courseStudiedChapters.push(chapterNum);
+                    progressData.courseStudiedChapters.sort((a,b) => a-b);
+                    updates.courseStudiedChapters = progressData.courseStudiedChapters;
+                }
+            }
+            break;
+        default:
+            throw new Error("Invalid activity type for admin completion.");
+    }
+    await progressRef.update(updates);
+}
+
+export async function adminSetCourseStatusAndGrade(targetUserId, courseId, finalMark, newStatus) {
+    // This function is ALREADY in firebase_firestore.js as updateCourseStatusForUser.
+    // We can call it directly. The `currentUser` check within it will ensure admin privs.
+    // No new function needed here, just ensure the call from admin_testing_aids.js is correct.
+    // The function is: updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus)
+    // Re-confirming: Yes, updateCourseStatusForUser from firebase_firestore.js is suitable.
+    await updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus);
+}
+
+export async function adminAdjustUserCredits(targetUserId, amount, reason, adminPerformingActionUid) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    if (typeof amount !== 'number' || !reason) throw new Error("Amount and reason required for credit adjustment.");
+
+    // We can use the existing updateUserCredits function, but it uses `currentUser` internally for `performedBy`.
+    // For admin actions, it's better to log which admin did it.
+    // Let's create a more specific admin version or modify updateUserCredits to accept `performedBy`.
+    // For now, let's assume updateUserCredits is flexible or we create an admin-specific one.
+    // For this exercise, I'll assume updateUserCredits can handle it or we'd create `adminUpdateUserCredits`.
+    // For simplicity, using existing updateUserCredits and it will log current admin as performer.
+    // If a different admin needs to be logged, updateUserCredits needs `performedByUid` param.
+
+    // For this implementation, I'll add a new specialized function in firebase_firestore.js
+    // called `adminAdjustUserCreditsWithPerformer` to make it explicit.
+    // (In a real app, you might refactor updateUserCredits to take an optional performer.)
+
+    // Let's create the new Firestore function:
+    const userRef = db.collection('users').doc(targetUserId);
+    const creditLogRef = userRef.collection("creditLog").doc(); // Assuming "creditLog" subcollection
+
+    await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists) throw new Error("Target user not found.");
+        const currentCredits = userDoc.data().credits || 0;
+        const newCredits = currentCredits + amount;
+
+        transaction.update(userRef, { credits: newCredits }); // Update target user's credits
+        transaction.set(creditLogRef, {
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            change: amount,
+            newBalance: newCredits,
+            reason: `Admin Action: ${reason}`,
+            performedBy: adminPerformingActionUid // Log which admin did it
+        });
+    });
+    // If this is the currently logged-in user being modified by another admin, their local state won't auto-update.
+    // The admin UI itself won't reflect the change unless refreshed.
+}
+
+// --- End Admin Testing Aid Functions ---
+
+export async function getAdminOverviewStats() {
+    if (!db) {
+        console.error("Firestore DB not initialized for getAdminOverviewStats.");
+        throw new Error("Database not available.");
+    }
+
+    try {
+        // Fetch total users
+        const usersSnapshot = await db.collection('users').get();
+        const totalUsers = usersSnapshot.size;
+
+        // Fetch pending courses
+        const pendingCoursesSnapshot = await db.collection('courses').where('status', '==', 'pending').get();
+        const pendingCourses = pendingCoursesSnapshot.size;
+
+        // Fetch approved courses
+        const approvedCoursesSnapshot = await db.collection('courses').where('status', '==', 'approved').get();
+        const approvedCourses = approvedCoursesSnapshot.size;
+
+        // Fetch reported courses
+        const reportedCoursesSnapshot = await db.collection('courses').where('status', '==', 'reported').get();
+        const reportedCourses = reportedCoursesSnapshot.size;
+
+        // Fetch total TestGen subjects (count documents in 'subjects' map within each user's appData)
+        // This is more complex and less performant. A better approach for a large number of users
+        // would be to maintain a separate counter or use a Cloud Function.
+        // For now, a simplified count of users who *have* appData.subjects:
+        let totalSubjectsCount = 0;
+        // This is still not ideal as it iterates all users.
+        // A placeholder or a limited query might be better for large scale.
+        // For this example, let's assume a reasonable number of users to iterate for `appData.subjects` count.
+        // Or, if `data.subjects` in `state.js` represents the global TestGen subjects defined by admins:
+        // totalSubjectsCount = window.data?.subjects ? Object.keys(window.data.subjects).length : 0;
+        // For now, let's assume `data.subjects` are global subjects defined by admins.
+        // If `data` refers to the current user's loaded appData, this isn't global.
+        // Let's assume global TestGen subjects are those in `state.js -> data.subjects` loaded from ADMIN's appData.
+        // This interpretation is tricky without knowing the exact intent of "Total TestGen Subjects".
+        // If it means total unique subjects across all users, that's very hard without aggregation.
+        // If it means system-defined subjects (like the default Physics), then:
+        const systemSubjects = window.data?.subjects ? Object.keys(window.data.subjects).filter(id => window.data.subjects[id].creatorUid === ADMIN_UID || window.data.subjects[id].status === 'approved').length : 0;
+        totalSubjectsCount = systemSubjects;
+
+
+        // Fetch total exams taken (from userExams)
+        // This would require iterating all users then all their exams, very expensive.
+        // A dedicated counter document updated by a Cloud Function on exam creation is ideal.
+        // For now, returning a placeholder or -1 to indicate it needs a better solution.
+        const totalExamsTaken = 'N/A (Needs Counter)'; // Placeholder
+
+        // Fetch pending feedback/issues
+        const feedbackSnapshot = await db.collection('feedback').where('status', '==', 'new').get();
+        const issuesSnapshot = await db.collection('examIssues').where('status', '==', 'new').get();
+        const pendingFeedback = feedbackSnapshot.size + issuesSnapshot.size;
+
+        // Fetch admin count
+        const adminSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
+        const adminCount = adminSnapshot.size;
+
+
+        return {
+            totalUsers,
+            pendingCourses,
+            approvedCourses,
+            reportedCourses,
+            totalSubjects: totalSubjectsCount,
+            totalExamsTaken,
+            pendingFeedback,
+            adminCount
+        };
+
+    } catch (error) {
+        console.error("Error fetching admin overview stats:", error);
+        throw error; // Re-throw to be caught by the UI
+    }
+}
+
+export async function adminSimulateDaysPassed(targetUserId, courseId, daysToSimulate) {
+    if (!currentUser || !currentUser.isAdmin) { // Ensure current user is admin
+        throw new Error("Admin privileges required to simulate days passed.");
+    }
+    if (!db) {
+        console.error("Firestore DB not initialized for adminSimulateDaysPassed.");
+        throw new Error("Database not available.");
+    }
+    if (!targetUserId || !courseId || typeof daysToSimulate !== 'number' || daysToSimulate < 0) {
+        console.error("Invalid parameters for adminSimulateDaysPassed.");
+        throw new Error("Invalid user, course, or days specified.");
+    }
+
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId);
+
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of today
+
+        // Calculate the new "enrollment date"
+        const newEnrollmentDate = new Date(today);
+        newEnrollmentDate.setDate(today.getDate() - daysToSimulate);
+
+        // Convert to Firestore Timestamp
+        const newEnrollmentTimestamp = firebase.firestore.Timestamp.fromDate(newEnrollmentDate);
+
+        console.log(`Admin Action: Setting enrollment for user ${targetUserId}, course ${courseId} to ${daysToSimulate} days ago. New enrollment date: ${newEnrollmentDate.toISOString()}`);
+
+        await progressRef.update({
+            enrollmentDate: newEnrollmentTimestamp,
+            baseMediocrePace: null, // Reset base pace, it will be recalculated
+            lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() // Update last activity
+        });
+
+        console.log(`Successfully updated enrollmentDate for user ${targetUserId}, course ${courseId}.`);
+
+        // If the admin is operating on their own account (unlikely for this feature but possible)
+        // or if more sophisticated state management is needed for other users,
+        // you might need to update local state here (userCourseProgressMap).
+        // For simplicity, this example relies on a page refresh or re-navigating to see full effects
+        // for the target user if they are not the current admin.
+
+        return true;
+    } catch (error) {
+        console.error(`Error in adminSimulateDaysPassed for user ${targetUserId}, course ${courseId}:`, error);
+        let alertMessage = `Failed to simulate days passed: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to simulate days passed: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        // Throw the error so the calling UI can handle it (e.g., show alert)
+        throw new Error(alertMessage);
     }
 }
 

@@ -1,0 +1,208 @@
+/* --- START OF FILE forms.css --- */
+
+/* === forms.css === */
+/* Styles for form elements like labels, inputs, selects, textareas, checkboxes, radios, and file inputs */
+
+/* ==========================================================================
+   Form Control Styles
+   ========================================================================== */
+
+label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-gray-700);
+    transition: color var(--transition-std);
+}
+.dark label {
+    color: var(--color-gray-300);
+}
+
+.form-control,
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="search"],
+select,
+textarea {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
+    font-family: var(--font-sans);
+    line-height: 1.4;
+    color: var(--color-gray-900);
+    background-color: var(--color-white);
+    background-clip: padding-box;
+    border: 1px solid var(--color-gray-300);
+    appearance: none;
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-inner);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background-color var(--transition-std), color var(--transition-std);
+}
+textarea { line-height: 1.5; min-height: 80px; }
+
+select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1.2em 1.2em;
+    padding-right: 2.5rem;
+}
+.dark select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23cbd5e1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+}
+
+.form-control:focus,
+input:focus, select:focus, textarea:focus {
+    border-color: var(--color-primary-500);
+    outline: 0;
+    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(14, 165, 233, 0.25);
+}
+
+.dark .form-control,
+.dark input[type="text"],
+.dark input[type="email"], .dark input[type="password"], .dark input[type="number"], .dark input[type="url"], .dark input[type="search"],
+.dark select,
+.dark textarea {
+    color: var(--color-gray-100);
+    background-color: var(--color-gray-700);
+    border-color: var(--color-gray-600);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+}
+.dark .form-control:focus,
+.dark input:focus, .dark select:focus, .dark textarea:focus {
+    border-color: var(--color-primary-400);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(56, 189, 248, 0.3);
+}
+
+/* Invalid input styles */
+input:invalid, select:invalid, textarea:invalid,
+.form-control.is-invalid,
+input.border-red-500, textarea.border-red-500, select.border-red-500
+{
+    border-color: var(--color-danger-500) !important;
+}
+input:invalid:focus, select:invalid:focus, textarea:invalid:focus,
+.form-control.is-invalid:focus,
+input.border-red-500:focus, textarea.border-red-500:focus, select.border-red-500:focus
+{
+    box-shadow: var(--shadow-inner), 0 0 0 3px rgba(244, 63, 94, 0.25) !important;
+}
+.dark input:invalid:focus, .dark select:invalid:focus, .dark textarea:invalid:focus,
+.dark .form-control.is-invalid:focus,
+.dark input.border-red-500:focus, .dark textarea.border-red-500:focus, .dark select.border-red-500:focus
+{
+     box-shadow: inset 0 1px 2px rgba(0,0,0,0.2), 0 0 0 3px rgba(244, 63, 94, 0.3) !important;
+}
+
+input[type="checkbox"], input[type="radio"] {
+    height: 1rem; width: 1rem;
+    border: 1px solid var(--color-gray-400);
+    color: var(--color-primary-600);
+    transition: var(--transition-fast);
+    flex-shrink: 0; vertical-align: middle;
+    appearance: none; background-color: var(--color-white);
+    position: relative; cursor: pointer; display: inline-block;
+    transition: background-color var(--transition-std), border-color var(--transition-std), box-shadow var(--transition-std);
+}
+input[type="checkbox"] { border-radius: var(--border-radius-sm); }
+input[type="radio"] { border-radius: 50%; }
+
+input[type="checkbox"]:focus, input[type="radio"]:focus {
+     outline: none;
+     box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.25);
+}
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+    border-color: var(--color-primary-500);
+    background-color: var(--color-primary-500);
+}
+input[type="radio"]:checked { background-color: var(--color-white); }
+
+input[type="checkbox"]:checked::before {
+    content: ""; display: block; width: 0.3rem; height: 0.6rem;
+    border: solid var(--color-white); border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-50%, -50%);
+    position: absolute; left: 50%; top: 45%;
+}
+input[type="radio"]:checked::before {
+    content: ""; display: block; width: 0.5rem; height: 0.5rem;
+    background-color: var(--color-primary-500); border-radius: 50%;
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    transition: background-color var(--transition-std);
+}
+
+.dark input[type="checkbox"], .dark input[type="radio"] {
+    border-color: var(--color-gray-500); background-color: var(--color-gray-600);
+}
+.dark input[type="checkbox"]:focus, .dark input[type="radio"]:focus {
+     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.3);
+}
+.dark input[type="checkbox"]:checked, .dark input[type="radio"]:checked {
+    border-color: var(--color-primary-400); background-color: var(--color-primary-400);
+}
+.dark input[type="radio"]:checked { background-color: var(--color-gray-600); }
+.dark input[type="radio"]:checked::before { background-color: var(--color-primary-400); }
+
+/* Form helper text */
+.form-help-text {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    margin-top: 0.25rem;
+    transition: color var(--transition-std);
+}
+.dark .form-help-text {
+    color: var(--color-gray-400);
+}
+.form-error-text {
+    font-size: 0.75rem;
+    color: var(--color-danger-600);
+    margin-top: 0.25rem;
+    transition: color var(--transition-std);
+}
+.dark .form-error-text {
+     color: var(--color-danger-400);
+}
+
+/* Custom File Input Button Style */
+input[type="file"].form-control::file-selector-button {
+    font-weight: 500;
+    color: var(--color-white);
+    background-color: var(--color-primary-600);
+    border: 1px solid var(--color-primary-600);
+    padding: 0.5rem 1rem; /* Match .btn styles roughly */
+    border-radius: var(--border-radius-md);
+    margin-right: 0.75rem;
+    margin-left: -0.9rem; /* Pull to edge */
+    margin-top: -0.6rem; /* Pull to edge */
+    margin-bottom: -0.6rem; /* Pull to edge */
+    cursor: pointer;
+    transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+input[type="file"].form-control::file-selector-button:hover {
+    background-color: var(--color-primary-700);
+    border-color: var(--color-primary-700);
+}
+
+.dark input[type="file"].form-control::file-selector-button {
+    background-color: var(--color-primary-500);
+    border-color: var(--color-primary-500);
+    color: var(--color-white);
+}
+
+.dark input[type="file"].form-control::file-selector-button:hover {
+    background-color: var(--color-primary-400);
+    border-color: var(--color-primary-400);
+}
+
+/* Ensure text part of file input is styled correctly */
+input[type="file"].form-control {
+    padding-left: 0.9rem; /* Default padding unless button is there */
+}
+
+
+/* --- END OF FILE forms.css --- */
