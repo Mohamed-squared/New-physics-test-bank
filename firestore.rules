@@ -60,7 +60,7 @@ service cloud.firestore {
             'dailyProgress', 'status', 'totalMark', 'grade', 'completionDate',
             'userRating', 'userReview', 'selectedPace', 'customPaceDays', 'currentPace',
             'currentChapterTarget', 'currentDayObjective', 'attendanceScore', 'extraPracticeBonus',
-            'enrollmentMode'
+            'enrollmentMode', 'testGenBonus'
         ];
     }
 
@@ -81,6 +81,77 @@ service cloud.firestore {
              config.durationMinutes is number && config.durationMinutes >= 5 &&
              config.mcqRatio is number && config.mcqRatio >= 0 && config.mcqRatio <= 1 &&
              config.textSourceRatio is number && config.textSourceRatio >= 0 && config.textSourceRatio <= 1;
+    }
+
+    // --- Helper function for Test Gen Config (can be expanded) ---
+    function isValidTestGenConfig(config) {
+      return config is map &&
+             config.keys().hasAll(['textMcqCount', 'textProblemCount', 'lectureMcqCounts', 'lectureProblemCounts', 'timingOption']) &&
+             config.textMcqCount is number && config.textMcqCount >= 0 &&
+             config.textProblemCount is number && config.textProblemCount >= 0 &&
+             config.lectureMcqCounts is map && // keys are lecture IDs (strings), values are numbers
+             config.lectureProblemCounts is map && // keys are lecture IDs (strings), values are numbers
+             config.timingOption is string && (config.timingOption == 'default' || config.timingOption == 'calculated' || config.timingOption == 'custom') &&
+             (config.timingOption != 'custom' || (config.timingOption == 'custom' && config.customDurationMinutes is number && config.customDurationMinutes >= 10)) &&
+             // Min 10 questions validation is hard to do directly in rules for sums of map values.
+             // Best handled client-side / Cloud Function before write.
+             // We can check individual counts are not excessively large if needed.
+             true; // Add more checks if necessary, e.g., map values are numbers >= 0
+    }
+
+
+    match /userExams/{userId}/exams/{examId} {
+      allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isLoggedIn() && isOwner(userId) &&
+                       request.resource.data.userId == userId &&
+                       request.resource.data.examId == examId && // examId is typically generated client-side
+                       request.resource.data.courseId is string && // Need courseId to link to subject for default timing
+                       request.resource.data.questions is list && // Populated based on config
+                       request.resource.data.answers is map && // User's answers
+                       request.resource.data.markingResults is map && // Auto-grading results
+                       request.resource.data.score is number && request.resource.data.score >= 0 &&
+                       request.resource.data.maxScore is number && request.resource.data.maxScore > 0 &&
+                       request.resource.data.status is string && (request.resource.data.status == 'started' || request.resource.data.status == 'completed') &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.completedAt == (request.resource.data.status == 'completed' ? request.time : null) &&
+                       request.resource.data.durationMinutes is number && request.resource.data.durationMinutes >= 5 && // Final duration
+                       request.resource.data.isTestGen is bool &&
+                       (
+                         ( request.resource.data.isTestGen == false &&
+                           // For regular exams, ensure no testGenConfig is present or it's null
+                           (!('testGenConfig' in request.resource.data) || request.resource.data.testGenConfig == null) &&
+                           request.resource.data.keys().hasOnly([
+                             'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
+                             'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
+                             'examType' // e.g., 'weekly', 'midterm', 'final', 'practice' - you might have this
+                           ]) // Adjust this list based on your existing regular exam structure
+                         ) ||
+                         ( request.resource.data.isTestGen == true &&
+                           request.resource.data.testGenConfig is map &&
+                           isValidTestGenConfig(request.resource.data.testGenConfig) &&
+                           // Ensure total questions from testGenConfig adds up to at least 10.
+                           // This is complex for rules. Assume client/CF validated.
+                           // We can check questions list size matches config.
+                           // request.resource.data.questions.size() >= 10 && (complex sum here)
+                           request.resource.data.keys().hasOnly([
+                             'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
+                             'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
+                             'testGenConfig'
+                           ])
+                         )
+                       );
+
+      // Generally, exams are immutable once created or only status/score/markingResults can be updated (e.g., by a grading function)
+      // For simplicity, let's stick to no updates after creation for now, as per original rule.
+      // If you need updates (e.g., 'started' -> 'completed'), this needs to be more granular.
+      allow update: if false; // Or allow specific updates if needed, e.g., by an admin/grading function
+                        // if (isAdmin() || request.auth.uid == resource.data.userId) &&
+                        //    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'answers', 'score', 'markingResults']) &&
+                        //    request.resource.data.status == 'completed' &&
+                        //    request.resource.data.completedAt == request.time &&
+                        //    resource.data.status == 'started'; // Example update logic
+
+      allow delete: if isLoggedIn() && isOwner(userId);
     }
 
     // --- Usernames Registry ---
@@ -231,6 +302,7 @@ service cloud.firestore {
                request.resource.data.finalExamScores == null &&
                request.resource.data.attendanceScore == 100 &&
                request.resource.data.extraPracticeBonus == 0 &&
+               request.resource.data.testGenBonus == 0 &&
                request.resource.data.totalMark == null &&
                request.resource.data.grade == null &&
                request.resource.data.completionDate == null &&
@@ -246,7 +318,7 @@ service cloud.firestore {
                  'watchedVideoUrls', 'watchedVideoDurations', 'pdfProgress',
                  'skipExamAttempts', 'lastSkipExamScore',
                  'assignmentScores', 'weeklyExamScores', 'midcourseExamScores', 'finalExamScores',
-                 'attendanceScore', 'extraPracticeBonus',
+                 'attendanceScore', 'extraPracticeBonus', 'testGenBonus',
                  'totalMark', 'grade', 'completionDate',
                  'enrollmentDate', 'lastActivityDate' // Add them here
                ]);

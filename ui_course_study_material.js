@@ -3,7 +3,9 @@
 // ui_course_study_material.js
 
 // *** MODIFIED: Import 'data' state for subject access, and courseExamDefaults ***
-import { currentUser, globalCourseDataMap, activeCourseId, setActiveCourseId, videoDurationMap, userCourseProgressMap, updateUserCourseProgress, data, courseExamDefaults } from './state.js'; // Added courseExamDefaults
+import { currentUser, globalCourseDataMap, activeCourseId,
+         setActiveCourseId, videoDurationMap, userCourseProgressMap,
+         updateUserCourseProgress, data, courseExamDefaults, globalSubjectDefinitionsMap } from './state.js'; // Added courseExamDefaults
 // MODIFIED: Import Firestore save/load functions for notes
 import { saveUserCourseProgress, markChapterStudiedInCourse, saveUserFormulaSheet, loadUserFormulaSheet, saveUserChapterSummary, loadUserChapterSummary } from './firebase_firestore.js';
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
@@ -1812,124 +1814,145 @@ window.showCurrentCourseDashboardWrapper = (courseId) => showCurrentCourseDashbo
 
 
 export async function triggerSkipExamGeneration(courseId, chapterNum) {
-     if (!currentUser || !data) { alert("Log in and load data required."); return; }
-     const courseDef = globalCourseDataMap.get(courseId);
-     if (!courseDef) { alert("Course definition not found."); return; }
+    if (!currentUser || !data) { // data here refers to the user's TestGen subject progress cache
+        alert("Log in and ensure subject data is loaded before attempting a skip exam.");
+        return;
+    }
+    const courseDef = globalCourseDataMap.get(courseId);
+    if (!courseDef) {
+        alert("Course definition not found. Cannot generate skip exam.");
+        return;
+    }
+    
+    // Get the configuration for skip_exam, falling back to global defaults if not found
+    const currentGlobalExamDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG;
+    const skipExamConfig = currentGlobalExamDefaults.skip_exam || FALLBACK_EXAM_CONFIG.skip_exam;
+    const skipExamMcqCount = skipExamConfig.questions;
+    const skipExamDurationMinutes = skipExamConfig.durationMinutes;
 
-     const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
-     if (!confirm(`Generate and start a Skip Exam for Chapter ${chapterNum} using existing chapter questions?\nPassing this exam (${skipExamThreshold}%) will mark the chapter as studied.`)) return;
+    const chapterTitle = courseDef.chapters?.[chapterNum - 1] || `Chapter ${chapterNum}`;
 
-     showLoading(`Preparing Skip Exam for Chapter ${chapterNum}...`);
+    if (!confirm(`Generate and start a Skip Exam for ${escapeHtml(chapterTitle)}?\n\nThis exam will consist of ${skipExamMcqCount} multiple-choice questions. Passing this exam will mark the chapter as studied.`)) {
+        return;
+    }
 
-     try {
-         const relatedSubjectId = courseDef.relatedSubjectId;
-         if (!relatedSubjectId) throw new Error("Course definition is missing the related subject ID.");
-         const subject = data.subjects?.[relatedSubjectId];
-         if (!subject) throw new Error(`Subject data not found for ID: ${relatedSubjectId}`);
-         const subjectMdFilename = subject.fileName;
-         if (!subjectMdFilename) throw new Error(`Markdown filename not found for subject: ${subject.name}`);
+    showLoading(`Preparing Skip Exam for ${escapeHtml(chapterTitle)}...`);
 
-         // --- START MODIFICATION: Use SUBJECT_RESOURCE_FOLDER ---
-         const courseDirForMd = subject.courseDirName 
-            ? cleanTextForFilename(subject.courseDirName) 
-            : cleanTextForFilename(subject.name || `subject_${subject.id}`);
-         const safeMcqFileName = subject.fileName ? cleanTextForFilename(subject.fileName) : 'default_mcqs.md';
-         const fullMdPath = `${COURSE_BASE_PATH}/${courseDirForMd}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileName}`;
-         // --- END MODIFICATION ---
+    try {
+        const relatedSubjectId = courseDef.relatedSubjectId;
+        if (!relatedSubjectId) {
+            throw new Error("Course definition is missing the 'relatedSubjectId' needed to find the question bank.");
+        }
 
-         let mdContent;
-         try {
-             const response = await fetch(`${fullMdPath}?cacheBust=${Date.now()}`);
-             if (!response.ok) {
-                 throw new Error(`HTTP error ${response.status} fetching ${fullMdPath}`);
-             }
-             mdContent = await response.text();
-             if (!mdContent) throw new Error(`Markdown file "${fullMdPath}" is empty or could not be read.`);
-             console.log(`Fetched MD content for Skip Exam from: ${fullMdPath}`);
-         } catch (fetchError) {
-             console.error("Error fetching subject Markdown for Skip Exam:", fetchError);
-             throw new Error(`Could not load questions file: ${fullMdPath}. ${fetchError.message}`);
-         }
+        // *** IMPORTANT CHANGE: Use the imported globalSubjectDefinitionsMap directly ***
+        const subjectDef = globalSubjectDefinitionsMap.get(relatedSubjectId); 
+        if (!subjectDef) {
+            // Add a more detailed log if the map itself is empty or the ID isn't there
+            console.error(`[Skip Exam] TestGen subject definition not found for ID: ${relatedSubjectId} (linked from course ${courseDef.name}).`);
+            console.error(`[Skip Exam] Current globalSubjectDefinitionsMap size: ${globalSubjectDefinitionsMap.size}`);
+            if (globalSubjectDefinitionsMap.size > 0) {
+                console.log("[Skip Exam] Available subject IDs in map:", Array.from(globalSubjectDefinitionsMap.keys()));
+            }
+            throw new Error(`TestGen subject definition not found for ID: ${relatedSubjectId} (linked from course ${courseDef.name}). Ensure this subject exists in the global definitions and has loaded.`);
+        }
 
-         const chapterData = subject.chapters?.[chapterNum];
-         const availableQNumbers = chapterData?.available_questions;
-         if (!availableQNumbers || availableQNumbers.length === 0) {
-             throw new Error(`No MCQs available for Chapter ${chapterNum} in subject "${subject.name}". Check the Markdown file and data state.`);
-         }
-         console.log(`Available MCQs for Ch ${chapterNum}: ${availableQNumbers.join(', ')}`);
-        
-        // --- START MODIFICATION: Use courseExamDefaults for skip exam ---
-        const currentGlobalExamDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG;
-        const skipExamConfig = currentGlobalExamDefaults.skip_exam || FALLBACK_EXAM_CONFIG.skip_exam;
-        const skipExamMcqCount = skipExamConfig.questions;
-        // --- END MODIFICATION ---
+        const mcqFileNameFromSubject = subjectDef.mcqFileName;
+        if (!mcqFileNameFromSubject) {
+            throw new Error(`MCQ filename not found for the related TestGen subject: ${subjectDef.name}. Please configure it.`);
+        }
+        const courseDirForMd = subjectDef.courseDirName
+            ? cleanTextForFilename(subjectDef.courseDirName)
+            : cleanTextForFilename(subjectDef.name || `subject_${subjectDef.id}`);
 
-         if (availableQNumbers.length < skipExamMcqCount) {
-             console.warn(`Chapter ${chapterNum} has only ${availableQNumbers.length} available MCQs, less than the desired ${skipExamMcqCount}. Using all available.`);
-         }
+        if (!courseDirForMd) {
+            throw new Error(`Could not determine resource directory for subject ${subjectDef.name}.`);
+        }
 
-         const shuffledNumbers = [...availableQNumbers];
-         for (let i = shuffledNumbers.length - 1; i > 0; i--) {
-             const j = Math.floor(Math.random() * (i + 1));
-             [shuffledNumbers[i], shuffledNumbers[j]] = [shuffledNumbers[j], shuffledNumbers[i]];
-         }
+        const safeMcqFileName = cleanTextForFilename(mcqFileNameFromSubject);
+        const fullMdPath = `${COURSE_BASE_PATH}/${courseDirForMd}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileName}`;
 
-         const selectedNumbersList = shuffledNumbers.slice(0, skipExamMcqCount);
-         if (selectedNumbersList.length === 0) {
-            throw new Error(`Failed to select any MCQs for Chapter ${chapterNum}.`);
-         }
-         console.log(`Selected ${selectedNumbersList.length} MCQs for Skip Exam: ${selectedNumbersList.join(', ')}`);
+        console.log(`[Skip Exam] Fetching MD content for Chapter ${chapterNum} from: ${fullMdPath} (Subject: ${subjectDef.name})`);
 
-         const selectedMcqMap = { [chapterNum]: selectedNumbersList };
-         const extracted = extractQuestionsFromMarkdown(mdContent, selectedMcqMap, 'skip_exam_mcq'); // Source type indicates it's for a skip exam
+        let mdContent;
+        try {
+            const response = await fetch(`${fullMdPath}?cacheBust=${Date.now()}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status} fetching MCQ file: ${fullMdPath}`);
+            }
+            mdContent = await response.text();
+            if (!mdContent) {
+                throw new Error(`MCQ file "${fullMdPath}" is empty or could not be read.`);
+            }
+            console.log(`[Skip Exam] Fetched MD content from: ${fullMdPath}`);
+        } catch (fetchError) {
+            console.error("[Skip Exam] Error fetching subject Markdown for Skip Exam:", fetchError);
+            throw new Error(`Could not load MCQ definitions file: ${fullMdPath}. ${fetchError.message}`);
+        }
 
-         if (!extracted || !extracted.questions || extracted.questions.length === 0) {
-             console.error("Extraction Map:", selectedMcqMap);
-             throw new Error(`Failed to extract the selected MCQs (${selectedNumbersList.join(', ')}) from "${fullMdPath}". Check Markdown formatting.`);
-         }
-         if (extracted.questions.length < selectedNumbersList.length) {
-             console.warn(`Extraction Warning: Requested ${selectedNumbersList.length} MCQs, but only extracted ${extracted.questions.length}. Some might be missing/malformed in the MD file.`);
-         }
-         console.log(`Successfully extracted ${extracted.questions.length} MCQs for skip exam.`);
+        const chapterScopeMap = { [String(chapterNum)]: null };
+        const extractedForChapter = extractQuestionsFromMarkdown(mdContent, chapterScopeMap, `skip_exam_ch${chapterNum}_mcq`);
 
-         const examId = `${courseId}-skip-ch${chapterNum}-${Date.now()}`;
-         // --- START MODIFICATION: Use duration from skipExamConfig ---
-         const durationMinutes = skipExamConfig.durationMinutes;
-         // --- END MODIFICATION ---
+        if (!extractedForChapter || !extractedForChapter.questions || extractedForChapter.questions.length === 0) {
+            throw new Error(`No MCQs found for Chapter ${chapterNum} in the file "${safeMcqFileName}". Cannot generate skip exam.`);
+        }
 
-         const onlineTestState = {
-             examId: examId,
-             questions: extracted.questions,
-             correctAnswers: extracted.answers,
-             userAnswers: {},
-             allocation: null,
-             startTime: Date.now(),
-             timerInterval: null,
-             currentQuestionIndex: 0,
-             status: 'active',
-             durationMinutes: durationMinutes,
-             subjectId: relatedSubjectId,
-             courseContext: {
-                 isCourseActivity: true,
-                 courseId: courseId,
-                 activityType: 'skip_exam',
-                 activityId: `chapter${chapterNum}`,
-                 chapterNum: chapterNum,
-                 isSkipExam: true
-             }
-         };
+        console.log(`[Skip Exam] Found ${extractedForChapter.questions.length} MCQs in Chapter ${chapterNum} of "${safeMcqFileName}".`);
 
-         setCurrentOnlineTestState(onlineTestState);
-         hideLoading();
-         launchOnlineTestUI();
+        if (extractedForChapter.questions.length < skipExamMcqCount) {
+            console.warn(`[Skip Exam] Chapter ${chapterNum} has only ${extractedForChapter.questions.length} MCQs, less than the configured ${skipExamMcqCount}. Using all available MCQs.`);
+        }
 
-     } catch (error) {
-          hideLoading();
-          console.error(`Error preparing Skip Exam for Chapter ${chapterNum}:`, error);
-          alert(`Could not start Skip Exam: ${error.message}`);
-     }
+        const shuffledChapterMcqs = [...extractedForChapter.questions].sort(() => 0.5 - Math.random());
+        const selectedMcqsForExam = shuffledChapterMcqs.slice(0, Math.min(skipExamMcqCount, extractedForChapter.questions.length));
+
+        if (selectedMcqsForExam.length === 0) {
+            throw new Error(`Failed to select any MCQs for the Skip Exam for Chapter ${chapterNum}.`);
+        }
+        console.log(`[Skip Exam] Selected ${selectedMcqsForExam.length} MCQs for the exam.`);
+
+        const selectedMcqAnswers = {};
+        selectedMcqsForExam.forEach(q => {
+            if (extractedForChapter.answers[q.id]) {
+                selectedMcqAnswers[q.id] = extractedForChapter.answers[q.id];
+            } else {
+                console.warn(`[Skip Exam] Answer not found for selected MCQ ID: ${q.id}`);
+            }
+        });
+
+        const examId = `${courseId}-skip-ch${chapterNum}-${Date.now().toString().slice(-6)}`;
+
+        const onlineTestState = {
+            examId: examId,
+            questions: selectedMcqsForExam,
+            correctAnswers: selectedMcqAnswers,
+            userAnswers: {},
+            allocation: null,
+            startTime: Date.now(),
+            timerInterval: null,
+            currentQuestionIndex: 0,
+            status: 'active',
+            durationMinutes: skipExamDurationMinutes,
+            subjectId: relatedSubjectId,
+            courseContext: {
+                isCourseActivity: true,
+                courseId: courseId,
+                activityType: 'skip_exam',
+                activityId: `chapter${chapterNum}`,
+                chapterNum: chapterNum,
+                isSkipExam: true
+            }
+        };
+
+        setCurrentOnlineTestState(onlineTestState);
+        hideLoading();
+        launchOnlineTestUI();
+
+    } catch (error) {
+        hideLoading();
+        console.error(`Error preparing Skip Exam for Chapter ${chapterNum} of course ${courseId}:`, error);
+        alert(`Could not start Skip Exam: ${error.message}`);
+    }
 }
-window.triggerSkipExamGenerationWrapper = (courseId, chapterNum) => triggerSkipExamGeneration(courseId, chapterNum);
-window.showCurrentCourseDashboard = showCurrentCourseDashboard;
+window.triggerSkipExamGenerationWrapper = (courseId, chapterNum) => triggerSkipExamGeneration(courseId, chapterNum); // Ensure it's on window if called from HTML
 
 // --- END OF FILE ui_course_study_material.js ---

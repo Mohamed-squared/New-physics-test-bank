@@ -109,6 +109,7 @@ export function calculateTotalMark(progressData) {
         return null;
     }
 
+    // GRADING_WEIGHTS should be imported from config.js
     const weights = GRADING_WEIGHTS;
     let totalMark = 0;
     let totalWeightAchieved = 0; // Track weight of components with scores
@@ -117,39 +118,39 @@ export function calculateTotalMark(progressData) {
     const calculateAverage = (scores) => {
         if (!scores) return { average: 0, count: 0 };
         const values = (Array.isArray(scores) ? scores : Object.values(scores))
-                       .filter(s => s !== null && s !== undefined);
+                       .filter(s => s !== null && s !== undefined); // Filter out null/undefined scores
         if (values.length === 0) return { average: 0, count: 0 };
         const sum = values.reduce((acc, score) => acc + (Number(score) || 0), 0); // Ensure scores are numbers
         return { average: (sum / values.length), count: values.length };
     };
 
-    // *** MODIFIED: Calculate Overall Chapter Completion (using combined progress) ***
+    // Calculate Overall Chapter Completion (using combined progress)
     let totalChapterProgressSum = 0;
     const totalChapters = courseDef.totalChapters || 1; // Avoid division by zero
 
     for (let i = 1; i <= totalChapters; i++) {
-         // Calculate combined progress for each chapter
          const chapterResources = courseDef.chapterResources?.[i] || {};
-         const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : []).filter(lec => typeof lec === 'object' && lec.url && lec.title);
+         // Ensure getYouTubeVideoId and videoDurationMap are accessible
+         const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
+                                    .filter(lec => typeof lec === 'object' && lec.url && lec.title);
          const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
-         const chapterVideoDurationMap = {}; videoIdsForChapter.forEach(id => { if (videoDurationMap[id] !== undefined) { chapterVideoDurationMap[id] = videoDurationMap[id]; } });
+         const chapterVideoDurationMap = {};
+         videoIdsForChapter.forEach(id => {
+             if (videoDurationMap[id] !== undefined) {
+                 chapterVideoDurationMap[id] = videoDurationMap[id];
+             }
+         });
          const pdfInfo = progressData.pdfProgress?.[i] || null;
 
-         // Use the locally defined combined progress function
          const { percent: chapterPercent } = calculateChapterCombinedProgress(progressData, i, chapterVideoDurationMap, pdfInfo);
          totalChapterProgressSum += chapterPercent;
     }
-    // Average progress across *all* chapters in the course
     const overallChapterCompletionAvg = totalChapters > 0 ? (totalChapterProgressSum / totalChapters) : 0;
 
-    // Add weighted score for chapter completion
     totalMark += (overallChapterCompletionAvg * weights.chapterCompletion);
-    totalWeightAchieved += weights.chapterCompletion; // This component always contributes weight
+    totalWeightAchieved += weights.chapterCompletion;
     console.log(`Chapter Completion Avg: ${overallChapterCompletionAvg.toFixed(1)}%, Contribution: ${(overallChapterCompletionAvg * weights.chapterCompletion).toFixed(1)}`);
 
-    // --- REMOVED: Skip Exam Score Contribution ---
-
-    // --- Other components remain the same ---
     const assignmentResult = calculateAverage(progressData.assignmentScores);
     if (assignmentResult.count > 0) {
         totalMark += (assignmentResult.average * weights.assignments);
@@ -178,22 +179,26 @@ export function calculateTotalMark(progressData) {
          console.log(`Final Exams Avg: ${finalResult.average.toFixed(1)}%, Contribution: ${(finalResult.average * weights.finalExams).toFixed(1)}`);
     }
 
+    // Ensure calculateAttendanceScore is defined and accessible
     const attendance = progressData.attendanceScore === undefined ? calculateAttendanceScore(progressData) : progressData.attendanceScore;
     totalMark += (attendance * weights.attendance);
-    totalWeightAchieved += weights.attendance; // Attendance always contributes weight
+    totalWeightAchieved += weights.attendance;
     console.log(`Attendance: ${attendance}%, Contribution: ${(attendance * weights.attendance).toFixed(1)}`);
-
 
     const bonus = progressData.extraPracticeBonus || 0;
     totalMark += bonus;
-    console.log(`Bonus: ${bonus}pts`);
+    console.log(`Extra Practice Bonus: ${bonus}pts`);
 
-    // Optional Normalization (Removed for simplicity, can be added back if needed)
+    // Add TestGen Bonus
+    const testGenBonusPoints = progressData.testGenBonus || 0;
+    totalMark += testGenBonusPoints;
+    console.log(`TestGen Bonus Points: ${testGenBonusPoints}pts`);
 
-    console.log(`Total Weighted Mark (Before Clamp): ${totalMark.toFixed(1)}%, Achieved Weight: ${totalWeightAchieved.toFixed(2)}`);
-    // Clamp mark between 0 and potentially > 100 due to bonus
+    console.log(`Total Weighted Mark (Before Clamp): ${totalMark.toFixed(1)}%, Achieved Weight (for weighted components): ${totalWeightAchieved.toFixed(2)}`);
+    // Clamp mark between 0 and potentially > 100 due to bonus. Max not capped at 100 to allow bonus.
     return Math.max(0, totalMark);
 }
+
 
 /**
  * Determines the letter grade based on the total mark percentage.

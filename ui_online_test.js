@@ -450,6 +450,7 @@ export async function submitOnlineTest() {
                  alert("Error: Missing test data, user session, or test already submitted.");
             }
             console.error("Submit Error: State missing, already submitting, or completed.");
+            hideLoading(); // Ensure loading is hidden if we return early
             return;
         }
 
@@ -463,23 +464,25 @@ export async function submitOnlineTest() {
         } else {
             console.warn("submitOnlineTest: Test area element (#online-test-area) not found during submission.");
         }
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 100)); // Short delay for UI update
 
         const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
         const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
         const courseId = currentOnlineTestState.courseContext?.courseId;
-        const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen';
+        const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen'; // Default to 'testgen' if no course context
         const activityId = currentOnlineTestState.courseContext?.activityId;
         const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
 
         console.log(`Submitting exam ${currentOnlineTestState.examId} of type ${activityType}`);
         const examRecord = await storeExamResult(
-            courseId,
+            courseId, // Pass courseId (can be null for TestGen)
             currentOnlineTestState,
-            activityType
+            activityType // Pass the determined activityType
         );
 
         if (!examRecord || !examRecord.markingResults) {
+            hideLoading(); // Ensure loading is hidden on error or no record
+            alert("There was an issue processing your exam results. Please try again or contact support.");
             if (isCourseActivity && courseId) {
                 window.showCurrentAssignmentsExams?.(courseId);
             } else {
@@ -489,6 +492,7 @@ export async function submitOnlineTest() {
             return;
         }
 
+        // --- Course Activity Progress Update ---
         if (isCourseActivity && courseId) {
             const progress = userCourseProgressMap.get(courseId);
             if (progress) {
@@ -520,14 +524,12 @@ export async function submitOnlineTest() {
                         progress.weeklyExamScores[activityId] = percentageScore;
                         console.log(`Updated weekly exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
-                    // MODIFIED: Changed 'final_exam' to 'final' to match ID generation in ui_course_assignments_exams.js
                     case 'final':
                         progress.finalExamScores = progress.finalExamScores || [];
                         const finalExamNumMatch = activityId.match(/final(\d+)/);
                         if (finalExamNumMatch) {
                             const attemptIndex = parseInt(finalExamNumMatch[1], 10) - 1;
                             if (attemptIndex >= 0) {
-                                 // Ensure array is long enough
                                  while (progress.finalExamScores.length <= attemptIndex) {
                                      progress.finalExamScores.push(null);
                                  }
@@ -538,35 +540,31 @@ export async function submitOnlineTest() {
                             }
                         } else {
                              console.warn(`Invalid final exam ID format ${activityId}. Score not specifically logged for attempt.`);
-                             // Fallback: Add to array if not matching format, or handle error
-                             // progress.finalExamScores.push(percentageScore); // Less ideal
                         }
                         break;
-                    
-                    case 'midcourse': // Was midcourse_exam, changed to match ID gen
+                    case 'midcourse':
                         progress.midcourseExamScores = progress.midcourseExamScores || {};
                         progress.midcourseExamScores[activityId] = percentageScore;
                         console.log(`Updated midcourse exam score for ${activityId}: ${percentageScore.toFixed(1)}%`);
                         break;
-
                     case 'skip_exam':
-                        // Skip exam specific logic handled below
+                        // Skip exam specific logic handled further down
                         break;
-
                     default:
-                        console.log(`Unhandled course activity type: ${activityType}`);
+                        console.log(`Unhandled course activity type for progress update: ${activityType}`);
                 }
 
-                updateUserCourseProgress(courseId, progress);
-                await saveUserCourseProgress(currentUser.uid, courseId, progress);
+                updateUserCourseProgress(courseId, progress); // Update local state map
+                await saveUserCourseProgress(currentUser.uid, courseId, progress); // Save to Firestore
                 console.log(`Course progress updated and saved for ${courseId}`);
             }
         }
 
-        currentOnlineTestState.status = 'completed';
+        currentOnlineTestState.status = 'completed'; // Mark test as completed in local state
 
-        await displayOnlineTestResults(examRecord);
+        await displayOnlineTestResults(examRecord); // Display results UI
 
+        // --- Skip Exam Specific Logic ---
         if (isSkipExam && chapterNumForSkipExam && courseId && examRecord.markingResults.maxPossibleScore > 0) {
             const percentage = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100;
             const progress = userCourseProgressMap.get(courseId);
@@ -579,20 +577,26 @@ export async function submitOnlineTest() {
                  const todayStr = getFormattedDate();
                  progress.dailyProgress = progress.dailyProgress || {};
                  progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
-
+                 
                  if (percentage >= SKIP_EXAM_PASSING_PERCENT) {
                      console.log(`Skip exam passed (${percentage.toFixed(1)}%). Marking chapter ${chapterNumForSkipExam} as studied.`);
-                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed");
+                     // Add to daily progress for skip exams passed
+                     if (!progress.dailyProgress[todayStr].skipExamsPassed.includes(chapterNumForSkipExam)) {
+                        progress.dailyProgress[todayStr].skipExamsPassed.push(chapterNumForSkipExam);
+                        progress.dailyProgress[todayStr].skipExamsPassed.sort((a,b) => a - b);
+                     }
+                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed"); // This also saves progress
                  } else {
                      console.log(`Skip exam not passed (${percentage.toFixed(1)}% < ${SKIP_EXAM_PASSING_PERCENT}%).`);
-                     // Save progress even if not passed, to record attempt and score
-                     await saveUserCourseProgress(currentUser.uid, courseId, progress);
+                     await saveUserCourseProgress(currentUser.uid, courseId, progress); // Save attempt and score
                  }
             }
         }
+        // --- TestGen Exam Stats & Bonus Logic ---
         else if (!isCourseActivity && currentSubject && data?.subjects?.[currentSubject.id]) {
              let chaptersDataModified = false;
-             const subjectToUpdate = data.subjects[currentSubject.id];
+             const subjectToUpdate = data.subjects[currentSubject.id]; // Get the subject from the global 'data' state
+
              if (examRecord.questions && examRecord.markingResults?.questionResults) {
                   examRecord.markingResults.questionResults.forEach(result => {
                       const question = examRecord.questions.find(q => q.id === result.questionId);
@@ -601,22 +605,20 @@ export async function submitOnlineTest() {
                            if (chap) {
                                 if (!question.isProblem) { // Only update stats for MCQs from TestGen
                                      chap.total_attempted = (chap.total_attempted || 0) + 1;
-                                     const isCorrect = result.score > 0; // For MCQs, score > 0 means correct
+                                     const isCorrect = result.score > 0;
                                      if (!isCorrect) {
                                           chap.total_wrong = (chap.total_wrong || 0) + 1;
                                      }
                                      chap.mistake_history = chap.mistake_history || [];
-                                     chap.mistake_history.push(isCorrect ? 0 : 1);
+                                     chap.mistake_history.push(isCorrect ? 0 : 1); // 0 for correct, 1 for wrong
                                      if (chap.mistake_history.length > 20) chap.mistake_history.shift();
                                      chap.consecutive_mastery = isCorrect ? (chap.consecutive_mastery || 0) + 1 : 0;
                                      chaptersDataModified = true;
 
-                                     // Remove from available_questions
                                      if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
-                                          const qIndex = chap.available_questions.indexOf(question.number); // Assuming q.number is the actual number
+                                          const qIndex = chap.available_questions.indexOf(question.number);
                                           if (qIndex > -1) {
                                                chap.available_questions.splice(qIndex, 1);
-                                               console.log(`Removed MCQ Q${question.number} from Ch ${question.chapter} available list.`);
                                           } else {
                                               console.warn(`MCQ Q${question.number} (Ch ${question.chapter}) not found in available list during post-exam update.`);
                                           }
@@ -629,34 +631,89 @@ export async function submitOnlineTest() {
                   });
              }
              if (chaptersDataModified) {
-                  // Ensure available_questions is sorted after modification
                   Object.values(subjectToUpdate.chapters).forEach(chap => {
                       if (chap.available_questions) {
                           chap.available_questions.sort((a, b) => a - b);
                       }
                   });
-                  await saveUserData(currentUser.uid, data); // Save modified appData
+                  await saveUserData(currentUser.uid, data); // Save modified appData (which includes subjects)
                   console.log("TestGen Exam: Updated chapter stats and removed used MCQs.");
              }
+
+            // --- START: TestGen Bonus Application ---
+            if (examRecord.subjectId && examRecord.markingResults) {
+                console.log("TestGen exam completed. Attempting to apply bonus to a relevant course.");
+                let bonusAppliedToCourseId = null;
+                const testGenScorePercent = examRecord.markingResults.maxPossibleScore > 0 ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) : 0;
+                
+                const MAX_BONUS_FROM_TESTGEN = 2; // Max raw bonus points
+
+                if (testGenScorePercent > 0.5) { // Only apply if score > 50%
+                    const bonusPoints = Math.min(MAX_BONUS_FROM_TESTGEN, testGenScorePercent * MAX_BONUS_FROM_TESTGEN);
+
+                    if (activeCourseId && userCourseProgressMap.has(activeCourseId)) {
+                        const activeCourseDef = globalCourseDataMap.get(activeCourseId);
+                        if (activeCourseDef && activeCourseDef.relatedSubjectId === examRecord.subjectId) {
+                            bonusAppliedToCourseId = activeCourseId;
+                        }
+                    }
+
+                    if (!bonusAppliedToCourseId) {
+                        for (const [enrolledCId, enrolledProgress] of userCourseProgressMap.entries()) {
+                            const enrolledCourseDef = globalCourseDataMap.get(enrolledCId);
+                            if (enrolledCourseDef && enrolledCourseDef.relatedSubjectId === examRecord.subjectId && enrolledProgress.status === 'enrolled') {
+                                bonusAppliedToCourseId = enrolledCId;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (bonusAppliedToCourseId) {
+                        const courseProgressToUpdate = userCourseProgressMap.get(bonusAppliedToCourseId);
+                        if (courseProgressToUpdate) {
+                            const oldBonus = courseProgressToUpdate.testGenBonus || 0;
+                            const MAX_TOTAL_TESTGEN_BONUS_CAP = 10;
+                            const newPotentialTotalBonus = oldBonus + bonusPoints;
+                            courseProgressToUpdate.testGenBonus = Math.min(newPotentialTotalBonus, MAX_TOTAL_TESTGEN_BONUS_CAP);
+                            
+                            console.log(`Applying ${bonusPoints.toFixed(2)} TestGen bonus (new total: ${courseProgressToUpdate.testGenBonus.toFixed(2)}) to course ${bonusAppliedToCourseId}`);
+                            
+                            await saveUserCourseProgress(currentUser.uid, bonusAppliedToCourseId, courseProgressToUpdate);
+                            updateUserCourseProgress(bonusAppliedToCourseId, courseProgressToUpdate); // Update local state
+                            // The alert is now part of displayOnlineTestResults logic or a separate toast.
+                            // We can add a specific toast here if preferred:
+                            const bonusToast = document.createElement('div');
+                            bonusToast.className = 'toast-notification toast-info animate-fade-in'; // Use a distinct style
+                            bonusToast.innerHTML = `<p>Bonus of ${bonusPoints.toFixed(1)} points from your TestGen exam applied to course: ${globalCourseDataMap.get(bonusAppliedToCourseId)?.name || bonusAppliedToCourseId}!</p>`;
+                            document.body.appendChild(bonusToast);
+                            setTimeout(() => bonusToast.remove(), 5000);
+                        }
+                    } else {
+                        console.log("No relevant enrolled course found to apply TestGen bonus.");
+                    }
+                } else {
+                    console.log(`TestGen score (${(testGenScorePercent * 100).toFixed(1)}%) not high enough to apply bonus.`);
+                }
+            }
+            // --- END: TestGen Bonus Application ---
         }
 
-        setCurrentOnlineTestState(null);
+        setCurrentOnlineTestState(null); // Clear test state after all processing
 
     } catch (error) {
         console.error("Error finishing test:", error);
-        setCurrentOnlineTestState(null);
+        setCurrentOnlineTestState(null); // Clear state on error too
         alert("Error submitting test results. Please try again later. " + error.message);
-        // Navigate back based on context
-        const isCourseActivity = !!currentOnlineTestState?.courseContext?.isCourseActivity;
+        
+        const isCourseActivityOnError = !!currentOnlineTestState?.courseContext?.isCourseActivity;
         const courseIdOnError = currentOnlineTestState?.courseContext?.courseId;
-        if (isCourseActivity && courseIdOnError) {
-            // Attempt to show the assignments/exams page for the course
+        if (isCourseActivityOnError && courseIdOnError) {
             window.showCurrentAssignmentsExams?.(courseIdOnError);
         } else {
             showTestGenerationDashboard();
         }
     } finally {
-        hideLoading();
+        hideLoading(); // Ensure loading is always hidden
     }
 }
 
