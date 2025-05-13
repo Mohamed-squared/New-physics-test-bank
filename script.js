@@ -21,7 +21,7 @@ import {
     loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, 
     sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts,
     // --- START MODIFICATION: Added loadCourseExamDefaults ---
-    loadCourseExamDefaults 
+    loadCourseExamDefaults, loadGlobalSubjectDefinitionsFromFirestore
     // --- END MODIFICATION ---
 } from './firebase_firestore.js';
 
@@ -228,6 +228,9 @@ async function initializeApp() {
         setDb(firebase.firestore());
         window.auth = firebase.auth();
         window.db = firebase.firestore();
+
+        await loadGlobalSubjectDefinitionsFromFirestore();
+        console.log("[initializeApp] Global Subject Definitions loaded initially.");
 
         // --- MODIFICATION: Load Global AI Prompts ---
         try {

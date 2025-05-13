@@ -7,18 +7,19 @@ import {
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
     setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap,
-    // --- START MODIFICATION: Added courseExamDefaults, setCourseExamDefaults ---
-    courseExamDefaults, setCourseExamDefaults
-    // --- END MODIFICATION ---
+    courseExamDefaults, setCourseExamDefaults,
+    // --- NEW: Import for global subject defs map ---
+    globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown, parseChaptersFromMarkdown  } from './markdown_parser.js';
 // Import ALL needed config values
-import { 
-    initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
-    FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
+import {
+    // MODIFIED: Import globalSubjectBootstrapData instead of initialSubjectData
+    globalSubjectBootstrapData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID,
+    FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT,
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
-    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG // MODIFIED: Added FALLBACK_EXAM_CONFIG
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG
 } from './config.js';
 import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
@@ -31,14 +32,12 @@ import { fetchVideoDurationsIfNeeded, getYouTubeVideoId } from './ui_course_stud
 const userFormulaSheetSubCollection = "userFormulaSheets";
 const userSummarySubCollection = "userChapterSummaries";
 const sharedNotesCollection = "sharedCourseNotes";
-const adminTasksCollection = "adminTasks"; // MODIFIED: Added constant
+const adminTasksCollection = "adminTasks";
 const userCreditLogSubCollection = "creditLog";
-const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Chat
+const aiChatSessionsSubCollection = "aiChatSessions";
 const globalSettingsCollection = "settings";
 const aiPromptsDocId = "aiPrompts";
-
-// --- START MODIFICATION: Constants for Course Exam Defaults ---
-const settingsCollection = "settings"; // Re-declare or ensure consistent use if already present
+const settingsCollection = "settings";
 const courseExamDefaultsDocId = "courseExamDefaults";
 
 export async function loadCourseExamDefaults() {
@@ -52,14 +51,12 @@ export async function loadCourseExamDefaults() {
         const docSnap = await docRef.get();
         if (docSnap.exists) {
             const defaultsFromDb = docSnap.data();
-            // Merge with fallback to ensure all exam types and their properties are present
             const mergedDefaults = {};
             for (const examType in FALLBACK_EXAM_CONFIG) {
                 mergedDefaults[examType] = {
-                    ...FALLBACK_EXAM_CONFIG[examType],         // Start with fallback structure
-                    ...(defaultsFromDb[examType] || {})        // Override with DB values if they exist
+                    ...FALLBACK_EXAM_CONFIG[examType],
+                    ...(defaultsFromDb[examType] || {})
                 };
-                 // Ensure numeric fields are numbers and have valid defaults if parsing fails
                 mergedDefaults[examType].questions = parseInt(mergedDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions;
                 mergedDefaults[examType].durationMinutes = parseInt(mergedDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes;
                 mergedDefaults[examType].mcqRatio = parseFloat(mergedDefaults[examType].mcqRatio) || FALLBACK_EXAM_CONFIG[examType].mcqRatio;
@@ -79,12 +76,12 @@ export async function loadCourseExamDefaults() {
         }
     } catch (error) {
         console.error("Error loading course exam defaults from Firestore:", error);
-        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG }); // Fallback on error
+        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG });
     }
 }
 
 export async function saveCourseExamDefaults(newDefaults) {
-    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { // MODIFIED: Check against ADMIN_UID for primary admin
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Primary Admin privileges required to save exam defaults.");
         return false;
     }
@@ -94,9 +91,8 @@ export async function saveCourseExamDefaults(newDefaults) {
     }
     const docRef = db.collection(settingsCollection).doc(courseExamDefaultsDocId);
     try {
-        // Sanitize and validate before saving
         const defaultsToSave = {};
-        for (const examType in FALLBACK_EXAM_CONFIG) { // Iterate based on known structure
+        for (const examType in FALLBACK_EXAM_CONFIG) {
             if (newDefaults[examType]) {
                 defaultsToSave[examType] = {
                     questions: parseInt(newDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions,
@@ -105,12 +101,12 @@ export async function saveCourseExamDefaults(newDefaults) {
                     textSourceRatio: Math.max(0, Math.min(1, parseFloat(newDefaults[examType].textSourceRatio))) || FALLBACK_EXAM_CONFIG[examType].textSourceRatio,
                 };
             } else {
-                defaultsToSave[examType] = { ...FALLBACK_EXAM_CONFIG[examType] }; // If a type is missing in input, revert to fallback
+                defaultsToSave[examType] = { ...FALLBACK_EXAM_CONFIG[examType] };
             }
         }
         console.log("[saveCourseExamDefaults DEBUG] Data being sent to Firestore:", JSON.stringify(defaultsToSave, null, 2));
-        await docRef.set(defaultsToSave); // Overwrite with validated structure
-        setCourseExamDefaults(defaultsToSave); // Update local state
+        await docRef.set(defaultsToSave);
+        setCourseExamDefaults(defaultsToSave);
         console.log("Course exam defaults saved to Firestore.");
         return true;
     } catch (error) {
@@ -165,6 +161,121 @@ async function fetchMarkdownForSubject(subject) {
     }
 }
 
+function getDefaultSubjectProgressStats() {
+    return {
+        chapters: {}, // Will be populated by MD parse relative to global total_questions
+        studied_chapters: [],
+        pending_exams: [],
+        // Note: total_attempted, total_wrong etc. are per-chapter within `chapters` object
+    };
+}
+
+export async function fetchMarkdownForGlobalSubject(subjectDef) {
+    if (!subjectDef) return null;
+
+    const courseDir = subjectDef.courseDirName
+        ? cleanTextForFilename(subjectDef.courseDirName)
+        : cleanTextForFilename(subjectDef.name || `subject_${subjectDef.id}`);
+
+    if (!courseDir) {
+        console.warn(`fetchMarkdownForGlobalSubject: Could not determine courseDir for subject ${subjectDef.id} ('${subjectDef.name}').`);
+        return null;
+    }
+    // mcqFileName in global subject def points to the file for MCQs
+    const safeMcqFileName = subjectDef.mcqFileName
+        ? cleanTextForFilename(subjectDef.mcqFileName)
+        : 'default_mcqs.md'; // Fallback, though a defined subject should have this
+
+    // *** USE THE CORRECT CONSTANT HERE ***
+    const url = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileName}?t=${new Date().getTime()}`;
+
+    console.log(`Fetching Markdown for Global Subject (for MD Parse): ${url}`); // Clarified log
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`MD file not found: ${url}. Subject: ${subjectDef.name} (ID: ${subjectDef.id})`);
+                return null;
+            }
+            throw new Error(`HTTP error fetching MD! status: ${response.status} for ${url}`);
+        }
+        const mdContent = await response.text();
+        // console.log(`MD fetched for subject ${subjectDef.name} (ID: ${subjectDef.id}).`);
+        return mdContent;
+    } catch (error) {
+        console.error(`Error fetching MD for subject ${subjectDef.name} (ID: ${subjectDef.id}) (${url}):`, error);
+        return null;
+    }
+}
+
+export async function loadGlobalSubjectDefinitionsFromFirestore() {
+    if (!db) { console.error("Firestore DB not initialized"); return; }
+    console.log("Loading global subject definitions...");
+    const subjectsRef = db.collection('subjects');
+    const newDefMap = new Map();
+    let bootstrapNeeded = false;
+
+    try {
+        const snapshot = await subjectsRef.get();
+        if (snapshot.empty && currentUser?.uid === ADMIN_UID) { // Only admin can bootstrap
+            console.warn("Global '/subjects' collection is empty. Attempting bootstrap by admin.");
+            bootstrapNeeded = true;
+        } else {
+            snapshot.forEach(doc => {
+                const subjectDef = { id: doc.id, ...doc.data() };
+                // Basic validation
+                subjectDef.chapters = {}; // This will be populated by MD parse, not stored in global def
+                newDefMap.set(doc.id, subjectDef);
+            });
+        }
+
+        if (bootstrapNeeded) {
+            showLoading("Bootstrapping global subjects...");
+            const batch = db.batch();
+            for (const subjectId in globalSubjectBootstrapData) {
+                const subjectDef = globalSubjectBootstrapData[subjectId];
+                // Remove any user-progress-like fields before saving definition
+                const definitionToSave = { ...subjectDef };
+                delete definitionToSave.chapters; // Chapters structure (titles, Q counts) derived from MD
+                delete definitionToSave.studied_chapters;
+                delete definitionToSave.pending_exams;
+
+                const docRef = db.collection('subjects').doc(subjectId);
+                batch.set(docRef, definitionToSave);
+                newDefMap.set(subjectId, { id: subjectId, ...definitionToSave, chapters: {} }); // Add to map with empty chapters
+                console.log(`Bootstrapped global subject: ${subjectDef.name}`);
+            }
+            await batch.commit();
+            hideLoading();
+            alert("Global subjects bootstrapped by admin.");
+        }
+        setGlobalSubjectDefinitionsMap(newDefMap);
+        console.log(`Global subject definitions loaded. Count: ${newDefMap.size}`);
+    } catch (error) {
+        console.error("Error loading global subject definitions:", error);
+        // Fallback or error handling
+    }
+}
+
+export async function loadUserSubjectProgress(uid) {
+    if (!db || !uid) {
+        console.warn("loadUserSubjectProgress: DB or UID missing.");
+        return {};
+    }
+    const userRef = db.collection('users').doc(uid);
+    try {
+        const doc = await userRef.get();
+        if (doc.exists) {
+            const userData = doc.data();
+            // This now expects subjectProgress to be directly under appData
+            return userData.appData?.subjectProgress || {};
+        }
+        return {};
+    } catch (error) {
+        console.error(`Error loading subject progress for user ${uid}:`, error);
+        return {};
+    }
+}
 
 // --- User Data Management ---
 
@@ -181,55 +292,58 @@ export async function saveUserData(uid, appDataToSave = data) {
         return;
     }
     const userRef = db.collection('users').doc(uid);
-    try {
-        const cleanData = JSON.parse(JSON.stringify(appDataToSave));
 
-        if (cleanData && cleanData.subjects) {
-             Object.values(cleanData.subjects).forEach(subject => {
-                 if (subject && subject.chapters) {
-                      Object.values(subject.chapters).forEach(chap => {
-                          chap.total_questions = Number(chap.total_questions) || 0;
-                          chap.total_attempted = Number(chap.total_attempted) || 0;
-                          chap.total_wrong = Number(chap.total_wrong) || 0;
-                          chap.consecutive_mastery = Number(chap.consecutive_mastery) || 0;
-                          chap.available_questions = Array.isArray(chap.available_questions) ? chap.available_questions : [];
-                          chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
-                      });
-                 }
-                 subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
-                 subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams : [];
-                 subject.status = subject.status || 'approved'; 
-                 subject.creatorUid = subject.creatorUid || ADMIN_UID; 
-                 subject.creatorName = subject.creatorName || 'System'; 
-                 subject.createdAt = subject.createdAt || new Date(0).toISOString(); 
-             });
-        }
-        
-        console.log(`[saveUserData] Attempting to update appData for UID: ${uid}. Current auth UID: ${firebaseAuth?.currentUser?.uid}`);
-        console.log(`[saveUserData] Data keys in appDataToSave: ${Object.keys(appDataToSave || {}).join(', ')}`);
-        try {
-            const cleanDataString = JSON.stringify(cleanData);
-            console.log(`[saveUserData] Cleaned appData (first 500 chars): ${cleanDataString.substring(0, 500)}${cleanDataString.length > 500 ? '...' : ''}`);
-            if (cleanDataString.includes('undefined')) {
-                console.warn("[saveUserData] WARNING: 'undefined' string found in cleanData. This might indicate an issue if it's not an intentional string value.");
+    const subjectProgressToSave = {};
+    if (appDataToSave.subjects) {
+        for (const subjectId in appDataToSave.subjects) {
+            const mergedSubject = appDataToSave.subjects[subjectId];
+            subjectProgressToSave[subjectId] = {
+                // Only save user-specific progress fields
+                total_attempted: mergedSubject.total_attempted || 0,
+                total_wrong: mergedSubject.total_wrong || 0,
+                available_questions: Array.isArray(mergedSubject.available_questions) ? mergedSubject.available_questions : [],
+                mistake_history: Array.isArray(mergedSubject.mistake_history) ? mergedSubject.mistake_history : [],
+                consecutive_mastery: mergedSubject.consecutive_mastery || 0,
+                studied_chapters: Array.isArray(mergedSubject.studied_chapters) ? mergedSubject.studied_chapters : [],
+                pending_exams: Array.isArray(mergedSubject.pending_exams) ? mergedSubject.pending_exams : [],
+                // Store chapter-specific progress (like available_questions) within user's progress
+                chapters: mergedSubject.chapters ? JSON.parse(JSON.stringify(mergedSubject.chapters)) : {} // Deep copy chapter progress
+            };
+            // Clean chapter progress to only store what's needed
+            if (subjectProgressToSave[subjectId].chapters) {
+                for (const chapNum in subjectProgressToSave[subjectId].chapters) {
+                    const chapProgress = subjectProgressToSave[subjectId].chapters[chapNum];
+                    subjectProgressToSave[subjectId].chapters[chapNum] = {
+                        total_attempted: chapProgress.total_attempted || 0,
+                        total_wrong: chapProgress.total_wrong || 0,
+                        available_questions: Array.isArray(chapProgress.available_questions) ? chapProgress.available_questions : [],
+                        mistake_history: Array.isArray(chapProgress.mistake_history) ? chapProgress.mistake_history : [],
+                        consecutive_mastery: chapProgress.consecutive_mastery || 0,
+                        // DO NOT save title or total_questions here, they come from global def/MD parse
+                    };
+                }
             }
-        } catch (e) {
-            console.warn("[saveUserData] Could not stringify cleanData for logging:", e);
         }
-        
+    }
+
+    const finalAppDataForFirestore = {
+        subjectProgress: subjectProgressToSave
+    };
+
+    try {
+        console.log(`[saveUserData] Saving appData (subjectProgress only) for UID: ${uid}.`);
         await userRef.update({
-            appData: cleanData
+            appData: finalAppDataForFirestore,
+            lastAppDataUpdate: firebase.firestore.FieldValue.serverTimestamp()
         });
-        console.log("User appData saved successfully.");
+        console.log("User appData (subjectProgress) saved successfully.");
     } catch (error) {
-        console.error("Error saving user appData to Firestore. UID:", uid, "Error Name:", error.name, "Error Code:", error.code, "Error Message:", error.message, "Full Error:", error);
-        let alertMessage = "Error saving progress: " + error.message;
-        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
-            alertMessage = "Error saving progress: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
-        }
-        alert(alertMessage);
+        console.error("Error saving user appData (subjectProgress) to Firestore. UID:", uid, "Error:", error);
+        alert("Error saving progress: " + error.message);
     }
 }
+
+
 
 // --- User Course Progress ---
 /**
@@ -944,176 +1058,148 @@ export async function loadUserData(uid) {
     if (!db) { console.error("Firestore DB not initialized"); return; }
     if (!uid) { console.error("loadUserData called without UID."); return; }
 
-    console.log(`Loading user data for user: ${uid}`);
+    console.log(`Loading user data (vGlobalSubjects) for user: ${uid}`);
     const userRef = db.collection('users').doc(uid);
     try {
-        const doc = await userRef.get();
-        let needsAppDataSaveAfterLoad = false;
+        if (globalSubjectDefinitionsMap.size === 0) {
+            await loadGlobalSubjectDefinitionsFromFirestore();
+        }
 
-        if (doc.exists) {
-            const userData = doc.data();
-            let loadedAppData = userData.appData;
-            console.log("User appData loaded from Firestore.");
+        const userDoc = await userRef.get();
+        let appDataWasModifiedBySyncOrRepair = false;
 
+        if (userDoc.exists) {
+            const userDataFromFirestore = userDoc.data();
             const userProfileForState = {
                 uid: uid,
-                email: userData.email || firebaseAuth?.currentUser?.email,
-                displayName: userData.displayName || firebaseAuth?.currentUser?.displayName,
-                photoURL: userData.photoURL || firebaseAuth?.currentUser?.photoURL,
-                username: userData.username || null,
-                isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : (uid === ADMIN_UID),
-                credits: userData.credits !== undefined ? Number(userData.credits) : 0, 
-                onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : false,
+                email: userDataFromFirestore.email || firebaseAuth?.currentUser?.email,
+                displayName: userDataFromFirestore.displayName || firebaseAuth?.currentUser?.displayName,
+                photoURL: userDataFromFirestore.photoURL || firebaseAuth?.currentUser?.photoURL,
+                username: userDataFromFirestore.username || null,
+                isAdmin: userDataFromFirestore.isAdmin !== undefined ? (uid === ADMIN_UID || userDataFromFirestore.isAdmin) : (uid === ADMIN_UID),
+                credits: userDataFromFirestore.credits !== undefined ? Number(userDataFromFirestore.credits) : 0,
+                onboardingComplete: userDataFromFirestore.onboardingComplete !== undefined ? userDataFromFirestore.onboardingComplete : false,
             };
-            console.log("[loadUserData] setCurrentUser will be called with userProfileForState:", JSON.parse(JSON.stringify(userProfileForState)));
-            setCurrentUser(userProfileForState); 
+            setCurrentUser(userProfileForState);
 
             try {
                 const aiSettings = await loadUserAiSettings(uid);
-                setUserAiChatSettings(aiSettings); 
-                console.log(`[loadUserData] User AI Chat Settings loaded and set for UID: ${uid}`, aiSettings);
-            } catch (error) {
-                console.error(`[loadUserData] Error loading AI Chat Settings for UID: ${uid}. Setting to defaults.`, error);
-                 setUserAiChatSettings(getDefaultAiSettings());
-            }
+                setUserAiChatSettings(aiSettings);
+            } catch (error) { setUserAiChatSettings(getDefaultAiSettings()); }
 
+            const userSubjectProgressData = userDataFromFirestore.appData?.subjectProgress || {};
+            const mergedSubjects = {};
 
-            if (!loadedAppData || typeof loadedAppData.subjects !== 'object') {
-                console.warn("Loaded appData missing or invalid 'subjects'. Resetting to default.");
-                loadedAppData = JSON.parse(JSON.stringify(initialSubjectData));
-                needsAppDataSaveAfterLoad = true;
-            }
-             if (userData.photoURL === undefined) {
-                console.log("Initializing top-level photoURL.");
-                 const authUser = firebaseAuth?.currentUser;
-                await userRef.update({ photoURL: authUser?.photoURL || DEFAULT_PROFILE_PIC_URL }).catch(e => console.error("Error setting initial photoURL:", e));
-             }
-             if (userData.completedCourseBadges === undefined) {
-                  console.log("Initializing completedCourseBadges array.");
-                  await userRef.update({ completedCourseBadges: [] }).catch(e => console.error("Error setting initial completedCourseBadges:", e));
-             }
-              if (userData.userNotes === undefined) {
-                  console.log("Initializing userNotes map.");
-                  await userRef.update({ userNotes: {} }).catch(e => console.error("Error setting initial userNotes:", e));
-             }
-             if (userData.isAdmin === undefined) {
-                 console.log(`Initializing isAdmin field for user ${uid}.`);
-                 await userRef.update({ isAdmin: (uid === ADMIN_UID) }).catch(e => console.error("Error setting initial isAdmin field:", e));
-             }
-             if (userData.credits === undefined) {
-                console.log(`Initializing credits field for user ${uid}.`);
-                await userRef.update({ credits: 0 }).catch(e => console.error("Error setting initial credits field:", e));
-             }
-             if (userData.userAiChatSettings === undefined) {
-                console.log(`Initializing userAiChatSettings field for user ${uid}.`);
-                await saveUserAiSettings(uid, getDefaultAiSettings()); 
-             }
+            for (const [subjectId, globalDef] of globalSubjectDefinitionsMap.entries()) {
+                const userProgressForThisSubject = userSubjectProgressData[subjectId] || getDefaultSubjectProgressStats();
+                let currentMergedSubject = {
+                    ...globalDef, // Global fields (name, filenames, ratios, status, etc.)
+                    chapters: {}, // Start with empty chapters, will be filled by MD parse + user progress
+                    studied_chapters: userProgressForThisSubject.studied_chapters || [],
+                    pending_exams: userProgressForThisSubject.pending_exams || [],
+                };
 
+                if (currentUser && (currentUser.isAdmin || globalDef.status === 'approved')) {
+                    const subjectMarkdown = await fetchMarkdownForGlobalSubject(globalDef);
+                    if (subjectMarkdown !== null) {
+                        const parsedMdChapters = parseChaptersFromMarkdown(subjectMarkdown);
+                        for (const chapNumStr in parsedMdChapters) {
+                            const mdChapData = parsedMdChapters[chapNumStr];
+                            const userChapProgress = userProgressForThisSubject.chapters?.[chapNumStr] || {};
 
-            setData(loadedAppData); 
-
-            console.log("Syncing loaded subject appData with Markdown files...");
-             let appDataWasModifiedBySync = false;
-             if (data && data.subjects) {
-                 for (const subjectId in data.subjects) {
-                     const subject = data.subjects[subjectId];
-                     if (!subject) continue;
-
-                     if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
-                         const subjectMarkdown = await fetchMarkdownForSubject(subject);
-                         if (subjectMarkdown !== null) {
-                              const subjectModified = updateChaptersFromMarkdown(subject, subjectMarkdown);
-                              if (subjectModified) { appDataWasModifiedBySync = true; }
-                         } else { console.warn(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) - MD file missing or could not be fetched from expected path.`); }
-                     } else {
-                         console.log(`Skipping MD sync for Subject ${subject.name} (ID: ${subjectId}) due to status '${subject.status}' and user role.`);
-                         subject.chapters = subject.chapters || {};
-                     }
-                 }
-                 if (appDataWasModifiedBySync) { needsAppDataSaveAfterLoad = true; }
-             } else { console.warn("Cannot sync appData with Markdown - state.data.subjects is missing."); }
-
-              if (data && data.subjects) {
-                 for (const subjectId in data.subjects) {
-                     const subject = data.subjects[subjectId];
-                     if (!subject) continue;
-                     if (!subject.name) { subject.name = `Subject ${subjectId}`; needsAppDataSaveAfterLoad = true; }
-                     if (!subject.fileName) { subject.fileName = `${cleanTextForFilename(subject.name || `subject_${subjectId}`)}.md`; needsAppDataSaveAfterLoad = true; } 
-                     subject.studied_chapters = Array.isArray(subject.studied_chapters) ? subject.studied_chapters : [];
-                     subject.pending_exams = Array.isArray(subject.pending_exams) ? subject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
-                     subject.mcqProblemRatio = typeof subject.mcqProblemRatio === 'number' ? subject.mcqProblemRatio : 0.5;
-                     subject.defaultTestDurationMinutes = Number(subject.defaultTestDurationMinutes) || 120;
-                     subject.max_questions_per_test = Number(subject.max_questions_per_test) || 42;
-
-                     subject.status = subject.status || 'approved';
-                     subject.creatorUid = subject.creatorUid || ADMIN_UID; 
-                     subject.creatorName = subject.creatorName || 'System';
-                     subject.createdAt = subject.createdAt || new Date(0).toISOString();
-
-
-                     subject.chapters = typeof subject.chapters === 'object' ? subject.chapters : {};
-                     if (currentUser && (currentUser.isAdmin || subject.status === 'approved')) {
-                         for (const chapNum in subject.chapters) {
-                            const chap = subject.chapters[chapNum];
-                            if (!chap) continue;
-                            chap.total_questions = Number(chap.total_questions) ?? 0;
-                            chap.total_attempted = Number(chap.total_attempted) ?? 0;
-                            chap.total_wrong = Number(chap.total_wrong) ?? 0;
-                            chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
-                            chap.consecutive_mastery = Number(chap.consecutive_mastery) ?? 0;
-                            const expectedAvailable = Array.from({ length: chap.total_questions }, (_, j) => j + 1);
-                            const currentAvailableSet = new Set(Array.isArray(chap.available_questions) ? chap.available_questions : []);
-                            const validAvailable = expectedAvailable.filter(qNum => currentAvailableSet.has(qNum));
-                            if (JSON.stringify(validAvailable.sort((a,b) => a-b)) !== JSON.stringify((chap.available_questions || []).sort((a,b)=>a-b))) {
-                                 chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
-                            } else if (chap.available_questions === undefined) {
-                                 chap.available_questions = validAvailable; needsAppDataSaveAfterLoad = true;
+                            const totalMcqsFromMd = mdChapData.total_questions || 0;
+                            let finalAvailableQuestions;
+                            if (Array.isArray(userChapProgress.available_questions) && userChapProgress.available_questions.length > 0) {
+                                finalAvailableQuestions = userChapProgress.available_questions.filter(qN =>
+                                    typeof qN === 'number' && qN > 0 && qN <= totalMcqsFromMd
+                                ).sort((a, b) => a - b);
+                            } else {
+                                finalAvailableQuestions = Array.from({ length: totalMcqsFromMd }, (_, j) => j + 1);
                             }
-                         }
-                     }
-                 }
-              } else { console.warn("Cannot validate/repair appData - state.data.subjects is missing."); }
+                            if (JSON.stringify(userChapProgress.available_questions || []) !== JSON.stringify(finalAvailableQuestions)) {
+                                appDataWasModifiedBySyncOrRepair = true;
+                            }
 
+                            currentMergedSubject.chapters[chapNumStr] = {
+                                title: mdChapData.title || `Chapter ${chapNumStr}`,
+                                total_questions: totalMcqsFromMd,
+                                total_attempted: userChapProgress.total_attempted || 0,
+                                total_wrong: userChapProgress.total_wrong || 0,
+                                mistake_history: Array.isArray(userChapProgress.mistake_history) ? userChapProgress.mistake_history : [],
+                                consecutive_mastery: userChapProgress.consecutive_mastery || 0,
+                                available_questions: finalAvailableQuestions
+                            };
+                        }
+                    } else {
+                        console.warn(`MD file missing for Subject ${globalDef.name} (ID: ${subjectId}). Using existing user chapter progress if any.`);
+                        currentMergedSubject.chapters = userProgressForThisSubject.chapters || {};
+                    }
+                } else {
+                    console.log(`Skipping MD sync for Subject ${globalDef.name} (ID: ${subjectId}) due to status '${globalDef.status}'.`);
+                    currentMergedSubject.chapters = userProgressForThisSubject.chapters || {};
+                }
+                // Default chapter progress fields if chapter exists but fields are missing
+                for(const chapNumStr in currentMergedSubject.chapters) {
+                    const chap = currentMergedSubject.chapters[chapNumStr];
+                    chap.title = chap.title || `Chapter ${chapNumStr}`;
+                    chap.total_questions = chap.total_questions || 0;
+                    chap.total_attempted = chap.total_attempted || 0;
+                    chap.total_wrong = chap.total_wrong || 0;
+                    chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : [];
+                    chap.consecutive_mastery = chap.consecutive_mastery || 0;
+                    chap.available_questions = Array.isArray(chap.available_questions) ? chap.available_questions : Array.from({ length: chap.total_questions }, (_, j) => j + 1);
+                }
+                mergedSubjects[subjectId] = currentMergedSubject;
+            }
+            setData({ subjects: mergedSubjects });
 
-            if (needsAppDataSaveAfterLoad) {
-                 console.log("Saving appData after load/sync/validation/repair...");
-                 await saveUserData(uid); 
+            if (appDataWasModifiedBySyncOrRepair) {
+                console.log("Saving appData (subjectProgress) after MD sync/repair during loadUserData...");
+                await saveUserData(uid);
             }
 
             if (data && data.subjects) {
                 const subjectKeys = Object.keys(data.subjects);
                 let subjectToSelectId = null;
-                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') { 
+                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') {
                      subjectToSelectId = currentSubject.id;
-                 } else if (userData.lastSelectedSubjectId && data.subjects[userData.lastSelectedSubjectId] && data.subjects[userData.lastSelectedSubjectId].status === 'approved') { 
-                     subjectToSelectId = userData.lastSelectedSubjectId;
-                 } else { 
+                 } else if (userDataFromFirestore.lastSelectedSubjectId && data.subjects[userDataFromFirestore.lastSelectedSubjectId] && data.subjects[userDataFromFirestore.lastSelectedSubjectId].status === 'approved') {
+                     subjectToSelectId = userDataFromFirestore.lastSelectedSubjectId;
+                 } else {
                      subjectToSelectId = subjectKeys.find(key => data.subjects[key].status === 'approved') || null;
                  }
                 setCurrentSubject(subjectToSelectId ? data.subjects[subjectToSelectId] : null);
                 updateSubjectInfo();
-                if (subjectToSelectId && subjectToSelectId !== userData.lastSelectedSubjectId) {
+                if (subjectToSelectId && subjectToSelectId !== userDataFromFirestore.lastSelectedSubjectId) {
                      await userRef.update({ lastSelectedSubjectId: subjectToSelectId }).catch(e => console.error("Error saving lastSelectedSubjectId:", e));
                 }
             } else { setCurrentSubject(null); updateSubjectInfo(); }
 
             await loadAllUserCourseProgress(uid);
+            await checkOnboarding(uid);
 
-            await checkOnboarding(uid); 
+        } else { // User document doesn't exist
+            console.log("User document not found for UID:", uid, "- Initializing data.");
+            const currentUserDetails = firebaseAuth?.currentUser;
+            if (!currentUserDetails) { throw new Error("Cannot initialize data: Current user details unavailable."); }
 
-        } else {
-             console.log("User document not found for UID:", uid, "- Initializing data.");
-             const currentUserDetails = firebaseAuth?.currentUser;
-             if (!currentUserDetails) { throw new Error("Cannot initialize data: Current user details unavailable."); }
-             await initializeUserData(uid, currentUserDetails.email, (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]), currentUserDetails.displayName, currentUserDetails.photoURL);
-             await loadUserData(uid); 
-             return;
+            await initializeUserData(
+                uid,
+                currentUserDetails.email,
+                (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]),
+                currentUserDetails.displayName,
+                currentUserDetails.photoURL
+            );
+            // `initializeUserData` will implicitly call `loadUserData` again after creating the doc
+            // through the auth state listener, so we can return.
+            return;
         }
     } catch (error) {
-        console.error("Error in loadUserData:", error);
-        throw error; 
+        console.error("Error in loadUserData (vGlobalSubjects):", error);
+        throw error;
     }
 }
+
 
 /**
  * Reloads user data after a change (e.g., username update, admin status toggle).
@@ -1183,175 +1269,113 @@ export async function reloadUserDataAfterChange(uid) {
 export async function initializeUserData(uid, email, username, displayName = null, photoURL = null, forceReset = false) {
     if (!db || !firebaseAuth) { console.error("Firestore DB or Auth not initialized"); return; }
     const userRef = db.collection('users').doc(uid);
-    let docExists = false; let existingUserData = null;
-    if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) { console.error("Error checking user existence:", e); } }
-    
-    let usernameLower;
-    if (username && typeof username === 'string') {
-        usernameLower = username.toLowerCase();
-    } else if (docExists && forceReset && existingUserData && typeof existingUserData.username === 'string') {
-        usernameLower = existingUserData.username.toLowerCase();
-    } else {
-        usernameLower = (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
-        console.warn(`[initializeUserData] Username was not a valid string, derived as: ${usernameLower}`);
-    }
+    let docExists = false;
+    let existingUserData = null; // To store existing data if not forceReset
 
-    let initialIsAdmin = (uid === ADMIN_UID); 
-    if (docExists && forceReset && existingUserData && typeof existingUserData.isAdmin === 'boolean') {
-        initialIsAdmin = existingUserData.isAdmin;
-    }
-    let initialCredits = 0;
-    if (docExists && forceReset && existingUserData && typeof existingUserData.credits === 'number') {
-        initialCredits = existingUserData.credits;
-    }
-
-    if (!docExists || forceReset) {
-        console.log(`[initializeUserData] Initializing data for user: ${uid}. Force reset: ${forceReset}. Username: ${usernameLower}, Email: ${email}`);
-        
-        let defaultAppData = JSON.parse(JSON.stringify(initialSubjectData));
-        const isCurrentUserInitializingAdmin = (uid === ADMIN_UID); 
-        
-        if (defaultAppData.subjects && typeof defaultAppData.subjects === 'object') {
-            Object.values(defaultAppData.subjects).forEach(subject => {
-                if (!isCurrentUserInitializingAdmin) {
-                    subject.status = 'pending'; 
-                    subject.creatorUid = uid;
-                    subject.creatorName = displayName || usernameLower || (email ? email.split('@')[0] : 'New User');
-                    subject.createdAt = new Date().toISOString(); 
-                } else {
-                    subject.status = subject.status || 'approved'; 
-                    subject.creatorUid = subject.creatorUid || ADMIN_UID;
-                    subject.creatorName = subject.creatorName || 'System';
-                    subject.createdAt = subject.createdAt || new Date(0).toISOString();
-                }
-            });
-        } else {
-            console.warn("[initializeUserData] initialSubjectData.subjects was not an object. Initializing appData.subjects as {}.");
-            defaultAppData.subjects = {};
-        }
-        
-        if (defaultAppData.subjects) {
-            for (const subjectId in defaultAppData.subjects) {
-                const defaultSubject = defaultAppData.subjects[subjectId];
-                if (defaultSubject && (isCurrentUserInitializingAdmin || defaultSubject.status === 'approved')) { 
-                     const defaultMarkdown = await fetchMarkdownForSubject(defaultSubject);
-                     if (defaultMarkdown) { updateChaptersFromMarkdown(defaultSubject, defaultMarkdown); }
-                }
-            }
-        }
-        
-        const dataToSet = {
-             email: email, 
-             username: usernameLower, 
-             displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`)),
-             photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
-             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-             onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
-             appData: defaultAppData, 
-             completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
-             userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
-             isAdmin: initialIsAdmin, 
-             credits: initialCredits, 
-             userAiChatSettings: getDefaultAiSettings()
-        };
-
-        console.log(`[initializeUserData] Data being set for new user ${uid}:`, JSON.stringify(dataToSet, null, 2));
-
+    if (!forceReset) {
         try {
-            await userRef.set(dataToSet); 
-            console.log(`[initializeUserData] User document successfully created/reset for ${uid}`);
-            
-            setData(defaultAppData);
-            setUserAiChatSettings(dataToSet.userAiChatSettings); 
-            console.log("[initializeUserData] Default AI Chat Settings set in state.");
-
-            if (forceReset) { 
-                setUserCourseProgressMap(new Map()); 
-                console.warn("Force reset executed. User course progress subcollection NOT cleared automatically."); 
-                const firstSubjectKey = defaultAppData.subjects ? Object.keys(defaultAppData.subjects)[0] : null;
-                setCurrentSubject(firstSubjectKey ? defaultAppData.subjects[firstSubjectKey] : null);
-                updateSubjectInfo();
-            }
-            
-            if (usernameLower && typeof usernameLower === 'string') {
-                try {
-                    const usernameRef = db.collection('usernames').doc(usernameLower);
-                    const usernameDocCheck = await usernameRef.get();
-                    if (!usernameDocCheck.exists) {
-                        await usernameRef.set({ userId: uid });
-                        console.log(`[initializeUserData] Username '${usernameLower}' successfully reserved for ${uid}.`);
-                    } else if (usernameDocCheck.data().userId !== uid) {
-                        console.warn(`[initializeUserData] Username ${usernameLower} was already taken by user ${usernameDocCheck.data().userId} during initialization for ${uid}. The main user document was created/updated, but this username could not be reserved.`);
-                    } else {
-                        console.log(`[initializeUserData] Username '${usernameLower}' already reserved for ${uid}. No action needed.`);
-                    }
-                } catch(userErr) {
-                    console.error(`[initializeUserData] Error reserving username '${usernameLower}' for ${uid} (new user path):`, userErr, "This does not prevent user document creation/update.");
-                    if (userErr.code === 'permission-denied' || (userErr.message && userErr.message.toLowerCase().includes('permission'))) {
-                        console.error(`[initializeUserData] Permission denied while trying to reserve username '${usernameLower}' for ${uid}. User document creation itself was successful. Check Firestore rules for 'usernames' collection.`);
-                    }
-                }
-            }
-
-        } catch (error) { 
-            console.error(`[initializeUserData] Error setting user data for ${uid}:`, error); 
-            let alertMessage = "Error setting up initial user data: " + error.message;
-            if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
-                alertMessage = "Error setting up initial user data: Permission Denied. Please check Firestore security rules or contact support. Details: " + error.message;
-            }
-            alert(alertMessage); 
+            const doc = await userRef.get();
+            docExists = doc.exists;
+            if (docExists) existingUserData = doc.data();
+        } catch (e) {
+            console.error("Error checking user existence:", e);
+            // Proceed as if doc doesn't exist if check fails, to attempt creation
         }
-    } else { // Document exists and not forceReset: Update missing fields if any
+    }
+
+    let usernameLower = (username && typeof username === 'string')
+        ? username.toLowerCase()
+        : (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
+
+    const initialIsAdmin = (uid === ADMIN_UID);
+
+    // If document exists AND we are NOT force-resetting, only update missing top-level fields.
+    // DO NOT overwrite appData here.
+    if (docExists && !forceReset) {
         let updatesNeeded = {};
-        if (usernameLower && existingUserData && !existingUserData.username) { updatesNeeded.username = usernameLower; }
-        if (existingUserData && !existingUserData.displayName) { updatesNeeded.displayName = displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`); }
-        if (existingUserData && existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
-        if (existingUserData && existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
-        if (existingUserData && !existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
-        if (existingUserData && !existingUserData.userNotes) { updatesNeeded.userNotes = {}; }
-        if (existingUserData && existingUserData.isAdmin === undefined) {
-            updatesNeeded.isAdmin = (uid === ADMIN_UID); 
-        }
-        if (existingUserData && existingUserData.credits === undefined) {
-            updatesNeeded.credits = 0;
-        }
-        if (existingUserData && existingUserData.userAiChatSettings === undefined) {
-            updatesNeeded.userAiChatSettings = getDefaultAiSettings();
+        if (!existingUserData.username && usernameLower) { updatesNeeded.username = usernameLower; }
+        if (!existingUserData.displayName) { updatesNeeded.displayName = displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`); }
+        if (existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
+        if (existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
+        if (!existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
+        if (!existingUserData.userNotes) { updatesNeeded.userNotes = {}; }
+        if (existingUserData.isAdmin === undefined) { updatesNeeded.isAdmin = initialIsAdmin; }
+        if (existingUserData.credits === undefined) { updatesNeeded.credits = 0; }
+        if (existingUserData.userAiChatSettings === undefined) { updatesNeeded.userAiChatSettings = getDefaultAiSettings(); }
+        // CRITICAL: Only create appData.subjectProgress if appData itself or subjectProgress is missing
+        if (!existingUserData.appData || !existingUserData.appData.subjectProgress) {
+            updatesNeeded['appData.subjectProgress'] = {}; // Use dot notation for specific field update
+            console.log(`[initializeUserData] User ${uid} exists but appData.subjectProgress missing. Initializing it.`);
         }
 
-         if (Object.keys(updatesNeeded).length > 0) {
-             console.log(`[initializeUserData] Updating missing fields for existing user ${uid}:`, Object.keys(updatesNeeded));
-             try {
-                 await userRef.update(updatesNeeded); // Main user document updated here
 
-                 if (updatesNeeded.username) { 
-                     const usernameToReserve = updatesNeeded.username; // This is usernameLower
-                     try {
-                         const usernameRef = db.collection('usernames').doc(usernameToReserve);
-                         const usernameDocCheck = await usernameRef.get();
-                         if (!usernameDocCheck.exists) {
-                             await usernameRef.set({ userId: uid });
-                             console.log(`[initializeUserData] Username '${usernameToReserve}' successfully reserved for existing user ${uid} during field update.`);
-                         } else if (usernameDocCheck.data().userId !== uid) {
-                             console.warn(`[initializeUserData] Username '${usernameToReserve}' was already taken by user ${usernameDocCheck.data().userId} when trying to set it for existing user ${uid}. The user document's username field was updated to '${usernameToReserve}', but this username could not be exclusively reserved in the 'usernames' collection.`);
-                         } else {
-                             console.log(`[initializeUserData] Username '${usernameToReserve}' already reserved for existing user ${uid}. No action needed for reservation.`);
-                         }
-                     } catch (userErr) {
-                         console.error(`[initializeUserData] Error reserving username '${usernameToReserve}' for existing user ${uid} (update path):`, userErr, "This does not prevent other user field updates.");
-                         if (userErr.code === 'permission-denied' || (userErr.message && userErr.message.toLowerCase().includes('permission'))) {
-                            console.error(`[initializeUserData] Permission denied while trying to reserve username '${usernameToReserve}' for ${uid} during update. Other user fields were updated. Check Firestore rules for 'usernames' collection.`);
-                        }
-                     }
-                 }
-             } catch(updateError) { 
-                 console.error("[initializeUserData] Error updating existing user fields (main update):", updateError); 
-                 // Optionally alert if this main update fails, and it's critical.
-                 // For now, just console.error as it's often a background sync.
-             }
-         } else { 
-             console.log(`[initializeUserData] User data already exists for ${uid}. No standard fields needed update.`); 
-         }
+        if (Object.keys(updatesNeeded).length > 0) {
+            console.log(`[initializeUserData] Updating missing top-level fields for existing user ${uid}:`, Object.keys(updatesNeeded));
+            try {
+                await userRef.update(updatesNeeded);
+                // If username was updated, handle reservation
+                if (updatesNeeded.username) {
+                    const usernameToReserve = updatesNeeded.username;
+                    const usernameResRef = db.collection('usernames').doc(usernameToReserve);
+                    const usernameResDoc = await usernameResRef.get();
+                    if (!usernameResDoc.exists) await usernameResRef.set({ userId: uid });
+                    else if (usernameResDoc.data().userId !== uid) console.warn(`Username ${usernameToReserve} taken during update for ${uid}.`);
+                }
+            } catch (updateError) {
+                console.error("[initializeUserData] Error updating existing user's missing fields:", updateError);
+            }
+        } else {
+            console.log(`[initializeUserData] User data already exists and is up-to-date for ${uid}. No initial field updates needed.`);
+        }
+        return; // Exit after handling existing user without forceReset
+    }
+
+    // Proceed with full initialization if doc doesn't exist OR forceReset is true
+    console.log(`[initializeUserData] Initializing/Forcing Reset for user: ${uid}. Username: ${usernameLower}`);
+
+    const defaultAppData = {
+        subjectProgress: {} // User's progress on global subjects starts empty
+    };
+
+    const dataToSet = {
+        email: email,
+        username: usernameLower,
+        displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`)),
+        photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
+        appData: defaultAppData,
+        completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
+        userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
+        isAdmin: (forceReset && typeof existingUserData?.isAdmin === 'boolean') ? existingUserData.isAdmin : initialIsAdmin,
+        credits: (forceReset && typeof existingUserData?.credits === 'number') ? existingUserData.credits : 0,
+        userAiChatSettings: (forceReset && existingUserData?.userAiChatSettings) ? existingUserData.userAiChatSettings : getDefaultAiSettings()
+    };
+
+    try {
+        await userRef.set(dataToSet);
+        console.log(`[initializeUserData] User document successfully CREATED/FORCED_RESET for ${uid}`);
+        setData({ subjects: {} }); // Reset local `data.subjects` for this user
+        setUserAiChatSettings(dataToSet.userAiChatSettings);
+
+        if (forceReset) {
+            setUserCourseProgressMap(new Map());
+            console.warn("Force reset executed. User course progress subcollection needs manual clearing if desired.");
+            setCurrentSubject(null);
+            updateSubjectInfo();
+        }
+
+        if (usernameLower) {
+            const usernameRef = db.collection('usernames').doc(usernameLower);
+            // If forceReset, we might need to clear old username reservation if username changes,
+            // but this is complex. For now, just try to set the new one.
+            // A more robust system would handle username changes carefully with transactions.
+            await usernameRef.set({ userId: uid }); // This will overwrite if it existed for another user - admin should handle conflicts.
+            console.log(`[initializeUserData] Username '${usernameLower}' reserved/updated for ${uid}.`);
+        }
+    } catch (error) {
+        console.error(`[initializeUserData] Error setting user data for ${uid} (Create/Force Reset):`, error);
+        alert("Error setting up user data: " + error.message);
     }
 }
 
@@ -3233,6 +3257,45 @@ export async function adminSimulateDaysPassed(targetUserId, courseId, daysToSimu
         // Throw the error so the calling UI can handle it (e.g., show alert)
         throw new Error(alertMessage);
     }
+}
+
+export async function adminAddGlobalSubject(subjectData) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    const subjectsRef = db.collection('subjects');
+    // Remove user-progress fields before saving definition
+    const { chapters, studied_chapters, pending_exams, ...definitionToSave } = subjectData;
+    definitionToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    definitionToSave.creatorUid = currentUser.uid;
+    definitionToSave.creatorName = currentUser.displayName || currentUser.email;
+
+    const docRef = await subjectsRef.add(definitionToSave);
+    const newSubjectDef = { id: docRef.id, ...definitionToSave, chapters: {} }; // Add with empty chapters locally
+    updateGlobalSubjectDefinition(docRef.id, newSubjectDef); // Update local cache
+    // Potentially trigger a re-merge for current user's `data.subjects`
+    return newSubjectDef;
+}
+
+export async function adminUpdateGlobalSubjectDefinition(subjectId, updates) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    const subjectRef = db.collection('subjects').doc(subjectId);
+    // Ensure no user-progress fields are in 'updates'
+    const { chapters, studied_chapters, pending_exams, ...definitionUpdates } = updates;
+    definitionUpdates.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+
+    await subjectRef.update(definitionUpdates);
+    const updatedDoc = await subjectRef.get();
+    const updatedDef = { id: updatedDoc.id, ...updatedDoc.data(), chapters: {} };
+    updateGlobalSubjectDefinition(subjectId, updatedDef); // Update local cache
+    return updatedDef;
+}
+
+export async function adminDeleteGlobalSubject(subjectId) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    // Consider implications: what happens to user progress for this subject?
+    // For now, just deletes the global definition. User progress might become orphaned.
+    await db.collection('subjects').doc(subjectId).delete();
+    globalSubjectDefinitionsMap.delete(subjectId); // Remove from local cache
+    // Potentially trigger a re-merge for current user's `data.subjects`
 }
 
 // --- END OF FILE firebase_firestore.js ---

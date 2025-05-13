@@ -80,43 +80,46 @@ export const FALLBACK_EXAM_CONFIG = {
 // --- END MODIFICATION ---
 
 // Default structure for a *new* user's subject data if none exists
-export const initialSubjectData = {
-    "subjects": {
-        "1": { // Linked to FoP Course
-            "id": "1",
-            "name": "Fundamentals of Physics",
-            "fileName": "TextMCQ.md", // MCQ file name (e.g., courses/fop_physics_v1/Problems/chapters.md)
-            "courseDirName": "fop_physics_v1", // Directory name for this subject's content
-            "problemsFileName": "chapters.md", // Problems file name (e.g., courses/fop_physics_v1/Problems/chapters.md if same file)
-            "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
-            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
-            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
-            "chapters": {}, // Populated by MD parse
-            "studied_chapters": [],
-            "pending_exams": [],
-            "status": "approved",
-            "creatorUid": ADMIN_UID,
-            "creatorName": "System",
-            "createdAt": new Date(0).toISOString(),
-        },
-        "2": { // Example unrelated subject
-            "id": "2",
-            "name": "ABC of Aviation",
-            "fileName": "ABC_Aviation_MCQ.md", // MCQ file name (e.g., courses/abc_of_aviation/Problems/ABC_Aviation_MCQ.md)
-            "courseDirName": "abc_of_aviation", // Directory name for this subject's content
-            "problemsFileName": "ABC_Aviation_Problems.md", // Problems file name (e.g., courses/abc_of_aviation/Problems/ABC_Aviation_Problems.md)
-            "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
-            "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
-            "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
-            "chapters": {}, // Populated by MD parse
-            "studied_chapters": [],
-            "pending_exams": [],
-            "status": "approved",
-            "creatorUid": ADMIN_UID,
-            "creatorName": "System",
-            "createdAt": new Date(0).toISOString(),
-        }
+export const globalSubjectBootstrapData = {
+    "1": { // Key will be the document ID in /subjects
+        "id": "1", // Should match the doc ID
+        "name": "Fundamentals of Physics",
+        "mcqFileName": "FoP_MCQs.md", // File in ./courses/fop_physics_v1/Resources/
+        "textProblemsFileName": "FoP_TextProblems.md", // File in ./courses/fop_physics_v1/Resources/
+        "lectureProblemsFileName": "FoP_LectureProblems.md", // Optional
+        "lectureMcqFileName": null, // Optional, if lecture MCQs are separate
+        "courseDirName": "fop_physics_v1", // For constructing resource paths
+        "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
+        "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
+        "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
+        "textSourceRatio": 0.7, // Example: 70% of problems from text sources, 30% from lecture (if lecture problems exist)
+        "status": "approved",
+        "creatorUid": ADMIN_UID,
+        "creatorName": "System",
+        "createdAt": new Date(0).toISOString(), // Use a fixed date for bootstrap
+        // "chapters" definitions (titles, total_questions) will be populated by MD parse
+        // on first load/sync by an admin or system.
+        // These are NOT stored in the global subject definition, but used by MD parser.
+    },
+    "2": {
+        "id": "2",
+        "name": "ABC of Aviation",
+        "mcqFileName": "ABC_Aviation_MCQs.md",
+        "textProblemsFileName": "ABC_Aviation_Problems.md",
+        "lectureProblemsFileName": null,
+        "lectureMcqFileName": null,
+        "courseDirName": "abc_of_aviation",
+        "max_questions_per_test": DEFAULT_MAX_QUESTIONS,
+        "mcqProblemRatio": DEFAULT_MCQ_PROBLEM_RATIO,
+        "defaultTestDurationMinutes": DEFAULT_ONLINE_TEST_DURATION_MINUTES,
+        "textSourceRatio": 0.8,
+        "status": "approved",
+        "creatorUid": ADMIN_UID,
+        "creatorName": "System",
+        "createdAt": new Date(0).toISOString(),
     }
+    // Note: 'initialSubjectData' is now deprecated in favor of 'globalSubjectBootstrapData'.
+    // Ensure old references are updated.
 };
 
 // Default profile picture URL (relative path assumed)
