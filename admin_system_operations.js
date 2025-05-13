@@ -218,7 +218,7 @@ export async function saveChatAutoDeleteSettingAdmin() {
     }
 }
 
-// --- NEW: Course Exam Defaults Configuration UI and Logic ---
+// --- START MODIFICATION: Course Exam Defaults Configuration UI and Logic ---
 function displayCourseExamDefaultsSection(containerElement) {
     const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
     const currentDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG; // Use state or fallback
@@ -326,6 +326,7 @@ window.handleSaveCourseExamDefaults = async () => {
         // saveCourseExamDefaults shows its own error alert if Firestore save fails.
     }
 };
+// --- END MODIFICATION ---
 
 
 // --- Main Display Function for System Operations Section ---

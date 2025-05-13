@@ -10,11 +10,12 @@ import { getExamHistory, getExamDetails, showExamReviewUI, deleteCompletedExamV2
 import {
     FALLBACK_EXAM_CONFIG, // NEW: Import fallback for defaults
     FOP_COURSE_ID, SKIP_EXAM_PASSING_PERCENT,
-    DEFAULT_MCQ_PROBLEM_RATIO, MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ,
+    // --- START MODIFICATION: Remove deprecated constants, use from examConfig ---
+    // DEFAULT_MCQ_PROBLEM_RATIO, MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ,
+    // --- END MODIFICATION ---
     COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER as DEFAULT_COURSE_QUESTIONS_FOLDER,
     DEFAULT_COURSE_TEXT_MCQ_FILENAME, DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME,
     DEFAULT_COURSE_LECTURE_MCQ_FILENAME, DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME
-    // COURSE_EXAM_TEXT_LECTURE_RATIO is now part of courseExamDefaults
 } from './config.js';
 import { deleteCourseActivityProgress } from './firebase_firestore.js';
 
@@ -82,7 +83,6 @@ window.confirmDeleteCompletedExamV2Wrapper = confirmDeleteCompletedExamV2Wrapper
 
 // --- Main UI Function for displaying assignments and exams ---
 export async function showCourseAssignmentsExams(courseId = activeCourseId) {
-    // ... (This function's existing implementation remains the same, as it only displays available exams)
     if (!currentUser || !courseId) return;
     setActiveSidebarLink('showCurrentAssignmentsExams', 'sidebar-course-nav');
     showLoading("Loading course assignments and exams...");
@@ -143,12 +143,11 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
         let weeklyExamsHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Weekly Exams</h3><ul class="space-y-2">`;
         if (!validEnrollmentDate) { weeklyExamsHtml += `<li class="text-sm text-red-500">Cannot determine exams due to invalid enrollment date.</li>`; }
         else {
-            // const currentWeek = Math.floor(daysElapsed / 7) + 1; // This was correct
             const totalPossibleWeeks = Math.ceil(courseDef.totalChapters / 7);
             for (let i = 1; i <= totalPossibleWeeks; i++) {
                  const weeklyExamId = `week${i}`; const score = progress.weeklyExamScores?.[weeklyExamId];
                  const lastChapterOfWeek = Math.min(i * 7, courseDef.totalChapters);
-                 const isDue = daysElapsed >= (i * 7); // Due after the week has passed (e.g. day 7 for week 1 exam)
+                 const isDue = daysElapsed >= (i * 7 -1); // Due ON the 7th day of the week (day 7, 14, 21...)
                  const canStart = isDue && studiedChaptersSet.has(lastChapterOfWeek);
 
                  if (score !== undefined) {
@@ -161,24 +160,46 @@ export async function showCourseAssignmentsExams(courseId = activeCourseId) {
         }
         weeklyExamsHtml += `</ul>`;
 
+        // --- START MODIFICATION: Midcourse Exam Logic based on Quarters ---
         let midcourseHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Midcourse Exams</h3><ul class="space-y-2">`;
-        const quarterChapters = Math.floor(courseDef.totalChapters / 4);
-        const midcourseThresholds = [quarterChapters, quarterChapters * 2, quarterChapters * 3];
         let midcourseExamDefined = false;
-        if (quarterChapters > 0) { // Only show if course is long enough for quarters
-            midcourseThresholds.forEach((chapThreshold, index) => {
-                if (chapThreshold === 0) return; // Skip if a quarter calculation results in 0 (very short course)
+        if (courseDef.totalChapters >= 4) { // Only if course has enough chapters for at least one quarter
+            const quarterMarkers = [
+                Math.floor(courseDef.totalChapters / 4),
+                Math.floor(courseDef.totalChapters / 2),
+                Math.floor(courseDef.totalChapters * 3 / 4)
+            ];
+
+            quarterMarkers.forEach((chapThreshold, index) => {
+                if (chapThreshold === 0) return; // Skip if a quarter calculation is 0 (e.g. for 1-3 chapter courses)
+                
+                // Ensure we don't define midcourse 3 if it's too close to the end or equals total chapters
+                if (index === 2 && chapThreshold >= courseDef.totalChapters - Math.floor(courseDef.totalChapters / 8)) {
+                     console.log(`Skipping Midcourse 3 as threshold ${chapThreshold} is too close to total chapters ${courseDef.totalChapters}`);
+                     return;
+                }
+
                 midcourseExamDefined = true;
-                const midNum = index + 1; const midId = `mid${midNum}`; const score = progress.midcourseExamScores?.[midId];
+                const midNum = index + 1;
+                const midId = `mid${midNum}`;
+                const score = progress.midcourseExamScores?.[midId];
                 const canStart = totalChaptersStudied >= chapThreshold;
+
                 if (score !== undefined) {
                     midcourseHtml += `<li class="text-sm text-muted flex items-center justify-between"><span>Midcourse Exam ${midNum} - Completed (Score: ${score.toFixed(1)}%)</span><button onclick="window.confirmDeleteCourseActivity('${courseId}', 'midcourse', '${midId}')" class="btn-danger-small text-xs">Delete</button></li>`;
-                } else if (canStart) { midcourseHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'midcourse', '${midId}')">Start Midcourse Exam ${midNum}</button> (After Ch ${chapThreshold})</li>`; }
-                else { midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} (Available after Ch ${chapThreshold})</li>`; }
+                } else if (canStart) {
+                    midcourseHtml += `<li><button class="link" onclick="window.startAssignmentOrExam('${courseId}', 'midcourse', '${midId}')">Start Midcourse Exam ${midNum}</button> (After Ch ${chapThreshold})</li>`;
+                } else {
+                    midcourseHtml += `<li class="text-sm text-muted">Midcourse Exam ${midNum} (Available after completing Chapter ${chapThreshold})</li>`;
+                }
             });
         }
-        if (!midcourseExamDefined) midcourseHtml += `<li class="text-sm text-muted">No midcourse exams applicable for this course length.</li>`;
+        if (!midcourseExamDefined) {
+            midcourseHtml += `<li class="text-sm text-muted">No midcourse exams applicable for this course length.</li>`;
+        }
         midcourseHtml += `</ul>`;
+        // --- END MODIFICATION ---
+
 
         let finalHtml = `<h3 class="text-lg font-semibold mb-3 mt-6 text-gray-700 dark:text-gray-300">Final Exams</h3><ul class="space-y-2">`;
         const allChaptersDone = totalChaptersStudied >= courseDef.totalChapters;
@@ -232,18 +253,23 @@ export async function startAssignmentOrExam(courseId, type, id) {
     if (!courseDef.relatedSubjectId || !data?.subjects?.[courseDef.relatedSubjectId]) {
          hideLoading(); alert(`Error: Course definition for ${courseDef.name} is missing 'relatedSubjectId' or TestGen subject data for it is not loaded.`); return;
     }
-    const subjectId = courseDef.relatedSubjectId; // This is the ID for the associated TestGen subject bank
-    const relatedTestGenSubject = data.subjects[subjectId]; // Get the TestGen subject data for file names
+    const subjectId = courseDef.relatedSubjectId; 
+    const relatedTestGenSubject = data.subjects[subjectId]; 
 
-    // --- Get exam configuration from global state or fallback ---
-    const currentExamDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG;
-    let examConfig = currentExamDefaults[type];
+    // --- START MODIFICATION: Get exam configuration ---
+    const currentGlobalExamDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG; // Use loaded global defaults or fallback
+    let examConfig = currentGlobalExamDefaults[type];
     if (!examConfig) {
-        console.warn(`No specific exam configuration found for type: ${type}. Using generic fallback.`);
-        const genericFallback = { questions: 10, durationMinutes: 60, mcqRatio: 0.5, textSourceRatio: 0.5 };
-        examConfig = FALLBACK_EXAM_CONFIG[type] || genericFallback; // Fallback if type itself is unknown
+        console.warn(`No specific exam configuration found for type: ${type} in global defaults. Using generic fallback.`);
+        examConfig = FALLBACK_EXAM_CONFIG[type] || { questions: 10, durationMinutes: 60, mcqRatio: 0.5, textSourceRatio: 0.5 };
     }
+    // Ensure all properties exist in examConfig, falling back to global defaults if a specific one is incomplete
+    examConfig = {
+        ...FALLBACK_EXAM_CONFIG[type], // Start with the structure of a known type from fallback
+        ...examConfig // Override with values from loaded config
+    };
     console.log(`[startAssignmentOrExam] Using exam config for ${type} ${id}:`, examConfig);
+    // --- END MODIFICATION ---
 
 
     // --- Determine Chapter Scope ---
@@ -269,16 +295,33 @@ export async function startAssignmentOrExam(courseId, type, id) {
                 const endChap = Math.min(weekNum * 7, courseDef.totalChapters);
                 chaptersToInclude = Array.from({ length: endChap - startChap + 1 }, (_, i) => startChap + i);
                 break;
-            case 'midcourse': // NEW Midcourse Logic
+            // --- START MODIFICATION: Midcourse Logic for Chapter Scope ---
+            case 'midcourse':
                 const midNumMatch = id.match(/mid(\d+)/); if (!midNumMatch) throw new Error("Invalid midcourse ID format.");
                 const midNum = parseInt(midNumMatch[1], 10); // 1, 2, or 3
-                const quarterSize = Math.floor(courseDef.totalChapters / 4);
-                if (quarterSize === 0 && midNum > 0) throw new Error("Course too short for midcourse exams.");
-                
-                const startChapterForMid = (midNum - 1) * quarterSize + 1;
-                const endChapterForMid = midNum * quarterSize;
-                chaptersToInclude = Array.from({ length: endChapterForMid - startChapterForMid + 1 }, (_, i) => startChapterForMid + i);
+                const totalChapters = courseDef.totalChapters;
+                let startChapterForMid, endChapterForMid;
+
+                if (midNum === 1) {
+                    startChapterForMid = 1;
+                    endChapterForMid = Math.floor(totalChapters / 4);
+                } else if (midNum === 2) {
+                    startChapterForMid = Math.floor(totalChapters / 4) + 1;
+                    endChapterForMid = Math.floor(totalChapters / 2);
+                } else if (midNum === 3) {
+                    startChapterForMid = Math.floor(totalChapters / 2) + 1;
+                    endChapterForMid = Math.floor(totalChapters * 3 / 4);
+                } else {
+                    throw new Error(`Invalid midcourse number: ${midNum}`);
+                }
+                if (startChapterForMid > endChapterForMid || endChapterForMid === 0) { // Handle short courses where a quarter might be 0
+                    console.warn(`Midcourse ${midNum} has an invalid chapter range (${startChapterForMid}-${endChapterForMid}) for a course with ${totalChapters} chapters. Skipping this midcourse generation or setting empty scope.`);
+                    chaptersToInclude = []; // Or handle by not generating this exam
+                } else {
+                    chaptersToInclude = Array.from({ length: endChapterForMid - startChapterForMid + 1 }, (_, i) => startChapterForMid + i);
+                }
                 break;
+            // --- END MODIFICATION ---
             case 'final':
                 chaptersToInclude = Array.from({ length: courseDef.totalChapters }, (_, i) => i + 1);
                 break;
@@ -288,28 +331,25 @@ export async function startAssignmentOrExam(courseId, type, id) {
                 break;
             default: throw new Error(`Unknown activity type for exam generation: ${type}`);
         }
-        chaptersToInclude = chaptersToInclude.filter(cn => cn > 0 && cn <= courseDef.totalChapters); // Ensure valid chapter numbers
+        chaptersToInclude = chaptersToInclude.filter(cn => cn > 0 && cn <= courseDef.totalChapters); 
 
         console.log(`Chapter scope for ${type} ${id}: Chapters [${chaptersToInclude.join(', ')}]`);
-        if (chaptersToInclude.length === 0) throw new Error("Could not determine any valid chapters for this activity. Check course length and activity ID.");
+        if (chaptersToInclude.length === 0 && type !== 'midcourse') { // Allow midcourse to proceed if its specific range is empty for short courses
+            throw new Error("Could not determine any valid chapters for this activity. Check course length and activity ID.");
+        } else if (chaptersToInclude.length === 0 && type === 'midcourse') {
+             console.log(`Midcourse ${id} generation skipped as chapter range is empty.`);
+             hideLoading();
+             alert(`Midcourse Exam ${id} is not applicable for this course length or configuration.`);
+             showCourseAssignmentsExams(courseId); // Refresh the assignments view
+             return;
+        }
 
-        // --- Fetch Course Specific Content ---
-        // NOTE: For courses, the 'Problems' folder under courseDirName contains various MD files.
-        // We need to determine which MD files correspond to "Text" sources and which to "Lecture" sources.
-        // The `relatedTestGenSubject` object might have `fileName` (for MCQs) and `problemsFileName`.
-        // Let's assume the `relatedTestGenSubject.fileName` is for general/text MCQs
-        // and `relatedTestGenSubject.problemsFileName` is for general/text Problems.
-        // For lecture-specific content, we'll use predefined names like DEFAULT_COURSE_LECTURE_MCQ_FILENAME.
 
         const courseResourcePath = `${COURSE_BASE_PATH}/${courseDef.courseDirName}/${DEFAULT_COURSE_QUESTIONS_FOLDER}`;
-
-        // Text-based sources (use filenames from the related TestGen subject if available, else defaults)
         const textMcqFileName = relatedTestGenSubject?.fileName || DEFAULT_COURSE_TEXT_MCQ_FILENAME;
         const textProbFileName = relatedTestGenSubject?.problemsFileName || DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
         const textMcqPath = `${courseResourcePath}/${textMcqFileName}`;
         const textProbPath = `${courseResourcePath}/${textProbFileName}`;
-
-        // Lecture-based sources (use default names)
         const lectMcqPath = `${courseResourcePath}/${DEFAULT_COURSE_LECTURE_MCQ_FILENAME}`;
         const lectProbPath = `${courseResourcePath}/${DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME}`;
 
@@ -317,32 +357,28 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
         const [
             textMcqContent,
-            textProbContent_fetched, // Content fetched, parsing handled by parseChapterProblems
+            textProbContent_fetched, 
             lectMcqContent,
-            lectProbContent_fetched  // Content fetched, parsing handled by parseChapterProblems
+            lectProbContent_fetched  
         ] = await Promise.all([
             fetchCourseMarkdownContent(textMcqPath),
-            fetchCourseMarkdownContent(textProbPath), // Fetch to check existence, parseChapterProblems will re-fetch by path
+            fetchCourseMarkdownContent(textProbPath), 
             fetchCourseMarkdownContent(lectMcqPath),
-            fetchCourseMarkdownContent(lectProbPath)  // Fetch to check existence
+            fetchCourseMarkdownContent(lectProbPath)  
         ]);
 
         if (!textMcqContent && !textProbContent_fetched && !lectMcqContent && !lectProbContent_fetched) {
             throw new Error("Could not load ANY question/problem definition files for the course. Please check course configuration, related TestGen subject setup (for filenames), and file paths.");
         }
 
-        // --- Parse Content (Filtered by Chapter Scope) ---
         console.log("Parsing fetched MCQ content...");
         const parsedTextMcqs = extractQuestionsFromMarkdown(textMcqContent, chaptersToInclude, 'text_mcq');
         const parsedLectMcqs = extractQuestionsFromMarkdown(lectMcqContent, chaptersToInclude, 'lect_mcq');
-
-        // Parse problems (asynchronously, populates subjectProblemCache for the subjectId)
-        // The sourceType for problems will differentiate them in the cache for the *subjectId*.
+        
         console.log("Parsing problems (populating cache)...");
         await parseChapterProblems(textProbPath, subjectId, 'text_problems');
         await parseChapterProblems(lectProbPath, subjectId, 'lecture_problems');
 
-        // Aggregate available items
         const availableTextMcqs = parsedTextMcqs.questions || [];
         const availableLectMcqs = parsedLectMcqs.questions || [];
         let availableTextProbs = [];
@@ -369,55 +405,48 @@ export async function startAssignmentOrExam(courseId, type, id) {
 
         // --- Determine Target Counts using new examConfig ---
         let finalTestSize = Math.min(examConfig.questions, totalAvailableItems);
-        const overallMcqRatio = examConfig.mcqRatio; // e.g., 0.5 for 50% MCQs
-        const textSourceRatio = examConfig.textSourceRatio; // e.g., 0.5 for 50% from Text sources
+        const overallMcqRatio = examConfig.mcqRatio; 
+        const textSourceRatio = examConfig.textSourceRatio; 
 
         let targetTotalMcqsFromConfig = Math.round(finalTestSize * overallMcqRatio);
         let targetTotalProblemsFromConfig = finalTestSize - targetTotalMcqsFromConfig;
         
-        // Adjust if total available for a type is less than targeted
         let actualTargetTotalMcqs = Math.min(targetTotalMcqsFromConfig, totalAvailableMcqs);
         let actualTargetTotalProblems = Math.min(targetTotalProblemsFromConfig, totalAvailableProblems);
 
-        // If one type is short, try to fill with the other if available, up to finalTestSize
         let currentTotalSelected = actualTargetTotalMcqs + actualTargetTotalProblems;
         if (currentTotalSelected < finalTestSize) {
             let deficit = finalTestSize - currentTotalSelected;
-            if (actualTargetTotalMcqs < totalAvailableMcqs) { // Can we add more MCQs?
+            if (actualTargetTotalMcqs < totalAvailableMcqs) { 
                 let canAddMcqs = totalAvailableMcqs - actualTargetTotalMcqs;
                 let addMcqs = Math.min(deficit, canAddMcqs);
                 actualTargetTotalMcqs += addMcqs;
                 deficit -= addMcqs;
             }
-            if (deficit > 0 && actualTargetTotalProblems < totalAvailableProblems) { // Can we add more Problems?
+            if (deficit > 0 && actualTargetTotalProblems < totalAvailableProblems) { 
                 let canAddProbs = totalAvailableProblems - actualTargetTotalProblems;
                 let addProbs = Math.min(deficit, canAddProbs);
                 actualTargetTotalProblems += addProbs;
             }
         }
-        finalTestSize = actualTargetTotalMcqs + actualTargetTotalProblems; // This is the true size of the exam now
+        finalTestSize = actualTargetTotalMcqs + actualTargetTotalProblems; 
 
-        // Distribute MCQs between Text and Lecture sources
         let targetTextMcqs = Math.min(availableTextMcqs.length, Math.round(actualTargetTotalMcqs * textSourceRatio));
         let targetLectMcqs = Math.min(availableLectMcqs.length, actualTargetTotalMcqs - targetTextMcqs);
-        // Adjust if one MCQ source is short
         if (targetTextMcqs + targetLectMcqs < actualTargetTotalMcqs) {
             let mcqDeficit = actualTargetTotalMcqs - (targetTextMcqs + targetLectMcqs);
             if (availableTextMcqs.length > targetTextMcqs) {
                 targetTextMcqs = Math.min(availableTextMcqs.length, targetTextMcqs + mcqDeficit);
-            } else if (availableLectMcqs.length > targetLectMcqs) { // Check if lecture can fill
+            } else if (availableLectMcqs.length > targetLectMcqs) { 
                 targetLectMcqs = Math.min(availableLectMcqs.length, targetLectMcqs + mcqDeficit);
             }
         }
-        // Final check on individual MCQ source counts
         targetTextMcqs = Math.min(targetTextMcqs, availableTextMcqs.length);
         targetLectMcqs = Math.min(targetLectMcqs, availableLectMcqs.length);
-        actualTargetTotalMcqs = targetTextMcqs + targetLectMcqs; // Recalculate actual MCQs we can get
+        actualTargetTotalMcqs = targetTextMcqs + targetLectMcqs; 
 
-        // Distribute Problems between Text and Lecture sources
         let targetTextProbs = Math.min(availableTextProbs.length, Math.round(actualTargetTotalProblems * textSourceRatio));
         let targetLectProbs = Math.min(availableLectProbs.length, actualTargetTotalProblems - targetTextProbs);
-        // Adjust if one Problem source is short
         if (targetTextProbs + targetLectProbs < actualTargetTotalProblems) {
             let probDeficit = actualTargetTotalProblems - (targetTextProbs + targetLectProbs);
             if (availableTextProbs.length > targetTextProbs) {
@@ -429,8 +458,6 @@ export async function startAssignmentOrExam(courseId, type, id) {
         targetTextProbs = Math.min(targetTextProbs, availableTextProbs.length);
         targetLectProbs = Math.min(targetLectProbs, availableLectProbs.length);
         actualTargetTotalProblems = targetTextProbs + targetLectProbs;
-
-        // Recalculate final exam size based on what was actually selectable
         finalTestSize = actualTargetTotalMcqs + actualTargetTotalProblems;
 
 
@@ -442,7 +469,6 @@ export async function startAssignmentOrExam(courseId, type, id) {
             selectedTextProbsCount: targetTextProbs, selectedLectProbsCount: targetLectProbs
         });
 
-        // --- Select Items Randomly ---
         const selectedTextMcqs = [...availableTextMcqs].sort(() => 0.5 - Math.random()).slice(0, targetTextMcqs);
         const selectedLectMcqs = [...availableLectMcqs].sort(() => 0.5 - Math.random()).slice(0, targetLectMcqs);
         const finalSelectedMcqs = [...selectedTextMcqs, ...selectedLectMcqs];
@@ -453,7 +479,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
         const problemToExamItem = (problem, indexOffset = 0, sourceSuffix = 'unknown') => ({
             id: problem.id || `problem-${problem.chapter}-${Date.now().toString().slice(-5)}-${indexOffset}-${sourceSuffix}`,
             chapter: String(problem.chapter),
-            number: indexOffset, // Will be overwritten by displayNumber
+            number: indexOffset, 
             text: problem.text || "Problem text not found.",
             options: [], image: null, correctAnswer: null,
             type: problem.type || 'Problem', difficulty: problem.difficulty,
@@ -463,13 +489,12 @@ export async function startAssignmentOrExam(courseId, type, id) {
         const finalSelectedLectProbs = selectedLectProbsRaw.map((p, i) => problemToExamItem(p, i, 'lecture_problems'));
         const finalSelectedProblems = [...finalSelectedTextProbs, ...finalSelectedLectProbs];
 
-        // --- Combine & Finalize ---
         const finalExamItems = combineProblemsWithQuestions(finalSelectedProblems, finalSelectedMcqs);
 
         if (finalExamItems.length === 0) {
             throw new Error("Failed to select any questions or problems after processing. Check source files and ratios.");
         }
-        if (finalExamItems.length < examConfig.questions * 0.75) { // Warn if significantly fewer than target
+        if (finalExamItems.length < examConfig.questions * 0.75) { 
              console.warn(`Generated exam has only ${finalExamItems.length} items, much lower than the target ${examConfig.questions}. Check course content availability.`);
         }
 
@@ -480,9 +505,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
         });
 
         const mcqAnswers = { ...parsedTextMcqs.answers, ...parsedLectMcqs.answers };
-
-        // --- Launch Online Test ---
-        const examIdSuffix = id.replace(/[^a-zA-Z0-9]/g, ''); // Clean up activity ID for examId
+        const examIdSuffix = id.replace(/[^a-zA-Z0-9]/g, ''); 
         const examId = `${courseId}-${type}-${examIdSuffix}-${Date.now().toString().slice(-6)}`;
         const durationMinutes = examConfig.durationMinutes;
 
@@ -496,7 +519,7 @@ export async function startAssignmentOrExam(courseId, type, id) {
             currentQuestionIndex: 0,
             status: 'active',
             durationMinutes: durationMinutes,
-            subjectId: subjectId, // The TestGen subject bank ID
+            subjectId: subjectId, 
             courseContext: { isCourseActivity: true, courseId: courseId, activityType: type, activityId: id, chapterScope: chaptersToInclude }
         };
 
@@ -514,10 +537,9 @@ window.startAssignmentOrExam = startAssignmentOrExam;
 
 // --- Delete Course Activity Functions ---
 export function confirmDeleteCourseActivity(courseId, activityType, activityId) {
-    // ... (This function's existing implementation is fine) ...
     if (!currentUser) { alert("You must be logged in."); return; }
     const activityName = activityType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    const activityNumber = activityId.replace(/[^0-9]/g, ''); // Attempt to get number part
+    const activityNumber = activityId.replace(/[^0-9]/g, ''); 
     if (confirm(`Are you sure you want to delete the results for ${activityName} ${activityNumber || activityId}? This also deletes related exam history. This action cannot be undone.`)) {
         handleDeleteCourseActivity(courseId, activityType, activityId);
     }
@@ -525,7 +547,6 @@ export function confirmDeleteCourseActivity(courseId, activityType, activityId) 
 window.confirmDeleteCourseActivity = confirmDeleteCourseActivity;
 
 export async function handleDeleteCourseActivity(courseId, activityType, activityId) {
-    // ... (This function's existing implementation is fine) ...
     showLoading(`Deleting ${activityType} ${activityId}...`);
     try {
         const success = await deleteCourseActivityProgress(currentUser.uid, courseId, activityType, activityId);
@@ -533,7 +554,7 @@ export async function handleDeleteCourseActivity(courseId, activityType, activit
         console.log(`Finding exam history records for activity: ${activityType} ${activityId}`);
         const examHistory = await getExamHistory(currentUser.uid, courseId, 'course');
         const examsToDelete = examHistory.filter(exam =>
-            exam.type === activityType && exam.id && exam.id.includes(`-${activityType}-${activityId.replace(/[^a-zA-Z0-9]/g, '')}-`) // Match cleaned ID part
+            exam.type === activityType && exam.id && exam.id.includes(`-${activityType}-${activityId.replace(/[^a-zA-Z0-9]/g, '')}-`) 
         );
 
         let deletedExamCount = 0;
@@ -541,7 +562,7 @@ export async function handleDeleteCourseActivity(courseId, activityType, activit
             console.log(`Found ${examsToDelete.length} exam record(s) to delete for activity ${activityId}.`);
             for (const exam of examsToDelete) {
                  console.log(`Deleting exam record: ${exam.id}`);
-                 const deleted = await deleteCompletedExamV2(exam.id); // deleteCompletedExamV2 handles TestGen question restoration
+                 const deleted = await deleteCompletedExamV2(exam.id); 
                  if (deleted) deletedExamCount++;
             }
             console.log(`Successfully deleted ${deletedExamCount} of ${examsToDelete.length} related exam records.`);
@@ -552,7 +573,7 @@ export async function handleDeleteCourseActivity(courseId, activityType, activit
         hideLoading();
         if (success || deletedExamCount > 0) {
             alert(`Successfully deleted progress score${deletedExamCount > 0 ? ` and ${deletedExamCount} related exam record(s)` : ''} for ${activityType} ${activityId}.`);
-            showCourseAssignmentsExams(courseId); // Refresh this specific view
+            showCourseAssignmentsExams(courseId); 
         } else if (!success && deletedExamCount === 0){
             alert(`Failed to delete ${activityType} ${activityId} results. Please check logs or try again.`);
         }

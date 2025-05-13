@@ -13,7 +13,7 @@ import { displayUserManagementSection, loadUserCoursesForAdmin, handleAdminMarkC
 import { displaySystemOperationsSection, loadAdminTasksUI, handleAddAdminTask, handleToggleAdminTaskStatus, handleDeleteAdminTask, renderGlobalAiPromptsAdminUI, handleSaveGlobalPromptsToFirestore, loadChatAutoDeleteSettingAdmin, saveChatAutoDeleteSettingAdmin } from './admin_system_operations.js';
 import { displayTestingAidsSection } from './admin_testing_aids.js';
 import { confirmDeleteAllFeedbackAndIssues } from './admin_moderation.js'
-import { populateAdminCourseSelect, loadPlaylistForAdmin, toggleSelectAllVideosAdmin as toggleSelectAllVideos, toggleVideoSelectionAdmin as toggleVideoSelection, handleAssignVideoToChapter, handleUnassignVideoFromChapter, handleDeleteUserFormulaSheetAdmin, handleDeleteUserChapterSummaryAdmin } from './admin_playlist_and_content_deletion.js';
+import { populateAdminCourseSelect, loadPlaylistForAdmin, toggleSelectAllVideosAdmin, toggleVideoSelectionAdmin, handleAssignVideoToChapter, handleUnassignVideoFromChapter, handleDeleteUserFormulaSheetAdmin, handleDeleteUserChapterSummaryAdmin } from './admin_playlist_and_content_deletion.js';
 import { getAdminOverviewStats } from './firebase_firestore.js'
 // --- Main Admin Dashboard UI ---
 
@@ -253,7 +253,7 @@ function getStatIcon(type, iconColorClass = 'text-gray-500 dark:text-gray-400') 
 }
 
 
-export { confirmRemoveBadge, handleAdminMarkCourseComplete, handleAdminUserSubjectApproval as handleAdminSubjectApproval, loadUserBadgesForAdmin, loadUserCoursesForAdmin, loadUserSubjectsForAdmin, promptAddBadge, promptAdminFeedbackReply as promptAdminReply,  }
+export { confirmRemoveBadge, handleAdminMarkCourseComplete, handleAdminUserSubjectApproval, loadUserBadgesForAdmin, loadUserCoursesForAdmin, loadUserSubjectsForAdmin, promptAddBadge, promptAdminFeedbackReply as promptAdminReply,  }
 
 
 
@@ -290,8 +290,8 @@ window.saveChatAutoDeleteSettingAdmin = saveChatAutoDeleteSettingAdmin;
 
 window.populateAdminCourseSelect = populateAdminCourseSelect;
 window.loadPlaylistForAdmin = loadPlaylistForAdmin;
-window.toggleSelectAllVideos = toggleSelectAllVideos;
-window.toggleVideoSelection = toggleVideoSelection;
+window.toggleSelectAllVideosAdmin = toggleSelectAllVideosAdmin;
+window.toggleVideoSelectionAdmin = toggleVideoSelectionAdmin;
 window.handleAssignVideoToChapter = handleAssignVideoToChapter;
 window.handleUnassignVideoFromChapter = handleUnassignVideoFromChapter;
 window.handleDeleteUserFormulaSheetAdmin = handleDeleteUserFormulaSheetAdmin;

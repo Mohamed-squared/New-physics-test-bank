@@ -1,3 +1,5 @@
+// --- START OF FILE firebase_firestore.js ---
+
 // firebase_firestore.js
 
 import {
@@ -5,16 +7,18 @@ import {
     userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
     activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
     setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap,
-    setCourseExamDefaults
+    // --- START MODIFICATION: Added courseExamDefaults, setCourseExamDefaults ---
+    courseExamDefaults, setCourseExamDefaults
+    // --- END MODIFICATION ---
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
-import { updateChaptersFromMarkdown } from './markdown_parser.js';
+import { updateChaptersFromMarkdown, parseChaptersFromMarkdown  } from './markdown_parser.js';
 // Import ALL needed config values
 import { 
     initialSubjectData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID, 
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT, 
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
-    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG // MODIFIED: Added FALLBACK_EXAM_CONFIG
 } from './config.js';
 import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
@@ -33,7 +37,8 @@ const aiChatSessionsSubCollection = "aiChatSessions"; // New constant for AI Cha
 const globalSettingsCollection = "settings";
 const aiPromptsDocId = "aiPrompts";
 
-const settingsCollection = "settings";
+// --- START MODIFICATION: Constants for Course Exam Defaults ---
+const settingsCollection = "settings"; // Re-declare or ensure consistent use if already present
 const courseExamDefaultsDocId = "courseExamDefaults";
 
 export async function loadCourseExamDefaults() {
@@ -54,7 +59,7 @@ export async function loadCourseExamDefaults() {
                     ...FALLBACK_EXAM_CONFIG[examType],         // Start with fallback structure
                     ...(defaultsFromDb[examType] || {})        // Override with DB values if they exist
                 };
-                 // Ensure numeric fields are numbers
+                 // Ensure numeric fields are numbers and have valid defaults if parsing fails
                 mergedDefaults[examType].questions = parseInt(mergedDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions;
                 mergedDefaults[examType].durationMinutes = parseInt(mergedDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes;
                 mergedDefaults[examType].mcqRatio = parseFloat(mergedDefaults[examType].mcqRatio) || FALLBACK_EXAM_CONFIG[examType].mcqRatio;
@@ -79,8 +84,8 @@ export async function loadCourseExamDefaults() {
 }
 
 export async function saveCourseExamDefaults(newDefaults) {
-    if (!db || !currentUser || !currentUser.isAdmin) {
-        alert("Admin privileges required to save exam defaults.");
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { // MODIFIED: Check against ADMIN_UID for primary admin
+        alert("Primary Admin privileges required to save exam defaults.");
         return false;
     }
     if (!newDefaults || typeof newDefaults !== 'object') {
@@ -114,6 +119,7 @@ export async function saveCourseExamDefaults(newDefaults) {
         return false;
     }
 }
+// --- END MODIFICATION ---
 
 
 // --- Utilities ---
@@ -478,126 +484,211 @@ export async function unenrollFromCourse(uid, courseId) {
 }
 
 
-// --- Global Course Definitions ---
-/**
- * Loads global course definition data from Firestore.
- * Updates the `globalCourseDataMap` state.
- * Ensures FoP exists in Firestore, creating it from config if missing.
- * Initializes imageUrl, coverUrl, prerequisites (as string array), and corequisites (as string array).
- */
+async function fetchChapterDefinitionMarkdown(courseDef) {
+    // ... (implementation from previous response) ...
+    if (!courseDef || !courseDef.courseDirName) {
+        console.warn(`[fetchChapterDefinitionMarkdown] Course definition or courseDirName missing for ${courseDef?.id}. Cannot fetch chapter titles.`);
+        return null;
+    }
+    const chapterDefFilename = "TextMCQ.md"; // Or make this configurable per course
+    const safeDirName = cleanTextForFilename(courseDef.courseDirName);
+    const url = `${COURSE_BASE_PATH}/${safeDirName}/${SUBJECT_RESOURCE_FOLDER}/${chapterDefFilename}?t=${new Date().getTime()}`;
+    // console.log(`[fetchChapterDefinitionMarkdown] Fetching chapter definitions for "${courseDef.name}" from: ${url}`);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`[fetchChapterDefinitionMarkdown] Chapter definition file NOT FOUND: ${url} for course "${courseDef.name}".`);
+                return null;
+            }
+            throw new Error(`HTTP error fetching chapter definitions! status: ${response.status} for ${url}`);
+        }
+        return await response.text();
+    } catch (error) {
+        console.error(`Error fetching chapter definition Markdown for course "${courseDef.name}" (${url}):`, error);
+        return null;
+    }
+}
+
+
 export async function loadGlobalCourseDefinitions() {
     if (!db) { console.error("Firestore DB not initialized"); return; }
     console.log("Loading global course definitions...");
     const coursesRef = db.collection('courses');
     let fopFoundInFirestore = false;
+    const coursesToProcess = []; // Array to hold data before adding to map
 
     try {
         const snapshot = await coursesRef.get();
         snapshot.forEach(doc => {
-            const courseData = doc.data();
-            let finalCourseData = { ...courseData, id: doc.id }; 
-
-            finalCourseData.chapterResources = typeof finalCourseData.chapterResources === 'object' ? finalCourseData.chapterResources : {};
-            finalCourseData.youtubePlaylistUrls = Array.isArray(finalCourseData.youtubePlaylistUrls) ? finalCourseData.youtubePlaylistUrls : (finalCourseData.youtubePlaylistUrl ? [finalCourseData.youtubePlaylistUrl] : []);
-            finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
-            finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
-            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || (Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters.length : 0); 
-            finalCourseData.imageUrl = finalCourseData.imageUrl || null;
-            finalCourseData.coverUrl = finalCourseData.coverUrl || null;
-            finalCourseData.prerequisites = Array.isArray(finalCourseData.prerequisites)
-                                            ? finalCourseData.prerequisites.filter(item => typeof item === 'string')
-                                            : [];
-            finalCourseData.corequisites = Array.isArray(finalCourseData.corequisites)
-                                           ? finalCourseData.corequisites.filter(item => typeof item === 'string')
-                                           : [];
-
-            updateGlobalCourseData(doc.id, finalCourseData);
-            console.log(`Loaded global course definition: ${finalCourseData.name} (${doc.id}), Status: ${finalCourseData.status || 'N/A'}`);
-
+            coursesToProcess.push({ id: doc.id, firestoreData: doc.data() });
             if (doc.id === FOP_COURSE_ID) {
                 fopFoundInFirestore = true;
-                console.log(`FoP course ${FOP_COURSE_ID} found in Firestore.`);
             }
         });
 
         if (!fopFoundInFirestore) {
-            console.log(`FOP course ${FOP_COURSE_ID} not found in Firestore. Creating it from local config...`);
-            const fopDef = {...FOP_COURSE_DEFINITION}; 
-            fopDef.id = FOP_COURSE_ID; 
-            fopDef.status = 'approved'; 
-            fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {};
-            fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
-            fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
-            fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
-            fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
-            fopDef.imageUrl = fopDef.imageUrl || null;
-            fopDef.coverUrl = fopDef.coverUrl || null;
-            fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
-                                   ? fopDef.prerequisites.filter(item => typeof item === 'string')
-                                   : [];
-            fopDef.corequisites = Array.isArray(fopDef.corequisites)
-                                  ? fopDef.corequisites.filter(item => typeof item === 'string')
-                                  : [];
-
-            fopDef.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-            fopDef.creatorUid = ADMIN_UID; 
-            fopDef.creatorName = 'System (Config)';
-
-            try {
-                await db.collection('courses').doc(FOP_COURSE_ID).set(fopDef, { merge: true });
-                console.log(`Successfully created FOP course ${FOP_COURSE_ID} document in Firestore.`);
-                const createdDoc = await db.collection('courses').doc(FOP_COURSE_ID).get();
-                if (createdDoc.exists) {
-                    const createdData = { id: FOP_COURSE_ID, ...createdDoc.data() };
-                    createdData.chapterResources = typeof createdData.chapterResources === 'object' ? createdData.chapterResources : {};
-                    createdData.youtubePlaylistUrls = Array.isArray(createdData.youtubePlaylistUrls) ? createdData.youtubePlaylistUrls : (createdData.youtubePlaylistUrl ? [createdData.youtubePlaylistUrl] : []);
-                    createdData.chapters = Array.isArray(createdData.chapters) ? createdData.chapters : [];
-                    createdData.midcourseChapters = Array.isArray(createdData.midcourseChapters) ? createdData.midcourseChapters : [];
-                    createdData.totalChapters = Number(createdData.totalChapters) || (Array.isArray(createdData.chapters) ? createdData.chapters.length : 0);
-                    createdData.imageUrl = createdData.imageUrl || null;
-                    createdData.coverUrl = createdData.coverUrl || null;
-                    createdData.prerequisites = Array.isArray(createdData.prerequisites)
-                                                ? createdData.prerequisites.filter(item => typeof item === 'string')
-                                                : [];
-                    createdData.corequisites = Array.isArray(createdData.corequisites)
-                                                ? createdData.corequisites.filter(item => typeof item === 'string')
-                                                : [];
-                    updateGlobalCourseData(FOP_COURSE_ID, createdData); 
-                } else {
-                    console.error(`Failed to fetch FOP course ${FOP_COURSE_ID} immediately after creation.`);
-                     updateGlobalCourseData(FOP_COURSE_ID, { ...fopDef, createdAt: new Date() }); 
-                }
-            } catch (creationError) {
-                console.error(`Error creating FOP course ${FOP_COURSE_ID} document in Firestore:`, creationError);
-                 updateGlobalCourseData(FOP_COURSE_ID, { ...fopDef, createdAt: new Date() });
-            }
+            console.log(`FOP course ${FOP_COURSE_ID} not found in Firestore. Will attempt to create/ensure it.`);
+            // Add a placeholder to ensure FoP gets processed, even if just from config
+            coursesToProcess.push({ id: FOP_COURSE_ID, firestoreData: null, isPlaceholderFoP: true });
         }
+
+        for (const courseEntry of coursesToProcess) {
+            const courseId = courseEntry.id;
+            let baseData = courseEntry.firestoreData;
+            let isNewFoPInstance = false;
+
+            if (courseId === FOP_COURSE_ID) {
+                if (!baseData) { // If FoP wasn't in Firestore (isPlaceholderFoP was true)
+                    baseData = { ...FOP_COURSE_DEFINITION }; // Start with config
+                    baseData.status = 'approved'; // Ensure default status
+                    baseData.creatorUid = ADMIN_UID;
+                    baseData.creatorName = 'System (Config)';
+                    // Handle createdAt for new FoP
+                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) {
+                        baseData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    } else {
+                        baseData.createdAt = new Date(); // Fallback
+                    }
+                    isNewFoPInstance = true;
+                    console.log(`[FoP Processing] Preparing new FoP instance for course ID: ${courseId}`);
+                } else {
+                    console.log(`[FoP Processing] FoP course ID ${courseId} found in Firestore. Merging with config if necessary.`);
+                    // If FoP exists, ensure certain fields from config are prioritized or defaults applied
+                    // For example, to always use the config's chapter list for FoP:
+                    baseData.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : (baseData.chapters || []);
+                    baseData.totalChapters = baseData.chapters.length;
+                    // Ensure other FOP_COURSE_DEFINITION fields take precedence if desired
+                    baseData.name = FOP_COURSE_DEFINITION.name || baseData.name;
+                    baseData.description = FOP_COURSE_DEFINITION.description || baseData.description;
+                    baseData.youtubePlaylistUrls = FOP_COURSE_DEFINITION.youtubePlaylistUrls || baseData.youtubePlaylistUrls || [];
+                }
+            }
+
+            if (!baseData) { // Should only happen if firestoreData was null and not FoP
+                console.error(`CRITICAL: No baseData for courseId ${courseId}. Skipping this course.`);
+                continue;
+            }
+
+            let finalCourseData = { ...baseData, id: courseId };
+
+            // --- Initialize Core Fields (ensure these are always set) ---
+            finalCourseData.name = finalCourseData.name || `Course ${courseId}`;
+            finalCourseData.status = finalCourseData.status || 'approved';
+            finalCourseData.courseDirName = finalCourseData.courseDirName || cleanTextForFilename(finalCourseData.name) || courseId;
+            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || 0;
+            finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
+            finalCourseData.chapterResources = typeof finalCourseData.chapterResources === 'object' ? finalCourseData.chapterResources : {};
+            finalCourseData.youtubePlaylistUrls = Array.isArray(finalCourseData.youtubePlaylistUrls) ? finalCourseData.youtubePlaylistUrls : (finalCourseData.youtubePlaylistUrl ? [finalCourseData.youtubePlaylistUrl] : []);
+            finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
+            finalCourseData.imageUrl = finalCourseData.imageUrl || null;
+            finalCourseData.coverUrl = finalCourseData.coverUrl || null;
+            finalCourseData.prerequisites = Array.isArray(finalCourseData.prerequisites) ? finalCourseData.prerequisites.filter(item => typeof item === 'string') : [];
+            finalCourseData.corequisites = Array.isArray(finalCourseData.corequisites) ? finalCourseData.corequisites.filter(item => typeof item === 'string') : [];
+            finalCourseData.creatorUid = finalCourseData.creatorUid || ADMIN_UID;
+            finalCourseData.creatorName = finalCourseData.creatorName || 'System';
+            if (!finalCourseData.createdAt) { // If still not set (e.g. old Firestore doc without it)
+                finalCourseData.createdAt = (typeof firebase !== 'undefined' && firebase.firestore && baseData.createdAt !== firebase.firestore.FieldValue.serverTimestamp()) ? firebase.firestore.FieldValue.serverTimestamp() : new Date();
+            }
+            // --- End Core Fields Init ---
+
+
+            // --- CHAPTER TITLE & COUNT LOGIC (Refined from previous response) ---
+            if (courseId !== FOP_COURSE_ID) { // Only for non-FoP courses
+                let titlesFromMd = [];
+                let mdDerivedChapterCount = 0;
+
+                if (finalCourseData.courseDirName) {
+                    const chapterDefMdContent = await fetchChapterDefinitionMarkdown(finalCourseData);
+                    if (chapterDefMdContent) {
+                        const parsedMdDetails = parseChaptersFromMarkdown(chapterDefMdContent);
+                        const mdChapterNumbers = Object.keys(parsedMdDetails).map(Number).filter(n => n > 0);
+                        if (mdChapterNumbers.length > 0) {
+                            mdDerivedChapterCount = Math.max(...mdChapterNumbers);
+                            for (let i = 1; i <= mdDerivedChapterCount; i++) {
+                                titlesFromMd.push(parsedMdDetails[String(i)]?.title || `Chapter ${i}`);
+                            }
+                        }
+                    }
+                }
+
+                let effectiveTotalChapters = finalCourseData.totalChapters;
+                if (effectiveTotalChapters <= 0 && mdDerivedChapterCount > 0) {
+                    effectiveTotalChapters = mdDerivedChapterCount;
+                }
+                finalCourseData.totalChapters = effectiveTotalChapters;
+
+                if (finalCourseData.totalChapters > 0) {
+                    if (titlesFromMd.length >= finalCourseData.totalChapters) {
+                        finalCourseData.chapters = titlesFromMd.slice(0, finalCourseData.totalChapters);
+                    } else {
+                        finalCourseData.chapters = Array.from({ length: finalCourseData.totalChapters }, (_, i) => titlesFromMd[i] || `Chapter ${i + 1}`);
+                    }
+                } else {
+                    finalCourseData.chapters = [];
+                }
+                 console.log(`[Course Load] Non-FoP "${finalCourseData.name}": TotalCh: ${finalCourseData.totalChapters}, Titles found/gen: ${finalCourseData.chapters.length}, MD titles: ${titlesFromMd.length}`);
+            } else { // This is FoP (either from Firestore or new instance)
+                 // Ensure FoP chapters are from FOP_COURSE_DEFINITION if it's a new instance or if Firestore data is minimal
+                 if (isNewFoPInstance || finalCourseData.chapters.length === 0) {
+                      finalCourseData.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : [];
+                      finalCourseData.totalChapters = finalCourseData.chapters.length;
+                      console.log(`[FoP Processing] Ensured FoP titles from config. Total Chapters: ${finalCourseData.totalChapters}`);
+                 }
+            }
+            // --- END CHAPTER TITLE & COUNT LOGIC ---
+
+            // If it was a new FoP instance, attempt to save it to Firestore
+            if (isNewFoPInstance) {
+                try {
+                    await db.collection('courses').doc(FOP_COURSE_ID).set(finalCourseData, { merge: true });
+                    console.log(`Successfully created FoP course ${FOP_COURSE_ID} in Firestore.`);
+                    // Fetch it again to get server-resolved timestamps for the cache
+                    const savedFoPDoc = await db.collection('courses').doc(FOP_COURSE_ID).get();
+                    if (savedFoPDoc.exists) {
+                        updateGlobalCourseData(FOP_COURSE_ID, { id: FOP_COURSE_ID, ...savedFoPDoc.data() });
+                    } else { // Should not happen
+                        console.error("FoP doc not found immediately after creation!");
+                        updateGlobalCourseData(FOP_COURSE_ID, finalCourseData); // Use local with client time
+                    }
+                } catch (creationError) {
+                    console.error(`Error creating FoP course ${FOP_COURSE_ID} in Firestore:`, creationError);
+                    // If creation fails, still add the config version to the local map
+                    if (!(finalCourseData.createdAt instanceof Date) && typeof finalCourseData.createdAt.toDate !== 'function') {
+                       finalCourseData.createdAt = new Date(); // Ensure createdAt is a Date if it was a FieldValue
+                    }
+                    updateGlobalCourseData(FOP_COURSE_ID, finalCourseData);
+                }
+            } else {
+                // For existing courses (or FoP that was already in Firestore), update the map
+                updateGlobalCourseData(courseId, finalCourseData);
+            }
+            console.log(`Processed and cached course: "${finalCourseData.name}" (ID: ${courseId}), Chapters: ${finalCourseData.chapters.length}/${finalCourseData.totalChapters}`);
+        } // End of for...of loop
 
     } catch (error) {
-        console.error("Error loading global course definitions:", error);
+        console.error("CRITICAL Error during initial Firestore course fetch or main processing loop:", error);
+        // Fallback for FoP if entire Firestore operation fails
         if (!globalCourseDataMap.has(FOP_COURSE_ID)) {
-             console.log(`Firestore fetch failed, attempting to load FOP ${FOP_COURSE_ID} from local config as fallback.`);
-             const fopDef = {...FOP_COURSE_DEFINITION}; 
-             fopDef.id = FOP_COURSE_ID;
-             fopDef.status = 'approved';
-             fopDef.youtubePlaylistUrls = fopDef.youtubePlaylistUrls || (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
-             fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {};
-             fopDef.chapters = Array.isArray(fopDef.chapters) ? fopDef.chapters : [];
-             fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
-             fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
-             fopDef.imageUrl = fopDef.imageUrl || null;
-             fopDef.coverUrl = fopDef.coverUrl || null;
-             fopDef.prerequisites = Array.isArray(fopDef.prerequisites)
-                                    ? fopDef.prerequisites.filter(item => typeof item === 'string')
-                                    : [];
-             fopDef.corequisites = Array.isArray(fopDef.corequisites)
-                                   ? fopDef.corequisites.filter(item => typeof item === 'string')
-                                   : [];
-             updateGlobalCourseData(FOP_COURSE_ID, fopDef);
+            // ... (your existing FoP fallback logic remains the same here) ...
+            console.warn(`[CRITICAL FALLBACK] Global course load failed. Attempting to load FOP ${FOP_COURSE_ID} from local config.`);
+            const fopDef = { ...FOP_COURSE_DEFINITION, id: FOP_COURSE_ID, status: 'approved' };
+            fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID;
+            fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0);
+            fopDef.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : Array.from({ length: fopDef.totalChapters }, (_, i) => `Chapter ${i + 1}`);
+            // Ensure other fields
+            fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {};
+            fopDef.youtubePlaylistUrls = Array.isArray(fopDef.youtubePlaylistUrls) ? fopDef.youtubePlaylistUrls : (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []);
+            fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : [];
+            fopDef.imageUrl = fopDef.imageUrl || null;
+            fopDef.coverUrl = fopDef.coverUrl || null;
+            fopDef.prerequisites = Array.isArray(fopDef.prerequisites) ? fopDef.prerequisites.filter(item => typeof item === 'string') : [];
+            fopDef.corequisites = Array.isArray(fopDef.corequisites) ? fopDef.corequisites.filter(item => typeof item === 'string') : [];
+            updateGlobalCourseData(FOP_COURSE_ID, fopDef);
         }
     }
+    console.log(`Global course definitions loading complete. ${globalCourseDataMap.size} courses in map.`);
 }
-
 // --- MODIFICATION: Helper function to get default AI settings ---
 function getDefaultAiSettings() {
     return {
@@ -2981,8 +3072,7 @@ export async function adminAdjustUserCredits(targetUserId, amount, reason, admin
     // We can use the existing updateUserCredits function, but it uses `currentUser` internally for `performedBy`.
     // For admin actions, it's better to log which admin did it.
     // Let's create a more specific admin version or modify updateUserCredits to accept `performedBy`.
-    // For now, let's assume updateUserCredits is flexible or we create an admin-specific one.
-    // For this exercise, I'll assume updateUserCredits can handle it or we'd create `adminUpdateUserCredits`.
+    // For now, let's assume updateUserCredits is flexible or we'd create `adminUpdateUserCredits`.
     // For simplicity, using existing updateUserCredits and it will log current admin as performer.
     // If a different admin needs to be logged, updateUserCredits needs `performedByUid` param.
 

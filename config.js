@@ -1,3 +1,5 @@
+// --- START OF FILE config.js ---
+
 // --- Configuration ---
 
 // Admin User ID
@@ -60,33 +62,23 @@ export const MAX_MARKS_PER_PROBLEM = 10; // Max score for a written problem
 export const MAX_MARKS_PER_MCQ = 10;     // Max score for an MCQ (usually all or nothing)
 
 // --- Course Exam Configuration ---
-export const EXAM_QUESTION_COUNTS = {
-    assignment: 10,
-    weekly_exam: 30,
-    midcourse: 50,
-    final: 60,
-    skip_exam: 20 // Number of MCQs for AI generation (problems added separately)
-};
+// DEPRECATED: EXAM_QUESTION_COUNTS and EXAM_DURATIONS_MINUTES are now superseded by FALLBACK_EXAM_CONFIG
+// export const EXAM_QUESTION_COUNTS = { ... };
+// export const EXAM_DURATIONS_MINUTES = { ... };
 
-// Calculate durations based on question counts (e.g., 2.5 mins per question)
-const calculateDuration = (count) => Math.max(15, Math.min(180, Math.round(count * 2.5)));
-export const EXAM_DURATIONS_MINUTES = {
-    assignment: calculateDuration(EXAM_QUESTION_COUNTS.assignment),
-    weekly_exam: calculateDuration(EXAM_QUESTION_COUNTS.weekly_exam),
-    midcourse: calculateDuration(EXAM_QUESTION_COUNTS.midcourse),
-    final: calculateDuration(EXAM_QUESTION_COUNTS.final),
-    skip_exam: Math.max(15, Math.min(60, Math.round(EXAM_QUESTION_COUNTS.skip_exam * 1.5))) // Shorter duration for skip MCQs
-};
+// *** MODIFIED: COURSE_EXAM_TEXT_LECTURE_RATIO is now part of FALLBACK_EXAM_CONFIG objects ***
+// export const COURSE_EXAM_TEXT_LECTURE_RATIO = 0.5; // 50% Text, 50% Lecture by default
 
-// *** NEW: Ratio for Text vs Lecture sources in course exams ***
-export const COURSE_EXAM_TEXT_LECTURE_RATIO = 0.5; // 50% Text, 50% Lecture by default
+// --- START MODIFICATION: Fallback Exam Configuration ---
 export const FALLBACK_EXAM_CONFIG = {
-    assignment: { questions: 4, durationMinutes: 40, mcqRatio: 0.5, textSourceRatio: 0.5 },
-    weekly_exam: { questions: 8, durationMinutes: 75, mcqRatio: 0.5, textSourceRatio: 0.5 },
-    midcourse: { questions: 12, durationMinutes: 120, mcqRatio: 0.5, textSourceRatio: 0.5 },
-    final: { questions: 16, durationMinutes: 180, mcqRatio: 0.5, textSourceRatio: 0.5 },
-    skip_exam: { questions: 20, durationMinutes: 30, mcqRatio: 0.5, textSourceRatio: 0.5 }
+    assignment:  { questions: 4,  durationMinutes: 40,  mcqRatio: 0.5, textSourceRatio: 0.5 },
+    weekly_exam: { questions: 8,  durationMinutes: 75,  mcqRatio: 0.5, textSourceRatio: 0.5 },
+    midcourse:   { questions: 12, durationMinutes: 120, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    final:       { questions: 16, durationMinutes: 180, mcqRatio: 0.5, textSourceRatio: 0.5 },
+    skip_exam:   { questions: 20, durationMinutes: 30,  mcqRatio: 1.0, textSourceRatio: 1.0 } // Skip exams are typically all MCQs from text
 };
+// --- END MODIFICATION ---
+
 // Default structure for a *new* user's subject data if none exists
 export const initialSubjectData = {
     "subjects": {
@@ -188,7 +180,7 @@ export const FOP_COURSE_DEFINITION = {
         "Conduction of Electricity in Solids", "Nuclear Physics", "Energy from the Nucleus",
         "Quarks, Leptons, and the Big Bang"
     ],
-    midcourseChapters: [11, 22, 33],
+    midcourseChapters: [11, 22, 33], // This will be overridden by new quarter-based logic
     prerequisites: [], // Example subject tags
     corequisites: [], // Example: ["calculus_1"]
     chapterResources: {}

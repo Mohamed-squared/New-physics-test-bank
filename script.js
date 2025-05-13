@@ -1,3 +1,5 @@
+// --- START OF FILE script.js ---
+
 // script.js
 // --- Core State & Config Imports ---
 import { setAuth, setDb, auth, db, currentUser,
@@ -18,7 +20,9 @@ import {
     handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, 
     loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, 
     sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts,
+    // --- START MODIFICATION: Added loadCourseExamDefaults ---
     loadCourseExamDefaults 
+    // --- END MODIFICATION ---
 } from './firebase_firestore.js';
 
 
@@ -41,7 +45,7 @@ import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progre
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
 // MODIFIED: Added loadUserSubjectsForAdmin, handleAdminSubjectApproval
-import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js';
+import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js';
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
 import { showInbox, handleMarkRead } from './ui_inbox.js';
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
@@ -166,7 +170,7 @@ async function initializeApp() {
 
     if (themeToggle && !themeToggle.dataset.bgListenerAttached) { // Use a new data attribute
         themeToggle.addEventListener('click', () => {
-            const currentPref = JSON.parse(localStorage.getItem(LOCALSTORAGE_KEY) || '{}');
+            const currentPref = JSON.parse(localStorage.getItem('lyceumAppBackground') || '{}'); // MODIFIED KEY
             if (currentPref.type === 'default' || !currentPref.type) {
                 // If the current preference is default, re-apply it to reflect theme change
                 // Small delay to allow theme classes on <html> to update first
@@ -234,8 +238,10 @@ async function initializeApp() {
             console.error("[initializeApp] Error loading Global AI System Prompts. Using defaults/empty.", error);
             setGlobalAiSystemPrompts({}); // Ensure state is at least an empty object
         }
-        await loadCourseExamDefaults(); // <<<< ADD THIS LINE
+        // --- START MODIFICATION: Load Course Exam Defaults ---
+        await loadCourseExamDefaults(); 
         console.log("Initialized with Course Exam Defaults:", courseExamDefaults);
+        // --- END MODIFICATION ---
 
         setupAuthListener(); // This will handle UI changes based on auth state
     } catch (e) {
@@ -405,10 +411,7 @@ window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
 window.promptAddBadge = promptAddBadge;
-window.handleAddBadgeForUser = handleAddBadgeForUser;
 window.confirmRemoveBadge = confirmRemoveBadge;
-window.handleRemoveBadgeForUser = handleRemoveBadgeForUser;
-// MODIFIED: Assign subject management functions from ui_admin_dashboard
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
 window.showBackgroundManagement = showBackgroundManagement;

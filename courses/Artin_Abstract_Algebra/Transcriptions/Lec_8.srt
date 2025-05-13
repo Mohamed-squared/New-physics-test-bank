@@ -1,0 +1,1651 @@
+1
+00:12:745 --> 00:13:205
+So let me just finish one thing I should have said about this uh isomorphism theorem or the quotient group.
+
+2
+00:13:205 --> 00:18:945
+So let me just finish one thing I should have said about this uh isomorphism theorem or the quotient group.
+
+3
+00:18:945 --> 00:24:895
+So last time we showed that if you had a a group G and you had a normal subgroup H,
+
+4
+00:24:895 --> 00:33:425
+that there is a new group that one can construct, G mod H,
+
+5
+00:33:425 --> 00:38:445
+quotient group
+
+6
+00:38:445 --> 00:45:115
+of cosets of H.
+
+7
+00:45:115 --> 00:57:785
+So the elements of this group are the cosets of H, that this comes with a natural surjective map F that takes an element in G into its H coset.
+
+8
+00:57:785 --> 01:02:805
+That's a group homomorphism and the kernel of it is H. That's what we showed last time.
+
+9
+01:02:805 --> 01:07:785
+So any normal subgroup gives rise to a diagram like this of groups.
+
+10
+01:07:785 --> 01:13:425
+Now, let's make a a little observation which is quite useful.
+
+11
+01:13:425 --> 01:21:875
+Namely, suppose that between G and H, we have another group uh called K.
+
+12
+01:21:875 --> 01:28:585
+So K is a subgroup of G that contains the normal subgroup H.
+
+13
+01:28:585 --> 01:31:675
+We'll have examples of this. All right.
+
+14
+01:31:675 --> 01:34:625
+Then the claim is first,
+
+15
+01:34:625 --> 01:38:995
+that H is normal in K.
+
+16
+01:38:995 --> 01:44:315
+That's easy.
+
+17
+01:44:315 --> 01:52:495
+Because to say h is normal in G means that for any g and G, g inverse is equal to h.
+
+18
+01:52:495 --> 01:55:895
+For all g and G.
+
+19
+01:55:895 --> 02:02:905
+Now, if if this is is true for all g and G, it's certainly true for all G in the subgroup K.
+
+20
+02:02:905 --> 02:06:945
+Which is the statement that h is normal in K. That's easy.
+
+21
+02:06:945 --> 02:19:255
+So therefore, we can construct the quotient group. So, have group K mod h.
+
+22
+02:19:255 --> 02:26:505
+Which can be thought of as a subset of G mod H.
+
+23
+02:26:505 --> 02:32:765
+These are precisely the H cosets that have contain elements in K.
+
+24
+02:32:765 --> 02:34:715
+So here's the picture.
+
+25
+02:34:715 --> 02:45:935
+If we take G and we divide it up into the distinct cosets for H, a certain number of them will form the subgroup K.
+
+26
+02:45:935 --> 02:52:595
+Because K itself is a union of H cosets.
+
+27
+02:52:595 --> 03:00:735
+And a certain number of them give you K and the rest of them give you G. So you get a group which is a subset of this group.
+
+28
+03:00:735 --> 03:04:335
+All right? First statement, it's a subgroup.
+
+29
+03:04:335 --> 03:14:405
+of g mod h.
+
+30
+03:14:405 --> 03:18:005
+Because K is a subgroup of G.
+
+31
+03:18:005 --> 03:29:835
+In other words, if I take two different cosets that lie in K, HA and HB, and I multiply them, that coset also lies in K.
+
+32
+03:29:835 --> 03:36:615
+So it's so this subset of cosets that lie in K is closed under multiplication.
+
+33
+03:36:615 --> 03:37:585
+Why?
+
+34
+03:37:585 --> 03:44:435
+Because if I take two elements in K, A and B and I multiply them, I got a new element in K.
+
+35
+03:44:435 --> 03:46:985
+That's because K is a subgroup.
+
+36
+03:46:985 --> 04:03:125
+The cosets contained in K are stable under multiplication as K is stable under multiplication.
+
+37
+04:03:125 --> 04:07:195
+Okay?
+
+38
+04:07:195 --> 04:18:065
+So, if I have a group contained containing K H, then in the quotient group G mod H, I get the subgroup K mod H.
+
+39
+04:18:065 --> 04:20:755
+Okay.
+
+40
+04:20:755 --> 04:25:225
+Conversely, and this is very powerful.
+
+41
+04:25:225 --> 04:57:665
+Any subgroup of G containing H corresponds to a subgroup of G mod H in this manner.
+
+42
+04:57:665 --> 04:59:065
+What do I mean by that?
+
+43
+04:59:065 --> 05:19:895
+Well, if I have a subgroup of G mod H, let's say that the subgroup consists of the cosets AH, a subset of the cosets of G mod H, and then I just take the union of all those cosets, I claim that gives me a subgroup of G.
+
+44
+05:19:895 --> 05:31:885
+corresponding to the subgroup.
+
+45
+05:31:885 --> 05:39:075
+So you have to check that that gives a subgroup of G containing H and that every subgroup of G containing H arises in that manner.
+
+46
+05:39:075 --> 05:48:165
+So in other words, there's a bijection between the subgroups of G containing a normal subgroup and the subgroups of this quotient group.
+
+47
+05:48:165 --> 05:50:665
+Okay?
+
+48
+05:50:665 --> 05:55:805
+So that's an important. So I'll give you an example of this, which we'll use later on.
+
+49
+05:55:805 --> 05:59:215
+Start with the group G is equal to Z.
+
+50
+05:59:215 --> 06:09:525
+Under addition. Everything's normal. Okay?
+
+51
+06:09:525 --> 06:19:695
+Now, suppose I ask you and let P be a prime number, and consider the subgroup H, which is multiples of P.
+
+52
+06:19:695 --> 06:26:755
+Here's the claim.
+
+53
+06:26:755 --> 06:33:525
+If we have a subgroup of Z, which lies between Z and PZ, is a subgroup, then either K is equal to the integers or K is equal to PZ.
+
+54
+06:33:525 --> 06:36:285
+is a subgroup.
+
+55
+06:36:285 --> 07:04:885
+Then either K is equal to the integers or K is equal to PZ. In other words, there's nothing properly in between those two subgroups.
+
+56
+07:04:885 --> 07:08:565
+And the proof,
+
+57
+07:08:565 --> 07:34:215
+such a K gives a subgroup of the cyclic group quotient group Z mod PZ.
+
+58
+07:34:215 --> 07:40:605
+We showed that a group of prime order had no non-trivial subgroups.
+
+59
+07:40:605 --> 07:45:525
+Right? Because the order of a subgroup divides the order of the group.
+
+60
+07:45:525 --> 07:56:225
+So gives either the zero subgroup or the entire group.
+
+61
+07:56:225 --> 08:02:305
+That was by our result about groups of prime order. They had no non-trivial subgroups.
+
+62
+08:02:305 --> 08:16:375
+And if the subgroup of this quotient group is zero, that means that K corresponds to PZ because it's given by the union of cosets in that subgroup and the only coset in that subgroup is is H. So you get PZ.
+
+63
+08:16:375 --> 08:27:875
+And on the other hand, if the subgroup of this cyclic group is the entire group, then the subgroup H K is the union of all the cosets of H, namely it's this group.
+
+64
+08:27:875 --> 08:44:435
+So we might say, so we might restate this claim as the statement that this is a maximal subgroup of G.
+
+65
+08:44:435 --> 08:50:335
+maximal meaning anything larger than it is the entire group. You can't get any bigger.
+
+66
+08:50:335 --> 08:51:855
+Okay?
+
+67
+08:51:855 --> 08:55:355
+So that's some kind of way we're going to use this quotient theorem.
+
+68
+08:55:355 --> 09:10:885
+We're going to use it to pick out sub you get a wonderful thing from this, uh, this picture, namely any subgroup of G containing H maps to a subgroup here, and any subgroup of g mod H, if we take the inverse image under this map.
+
+69
+09:10:885 --> 09:11:885
+That's all this is, by the way.
+
+70
+09:11:885 --> 09:21:935
+This is the inverse image of the subgroup of g mod h in G.
+
+71
+09:21:935 --> 09:30:175
+The the set of all things mapping to the subgroup, that gives us a subgroup K and G that corresponds bijectively to the subgroup of g mod h.
+
+72
+09:30:175 --> 09:40:895
+And so if we can say something about the quotient group, like we can in this case, that it has no non-trivial subgroups, we know that there's nothing squeezed between Z and PZ. Okay?
+
+73
+09:40:895 --> 09:42:615
+Good.
+
+74
+09:42:615 --> 09:49:775
+This is the end of what I'm going to say about groups for a while. And now we're going to go into the theory of abstract vector spaces. Peter, you have something for me?
+
+75
+09:49:775 --> 09:51:785
+You even have the homework, you mean?
+
+76
+09:51:785 --> 09:55:285
+The basic operations.
+
+77
+09:55:285 --> 09:57:795
+I mean, what I'm supposed to be talking about? Okay.
+
+78
+09:57:795 --> 10:00:535
+It's all up here. It's all up here. Um, you know, uh,
+
+79
+10:00:535 --> 10:09:755
+there's a great line in Amadeus, which actually seems to have been an actual quote of of Mozart's.
+
+80
+10:09:755 --> 10:21:075
+Uh, Mozart used to write his symphony sometimes in the in the carriage once he took a trip from Vienna to Prague and wrote an entire symphony in the carriage.
+
+81
+10:21:075 --> 10:23:765
+And just got off and wrote it down on the paper.
+
+82
+10:23:765 --> 10:25:485
+And in Amadeus, uh,
+
+83
+10:25:485 --> 10:38:895
+the uh the man who commissioned the Magic Flute, which was really a popular opera, not a serious opera in that in Mozart's time, paid Mozart a considerable advance to write the magic flute.
+
+84
+10:38:895 --> 10:46:045
+Uh was harassing him uh about when he was actually going to produce the opera.
+
+85
+10:46:045 --> 10:52:545
+He goes, they were going to go into production in a week. And Mozart said, it's all up here. The rest is scribbling.
+
+86
+10:52:545 --> 10:53:985
+So, okay.
+
+87
+10:53:985 --> 10:56:215
+So the rest is scribbling.
+
+88
+10:56:215 --> 10:59:705
+So now we're going to go to the operation on vector spaces.
+
+89
+10:59:705 --> 11:05:095
+So vector spaces are something you've seen already in your courses on linear algebra.
+
+90
+11:05:095 --> 11:10:345
+And usually people study vector spaces in linear algebra over the real numbers.
+
+91
+11:10:345 --> 11:18:605
+Reals or complex numbers.
+
+92
+11:18:605 --> 11:22:335
+Because that's our geometric intuition of what a vector space looks like.
+
+93
+11:22:335 --> 11:29:495
+And a vector space V, I'll always denote V for a vector space over R,
+
+94
+11:29:495 --> 11:36:785
+consists of first an Abelian group.
+
+95
+11:36:785 --> 11:51:495
+So that means you can add vectors with operation plus and identity element, what's called the zero vector, or sometimes just zero.
+
+96
+11:51:495 --> 11:56:955
+And inverse element sometimes called minus B.
+
+97
+11:56:955 --> 12:03:075
+So the this is the operation of the Abelian group in a vector space is written additively like it is for the integers.
+
+98
+12:03:075 --> 12:10:595
+Now, this would be perfectly good example of this would be the integers, but the integers aren't a vector space. And the second thing you need is you need a scalar multiplication
+
+99
+12:10:595 --> 12:20:955
+by elements C in your real numbers, for example.
+
+100
+12:20:955 --> 12:22:055
+So in other words,
+
+101
+12:22:055 --> 12:24:235
+a billion group,
+
+102
+12:24:235 --> 12:27:825
+the elements of the group are usually denoted little V.
+
+103
+12:27:825 --> 12:34:535
+So associated the operation plus means that you can take two elements of V and add it and get a V plus W, that sort of thing.
+
+104
+12:34:535 --> 12:40:055
+So you can also take an element in this Abelian group and you're allowed to multiply it by a scalar.
+
+105
+12:40:055 --> 12:45:425
+So there should be some operation that takes V to C times V where C is a real number.
+
+106
+12:45:425 --> 12:52:055
+So it's a little more than an Abelian group. It has this scalar multiplication.
+
+107
+12:52:055 --> 12:58:415
+And that scalar multiplication has to also satisfy some identities. For example,
+
+108
+12:58:415 --> 13:04:745
+if you multiply by the zero scalar times any vector, you have to get the zero vector.
+
+109
+13:04:745 --> 13:11:405
+And if you multiply by the one scalar times any vector, you have to get the vector itself.
+
+110
+13:11:405 --> 13:13:615
+Right?
+
+111
+13:13:615 --> 13:17:775
+And if you do um, there's various associative laws.
+
+112
+13:17:775 --> 13:25:365
+So if you multiply two scalars, a times B, and then you scalar multiply that by a vector, that's A of B times a vector.
+
+113
+13:25:365 --> 13:29:965
+So here's the first scalar multiplication of vector, here's the second scalar multiplication of vector.
+
+114
+13:29:965 --> 13:35:735
+Then there's distributive laws um that relate these two operations.
+
+115
+13:35:735 --> 13:44:645
+So this is something I think you're familiar with, at least I hope. And and geometrically, one supposed to uh view vector addition, for example, in the plane, which is
+
+116
+13:44:645 --> 13:48:985
+This is an example of a vector space. V is equal to sometimes called R.
+
+117
+13:48:985 --> 13:51:745
+So sorry. So examples of vector spaces.
+
+118
+13:51:745 --> 13:58:405
+The simplest example is zero.
+
+119
+13:58:405 --> 14:02:155
+The vector space consisting of one element, zero.
+
+120
+14:02:155 --> 14:06:945
+You can have right? You can have a group of one element, you can have a vector space with one element.
+
+121
+14:06:945 --> 14:12:475
+It's kind of stupid. Here it is. There's the zero dimensional vector space.
+
+122
+14:12:475 --> 14:18:685
+Then you can have a vector space which is slightly more non-trivial consisting of all real numbers.
+
+123
+14:18:685 --> 14:26:825
+Where you add them, just using the addition law in the real numbers, and you scalar multiply by scalar multiplying real numbers.
+
+124
+14:26:825 --> 14:33:855
+That vector space we frequently denote by the real line like this. Here's the zero vector, here's the one vector, etc.
+
+125
+14:33:855 --> 14:35:325
+And of course,
+
+126
+14:35:325 --> 14:43:885
+you go on and you define more complicated vector spaces, for example, R to the N,
+
+127
+14:43:885 --> 14:48:465
+which is what one usually experiences first in in linear algebra.
+
+128
+14:48:465 --> 14:59:785
+And this vector space of vector consists of N real numbers component wise where the AI are reals.
+
+129
+14:59:785 --> 15:04:325
+And you add them by adding component vectors.
+
+130
+15:04:325 --> 15:19:455
+So V + W where W has the entry B would be a1 + B1, a2 + B2 AM + BN where W is the vector B1 through BN.
+
+131
+15:19:455 --> 15:28:395
+And if you want to multiply by a scalar, you multiply the scalar times each space vector.
+
+132
+15:28:395 --> 15:31:625
+And that satisfies the axioms of a vector space.
+
+133
+15:31:625 --> 15:49:235
+And if I wanted to draw a picture of R2, which one frequently does, the vectors in R2 would be the would have coordinates A1, A2, where this would be A1 in this direction and A2 in this direction.
+
+134
+15:49:235 --> 16:03:345
+And when you add vectors, as you've probably learned, you do it by the parallelogram law. If I can draw it, this would be the vector up here V plus W.
+
+135
+16:03:345 --> 16:08:965
+And when you scalar multiply vectors, you just scale them up and down the line that they're on.
+
+136
+16:08:965 --> 16:17:425
+So it's very good when you're when you're thinking about real vector spaces to have this geometric intuition in mind. That's where they came from. They were formalizing geometric operations.
+
+137
+16:17:425 --> 16:27:325
+Of course, in this vector space, because it's over the real numbers, we have other, we have other um properties beyond just addition and scalar multiplication.
+
+138
+16:27:325 --> 16:30:905
+For example, we have the notion of the length of a vector.
+
+139
+16:30:905 --> 16:42:615
+In RN can define things like inner products, v. W, you can define the length of a vector, things like that.
+
+140
+16:42:615 --> 16:48:965
+This is this is given by the summation of AI BI. It's a funny product operation.
+
+141
+16:48:965 --> 16:55:795
+This is the square root of the sum of the AI squared gives the Euclidean length of a vector.
+
+142
+16:55:795 --> 17:05:825
+So there are many, many things one can do in this vector space that are very useful for calculus, like you want to say when two vectors are close to each other, the length of their difference should be small.
+
+143
+17:05:825 --> 17:15:835
+But you can't do in a general vector space. So, so remember that the dot products and the the absolute value of a vector, that's something we're not doing here. This is just abstract spaces.
+
+144
+17:15:835 --> 17:26:815
+Now, when we do linear algebra, we're going to do the same things for vector spaces, but not necessarily where you can scalar multiply by the real numbers.
+
+145
+17:26:815 --> 17:38:545
+We are going to study now the theory of vector spaces over a field F.
+
+146
+17:38:545 --> 17:43:885
+So before I tell you what a vector space over a field F is, I have to tell you what a field is.
+
+147
+17:43:885 --> 17:48:935
+So a field is going to be something that abstracts what the real numbers are, what the complex numbers are.
+
+148
+17:48:935 --> 18:06:675
+And it's going to be exactly the right setting so that the basic results that we're familiar with in linear algebra, like vector spaces have a dimension, and there is a basis for a vector space that has the number of elements, which is the dimension of a space. All that kind of stuff works.
+
+149
+18:06:675 --> 18:27:925
+So people, once they understood the sort of basic properties of this, they said, well, why do we need our geometric intuition anymore? Maybe we can formulate the right mathematical notion to capture all the notions of dimension and bases and linear independence and span, um, and all the techniques of linear algebra, matrices and solutions of linear equations over an arbitrary field.
+
+150
+18:27:925 --> 18:30:585
+So what do you need to have a field?
+
+151
+18:30:585 --> 18:44:915
+So a field is defined as following. It's on the one hand, it's an Abelian group under addition.
+
+152
+18:44:915 --> 18:58:075
+So it's a set which forms an Abelian group under addition with the identity element zero, with the inverse identity element and inverse is minus A.
+
+153
+18:58:075 --> 19:01:315
+So that's the first condition.
+
+154
+19:01:315 --> 19:18:555
+The second condition, which is that there's always a multiplication law and every so if you take F minus the zero element, which is a distinguished element in this abelian group, and you call that F star,
+
+155
+19:18:555 --> 19:31:745
+So that set forms an Abelian group under multiplication.
+
+156
+19:31:745 --> 19:39:765
+With identity element, the element we call one, that's another distinguished element in the field.
+
+157
+19:39:765 --> 19:47:185
+And inverse element denoted by A inverse or 1/ A.
+
+158
+19:47:185 --> 19:51:215
+So you have to have two Abelian groups to get yourself a field.
+
+159
+19:51:215 --> 20:01:265
+An addition group, which is easy, and then the multiplication group, which has to work for every nonzero element. So, in other words, every nonzero element has an inverse. That's critical.
+
+160
+20:01:265 --> 20:11:695
+has a multiplicative inverse.
+
+161
+20:11:695 --> 20:14:415
+So, for example, the integers,
+
+162
+20:14:415 --> 20:22:945
+which form a very nice abelian group, which have a very nice multiplication law. Everything is good about them, except that you can't invert two.
+
+163
+20:22:945 --> 20:27:525
+Because if you tried to invert two, you'd find the number one half, which is not an integer.
+
+164
+20:27:525 --> 20:38:015
+So, here you have to be able to invert everything. And of course, the addition law and the multiplication law have to be compatible in that there's a distributive law, etc, which you can find
+
+165
+20:38:015 --> 20:39:835
+in the book.
+
+166
+20:39:835 --> 20:49:075
+So, for example, the real numbers form a field because everything non-zero is invertible. Same thing with the complex numbers. The rational numbers form a field.
+
+167
+20:49:075 --> 20:54:655
+set of all quotients, A over B, B not equal to zero. Looks simple, but you have to remember that A over B is equal to
+
+168
+20:54:655 --> 21:02:865
+a prime over B prime if AB prime is equal to B prime. I mean, there are various identifications of rational numbers, like 2/3 is the same as 4/6.
+
+169
+21:02:865 --> 21:08:045
+So, uh, but but everyone has some pretty good idea of what the rational numbers are.
+
+170
+21:08:045 --> 21:14:735
+The integers are not a field.
+
+171
+21:14:735 --> 21:22:235
+Now you can talk about sub fields of a field, that makes a lot of sense.
+
+172
+21:22:235 --> 21:27:195
+So if you have one field and you have a subset of it,
+
+173
+21:27:195 --> 21:52:675
+You'd say it's a subfield if closed under plus and times and closed under inverses in both in both groups.
+
+174
+21:52:675 --> 21:58:485
+So it's a subgroup under addition and the the nonzero elements form a subgroup under multiplication.
+
+175
+21:58:485 --> 22:09:405
+So you might notice that in this case, Q is a subfield of R. It's closed under addition and multiplication. and R is a subfield of the complex numbers.
+
+176
+22:09:405 --> 22:16:835
+And there are a lot of things in between. Believe me there is, not here, but between here and here, there are a lot of interesting fields.
+
+177
+22:16:835 --> 22:33:125
+And you might ask and people started out with the notion of whether these were the only fields? Namely was every field some considered a subfield of the complex numbers? Could we construct anything else that was completely different than the complex numbers or the real numbers?
+
+178
+22:33:125 --> 22:38:975
+Because if if if there were no other interesting fields, we wouldn't have any other interesting theory of vector spaces.
+
+179
+22:38:975 --> 22:41:325
+Okay?
+
+180
+22:41:325 --> 22:46:045
+So, we might try to construct the field by hand.
+
+181
+22:46:045 --> 22:47:985
+Why not?
+
+182
+22:47:985 --> 22:54:775
+Now, as I said, whenever you define an object mathematically, you should look for the simplest possible example.
+
+183
+22:54:775 --> 23:01:875
+Now, the simplest example of a group or a vector space has one element in it. Here it is.
+
+184
+23:01:875 --> 23:04:185
+It's got to have the identity element.
+
+185
+23:04:185 --> 23:18:155
+Now, the simplest element of a the example of a field has to have more than one element because you insist in the definitions that the identity element for addition and the identity element for multiplication are distinct elements.
+
+186
+23:18:155 --> 23:20:695
+In that's part of the definition.
+
+187
+23:20:695 --> 23:22:835
+So there must be at least two elements.
+
+188
+23:22:835 --> 23:31:855
+So any field, no matter how it's constructed, has to contain the identity element for addition and the identity element for multiplication.
+
+189
+23:31:855 --> 23:33:265
+Okay?
+
+190
+23:33:265 --> 23:40:625
+So if we're going to make the stupidest possible field, we should try to make it out of those two elements.
+
+191
+23:40:625 --> 23:43:785
+Can we do it? So, in fact, yes.
+
+192
+23:43:785 --> 23:47:525
+The simplest field
+
+193
+23:47:525 --> 23:55:345
+has two elements. Okay.
+
+194
+23:55:345 --> 24:01:875
+I have to give you the addition law and the multiplication law. Here's the addition law.
+
+195
+24:01:875 --> 24:09:355
+When you add zero to anything, you have to get itself.
+
+196
+24:09:355 --> 24:14:825
+That's part of zero is the identity element for addition, right?
+
+197
+24:14:825 --> 24:19:825
+So 0 + 0 is 0. 0 + 1 is 1. 0 + 1 is 1.
+
+198
+24:19:825 --> 24:22:685
+All I have to tell you is what 1 + 1 is.
+
+199
+24:22:685 --> 24:25:215
+We'll call 1 + 1 0.
+
+200
+24:25:215 --> 24:28:885
+That's my definition of what 1 + 1 is.
+
+201
+24:28:885 --> 24:31:525
+And now I have to give you the multiplication law.
+
+202
+24:31:525 --> 24:41:235
+It turns out that zero times anything in a field, part of a things that Artin will show you is zero.
+
+203
+24:41:235 --> 24:46:335
+And one the identity element times itself has to be the identity element. So multiplication is more or less forced.
+
+204
+24:46:335 --> 24:58:085
+If you take this addition, you get a group under addition. and in fact, this group is the group that I would call the cyclic group of order two.
+
+205
+24:58:085 --> 25:05:485
+And then if you impose this multiplication on it, it turns out to be a field.
+
+206
+25:05:485 --> 25:09:855
+With identity element, the non-trivial element of this group.
+
+207
+25:09:855 --> 25:11:105
+Okay?
+
+208
+25:11:105 --> 25:13:905
+There's there's the first example of a field. Yeah.
+
+209
+25:13:905 --> 25:17:435
+If you were to find 1 + 1 You'd get into trouble with the distributive laws, etc.
+
+210
+25:17:435 --> 25:22:585
+And also you wouldn't get a group because um, yeah, I mean 1 + 1 is 1
+
+211
+25:22:585 --> 25:29:125
+won't do for a group because then there's a unique identity element in a group.
+
+212
+25:29:125 --> 25:45:195
+So, so 1 + 1 equals 1 would imply that one is equal to the additive identity which is equal to zero, which is a contradiction because in the field one was not supposed to be equal to zero.
+
+213
+25:45:195 --> 25:46:455
+Okay?
+
+214
+25:46:455 --> 25:53:465
+So this is forced on us, this is forced on us. Either this works or it doesn't, it turns out to work.
+
+215
+25:53:465 --> 25:57:325
+More generally,
+
+216
+25:57:325 --> 26:09:855
+If P is a prime number, then Z mod PZ
+
+217
+26:09:855 --> 26:34:105
+with the multiplication inherited from Z. In other words, a * B bar times B bar is congruent to a B bar mod P.
+
+218
+26:34:105 --> 26:43:775
+Namely, you represent the classes by integers, you multiply them and you take the remainder after division by P, the way Peter described the multiplication table to you on Z mod NZ.
+
+219
+26:43:775 --> 26:48:775
+is a field.
+
+220
+26:48:775 --> 26:53:875
+So that's a remarkable example. We saw that this was not just an Abelian group, but it had a multiplication on it.
+
+221
+26:53:875 --> 27:03:975
+And the claim is that that multiplication has the property that every nonzero element is invertible.
+
+222
+27:03:975 --> 27:06:225
+However,
+
+223
+27:06:225 --> 27:11:115
+and this is a little warning sign by the way that was invented by Borbaki.
+
+224
+27:11:115 --> 27:28:985
+It means take care. You know, it's like in the game um Milborne where you know, you put out the rule, rule, and you know, and then all at once it's, you know, attention, attention. Attention. Z mod NZ is not a field
+
+225
+27:28:985 --> 27:39:705
+if n is composite.
+
+226
+27:39:705 --> 27:43:885
+So we're not going to get any more fields this way. It's only when n is a prime
+
+227
+27:43:885 --> 27:51:485
+that this Abelian group with its natural multiplication is a field.
+
+228
+27:51:485 --> 27:54:755
+Okay? Now I have to prove it for you.
+
+229
+27:54:755 --> 27:58:785
+This by the way is P equal 2.
+
+230
+27:58:785 --> 28:15:855
+You see, if you think of this product law, this is multiplication of even and odd numbers, right? If you multiply an even number by an even number, you get an even number. An even number by an odd number, you get an even number. An even number by an odd number, you get an even number. And an odd number by an odd number, you get an odd number.
+
+231
+28:15:855 --> 28:18:545
+That's multiplication in Z mod 2.
+
+232
+28:18:545 --> 28:20:745
+Okay? Let's prove this.
+
+233
+28:20:745 --> 28:26:935
+So this is this is non-trivial.
+
+234
+28:26:935 --> 28:30:725
+Okay?
+
+235
+28:30:725 --> 28:33:225
+To prove this,
+
+236
+28:33:225 --> 28:42:755
+we must show that if A is not congruent to zero mod P,
+
+237
+28:42:755 --> 28:52:455
+So that's a non zero element of this Abelian group. That's an element in F star.
+
+238
+28:52:455 --> 29:10:255
+Then there is an integer B such that a * B is congruent to one mod P.
+
+239
+29:10:255 --> 29:17:415
+We showed this. We did? You did it already?
+
+240
+29:17:415 --> 29:21:945
+Oh, it's so shocking. I was going to do this brilliantly with my
+
+241
+29:21:945 --> 29:27:545
+All right, well, I'm going to do it better. I'm going to do it better.
+
+242
+29:27:545 --> 29:32:105
+Maybe you did it this way. Let's see if Peter is a genius as I am.
+
+243
+29:32:105 --> 29:39:685
+You see that would be then then then B then B would be congruent to A inverse mod P.
+
+244
+29:39:685 --> 29:44:065
+There are many ways to slice this this lemon. All right, here we go.
+
+245
+29:44:065 --> 29:46:965
+So the proof goes like this.
+
+246
+29:46:965 --> 29:55:375
+Recall from 30 minutes ago
+
+247
+29:55:375 --> 30:03:135
+that PZ in Z is a maximal subgroup.
+
+248
+30:03:135 --> 30:05:415
+See Peter, maybe he had that.
+
+249
+30:05:415 --> 30:14:515
+But he hadn't done it by the isomorphism theorem, right? Because we showed there were no groups between Z and PZ. All right.
+
+250
+30:14:515 --> 30:27:575
+Now, if A is not congruent to zero mod P, then A is not an element of the subgroup PZ.
+
+251
+30:27:575 --> 30:37:745
+We agree on that? That's our hypothesis. We have a nonzero element mod P, means it's not divisible by P, so it's not in here.
+
+252
+30:37:745 --> 30:38:345
+Hence,
+
+253
+30:38:345 --> 30:54:025
+if we adjoin A to this subgroup, we have to get the entire group Z. PZ + AZ is equal to Z.
+
+254
+30:54:025 --> 31:04:925
+Because this means all integer multiples of P plus all integer multiples of A.
+
+255
+31:04:925 --> 31:24:595
+Because this is a subgroup as this is a subgroup of Z containing PZ, but not equal to PZ because it contains the element A, which is not in PZ.
+
+256
+31:24:595 --> 31:27:865
+So once it's bigger than PZ, has to be the whole thing.
+
+257
+31:27:865 --> 31:30:785
+Agreed? So it's Z.
+
+258
+31:30:785 --> 31:37:755
+So that means if I take any element in Z, I can write it as a multiple of P plus a multiple of A.
+
+259
+31:37:755 --> 31:43:465
+So write the element one as some multiple of P plus some multiple of A.
+
+260
+31:43:465 --> 31:49:885
+Since one is an element in Z,
+
+261
+31:49:885 --> 31:53:785
+I can write it as a multiple of P plus a multiple of A.
+
+262
+31:53:785 --> 31:56:755
+And now look at this identity mod P.
+
+263
+31:56:755 --> 32:04:485
+That says that one is congruent to BA mod P because this is divisible by P.
+
+264
+32:04:485 --> 32:07:665
+And there is my inverse B.
+
+265
+32:07:665 --> 32:10:855
+Similar to what you did, Peter? You did the Euclidean algorithm?
+
+266
+32:10:855 --> 32:13:315
+Okay. It's the same thing.
+
+267
+32:13:315 --> 32:21:755
+It's the same thing, but I got I was a little fancier because I did this business about subgroups of Z containing PZ a little earlier.
+
+268
+32:21:755 --> 32:22:665
+Okay?
+
+269
+32:22:665 --> 32:29:995
+So there's my inverse. It's true for every nonzero element of the set. So there's my field.
+
+270
+32:29:995 --> 32:35:005
+Now, notice that this field is way different than the complex numbers.
+
+271
+32:35:005 --> 32:39:695
+Let's see what's so different about this field and the complex numbers.
+
+272
+32:39:695 --> 32:40:685
+It couldn't be a subfield, for example, of the complex numbers.
+
+273
+32:40:685 --> 32:46:515
+Namely, first of all, has a finite number of elements. It's a field with P elements.
+
+274
+32:46:515 --> 32:47:655
+Okay?
+
+275
+32:47:655 --> 32:50:095
+Now, uh,
+
+276
+32:50:095 --> 33:02:855
+Z mod PZ is not a subfield of C.
+
+277
+33:02:855 --> 33:10:975
+And the reason is very simple. In any field, you have the element one.
+
+278
+33:10:975 --> 33:16:115
+Right? A field has to have a multiplicative identity. one.
+
+279
+33:16:115 --> 33:22:925
+And since you can, you can add one to itself any number of times.
+
+280
+33:22:925 --> 33:31:825
+So you can add it to itself n times. And you get a new element in the field.
+
+281
+33:31:825 --> 33:34:385
+Okay?
+
+282
+33:34:385 --> 33:39:735
+for every integer n.
+
+283
+33:39:735 --> 33:45:835
+Okay. Now, in the complex numbers, when you keep adding one to itself,
+
+284
+33:45:835 --> 33:58:875
+you just keep marching out in the complex plane. Here's one, here's two, here's three, here's four, here's five. You got a bunch of distinct elements.
+
+285
+33:58:875 --> 34:13:445
+Okay? So these are all distinct in subfields of C.
+
+286
+34:13:445 --> 34:21:155
+Because any subfield of C contains the element one, and since and it's closed under addition, so it contains two, and then it contains three, and then it contains four, etc.
+
+287
+34:21:155 --> 34:29:265
+However, in this field, when you take the element one and you add it to itself P times, you get back to the origin.
+
+288
+34:29:265 --> 34:41:995
+because 1 + 1 + 1 + 1 P times is equal to 0 in Z mod PZ.
+
+289
+34:41:995 --> 34:43:665
+That's a huge difference.
+
+290
+34:43:665 --> 34:54:105
+And so you could never put this field inside of this one because one would have to go to one if you had a proper embedding of fields and then two would have to go to two and and in here all those numbers are non zero.
+
+291
+34:54:105 --> 34:58:195
+And here when you do it P times, you get to zero.
+
+292
+34:58:195 --> 35:03:865
+And that's a big um distinction of fields. how many times you have to add one to itself to get zero?
+
+293
+35:03:865 --> 35:11:545
+If you never get zero, uh then you're like the complex numbers. And if uh I should say by the way, that Galois made a
+
+294
+35:11:545 --> 35:20:055
+Gaois, our friend who did group theory, made a big discovery about fields. And in some sense, after
+
+295
+35:20:055 --> 35:27:745
+they understood that this was a field, Gaois asked himself the question,
+
+296
+35:27:745 --> 35:38:275
+what are the finite fields?
+
+297
+35:38:275 --> 35:47:345
+Beyond Z mod PZ. Namely, the finite groups, that's a really interesting question.
+
+298
+35:47:345 --> 35:53:805
+We don't even know the the final answer to that. But finite fields, Gaois realized he could make a list of them.
+
+299
+35:53:805 --> 35:58:645
+Well, you have one for each prime P. So the first thing is you might want to know
+
+300
+35:58:645 --> 36:11:765
+what is the order of F for a finite field?
+
+301
+36:11:765 --> 36:13:765
+Can you have a finite field? Here's a finite field of order
+
+302
+36:13:765 --> 36:19:745
+two and three. Is there a finite field of order four? Is there a finite field of order five? Yes.
+
+303
+36:19:745 --> 36:24:395
+Is there a finite field of order six? We don't know. So what Ga proved is
+
+304
+36:24:395 --> 36:36:545
+the answer to this is P to the N for a prime P and an integer n bigger and equal to one.
+
+305
+36:36:545 --> 36:45:615
+So you don't have a finite field of order six. No matter how hard you try, you can't construct something which has order six and has all the axioms of a field.
+
+306
+36:45:615 --> 36:48:115
+But um, and he also proved
+
+307
+36:48:115 --> 37:01:355
+that for each P and N, there is a unique such field
+
+308
+37:01:355 --> 37:03:505
+up to isomorphism.
+
+309
+37:03:505 --> 37:09:425
+We're going to do that later. That'll be one of the crowning joys of this course. Gaois classification of finite fields.
+
+310
+37:09:425 --> 37:16:075
+So, there this is the only field which has P elements.
+
+311
+37:16:075 --> 37:19:325
+And there's a field which has four elements.
+
+312
+37:19:325 --> 37:21:835
+And there's a field that has eight elements, which we haven't seen yet.
+
+313
+37:21:835 --> 37:23:935
+And there's a field with 16 elements. There's a field with 27 elements.
+
+314
+37:23:935 --> 37:27:515
+There's no field with 28 elements. So that's one thing we're going to get to.
+
+315
+37:27:515 --> 37:34:145
+But at least we have a large supply of finite fields looking at us that we can work with.
+
+316
+37:34:145 --> 37:39:435
+Now, having defined what a field is, I can tell you what a vector space is over a field.
+
+317
+37:39:435 --> 37:50:655
+And that's going to be the setting for the linear algebra we're going to pursue in the next couple of lectures. Okay.
+
+318
+37:50:655 --> 38:02:635
+So a vector space over a field is a set V, a set of vectors with the following properties.
+
+319
+38:02:635 --> 38:16:795
+One, V is an Abelian group under addition with identity element 0 V, just like it was for the real numbers, etc, etc.
+
+320
+38:16:795 --> 38:33:955
+And the second, and here's where the field comes in, there's an operation called the scalar product
+
+321
+38:33:955 --> 38:46:805
+from V cross F into V that takes a vector and a scalar in the field F to the vector
+
+322
+38:46:805 --> 38:53:995
+C times V. And it has to obey various rules with respect to the addition and the associative rule.
+
+323
+38:53:995 --> 39:06:995
+And we have to have that zero times any vector is 0V, where this is the zero element of the field, and one times any vector is V where one is the one element of the field.
+
+324
+39:06:995 --> 39:12:835
+So, uh, and the associative law is usual, AB times a vector is
+
+325
+39:12:835 --> 39:15:745
+A times B of a vector.
+
+326
+39:15:745 --> 39:22:705
+The distributive law, A * V + C, V + W, etc is AV + AW.
+
+327
+39:22:705 --> 39:31:235
+So exactly the laws that we had for vector spaces over the real numbers, but now we allow ourselves to multiply by scalars.
+
+328
+39:31:235 --> 39:37:255
+And I should give you some examples of vector spaces because we already saw some examples of real vector spaces.
+
+329
+39:37:255 --> 39:45:595
+And they work just as well for examples of vector spaces over fields.
+
+330
+39:45:595 --> 39:57:805
+The first example is the zero vector space. Works just as well.
+
+331
+39:57:805 --> 40:02:745
+The second example is the field itself.
+
+332
+40:02:745 --> 40:05:805
+It forms a vector space over the field.
+
+333
+40:05:805 --> 40:07:725
+can multiply by scalars.
+
+334
+40:07:725 --> 40:15:555
+The third example, why not, is uh n tuples of elements in the field.
+
+335
+40:15:555 --> 40:23:395
+So this consists of all tuples A1, an such that the AI are elements in F.
+
+336
+40:23:395 --> 40:28:065
+You add them component wise using the addition law of the field.
+
+337
+40:28:065 --> 40:32:695
+You scalar multiply in each component using the multiplication law in the field.
+
+338
+40:32:695 --> 40:35:735
+All that works fine.
+
+339
+40:35:735 --> 40:46:775
+Those are kind of boring examples of vector spaces, but we're going to see that uh vector spaces all look kind of like that, at least if they have a finite dimensional basis.
+
+340
+40:46:775 --> 40:50:455
+A more interesting example of vector space.
+
+341
+40:50:455 --> 40:55:265
+Here's a here's a one that we're going to study a lot later. I'll denote it like this.
+
+342
+40:55:265 --> 40:57:755
+F brackets X.
+
+343
+40:57:755 --> 41:11:605
+That's the vector space of all polynomials P of X with coefficients in our field F.
+
+344
+41:11:605 --> 41:15:705
+That's a much more interesting vector space.
+
+345
+41:15:705 --> 41:27:935
+You can multiply in that vector space because you can multiply polynomials, but forgetting the multiplication of polynomials, we can certainly add two polynomials and we can certainly multiply a polynomial by a scalar.
+
+346
+41:27:935 --> 41:32:425
+And if we just keep that structure, we get the polynomials.
+
+347
+41:32:425 --> 41:34:505
+Okay?
+
+348
+41:34:505 --> 41:43:105
+Questions on the the definition or the definition of a field or the examples of fields we've got so far?
+
+349
+41:43:105 --> 41:45:705
+This pretty familiar material? Yeah, this is I
+
+350
+41:45:705 --> 41:55:385
+gather a little bit of review, but we have to we have to do this material if we're going to get seriously involved in uh the linear algebra groups later.
+
+351
+41:55:385 --> 41:58:535
+Do I need the other distributive property?
+
+352
+41:58:535 --> 42:01:575
+Do I need the other distributive property? Yes.
+
+353
+42:01:575 --> 42:07:895
+A + B * V is AV Thank you. BV.
+
+354
+42:07:895 --> 42:10:925
+You know, you have Never mind.
+
+355
+42:10:925 --> 42:14:715
+Um, those exercises are pointless.
+
+356
+42:14:715 --> 42:29:195
+Um, this remember that these things are taking place in different things. Namely, here you add the two scalars and then you scalar multiply by V. And here you're scalar multiply by A on this vector, you scalar multiply by V on this vector, and then you add the two vectors.
+
+357
+42:29:195 --> 42:31:885
+each one of these laws. Okay.
+
+358
+42:31:885 --> 42:39:375
+All right. Now, um just as we did for groups, we're going to have all kinds of concepts when we have sub objects, homomorphisms.
+
+359
+42:39:375 --> 42:46:725
+So we say W in V is a vector subspace
+
+360
+42:46:725 --> 42:59:135
+if it's a subgroup under plus contains zero.
+
+361
+42:59:135 --> 43:13:115
+Of course, that means that's what it means to be a subgroup under plus. And uh and is stable under scalar multiplication by F.
+
+362
+43:13:115 --> 43:18:495
+So an example, if we took the vector space
+
+363
+43:18:495 --> 43:30:905
+F, which is F squared and we took W to be the set of all vectors A1, A2 such that uh A1 was equal to uh C2
+
+364
+43:30:905 --> 43:39:935
+where C is in F.
+
+365
+43:39:935 --> 43:43:305
+That would form a space.
+
+366
+43:43:305 --> 43:48:925
+You can check that. Yeah. closed. Yeah, I'm sorry.
+
+367
+43:48:925 --> 43:56:485
+Okay? So you just preserve all the properties and you stay in the subset.
+
+368
+43:56:485 --> 44:02:495
+So for groups, the property was addition and inversion and the identity, you have to have all that.
+
+369
+44:02:495 --> 44:09:975
+And you also have to have this property of stable under multiplication.
+
+370
+44:09:975 --> 44:15:195
+All right. Another thing we had for groups was the notion of a homomorphism. What's the notion of a homomorphism?
+
+371
+44:15:195 --> 44:18:885
+Yes. What's the notion of a homomorphism?
+
+372
+44:18:885 --> 44:24:025
+or a linear transformation in the old
+
+373
+44:24:025 --> 44:27:765
+It's a homomorphism provided,
+
+374
+44:27:765 --> 44:39:075
+First of all, it's a group homomorphism. T of V plus W is T of V plus T of W. Group home.
+
+375
+44:39:075 --> 44:48:765
+takes the additive identity to the additive identity, takes inverses to inverses and it commutes with scalar multiplication.
+
+376
+44:48:765 --> 44:56:425
+where this scalar multiplication takes place in V and this scalar multiplication takes place in W.
+
+377
+44:56:425 --> 44:59:235
+So, just like a group homomorphism.
+
+378
+44:59:235 --> 45:01:465
+Okay?
+
+379
+45:01:465 --> 45:10:585
+If you have a if it's a group if it's a linear transformation which is bijective, we say it's an isomorphism, just like we did for groups.
+
+380
+45:10:585 --> 45:17:865
+homomorphism is equal to an isomorphism.
+
+381
+45:17:865 --> 45:31:005
+Moreover, we find that the kernel of T, which are the subgroup of vectors such that T of V is equal to zero is a space
+
+382
+45:31:005 --> 45:39:595
+of V. That's because if you take T of CV, it's C of T of V.
+
+383
+45:39:595 --> 45:49:885
+And it's we know it's a subgroup because of group theory. But we have to check it's stable under scalar multiplication.
+
+384
+45:49:885 --> 46:01:305
+If you take this, you get C * T of V, which is C times the zero vector, and anything times the zero vector is the zero vector.
+
+385
+46:01:305 --> 46:06:085
+This is the zero vector in W, sorry. Okay?
+
+386
+46:06:085 --> 46:19:485
+So the kernel and the image of T which are all things of the form T of V inside of W is a space of W.
+
+387
+46:19:485 --> 46:30:085
+So once I have a homomorphism that preserves scalar multiplication, it's kernel and its image are spaces. One more thing and I'll take a question. Finally, we might as well keep pushing our group theory.
+
+388
+46:30:085 --> 46:40:535
+Why don't we define uh if I have a space W in V, I can define the quotient space V mod W,
+
+389
+46:40:535 --> 46:52:435
+the set of cosets of W and V, which is an Abelian group, you check that that has a scalar multiplication.
+
+390
+46:52:435 --> 47:01:115
+has the structure of a vector space over F.
+
+391
+47:01:115 --> 47:14:845
+And the natural map, which is a group homomorphism from V to V mod W is a linear transformation with kernel W.
+
+392
+47:14:845 --> 47:24:235
+So all of our notions from group theory, and here you don't even have to worry about normal subgroup because the group involved is an Abelian group. All our notions from group theory go over into the theory of vector spaces.
+
+393
+47:24:235 --> 47:37:355
+Once we assume the additional things that the subgroup is stable under scalar multiplication or that the group homomorphism commutes with scalar multiplication.
+
+394
+47:37:355 --> 47:48:185
+So in some sense by doing vector spaces, you had already done a lot of the theory of Abelian groups, but you had thrown in this extra scalar multiplication that you didn't really need.
+
+395
+47:48:185 --> 47:49:935
+Now we need it. Okay.
+
+396
+47:49:935 --> 47:54:955
+So this is uh I should point out that next time you should read section 3.3
+
+397
+47:54:955 --> 47:59:845
+and the homework. So you should read
+
+398
+47:59:845 --> 50:05:005
+3.3 for Friday. We're going to get into some more serious linear algebra.
+
+399
+50:05:005 --> 50:09:865
+Today it's just definitions. And you're going to do exercises
+
+400
+50:09:865 --> 50:30:125
+3.1.1, 3.1.5, 3.2.1, 3.2.7, 3.2.15.
+
+401
+50:30:125 --> 50:34:965
+And I promise you this will get a lot more interesting once we get along. Yes.
+
+402
+50:34:965 --> 50:37:965
+Let take I'll take the questions. First, this question.
+
+403
+50:37:965 --> 50:42:745
+Oh, always. Yeah yeah yeah. I I'm sorry.
+
+404
+50:42:745 --> 50:54:025
+Thank you. Um, when one does vector spaces, it's always in the context of a fixed field. There's one field fixed once and for all. So in other words, this wouldn't make any sense.
+
+405
+50:54:025 --> 51:00:345
+If if you had scalars on W that were different than scalars on V. So the field is fixed once and for all.
+
+406
+51:00:345 --> 51:04:955
+Complex numbers or Z mod 2 or something like that. But the beautiful thing is
+
+407
+51:04:955 --> 51:10:025
+that much of the theory of vector spaces is independent of what field you're over. That's what we're going to develop in this chapter.
+
+408
+51:10:025 --> 51:14:305
+What can we say if we don't even know what F is? Liz.
+
+409
+51:14:305 --> 51:26:655
+Where is Peter?
+
+410
+51:26:655 --> 51:28:505
+Okay.
+
+411
+51:28:505 --> 51:32:775
+We'll figure out a way to get them back to you.
+
+412
+51:32:775 --> 51:38:275
+Is someone doing office hour if someone doing a section on Thursday?
+
+413
+51:38:275 --> 51:42:765
+Okay, he'll bring them to the section Thursday if you don't get them today.

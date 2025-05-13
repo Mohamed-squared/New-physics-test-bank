@@ -1,7 +1,5 @@
 // --- START OF FILE state.js ---
 
-// --- START OF FILE state.js ---
-
 // --- Core Data & State ---
 export let auth = null;
 export let db = null;
@@ -9,7 +7,7 @@ export let data = null; // Holds the user's specific app data { subjects: { ... 
 export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
 
 // --- MODIFICATION: Import ADMIN_UID at the top level ---
-import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL} from './config.js'; // Added DEFAULT_AI_SYSTEM_PROMPTS
+import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG } from './config.js'; // MODIFIED: Added FALLBACK_EXAM_CONFIG
 import {DEFAULT_AI_SYSTEM_PROMPTS} from './ai_prompts.js'
 
 // --- END MODIFICATION ---
@@ -209,6 +207,7 @@ export function clearUserSession() {
      document.getElementById('course-dashboard-area')?.classList.add('hidden');
 }
 
+// --- START MODIFICATION: Course Exam Defaults ---
 export let courseExamDefaults = null; // Will hold defaults loaded from Firestore
 
 
@@ -216,6 +215,7 @@ export function setCourseExamDefaults(newDefaults) {
     courseExamDefaults = newDefaults;
     console.log("[State] Course Exam Defaults set:", courseExamDefaults);
 }
+// --- END MODIFICATION ---
 
 /** Structure Update Notes for currentUser (added username, isAdmin) */
 /*

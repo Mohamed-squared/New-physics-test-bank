@@ -396,7 +396,6 @@ export function determineTodaysObjective(progressData, courseDef) {
     const today = new Date(); today.setHours(0,0,0,0);
     const dayNumber = daysBetween(enrollmentDate, today) + 1; // Day 1, Day 2...
 
-    // *** MODIFIED: Use combined studied logic ***
     const studiedChaptersSet = new Set(progressData.courseStudiedChapters || []);
     const courseTotalChapters = courseDef?.totalChapters || 1;
     if (progressData.lastSkipExamScore) {
@@ -409,15 +408,15 @@ export function determineTodaysObjective(progressData, courseDef) {
     }
     const totalChaptersStudied = studiedChaptersSet.size;
 
-    // --- Check for mandatory blocking tasks first ---
-
+    // --- START MODIFICATION: Midcourse Exam Logic based on Quarters ---
+    // Check for mandatory blocking tasks first
+    
     // 1. Yesterday's Assignment (if not day 1 and not completed)
     if (dayNumber > 1) {
         const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
         const yesterdayStr = getFormattedDate(yesterday);
         const assignmentNumYesterday = dayNumber - 1;
         const yesterdayAssignmentId = `day${assignmentNumYesterday}`;
-        // Check if assignment exists and score is null/undefined (meaning not completed/submitted)
         if (progressData.assignmentScores?.[yesterdayAssignmentId] === undefined) {
             return `Complete Assignment ${assignmentNumYesterday} (From ${yesterdayStr}).`;
         }
@@ -426,49 +425,60 @@ export function determineTodaysObjective(progressData, courseDef) {
     // 2. Today's Assignment (if not already completed)
     const assignmentNumToday = dayNumber;
     const todayAssignmentId = `day${assignmentNumToday}`;
-    // Check if assignment exists and score is null/undefined
     if (progressData.assignmentScores?.[todayAssignmentId] === undefined) {
-         // Check if we've studied enough chapters (Assignment N is due after Chapter N is studied)
          const lastStudiedChapter = Math.max(0, ...studiedChaptersSet);
-         if (lastStudiedChapter >= assignmentNumToday || assignmentNumToday === 1) { // Assignment 1 is always due
+         if (lastStudiedChapter >= assignmentNumToday || assignmentNumToday === 1) { 
               return `Complete Assignment ${assignmentNumToday}.`;
          }
-         // If not studied enough, fall through to study objective
     }
-
-    // --- Determine Study/Exam Objective ---
-    const targetChapter = determineTargetChapter(progressData, courseDef);
 
     // 3. Midcourse Exams
-    for (let i = 0; i < (courseDef.midcourseChapters || []).length; i++) {
-        const chapterThreshold = courseDef.midcourseChapters[i];
-        const midNum = i + 1; const midId = `mid${midNum}`;
-        const isMidcourseDone = progressData.midcourseExamScores?.[midId] !== undefined;
-        // Due if studied chapter *at or beyond* threshold and exam not done
-        if (totalChaptersStudied >= chapterThreshold && !isMidcourseDone) {
-            return `Complete Midcourse Exam #${midNum}.`;
+    // If a course has N chapters:
+    // Midcourse 1: After floor(N/4) chapters.
+    // Midcourse 2: After floor(N/2) chapters.
+    // Midcourse 3: After floor(3N/4) chapters.
+    // Finals: After N chapters.
+    if (courseDef.totalChapters >= 4) { // Only if course is long enough for quarters
+        const quarterMarkers = [
+            { num: 1, threshold: Math.floor(courseDef.totalChapters / 4) },
+            { num: 2, threshold: Math.floor(courseDef.totalChapters / 2) },
+            { num: 3, threshold: Math.floor(courseDef.totalChapters * 3 / 4) }
+        ];
+
+        for (const marker of quarterMarkers) {
+            if (marker.threshold === 0) continue; // Skip if quarter is 0 (e.g., very short course)
+            // Ensure Midcourse 3 is not too close to the end or equal to totalChapters
+            if (marker.num === 3 && marker.threshold >= courseDef.totalChapters - Math.floor(courseDef.totalChapters / 8)) {
+                continue;
+            }
+
+            const midId = `mid${marker.num}`;
+            const isMidcourseDone = progressData.midcourseExamScores?.[midId] !== undefined;
+            // Due if studied chapter *at or beyond* threshold and exam not done
+            if (totalChaptersStudied >= marker.threshold && !isMidcourseDone) {
+                return `Complete Midcourse Exam #${marker.num}.`;
+            }
         }
     }
+    // --- END MODIFICATION ---
 
     // 4. Final Exams
     if (totalChaptersStudied >= courseDef.totalChapters) {
         const numFinalsDone = (progressData.finalExamScores || []).filter(s => s !== null).length;
         if (numFinalsDone < 3) {
-             const lastFinalIndex = (progressData.finalExamScores || []).length -1; // Index of last score entry (-1 if empty)
-             // Simple alternation: After 0 or 2, take exam. After 1, revise.
-             if (lastFinalIndex === -1 || lastFinalIndex === 1) { // Before 1st, or after 2nd
+             const lastFinalIndex = (progressData.finalExamScores || []).length -1; 
+             if (lastFinalIndex === -1 || lastFinalIndex === 1) { 
                  return `Take Final Exam #${numFinalsDone + 1}.`;
-             } else { // After 1st or 3rd (though 3rd means done)
+             } else { 
                  return `Revision Day - Review Weakest Areas.`;
              }
         } else {
-            // Course should ideally be marked completed here, but handle the state if still 'enrolled'
             return "Course Completed! Review final grade.";
         }
     }
 
     // 5. Weekly Exams (Check if end of week and not done)
-    const weekNumber = Math.floor((dayNumber -1) / 7) + 1; // Week 1 starts day 1
+    const weekNumber = Math.floor((dayNumber -1) / 7) + 1; 
     const isEndOfAWeek = dayNumber % 7 === 0 && dayNumber > 0;
     const weeklyExamId = `week${weekNumber}`;
     const isWeeklyDone = progressData.weeklyExamScores?.[weeklyExamId] !== undefined;
@@ -477,26 +487,23 @@ export function determineTodaysObjective(progressData, courseDef) {
     }
 
     // 6. Study Next Chapter
-    // Find the lowest chapter number >= targetChapter that hasn't been studied
+    const targetChapter = determineTargetChapter(progressData, courseDef);
     let chapterToStudy = targetChapter;
     while (chapterToStudy <= courseDef.totalChapters && studiedChaptersSet.has(chapterToStudy)) {
         chapterToStudy++;
     }
 
     if (chapterToStudy <= courseDef.totalChapters) {
-        // Safely access chapter title
         const chapterTitle = (Array.isArray(courseDef.chapters) && courseDef.chapters.length >= chapterToStudy)
                              ? courseDef.chapters[chapterToStudy - 1]
-                             : `Chapter ${chapterToStudy}`; // Fallback title
+                             : `Chapter ${chapterToStudy}`; 
         return `Study Chapter ${chapterToStudy}: ${chapterTitle || ''}`;
     }
 
-    // Fallback if all chapters studied but finals not started yet (should be caught by final exam logic)
      if (totalChaptersStudied >= courseDef.totalChapters) {
           return "Prepare for Final Exams.";
      }
 
-    // Default fallback if somehow none of the above match
     console.warn("Could not determine specific objective, defaulting to review.");
     return "Continue reviewing or use Extra Practice.";
 }

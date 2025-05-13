@@ -1,0 +1,1867 @@
+1
+00:00:12,328 --> 00:00:18,828
+Reminder, the syllabus is posted on the web in in the course as part of the FAS webpage.
+
+2
+00:00:18,828 --> 00:00:25,388
+Under math 122, the extension school syllabus is posted under E 222.
+
+3
+00:00:25,388 --> 00:00:27,138
+Yeah. So what did they ask for login?
+
+4
+00:00:27,388 --> 00:00:31,698
+Ah, it's I going to give you now it's described on the webpage how you log in.
+
+5
+00:00:31,698 --> 00:00:36,658
+As you as you get for the first two weeks, you log in under guest with no password.
+
+6
+00:00:36,658 --> 00:00:37,568
+Okay.
+
+7
+00:00:37,568 --> 00:00:45,078
+Eventually, we'll get the student IDs in the course and you'll log in as yourself. Initially, guest, password just leave it blank and you get in.
+
+8
+00:00:45,078 --> 00:00:47,508
+So it's essentially an open web page at the moment.
+
+9
+00:00:48,118 --> 00:00:48,758
+Okay?
+
+10
+00:00:49,388 --> 00:00:58,408
+Uh, you'll find the homework posted there, you'll find videos of the lectures posted there, you'll find uh notes from the lecture scanned in there.
+
+11
+00:00:58,668 --> 00:01:00,418
+So a lot of information.
+
+12
+00:01:00,418 --> 00:01:15,388
+And the way you'll find it is it'll open up, you can open up a calendar and in September, you can click on the date of the lecture, and then there are various choices labeled by letters, say H for homework and V for video and
+
+13
+00:01:16,198 --> 00:01:16,578
+right?
+
+14
+00:01:16,768 --> 00:01:18,148
+N for notes.
+
+15
+00:01:18,148 --> 00:01:27,968
+And then you click on those and you see Peter's notes, or you see the video of me lecturing, or you can uh or you can get the homework assignment. We'll also post answers to the homework assignment there.
+
+16
+00:01:27,968 --> 00:01:33,138
+So the webpage should be up and functional. If you're having any problems with the web page, send email to Peter.
+
+17
+00:01:33,398 --> 00:01:38,538
+We're also getting the CAs lined up in the course. We hope to have two CAs lined up for
+
+18
+00:01:38,848 --> 00:01:44,488
+the students taking this course 122 and one CA lined up for E 222.
+
+19
+00:01:44,488 --> 00:01:53,988
+And please fill out, if you will, the section time preference survey on Tuesdays and Thursdays so we can find times to schedule those sections that agree with most of the people in the class.
+
+20
+00:01:54,408 --> 00:01:59,228
+The homework, as I pointed out last time, will be assigned every lecture and due the next lecture.
+
+21
+00:01:59,228 --> 00:02:03,368
+You can hand them in today to Peter and he'll distribute them to get them graded.
+
+22
+00:02:03,628 --> 00:02:13,288
+The homework for the extension course will be due weekly and uh you'll talk to JC Getz who is running the section for uh the extension school.
+
+23
+00:02:13,288 --> 00:02:18,448
+I think I should talk to the camera when I talk to the extension school students because they're all out there in the wild blue Yonder. Yes.
+
+24
+00:02:18,548 --> 00:02:21,258
+Jace. J.
+
+25
+00:02:21,588 --> 00:02:22,918
+J, excuse me.
+
+26
+00:02:23,208 --> 00:02:23,858
+Jace.
+
+27
+00:02:24,268 --> 00:02:26,638
+I'm always pronouncing the last letter of your name. I don't know why.
+
+28
+00:02:26,638 --> 00:02:28,188
+I have a friend named JC.
+
+29
+00:02:28,518 --> 00:02:32,128
+So I I transfer them to you. Jace gets.
+
+30
+00:02:32,128 --> 00:02:33,478
+Thank you. I apologize.
+
+31
+00:02:33,888 --> 00:02:39,258
+Um, we'll introduce all the we'll introduce all the CAs on Friday once we have things finalized.
+
+32
+00:02:39,408 --> 00:02:48,998
+And the homework due next time, since I might as well put it up while we're talking about homework which you can find on the web page is to read sections 2.1 and 2.2
+
+33
+00:02:49,288 --> 00:02:56,038
+in Arton Algebra which is the book.
+
+34
+00:02:56,038 --> 00:02:56,688
+Okay.
+
+35
+00:02:57,338 --> 00:03:15,678
+And the problems are 2.15 0.1.5, 2.1.7, 2.2.1, 2.2.15 and 2.2.20 part A.
+
+36
+00:03:16,898 --> 00:03:17,898
+Homework.
+
+37
+00:03:18,098 --> 00:03:19,928
+So that's what's do on Friday.
+
+38
+00:03:21,018 --> 00:03:23,488
+Okay, so let's get to the lecture now.
+
+39
+00:03:24,818 --> 00:03:29,058
+So last time, I reviewed some concepts from linear algebra.
+
+40
+00:03:29,058 --> 00:03:29,508
+Okay.
+
+41
+00:03:29,918 --> 00:03:50,048
+and defined our first group which was the group I called GLN of R, which is the set of all invertible N by N matrices
+
+42
+00:03:50,318 --> 00:04:00,518
+A with entries AJ in the real numbers.
+
+43
+00:04:01,398 --> 00:04:16,088
+You could also there are other groups you could do. If you didn't want to work with vector spaces over the real numbers, you could you could also define a group GLNC which would be the same thing where the entries of the matrix were complex numbers.
+
+44
+00:04:16,698 --> 00:04:34,598
+Or you could define the group GLN Q This is complex numbers, this is the field of rational numbers. Same thing where the entries are rational numbers.
+
+45
+00:04:34,598 --> 00:04:36,838
+We'll start with the the real numbers.
+
+46
+00:04:37,128 --> 00:04:46,588
+And and at the end, I talked about how this was uh in some sense contained in a rather natural group.
+
+47
+00:04:46,988 --> 00:04:52,868
+And let's remember first of all what a group is. So having defined this, we we showed that it was a group.
+
+48
+00:04:52,868 --> 00:04:57,068
+And a group is by definition
+
+49
+00:04:58,158 --> 00:05:02,078
+Okay.
+
+50
+00:05:02,758 --> 00:05:09,288
+All are groups G and group G is by definition one,
+
+51
+00:05:10,748 --> 00:05:17,528
+a set with a product structure.
+
+52
+00:05:18,008 --> 00:05:29,768
+So by that means, if you have two elements in the set, A and B are in the group, then you get a new element A. B, the product of A and B, which is a new element in the group.
+
+53
+00:05:30,138 --> 00:05:32,188
+So there has to be a product.
+
+54
+00:05:33,058 --> 00:05:41,078
+And the second thing is the product must be associative. That's the most important thing to check.
+
+55
+00:05:41,328 --> 00:05:49,128
+Namely A * B * c has to always equal A * B * c.
+
+56
+00:05:49,718 --> 00:05:51,208
+That's a tricky property.
+
+57
+00:05:51,988 --> 00:06:09,008
+Uh, and Artin shows and you can go over his proof, it's a it's a somewhat meaningless proof by induction, but you should at least see it, that it once you have this associativity, then the product of any n elements in the group is well-defined independent of the order that you take the product.
+
+58
+00:06:09,008 --> 00:06:12,978
+Once you have associativity for three elements, you have it for more than three elements.
+
+59
+00:06:13,708 --> 00:06:19,808
+And the second condition is the existence of an identity, which I'll denote E.
+
+60
+00:06:20,348 --> 00:06:27,808
+which has the property that the product of any element with the identity, the product of the identity element with is A.
+
+61
+00:06:28,118 --> 00:06:35,088
+So every element, no matter how you product it with the identity, gives you itself. And the fourth condition is the existence of inverse.
+
+62
+00:06:35,578 --> 00:06:42,138
+And that means that for every element, there's an inverse, which denoted A inverse in the group,
+
+63
+00:06:42,388 --> 00:06:50,368
+with the property that no matter how you multiply A by A inverse in either order, you get back to the identity.
+
+64
+00:06:51,468 --> 00:06:56,428
+Those are the properties that characterize a group, rather simple properties.
+
+65
+00:06:56,968 --> 00:07:03,648
+Uh, and we saw that the matrices which were invertible formed a group under matrix multiplication.
+
+66
+00:07:04,788 --> 00:07:09,498
+Okay.
+
+67
+00:07:14,208 --> 00:07:29,068
+Sociativity is rather difficult to check from the definition of matrix multiplication, but if you think of matrices as representing linear operators and multiplication being composition of linear operators, I'll leave this up as the homework for next time for those who come late.
+
+68
+00:07:30,338 --> 00:07:35,088
+Uh then it's clear that the composition of three operators is the same, no matter how you compose them.
+
+69
+00:07:35,518 --> 00:07:40,788
+The identity element is the identity matrix with all ones on the diagonal and zeros elsewhere.
+
+70
+00:07:40,788 --> 00:07:47,448
+And the inverse element is the inverse matrix, and that's why we had to assume that we only took invertible matrices here.
+
+71
+00:07:48,098 --> 00:07:58,478
+And I also ended with the prototypical example of a group, even more prototypical than this example, uh, which is the automorphisms of a set.
+
+72
+00:07:59,008 --> 00:08:09,508
+Uh, the the Ur group, I'll call it, Ur being the city in which uh which all started is the um
+
+73
+00:08:11,418 --> 00:08:18,728
+is the symmetries of a set T. This is just an arbitrary set.
+
+74
+00:08:19,168 --> 00:08:22,228
+And the symmetries of a set are all bijections of T.
+
+75
+00:08:23,098 --> 00:08:30,238
+Okay.
+
+76
+00:08:30,868 --> 00:08:34,488
+Bijection meaning a one-to-one onto map of the set to itself.
+
+77
+00:08:34,878 --> 00:08:46,108
+And the group operation is composition. So A. B of an element T is by definition A of B of T.
+
+78
+00:08:46,348 --> 00:08:47,438
+That's how we're going to do it.
+
+79
+00:08:47,438 --> 00:08:52,068
+So first apply B to the set, that gives you a new element in the set, then apply A to that element.
+
+80
+00:08:52,068 --> 00:08:58,268
+That gives you a third element of the set. That's the that's the mapping that A. B does to the set.
+
+81
+00:08:58,428 --> 00:09:03,068
+And you check that the composition of bijections is a bijection.
+
+82
+00:09:03,398 --> 00:09:08,508
+However, it needn't be equal to the composition in the opposite order, as we're going to see.
+
+83
+00:09:09,518 --> 00:09:17,468
+Uh, the identity element is just the the bijection that takes every element in the set to itself.
+
+84
+00:09:18,258 --> 00:09:27,538
+And the inverse element A inverse is defined as the element that takes the element A of T back to the element T.
+
+85
+00:09:27,538 --> 00:09:38,078
+And since every element in the set can be written as A of T uniquely because A was a bijection, this defines a bijection of the set T, and it clearly has the property
+
+86
+00:09:38,418 --> 00:09:41,408
+that when you compose it with A, you get the E.
+
+87
+00:09:41,838 --> 00:09:44,608
+You have to check in the opposite direction, but it also works.
+
+88
+00:09:45,678 --> 00:09:46,058
+Excuse me.
+
+89
+00:09:46,668 --> 00:09:46,938
+Please.
+
+90
+00:09:47,708 --> 00:09:48,888
+You use the term automorphism?
+
+91
+00:09:49,128 --> 00:09:54,508
+Uh, automorphism is the same as bijection. I'm sorry if I used that term, but we might as well get into it.
+
+92
+00:09:54,798 --> 00:09:58,418
+So morphism in mathematics means a map between sets.
+
+93
+00:09:58,858 --> 01:01,798
+An automorphism means a bijective map.
+
+94
+01:02,088 --> 01:15,698
+So sometimes people will refer to this group as the automorphism group of T, all automorphisms of the set T.
+
+95
+01:16,278 --> 01:18,938
+Automorphism is exactly the same word as bijection.
+
+96
+01:20,518 --> 01:22,968
+It's a little bit more Greek. Okay?
+
+97
+01:23,788 --> 01:24,828
+Good.
+
+98
+01:24,828 --> 01:28,248
+Please just stop me. I'm going to sometimes slip into jargon.
+
+99
+01:28,248 --> 01:34,848
+Part of this part of this uh course is so you can speak enough jargon to sound like a mathematician and confuse everyone else.
+
+100
+01:35,278 --> 01:43,638
+One of the things that mathematicians found out when they started talking to theoretical physicists over the last 30 years is that we were doing exactly the same thing but had different words for it.
+
+101
+01:44,078 --> 01:50,528
+So when physicists said things like D brain, mathematicians would say, but that's just a manifold.
+
+102
+01:51,078 --> 01:54,998
+So a lot of it is learning the difference the words that are used to express the same thing.
+
+103
+01:55,738 --> 01:56,358
+Okay?
+
+104
+01:56,788 --> 02:03,248
+So this is this is some sense the or group, almost all groups come in some way from the symmetries of a set.
+
+105
+02:03,248 --> 02:13,818
+For example, this group is contained in the automorphisms or the symmetries, sorry, of the set R to the N.
+
+106
+02:14,478 --> 02:18,938
+Namely, these are certain bijections of the set R to the end.
+
+107
+02:18,938 --> 02:22,158
+They're the bijections that preserve the linear structure.
+
+108
+02:22,798 --> 02:26,078
+Right? That's when you get a matrix, when you have a linear transformation.
+
+109
+02:26,078 --> 02:34,528
+You could have other maps of the real line to itself that weren't necessarily of the form X goes to AX.
+
+110
+02:35,458 --> 02:36,038
+Right?
+
+111
+02:36,898 --> 02:44,128
+You could have for example, the bijection X goes to X cubed. That's a bijection of the real line to itself.
+
+112
+02:44,878 --> 02:55,338
+So, there are more symmetries of Rn that are contained in N by N matrices, but these are certainly a subset of this. And in fact, they're what we call a subgroup.
+
+113
+02:55,688 --> 03:13,238
+So that's another definition to learn. A subgroup H of a group G denoted like that is a subset that is closed under multiplication, contains the identity and contains inverses.
+
+114
+03:13,588 --> 03:29,178
+So it should be closed under it's a subset which is closed under multiplication, contains the identity
+
+115
+03:29,628 --> 03:31,958
+and closed under inverses.
+
+116
+03:32,298 --> 03:37,648
+Namely, if A is in H, A inverse also has to be in H.
+
+117
+03:38,148 --> 03:48,008
+So let's observe that this is a subgroup of this. I have all the bijections of RN, and then they have the ones which are the linear bijections.
+
+118
+03:48,798 --> 03:57,208
+of RN. There were the ones that are represented by n by n invertible matrices.
+
+119
+03:57,488 --> 04:03,558
+Let's see, if I have two linear bijections and I compose them, I get a third linear map.
+
+120
+04:03,858 --> 04:10,678
+That's closed under multiplication because remember, multiplication here is composition of maps.
+
+121
+04:10,978 --> 04:18,238
+Does it contain the identity map that takes every vector to itself? You bet. That's given by the identity matrix. Okay?
+
+122
+04:20,628 --> 04:24,478
+If an element is linear, is its inverse linear?
+
+123
+04:24,478 --> 04:25,038
+Yes.
+
+124
+04:25,848 --> 04:33,508
+Consequently, this subset is closed under multiplication, it contains the identity, it contains inverses, it's a subgroup of this.
+
+125
+04:33,508 --> 04:40,688
+We're going to see all kinds of examples of groups defined as subgroups of the symmetry group of a set by putting more conditions on it.
+
+126
+04:40,688 --> 04:46,088
+It not only takes elements of the set to itself, but it preserves this structure on the set.
+
+127
+04:46,568 --> 04:48,678
+That's the usual way you get a group. Okay?
+
+128
+04:49,578 --> 04:59,608
+And this is the way they appear in mathematics because you whenever you have a mathematical object or in physics, for example, the group theory exploded in physics in the 20th century when
+
+129
+04:59,608 --> 05:05,018
+people started to realize that the forces operating on an object might be radially symmetric.
+
+130
+05:06,378 --> 05:07,998
+See, that's an extra symmetry.
+
+131
+05:07,998 --> 05:13,498
+So you want to exploit the fact that you have a group acting on the set that you're studying.
+
+132
+05:13,918 --> 05:17,548
+So this is this is the way groups really appear, not as not as symbols.
+
+133
+05:17,548 --> 05:25,298
+So, as I ended last time with the with the famous example, which is the way courses on group theory usually start, although Artin
+
+134
+05:25,708 --> 05:38,148
+very wisely identifies these uh these matrix groups as more fundamental and they are, they come up much more in mathematics because linear algebra is is the central subject of mathematics.
+
+135
+05:38,148 --> 05:40,608
+You cannot learn too much linear algebra.
+
+136
+05:40,608 --> 05:44,978
+That's a basic principle for all of you going on in mathematics. Linear algebra is presented as sort of stupid stuff.
+
+137
+05:44,978 --> 05:47,488
+You cannot learn too much linear algebra.
+
+138
+05:48,118 --> 05:59,738
+So here's the here's a nice group called SN, which is the symmetry group of the set 1, 2, 3 N - 1 N. The set, a finite set of N elements.
+
+139
+06:01,078 --> 06:04,658
+sometimes called the permutation group on n letters.
+
+140
+06:04,658 --> 06:06,528
+Okay.
+
+141
+06:11,058 --> 06:16,558
+Because an automorphism of this set just reassigns the reassigns the places in line.
+
+142
+06:17,478 --> 06:27,808
+And we saw that this is a finite group because there are only finitely many permutations of a set of N letters.
+
+143
+06:27,808 --> 06:35,508
+And the order of it, that's the size of the the set underlying the group, N factorial.
+
+144
+06:35,508 --> 06:38,778
+I might write that this way. This is the way Art write that.
+
+145
+06:38,778 --> 06:42,318
+The order of the symmetry group SN is n factorial.
+
+146
+06:42,318 --> 06:46,088
+Because there are n factorial ways to permute n letters.
+
+147
+06:46,278 --> 06:55,668
+Why? Because there are n choices for the letter you take first, and then there are n - 1 choices for the letter you take second, and then there are n - 2 choices for the letter you take third.
+
+148
+06:56,788 --> 06:57,278
+Okay.
+
+149
+06:57,868 --> 07:04,308
+Let's take a look at the symmetric group on a few small letters to get an idea how we would analyze it.
+
+150
+07:04,308 --> 07:06,528
+So the simplest one is S1.
+
+151
+07:07,148 --> 07:12,988
+S1 is a very simple group because the only permutation of a set of one element is the identity.
+
+152
+07:13,808 --> 07:15,368
+So there it's that's a famous group.
+
+153
+07:15,748 --> 07:24,408
+That's the simplest group you can have because any group has to contain an identity element, which happens to be its own inverse and etc, etc, etc.
+
+154
+07:25,328 --> 07:28,038
+So that's an easy group. has one element in it.
+
+155
+07:28,038 --> 07:36,408
+You can't have you can have a set with zero elements, right? The empty set, but you can't have a group with zero elements. Simplest group you have is one element.
+
+156
+07:36,918 --> 07:38,418
+How about S2?
+
+157
+07:38,788 --> 07:46,688
+Well, there's the identity map that takes let's let's denote a let's write our permutation like this. This would be the identity permutation.
+
+158
+07:47,748 --> 07:56,168
+takes one to one and two to two. But there's another element in this group that takes one to two and takes two to one.
+
+159
+07:56,938 --> 07:59,988
+Let's call that permutation Tau.
+
+160
+08:01,508 --> 08:07,218
+Okay, so S2 is a set which has two elements in it, E and Tau.
+
+161
+08:08,298 --> 08:11,448
+Those are the only possible permutations of two letters.
+
+162
+08:11,778 --> 08:14,198
+And we want to know what the multiplication law is.
+
+163
+08:14,528 --> 08:27,498
+Well, if we compose any any permutation with the identity permutation, we get itself. So obviously you have E tau is equal to tau E is equal to E is equal to tau.
+
+164
+08:28,728 --> 08:31,918
+And what about if I compose Tau with Tau?
+
+165
+08:33,338 --> 08:34,348
+It's E.
+
+166
+08:34,858 --> 08:43,548
+If I if I do this twice, so I take one to two, then I take two to one, it goes back to one, and then I take two to one, and I do it again, one goes to two, so two goes to two.
+
+167
+08:44,158 --> 08:52,898
+So, here I have this law. So in other words, Tau in this group is equal to tau inverse because it is the transformation that multiplies by tau to get E.
+
+168
+08:54,258 --> 08:55,798
+So that's a pretty simple group.
+
+169
+08:55,798 --> 09:03,108
+It has two elements in it, the identity and a non- identity element. And the non- identity element when I multiply by itself, I get back to E.
+
+170
+09:03,588 --> 09:12,238
+So the multiplication table, if you really wanted to write this thing out, which I don't recommend ever doing, would look like this.
+
+171
+09:13,828 --> 09:14,368
+Okay.
+
+172
+09:15,208 --> 09:21,018
+Now, that's an example of a group that I called last time, Abelian or commutative.
+
+173
+09:21,318 --> 09:30,908
+So if AB is equal to BA for all pairs, say G is a billion
+
+174
+09:36,118 --> 09:39,058
+or commutative.
+
+175
+09:40,628 --> 09:46,518
+Some people capitalize a billion in honor of Able, some people don't. doesn't make any difference to me.
+
+176
+09:47,908 --> 09:56,238
+So, uh this group is commutative. Commutative group just means that the multiplication table is symmetric across around the diagonal, and this one is.
+
+177
+09:58,018 --> 10:05,028
+Let's take an example which is a little bit more interesting where we go to the permutations of three elements.
+
+178
+10:07,458 --> 10:08,758
+I'm now going to erase the homework.
+
+179
+10:09,398 --> 10:11,598
+In fact, I'm going to erase the definition of a group.
+
+180
+10:12,118 --> 10:12,678
+Okay.
+
+181
+10:34,838 --> 10:35,458
+Okay.
+
+182
+10:35,778 --> 10:38,028
+S3. So, of course, we have the identity element.
+
+183
+10:38,028 --> 10:39,578
+That one we already knew about.
+
+184
+10:40,128 --> 10:52,398
+Now, we have an element like this Tau, namely, we can forget about the fact that we have three elements, leave the third element fixed and just permute the first two.
+
+185
+10:52,398 --> 10:55,078
+like that. Let's call that element Tau. We've already seen that element.
+
+186
+10:56,088 --> 11:02,408
+Now, elements in the symmetric this is by the way called the symmetric group or permutation group on n letters.
+
+187
+11:03,098 --> 11:07,688
+symmetric group on n letters.
+
+188
+11:08,338 --> 11:17,998
+I'm sorry for all these different terminologies for the same thing like automorphisms and symmetries, but um, it's good to at least know what they are.
+
+189
+11:17,998 --> 11:25,178
+People only realized how fundamental a group was at the end of the 19th century and already they had a lot of different language for it. So we at least have to know what the words are.
+
+190
+11:26,778 --> 11:38,228
+Um, if you have this kind of symmetries where you only exchange two elements, well, that was obvious in this case, are called transpositions.
+
+191
+11:38,228 --> 11:40,538
+Okay.
+
+192
+11:50,678 --> 12:03,508
+So, if if you have a a very simple type of of uh permutation is to fix everything but two elements and just exchange those two. Those are called transpositions. They're very important as we'll see later on in the theory of the symmetric group.
+
+193
+12:03,898 --> 12:09,418
+Now, in this case, we have this transposition, but we also have some others. Can someone tell me some other transpositions in the symmetric group on three letters?
+
+194
+12:11,148 --> 12:12,528
+Yeah.
+
+195
+12:12,838 --> 12:18,888
+the one that maps one to one, takes two to three, three to two. Right.
+
+196
+12:19,628 --> 12:26,118
+So there are three different elements we could fix, right? We could fix three, but we could also fix two, we could also fix one.
+
+197
+12:26,458 --> 12:36,078
+So uh there are actually three transpositions. I'll write them down. So we could fix one and switch two and three.
+
+198
+12:36,078 --> 12:50,408
+Let's call that one Tau prime. Or we could exchange one and three and fix two. Those are all three different. I could call that Tau double prime.
+
+199
+12:51,998 --> 12:57,898
+So, so far we've found four different permutations of the set of three elements. We ultimately have to find three factorial, which is six.
+
+200
+12:57,898 --> 13:04,268
+So there have to be two more permutations of three elements. So I'll write you down a new another one that isn't a transposition.
+
+201
+13:04,268 --> 13:18,228
+If it's not a transposition, it can't fix anything because there're only three elements. So once it fixed one element, it would have to either fix them all or or just exchange the other two. We've already written down all of those.
+
+202
+13:20,758 --> 13:29,098
+Well, we can take one to two and two to three and three back to one. Let's call that one sigma.
+
+203
+13:31,708 --> 13:48,998
+Or another possibility, instead of taking one to two, we could take one to three, right? Then we could take two, I guess it would have to go to um to one and three goes to two.
+
+204
+13:49,338 --> 13:51,378
+Let's call that one sigma prime.
+
+205
+13:52,618 --> 14:02,528
+So we have three transpositions, the identity element, and these two elements that don't fix anything, but represent different permutations. So those are the six elements of S3.
+
+206
+14:03,138 --> 14:09,398
+E tau tau prime, tau double prime, sigma sigma prime.
+
+207
+14:11,358 --> 14:13,478
+Now, the fun starts.
+
+208
+14:13,828 --> 14:20,728
+Let's see if we can find let's see what the composition of these things looks like. In particular, let's see if this group is uh commutative.
+
+209
+14:25,308 --> 14:31,448
+So, let us compute Tau sigma and let us then compute sigma Tau.
+
+210
+14:32,238 --> 14:37,498
+Now, how do you compute tau sigma? Well, you have to figure out what it is as a permutation of the set of three elements.
+
+211
+14:37,498 --> 14:41,898
+So the first thing I'd want to know is what does it do to the element one? Okay?
+
+212
+14:43,138 --> 14:44,658
+Well, let's figure that out.
+
+213
+14:44,658 --> 14:52,078
+This says, first now this notation means, first apply sigma to one and then apply Tau to what sigma takes one two.
+
+214
+14:52,588 --> 14:56,208
+So this becomes Tau of sigma of one.
+
+215
+14:56,658 --> 15:00,488
+Sigma of one is by definition two.
+
+216
+15:00,488 --> 15:01,088
+Right?
+
+217
+15:02,218 --> 15:11,528
+And Tau of two is one. So this becomes Tau of two which becomes one.
+
+218
+15:12,248 --> 15:16,868
+So this permutation, whatever it does, it fixes one.
+
+219
+15:17,928 --> 15:19,858
+It fixes the element one.
+
+220
+15:19,858 --> 15:21,788
+Now I can tell you right away what it is.
+
+221
+15:22,258 --> 15:27,478
+There are only two of these six permutations that fix the element one. What are they?
+
+222
+15:28,168 --> 15:29,358
+E and tau prime.
+
+223
+15:30,138 --> 15:32,018
+It could be E.
+
+224
+15:33,578 --> 15:42,708
+So Tau sigma is either E or Tau prime.
+
+225
+15:43,978 --> 15:54,048
+Now, I claim that it isn't E. Then I can tell you right away without even thinking about it, by pure thought, that it isn't E, without computing what it does to two.
+
+226
+15:54,488 --> 15:57,708
+Now, I could check by just seeing what it did to two.
+
+227
+15:58,078 --> 16:01,718
+Let's do that. That's the that's the computational approach.
+
+228
+16:01,718 --> 16:04,878
+Proof. Tau sigma of two.
+
+229
+16:05,208 --> 16:14,048
+Well, we first compute sigma of 2, that's three, it's tau of three. and tau of three happens to be three.
+
+230
+16:14,048 --> 16:14,758
+Okay?
+
+231
+16:16,188 --> 16:22,448
+So, it's beginning to look much more like tau prime, because it fixed one and it took two to three.
+
+232
+16:22,448 --> 16:26,558
+Now that says it has to take three to whatever whatever's left because it's a bijection.
+
+233
+16:26,938 --> 16:31,908
+So that that immediately implies that tau sigma is equal to tau prime.
+
+234
+16:32,638 --> 16:33,138
+Okay?
+
+235
+16:34,158 --> 16:37,688
+That's the that's our multiplication table. We're starting to work out. But...
+
+236
+16:37,988 --> 16:42,428
+if I wanted to do it by pure thought, without ever computing what it did to two.
+
+237
+16:42,428 --> 16:49,198
+How do you think I could eliminate the fact that Tau sigma could not be equal to E, given the fact that this is a group? Yeah, go ahead.
+
+238
+16:49,908 --> 16:51,988
+Because sigma is not the inverse of tau. Ah!
+
+239
+16:52,598 --> 16:55,948
+They're clearly not inverses of each other.
+
+240
+16:55,948 --> 16:57,448
+What is the inverse to Tau?
+
+241
+16:58,218 --> 16:58,968
+Tau. Tau.
+
+242
+16:59,498 --> 17:00,658
+That's all you have to say.
+
+243
+17:00,968 --> 17:07,278
+Inverses are unique. The only possible thing that when you multiply by tau, you get back to the identity is tau.
+
+244
+17:07,818 --> 17:10,658
+Sigma doesn't look like Tau.
+
+245
+17:11,408 --> 17:24,268
+So, but you could also argue very good that the inverse of Tau is equal to Tau.
+
+246
+17:24,268 --> 17:26,148
+By the way, what's the inverse of Sigma?
+
+247
+17:27,188 --> 17:31,298
+Can anyone tell me what the inverse of Sigma is? Sigma prime. Ah, very good.
+
+248
+17:32,248 --> 17:46,798
+Sigma inverse is equal to sigma prime. If you look at it, if you want to get this back to where you started, you have to take two to one, you have to take one to three, and you have to take three to two. That's what sigma prime is.
+
+249
+17:47,888 --> 17:54,638
+So, with these six elements, this is just the fun, you know, now you can start taking products and inverses, but in any case,
+
+250
+17:54,998 --> 17:58,758
+we've computed that Tau Sigma is Tau prime.
+
+251
+17:59,428 --> 18:02,348
+We've got that. Let's now compute what sigma Tau is.
+
+252
+18:02,998 --> 18:06,148
+Well we'll compute sigma Tau by computing it on one.
+
+253
+18:07,668 --> 18:10,498
+Okay, we start off by tau of 1 is two.
+
+254
+18:10,768 --> 18:12,548
+So this is sigma of two.
+
+255
+18:13,858 --> 18:16,818
+And sigma of two is three.
+
+256
+18:17,418 --> 18:20,828
+So sigma Tau of one is three.
+
+257
+18:21,768 --> 18:22,518
+Interesting.
+
+258
+18:22,938 --> 18:32,468
+So there are two possibilities for it. It could be it could be tau double prime, or it could be sigma prime.
+
+259
+18:32,948 --> 18:34,688
+We're again down to two possibilities.
+
+260
+18:35,348 --> 18:41,458
+Well, let's compute sigma tau of two just to just to to kill the suspense of it all.
+
+261
+18:41,458 --> 18:46,848
+Tau of 2 is one, so this becomes sigma of one. Sigma of one is two.
+
+262
+18:47,298 --> 18:53,568
+So, it fixes two and therefore it's equal to tau double prime, right?
+
+263
+18:54,078 --> 18:57,728
+So therefore sigma Tau is equal to Tau double prime.
+
+264
+18:58,588 --> 19:02,578
+Here, fixes two, takes one to three. Okay?
+
+265
+19:03,758 --> 19:07,618
+And therefore, sigma Tau is not equal to Tau sigma.
+
+266
+19:07,618 --> 19:09,138
+Okay.
+
+267
+19:12,028 --> 19:19,138
+So already in this incredibly simple permutation group on three elements, it's non-abelian.
+
+268
+19:19,758 --> 19:20,408
+Okay?
+
+269
+19:21,148 --> 19:26,278
+Corry, let's let's push our luck. Corry,
+
+270
+19:27,208 --> 19:41,618
+the group SN, the symmetric group on n letters is non-abelian for all N larger than or equal to three.
+
+271
+19:42,428 --> 19:47,048
+So once we permute more than three elements, we have a non-abelian group.
+
+272
+19:47,698 --> 19:53,738
+Well, what are we going to do? Are we going to write down all the n factorial things and find two things that don't commute? Let's think for a second.
+
+273
+19:54,838 --> 19:56,218
+Let's think for a second.
+
+274
+19:57,528 --> 19:58,908
+Did you want to say something?
+
+275
+19:59,728 --> 20:06,518
+How can we exhibit, how can we prove this corollary just from this stupid computation? Go ahead.
+
+276
+20:07,718 --> 20:10,608
+Fix all the elements after three. Bravo! Excellent! Proof.
+
+277
+20:13,048 --> 20:28,738
+S3 is a subgroup of SN fixing the the letters 4, 5, 6 up to N.
+
+278
+20:28,738 --> 20:44,238
+Namely, if I take inside of the permutation group, the subset of permutations that fix all the letters after three, then that is the permutation group on three letters because all I have left is to arrange how I permute the first three letters around.
+
+279
+20:45,278 --> 20:47,478
+Right? And that's a subgroup of SN.
+
+280
+20:47,478 --> 20:52,788
+Because if I compose two permutations that fix all this letters, they still fix it.
+
+281
+20:52,988 --> 20:58,068
+If I take the inverse of something that fixes these letters, it still fixes it, and the identity element fixes them.
+
+282
+20:58,408 --> 20:59,898
+So this is a subgroup.
+
+283
+21:00,508 --> 21:04,478
+Once N is bigger than or equal to three, S3 is a subgroup of SN.
+
+284
+21:04,798 --> 21:11,038
+I have two elements in S3 that don't commute, namely Sigma and Tau, and those give me elements in SN that don't commute.
+
+285
+21:11,038 --> 21:19,938
+Namely, just take these poor permutations Sigma and Tau and extend them to permutations of the whole set that fix 4, 5, 6, 7, 8, 9, 10 up to n.
+
+286
+21:20,858 --> 21:23,898
+Okay? So you already see that subgroups are very good.
+
+287
+21:23,898 --> 21:27,978
+If you can find a subgroup of a group that's non-abelian, the group is non-abelian.
+
+288
+21:27,978 --> 21:31,268
+Because all you have to do is find two elements in the group that don't commute.
+
+289
+21:31,688 --> 21:35,508
+And if you can find two elements in the subgroup that don't commute, they certainly don't commute in the group.
+
+290
+21:36,378 --> 21:40,688
+Because their products are different elements of the subgroup, so they're different elements in the group.
+
+291
+21:41,778 --> 21:42,438
+Okay?
+
+292
+21:43,998 --> 21:44,978
+Excuse me.
+
+293
+21:45,138 --> 21:45,408
+Please.
+
+294
+21:46,098 --> 21:51,048
+Sorry, I think I sort of missed something a second ago when you were talking about the secondary way to see that
+
+295
+21:51,408 --> 21:56,148
+How to argue that sigma Tau Tau Sigma is not equal to the identity?
+
+296
+21:56,518 --> 22:06,948
+Okay, if it were equal to the identity, then sigma would be an inverse to Tau, because the inverse is the unique element in the group that the product hits the identity.
+
+297
+22:07,338 --> 22:12,718
+If it were the identity, that would say sigma is tau inverse. But looking at them, they're not inverses of each other.
+
+298
+22:13,078 --> 22:15,638
+Because the inverse to a transposition is itself.
+
+299
+22:16,018 --> 22:19,368
+If you have a transposition, then you find Tau is equal to Tau inverse.
+
+300
+22:20,158 --> 22:22,978
+For all transpositions, you have that property.
+
+301
+22:23,338 --> 22:28,218
+Whereas here, we didn't find sigma is equal to sigma inverse. Its inverse was sigma prime.
+
+302
+22:29,408 --> 22:32,268
+Okay? I'll do one more example of a subgroup for you.
+
+303
+22:33,008 --> 22:40,858
+So here we saw we got a subgroup by asking that it permuted something, but it fixed something inside of that set.
+
+304
+22:41,138 --> 22:43,288
+That's a very good way of getting subgroups.
+
+305
+22:43,538 --> 22:58,428
+For example, I claim that for any K less than or equal to n, SK is a subgroup of SN.
+
+306
+22:58,748 --> 23:02,668
+Same argument. It fixes all the letters past K.
+
+307
+23:03,278 --> 23:14,538
+permutations fixing K + 1, K + 2 up to n.
+
+308
+23:15,478 --> 23:16,178
+Okay?
+
+309
+23:16,658 --> 23:24,828
+So you very frequently get subgroups by insisting that they fix something, and then when you compose two symmetries that fix something, it fixes something, etc.
+
+310
+23:25,168 --> 23:26,928
+Let's do that inside of GLN.
+
+311
+23:27,198 --> 23:39,588
+So what is the subgroup of GL2R which fixes the line, if I if I view GL2R is acting on R2,
+
+312
+23:40,438 --> 23:53,118
+what about the subgroup of linear transformations that fix this line? So the line uh where Y equals 0.
+
+313
+23:58,118 --> 23:59,128
+Okay.
+
+314
+24:00,678 --> 24:03,018
+What is the subgroup that fixes that line?
+
+315
+24:03,438 --> 24:05,238
+Well, let's think about it in matrix form.
+
+316
+24:07,018 --> 24:18,538
+Now, you can see right away that that has to be a subgroup, regardless of what the matrices in it look like, because these are linear maps of R2 to itself, which are bijections.
+
+317
+24:18,878 --> 24:23,948
+If they fix this line and you compose two bijections fixing this line, it fixes the line.
+
+318
+24:24,148 --> 24:33,658
+Fixing the line means, by the way, just keeping the line on itself. It it might move a vector here to a vector here or something, but it but at least it stabilizes the line.
+
+319
+24:34,438 --> 24:40,348
+Maybe I should use that expression so that we don't get we don't think it fixes every vector on the line.
+
+320
+24:40,348 --> 24:41,788
+stabilizing.
+
+321
+24:42,208 --> 24:46,888
+That's clearly a subgroup because composition of two things that stabilize this line, stabilizes the line.
+
+322
+24:47,138 --> 24:52,238
+If a map stabilizes this line, so does its inverse. The identity certainly stabilizes this line.
+
+323
+24:53,238 --> 24:56,788
+Okay? So there is some subgroup. What does it look like matricially?
+
+324
+24:57,658 --> 24:58,218
+Okay?
+
+325
+24:58,488 --> 25:07,748
+So if you have a matrix ABCD, which is invertible, what does it mean that it fixes the first basis vector?
+
+326
+25:07,748 --> 25:11,838
+It means that the entry B in the matrix is zero.
+
+327
+25:12,698 --> 25:13,328
+Right?
+
+328
+25:13,598 --> 25:22,118
+Because this column represents the transformation on the first basis vector, and this column represents the transformation on the second basis vector.
+
+329
+25:22,428 --> 25:29,368
+And to say that the linear transformation fixes this line says it takes the first basis vector into some multiple of the first basis vector.
+
+330
+25:30,228 --> 25:37,978
+Right? So the coefficient of the second basis vector in the matrix would be zero by the way we represent linear transformations by matrices.
+
+331
+25:38,608 --> 25:43,858
+So a matrix will fix this line if and only if the B entry is zero.
+
+332
+25:44,278 --> 25:52,738
+And then we want it to be invertible, so that just means that it's determinant is non zero. So AD is not equal to zero.
+
+333
+25:53,478 --> 25:57,988
+That's the subgroup of 2x2 matrices that fix the line.
+
+334
+25:58,318 --> 26:03,388
+And then we better check that it's closed under multiplication, huh? I mean, we might have gotten it wrong.
+
+335
+26:03,728 --> 26:13,918
+So we better check that if we multiply two matrices that look like this, we get another matrix that looks like this.
+
+336
+26:14,668 --> 26:16,258
+Well, do you believe it?
+
+337
+26:16,908 --> 26:26,148
+We just have to check that this bottom entry is zero. So there's only one thing to check. So we have to go across this row and down this column and verify that the product is zero.
+
+338
+26:26,148 --> 26:34,078
+And you get 0 * a prime plus d * 0. So the entry here is zero. It's sort of irrelevant what goes up here.
+
+339
+26:34,328 --> 26:37,068
+So that shows that those matrices are closed under product.
+
+340
+26:37,348 --> 26:37,608
+Yes.
+
+341
+26:38,128 --> 26:42,098
+Wouldn't you have to check that the other corners are non-zero either? Very good point.
+
+342
+26:42,098 --> 26:49,138
+But we know that because the product of two matrices with non-zero determinant have non-zero determinant.
+
+343
+26:49,138 --> 26:52,648
+That's already the fact that it's a subset of GL2.
+
+344
+26:53,208 --> 26:58,338
+This condition will be But you're you're absolutely right. In fact, why don't we check and see what the corners are just to just to verify that for ourselves.
+
+345
+26:58,768 --> 27:03,488
+So this corner is A a prime.
+
+346
+27:04,548 --> 27:07,188
+And this corner happens to be D D prime.
+
+347
+27:07,928 --> 27:17,958
+And this thing is much more complicated. And certainly, if A * D and A prime * D prime are non zero, so is A A prime * D D prime. But good question.
+
+348
+27:18,828 --> 27:20,088
+Okay? Good question.
+
+349
+27:21,698 --> 27:23,268
+All set with this?
+
+350
+27:23,678 --> 27:27,428
+So start to recognize subgroups. That's a that's a really big point. Now,
+
+351
+27:27,638 --> 27:34,538
+Artin has a very nice exercise where he shows you what the subgroups are of the additive group of the integers. Let's do that.
+
+352
+27:35,028 --> 27:42,388
+Sometimes it's possible in a group, very rarely, but sometimes it's possible to identify all the subgroups.
+
+353
+27:42,388 --> 27:43,168
+Okay?
+
+354
+27:44,418 --> 27:47,328
+So here's a proposition I'll prove for you.
+
+355
+27:47,328 --> 27:48,288
+Proposition.
+
+356
+27:49,108 --> 28:19,978
+The collection the subgroups of the integers under addition, that's an abelian group, are precisely given by BZ all multiples of a fixed integer under addition.
+
+357
+28:20,798 --> 28:21,658
+or multiple
+
+358
+28:28,058 --> 28:28,428
+Okay.
+
+359
+28:29,548 --> 28:35,478
+So uh all even integers or all integers divisible by three or all integers divisible by five.
+
+360
+28:36,078 --> 28:39,578
+So we're going to check that that forms a subgroup and then we're going to prove that every subgroup has that form.
+
+361
+28:40,008 --> 28:49,408
+By the way, I should have said in the definition of a subgroup, a mathematician gives you a definition, he should always follow it by the trivial examples.
+
+362
+28:49,948 --> 28:50,938
+Right? Sometimes they're no more examples.
+
+363
+28:51,958 --> 28:54,218
+Then it was a stupid definition.
+
+364
+28:55,028 --> 28:59,608
+So, who can give me two completely trivial subgroups of any group? Yeah.
+
+365
+29:00,638 --> 29:03,048
+the identity group and the entire group. Perfect.
+
+366
+29:03,538 --> 29:13,088
+So anytime you have a group, it forms a subgroup of itself. You didn't really need the notation to tell you that, but it's certainly closed under addition, identity, etc. And that's the biggest subgroup you can have.
+
+367
+29:15,678 --> 29:24,058
+And the smallest subgroup you can have is when you have just the identity element, because it must contain the identity element. And then the subgroup is like the group with one element.
+
+368
+29:24,428 --> 29:25,808
+Closed under Okay?
+
+369
+29:26,088 --> 29:27,428
+So you always have those two subgroups.
+
+370
+29:27,758 --> 29:33,578
+Now, where are those two subgroups here? Which subgroup here is the identity element and which subgroup is the full group?
+
+371
+29:34,748 --> 29:36,968
+Yeah, let's follow up. Go ahead. B equals zero. Good.
+
+372
+29:38,348 --> 29:49,568
+B equals 0 gives the group zero under addition, which is just the the one element group.
+
+373
+29:50,168 --> 29:55,488
+And B equal 1 gives h equal G.
+
+374
+29:55,488 --> 30:05,528
+Because if you just take multiples of one. But the others are non-trivial subgroups, even integers, integers divisible by three, integers divisible by 17, integers divisible by 21. Okay, proof.
+
+375
+30:07,308 --> 30:07,618
+Okay.
+
+376
+30:08,478 --> 30:14,008
+First, these are all subgroups.
+
+377
+30:16,668 --> 30:19,828
+That's more or less clear.
+
+378
+30:19,828 --> 30:29,548
+If you add two integers divisible by B, that's just things like this. B M + Bn is equal to B * M + n.
+
+379
+30:30,508 --> 30:36,018
+Right? The negative of BM is B * minus M.
+
+380
+30:36,458 --> 30:40,308
+And 0 is equal to 0 * is equal to B * 0.
+
+381
+30:41,048 --> 30:49,208
+So that shows that the zero element is in the group. This shows that we have inverses in the group, and this shows that the group is closed under addition.
+
+382
+30:49,208 --> 30:50,018
+Okay?
+
+383
+30:50,708 --> 30:57,598
+So anything, all integers divisible by something give a subgroup of all integers under addition.
+
+384
+30:57,888 --> 31:01,438
+We just have to show that these are the only possible subgroups.
+
+385
+31:01,438 --> 31:02,008
+Okay?
+
+386
+31:02,698 --> 31:13,128
+So, to show that these exhaust the subgroups, we're going to use a trick that goes back to book five and Euclid.
+
+387
+31:13,468 --> 31:26,008
+So we to show these exhaust the subgroups exhaust the subgroups, let
+
+388
+31:27,098 --> 31:41,258
+H be a subgroup of Z and let let B be equal to the smallest integer. Well, there are two cases.
+
+389
+31:43,078 --> 31:45,438
+Case 1. H is equal to 0.
+
+390
+31:45,438 --> 31:46,578
+Okay.
+
+391
+31:47,138 --> 31:51,238
+So it's the zero subgroup. Well, that's one of these cases.
+
+392
+31:51,238 --> 31:55,968
+with B equals 0. So that's okay.
+
+393
+31:56,898 --> 32:04,658
+Case two, H is not equal to the zero group. So it contains something other than the identity in it.
+
+394
+32:05,388 --> 32:10,108
+Now, by taking inverses, we see that it has to contain something positive in it.
+
+395
+32:10,638 --> 32:16,068
+So contains an M not equal to zero.
+
+396
+32:16,788 --> 32:29,218
+Taking M or minus M in H, we see it contains some integer M which is strictly greater than zero.
+
+397
+32:31,058 --> 32:32,348
+strictly greater than zero.
+
+398
+32:33,898 --> 32:42,368
+Because it's closed under inverses. So if if you found it contain minus 3, it would also have to contain three.
+
+399
+32:43,498 --> 32:44,208
+Okay?
+
+400
+32:44,828 --> 32:58,398
+And then the trick of the Euclidean algorithm is to let B be the smallest possible integer, B greater than zero, B the smallest positive integer contained in H.
+
+401
+32:59,428 --> 33:00,338
+Okay.
+
+402
+33:02,078 --> 33:06,598
+Okay? So since it contains positive integers, it contains a smallest one.
+
+403
+33:12,008 --> 33:13,128
+Okay?
+
+404
+33:14,008 --> 33:20,638
+Then the first observation is then H contains all multiples of B.
+
+405
+33:21,548 --> 33:31,598
+Because once it has B in it, it has B + B, which is 2B, and then it has B + B + B, which is 3B, right? And then it has minus B, which is the inverse of B, then it has minus 2B, which is the inverse of 2B.
+
+406
+33:31,598 --> 33:35,358
+Everyone agree to that? So once we find the smallest positive integer in it,
+
+407
+33:35,948 --> 33:51,658
+it has to contain all multiples of this by closure under addition and inversion.
+
+408
+33:52,608 --> 33:55,318
+Okay? Now suppose there was something else in H.
+
+409
+33:55,788 --> 34:00,928
+Suppose H is in H.
+
+410
+34:01,938 --> 34:12,818
+And write h as some multiple of B plus a remainder term with 0 less than or equal to R less than B.
+
+411
+34:13,548 --> 34:16,158
+We can do that by the Euclidean algorithm.
+
+412
+34:16,438 --> 34:23,178
+You can always subtract off some multiple of B from your integer that's in the group that makes the remainder less than B.
+
+413
+34:23,178 --> 34:46,958
+If you think of the elements in the group on the real line, here's zero, here's our smallest element B, which is in H. Here's some other element H, which is in H. We just go marching off here in multiples of B until H is squeezed between two multiples of B, which means that if we subtract that multiple of B from H, the remainder is less than B.
+
+414
+34:47,548 --> 34:48,188
+Okay?
+
+415
+34:48,948 --> 34:52,038
+Now, I claim that R is equal to zero.
+
+416
+34:52,908 --> 34:53,498
+Why?
+
+417
+34:56,458 --> 35:02,688
+Which will show that H is actually a multiple of B, so that this exhausts the subgroup.
+
+418
+35:03,328 --> 35:09,168
+And the proof is, if not, why? Because
+
+419
+35:10,748 --> 35:14,908
+R is actually an element in H.
+
+420
+35:15,788 --> 35:16,618
+Why?
+
+421
+35:16,918 --> 35:31,278
+B is an H, so the multiple of B is an H. H is an H. So if I take H and I add to it the inverse of this, I get something in H. H + minus MB is in H.
+
+422
+35:31,548 --> 35:34,118
+by the fact that H is closed under inversion and addition.
+
+423
+35:34,508 --> 35:37,838
+But H + - MB is R.
+
+424
+35:38,478 --> 35:41,678
+R was assumed to be a positive number less than B.
+
+425
+35:42,618 --> 35:46,178
+B was assumed to be the smallest positive number in H.
+
+426
+35:46,508 --> 35:50,328
+So the only way this can be the case is if the remainder is zero.
+
+427
+35:51,328 --> 35:59,688
+So R is equal to zero, which says that everything in H is a multiple of B. Okay?
+
+428
+36:00,498 --> 36:09,658
+So this is a nice application of the Euclidean algorithm, which is used to prove the existence of greatest common divisors and unique prime factorization in Euclid.
+
+429
+36:09,658 --> 36:18,848
+But it also establishes, Artin shows you is a slightly more sophisticated algebraic fact that it allows you to identify all subgroups of Z with the multiples of a fixed number.
+
+430
+36:19,138 --> 36:21,938
+And any multiple of a fixed number gives you a subgroup.
+
+431
+36:22,748 --> 36:23,478
+Good?
+
+432
+36:24,058 --> 36:28,588
+So there are an infinite number of subgroups of Z, and uh there they are.
+
+433
+36:29,238 --> 36:34,558
+Let me just end with one more definition, and then Peter will pick up with this on Friday.
+
+434
+36:34,888 --> 36:40,448
+So you get to see him lecture before you commit yourself irrevocably to this course.
+
+435
+36:41,218 --> 36:41,908
+Okay.
+
+436
+36:42,638 --> 36:43,328
+Okay.
+
+437
+36:48,238 --> 36:59,488
+So, I want to talk about a certain type of subgroup that you get. So if you have any group G, any group, and you have an element G and G,
+
+438
+37:00,398 --> 37:16,898
+there's a natural subgroup that I'll denote by H, which I'll write like this, which is sometimes called the cyclic subgroup generated by Z uh G
+
+439
+37:17,348 --> 37:24,548
+which is consists of all products of G with itself. It's the smallest subgroup that could contain this element.
+
+440
+37:25,478 --> 37:26,058
+Okay?
+
+441
+37:26,618 --> 37:47,518
+So it consists of things like E g, since it has g in it, it has to have g inverse in it, then it has to have g squared in it, then it has to have g the minus 2. So it consists of all powers of g.
+
+442
+37:48,158 --> 37:50,828
+Okay.
+
+443
+37:52,338 --> 37:56,058
+where the zeroth power is defined to be the identity.
+
+444
+37:56,058 --> 38:08,328
+Because if you if you have the element G in it, you certainly have to have all powers of G in it. If it's closed under multiplication and inversion. Moreover, once you get all powers of G in it, then um
+
+445
+38:09,318 --> 38:18,708
+it's certainly closed under multiplication. You multiply two powers of G, you get another. I mean, the power law works in a group just like it does in normal arithmetic.
+
+446
+38:18,988 --> 38:27,758
+Because this just means the product of G with itself M times, and this means the product of G with itself n times. So when you take the whole product, you have the product of G with itself m plus n times.
+
+447
+38:28,188 --> 38:34,068
+The inverse of G to the M is G to the minus M. And that's contained in here.
+
+448
+38:35,128 --> 38:42,288
+Okay? So this is certainly closed under addition and an inversion contains the identity element. So there it is. There's the cyclic subgroup.
+
+449
+38:42,288 --> 38:48,098
+However, and this is a big caveat, don't necessarily think that those powers are distinct.
+
+450
+38:48,778 --> 38:54,488
+And there could be a point where you take the power and you get back to the identity element.
+
+451
+38:54,798 --> 39:03,038
+We saw that in the symmetric group. In the in S3, we had this element Tau with the property that Tau squared was the identity element.
+
+452
+39:03,718 --> 39:11,168
+So if we took the cyclic subgroup generated by Tau in S3, it would just be the group E Tau.
+
+453
+39:11,898 --> 39:14,928
+It would be that subgroup of order two.
+
+454
+39:15,938 --> 39:22,728
+So that's a big question, namely, what do you get to a power of G where it becomes the identity element or not?
+
+455
+39:23,118 --> 39:46,788
+So if G to the M is equal to the identity and M is the smallest power, smallest positive such power, we say M is the order of G in G.
+
+456
+39:47,758 --> 40:04,648
+And if if no power g to the M equals the identity smallest positive such power for M greater than zero, we say g has infinite order.
+
+457
+40:05,888 --> 40:08,948
+Okay. So the elements in Z...
+
+458
+40:10,478 --> 40:16,988
+all have infinite order except for zero which has order one. Once you get to a positive integer,
+
+459
+40:17,478 --> 40:24,278
+no matter how many times you add it to itself, you never get back to the identity because you keep marching out.
+
+460
+40:24,788 --> 40:31,218
+But in the symmetric group on three letters, we find that this Tau has order two.
+
+461
+40:32,028 --> 40:38,468
+Someone has a phone call. And then we find that Sigma, if you cube it, you get to the identity has order three.
+
+462
+40:39,088 --> 40:40,658
+Okay.
+
+463
+40:42,108 --> 40:44,288
+Is that signify the class is over?
+
+464
+40:44,288 --> 40:55,088
+All right, we're going to find a big theorem, big theorem what's coming up is that in a finite group, every element has finite order and the order divides the order of the group.
+
+465
+40:55,088 --> 41:00,898
+So here we got order two and three. Huh, they both divide six. Big theorem.
+
+466
+41:02,138 --> 41:08,008
+In an infinite group, elements can either have finite or infinite order. Peter will give you examples of that next time. Okay.
+
+467
+41:09,098 --> 41:09,408
+Okay.

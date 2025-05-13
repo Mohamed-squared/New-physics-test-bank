@@ -1,0 +1,1555 @@
+1
+00:00:12,560 --> 00:00:14,360
+Okay, let's get started now.
+
+2
+00:00:15,800 --> 00:00:18,460
+So, what do we want to do in today's lecture?
+
+3
+00:00:19,550 --> 00:00:22,420
+There are two main goals for today's lecture.
+
+4
+00:00:23,540 --> 00:00:24,210
+Oh, okay.
+
+5
+00:00:33,570 --> 00:00:37,390
+The first goal for today's lecture is umm
+
+6
+00:00:40,830 --> 00:00:43,200
+Excuse me, could you stop talking in the back, please?
+
+7
+00:00:43,380 --> 00:00:44,250
+Thank you.
+
+8
+00:00:47,680 --> 00:01:01,560
+uh is to generalize the arithmetic of what I'll call evens and odds.
+
+9
+00:01:02,450 --> 00:01:04,010
+So what do I mean by that?
+
+10
+00:01:04,760 --> 00:01:17,780
+Well, I mean something that you sort of discover when you're really, really young, is that there's sort of a nice way of computing with evens and odds independently of, you know, the the whole arithmetic of all of the integers.
+
+11
+00:01:17,910 --> 00:01:29,610
+So, what I mean by that is if I denote by zero bar all the even numbers and by one bar all the odd numbers,
+
+12
+00:01:30,310 --> 00:01:32,930
+and there's a sort of natural addition operation.
+
+13
+00:01:33,060 --> 00:01:39,980
+If I add an even to an even, then I get an even.
+
+14
+00:01:40,140 --> 00:01:48,570
+If I add an odd to an odd, I get an even, but if I add an odd to an even or an even to an odd, then I get something odd.
+
+15
+00:01:49,620 --> 00:01:55,110
+Likewise, there's a sort of multiplication table for even and odds, evens and odds.
+
+16
+00:01:55,270 --> 00:02:04,360
+If I multiply something that's even by something that's odd or even, then I certainly get something that's even.
+
+17
+00:02:05,000 --> 00:02:09,720
+But if I multiply something odd by something odd, then I get something odd.
+
+18
+00:02:10,250 --> 00:02:17,540
+So there's this whole sort of simple arithmetic that goes on with evens and odds, but you have to ask the question, what's so special about the number two?
+
+19
+00:02:18,020 --> 00:02:20,530
+Well, the answer is there's nothing special about the number two.
+
+20
+00:02:20,960 --> 00:02:27,700
+And so, one of the things that we're going to talk about today is how to go from two to any N.
+
+21
+00:02:30,200 --> 00:02:53,080
+The second thing I'd like to do is make concrete what we did last time with uh cosets and equivalence relations.
+
+22
+00:02:53,680 --> 00:02:59,280
+And it's going to turn out that these are really sort of one and the same goal.
+
+23
+00:03:00,330 --> 00:03:04,960
+Exce- ex- at least when it comes to studying uh subgroups of the integers.
+
+24
+00:03:06,530 --> 00:03:08,890
+Um so, let's get started on that.
+
+25
+00:03:09,730 --> 00:03:34,230
+So, the main concept that is going to be new in lecture and which was on the reading from last lecture is that of congruence mod n and it's arithmetic.
+
+26
+00:03:38,670 --> 00:03:45,260
+So, let's fix some n a positive integer.
+
+27
+00:03:46,830 --> 00:04:02,610
+and define on the integers a relation. So, the relation is going to be A is related to B if and only if n divides A - B.
+
+28
+00:04:03,530 --> 00:04:14,390
+Or put another way A - B is in NZ, in the subgroup NZ of the integers,
+
+29
+00:04:15,540 --> 00:04:18,370
+which is just the set of multiples of n.
+
+30
+00:04:23,120 --> 00:04:26,430
+So, well, it's not hard to see that this is an equivalence relation.
+
+31
+00:04:34,680 --> 00:04:35,800
+Why? Well,
+
+32
+00:04:35,800 --> 00:04:44,290
+first of all, it's certainly reflexive. I mean, that just follows from the fact that a - a is zero, which is certainly a multiple of n.
+
+33
+00:04:46,490 --> 00:05:00,220
+If A is related to B, then certainly B is related to A because what does this mean? Well, a - b is a multiple of n, but then b - a is certainly also multiple of n. So, B is related to A.
+
+34
+00:05:01,170 --> 00:05:17,670
+And finally, if A is related to B and B is related to C, then, well, what do these mean? This means a - b and b - c are in uh NZ, are a multiple of n in other words. And so is their sum then.
+
+35
+00:05:20,260 --> 00:05:23,210
+And if you add a - b and b - c, you get a - c.
+
+36
+00:05:24,170 --> 00:05:26,460
+So A is related to C.
+
+37
+00:05:27,790 --> 00:05:30,550
+So this is definitely an equivalence relation.
+
+38
+00:05:31,820 --> 00:05:38,500
+Now, for notational purposes, it's often not sufficient just to write this relator symbol tle.
+
+39
+00:05:39,310 --> 00:05:49,090
+So, we have another piece of notation.
+
+40
+00:05:49,950 --> 00:05:56,120
+And that is A is congruent to B mod n.
+
+41
+00:05:57,610 --> 00:06:11,160
+So, this is a synonym for A tle B with n made explicit.
+
+42
+00:06:12,540 --> 00:06:23,030
+And the way we say this is A is congruent to B mod n. So this is just a linguistic issue.
+
+43
+00:06:25,140 --> 00:06:30,120
+So, well, what are the equivalence classes?
+
+44
+00:06:30,320 --> 00:06:37,960
+I mean, whenever you have an equivalence relation, one of the first questions you ask is, what is the structure of the equivalence classes?
+
+45
+00:06:38,370 --> 00:06:41,020
+I mean, this is the sort of thing that we started talking about last time.
+
+46
+00:06:41,390 --> 00:06:43,220
+Well, so let's write them down.
+
+47
+00:06:51,050 --> 00:07:08,110
+So, if I have an integer A, then at least for today, we're going to write A overline, A bar to denote the equivalence class
+
+48
+00:07:08,960 --> 00:07:14,180
+of A.
+
+49
+00:07:15,440 --> 00:07:18,900
+And um well, what does A bar look like?
+
+50
+00:07:19,860 --> 00:07:25,610
+What's a way of my writing A bar down just as a sort of explicit set? Go ahead.
+
+51
+00:07:26,760 --> 00:07:27,720
+Okay. Yes.
+
+52
+00:07:27,980 --> 00:07:35,330
+Yes, it's um set of all numbers Z from N Z where Z is Z Z Z Z Z K + A.
+
+53
+00:07:35,670 --> 00:07:36,420
+Exactly.
+
+54
+00:07:38,930 --> 00:07:51,430
+A bar looks like A + NZ or as you put it, all things of the form A + Kn as K ranges over Z.
+
+55
+00:07:51,910 --> 00:07:53,550
+These are the same thing.
+
+56
+00:07:54,500 --> 00:08:04,140
+Now, does this look familiar from last time? Did we have another sort of piece of terminology for things of this form? Coset.
+
+57
+00:08:04,420 --> 00:08:06,460
+Exactly. This is an example of a coset.
+
+58
+00:08:13,920 --> 00:08:22,050
+So, in the language from last time, where we had some subgroup H of some group Z,
+
+59
+00:08:22,910 --> 00:08:39,040
+we had these things that look like AH or perhaps better written A operation H.
+
+60
+00:08:39,560 --> 00:09:04,210
+But we're working with NZ, the subgroup of Z where the group operation is noted plus. So, this sort of multiplicative notation is not really appropriate. So, what we're really working with is A + H or what is the same A + NZ as the set of cosets of NZ.
+
+61
+00:09:04,430 --> 00:09:06,850
+The cosets are things of this form.
+
+62
+00:09:07,200 --> 00:09:09,420
+So these equivalence classes are just cosets.
+
+63
+00:09:11,110 --> 00:09:28,000
+One of the important themes here is that you lose a lot of information when you pass from all of the integers to the cosets, just as you lose a lot of information when you pass from all the integers to evens and odds.
+
+64
+00:09:31,960 --> 00:09:37,070
+So, for instance, if n equals 12.
+
+65
+00:09:37,340 --> 00:09:59,200
+I mean, bear in mind that from the point of view of of just the cosets of 12Z, um two and 26 are indistinguishable or put another way, 2 bar equals 26 bar.
+
+66
+01:00:00,850 --> 01:00:02,830
+Now, here's an observation.
+
+67
+01:00:04,590 --> 01:00:08,330
+We can very explicitly write down all the cosets.
+
+68
+01:00:14,630 --> 01:00:25,220
+There are n distinct cosets of NZ.
+
+69
+01:00:25,900 --> 01:00:28,030
+And we can write them down completely explicitly.
+
+70
+01:00:29,380 --> 01:00:37,000
+So, we're put another way equivalence classes modulo N.
+
+71
+01:00:37,360 --> 01:00:41,350
+So these are all sort of redundant ways of of saying the same thing, but you'll hear them all.
+
+72
+01:00:41,930 --> 01:00:46,060
+So it's good to sort of just practice hearing them uh each.
+
+73
+01:00:46,450 --> 01:00:49,210
+So, what are they? Well, can somebody list them?
+
+74
+01:00:49,880 --> 01:00:50,670
+Go ahead.
+
+75
+01:00:51,130 --> 01:00:54,570
+Z mod 1 Z Right.
+
+76
+01:00:56,310 --> 01:01:05,470
+Or in a sort of shorter notation 0 1 two up to n - 1.
+
+77
+01:01:06,340 --> 01:01:07,580
+Why is this?
+
+78
+01:01:08,680 --> 01:01:16,190
+Can anybody give me a quick proof at least that every coset or every uh equivalence class is of this form.
+
+79
+01:01:16,890 --> 01:01:18,000
+Yeah, go ahead.
+
+80
+01:01:18,420 --> 01:01:22,130
+divide by n Exactly.
+
+81
+01:01:22,580 --> 01:01:26,300
+So, this is a matter of taking advantage of the division algorithm.
+
+82
+01:01:29,440 --> 01:01:30,300
+So, why?
+
+83
+01:01:32,210 --> 01:01:36,030
+Well, at least in one part, it's the division algorithm.
+
+84
+01:01:38,960 --> 01:01:59,190
+If I have some A, then I can write it in the form n Q + R where Q and R are both integers, but moreover, 0 is less than or equal to r is less than n.
+
+85
+01:02:00,360 --> 01:02:05,540
+And then this is just saying that A bar equals R bar.
+
+86
+01:02:07,590 --> 01:02:10,510
+So we certainly have a representative in this range.
+
+87
+01:02:10,700 --> 01:02:14,060
+Moreover, these are all distinct.
+
+88
+01:02:14,870 --> 01:02:28,090
+Because if A bar is the same as B bar and we both have the these things in the range 0 to n - 1, so things that look like this.
+
+89
+01:02:28,820 --> 01:02:40,490
+Well, then the magnitude of the the uh difference between these things is also bounded by 0 and n + 1.
+
+90
+01:02:42,030 --> 01:02:55,200
+And moreover, we know by hypothesis, these are in the same equivalence class. So, b - A and a - b are both divisible by n.
+
+91
+01:02:55,200 --> 01:02:58,290
+So this thing is in NZ, but the only thing in this range in NZ is zero.
+
+92
+01:02:58,690 --> 01:03:08,050
+So this thing is just zero or what is the same A equals B.
+
+93
+01:03:08,640 --> 01:03:10,660
+So these things are each distinct.
+
+94
+01:03:14,530 --> 01:03:18,010
+Now, how do we describe this thing?
+
+95
+01:03:18,010 --> 01:03:35,200
+Well, following the notation from last time, you might think, well, we're going to notate uh the equivalence classes of Z modulo N or modulo NZ by Z bar because we had this sort of notation S goes to the set of equivalence classes S bar.
+
+96
+01:03:35,660 --> 01:03:44,580
+This is not such a great notation because you lose which n you're working with. So, the usual notation is Z mod NZ.
+
+97
+01:03:48,550 --> 01:04:01,890
+notation or set of equivalence classes
+
+98
+01:04:03,030 --> 01:04:09,830
+is um Z mod NZ.
+
+99
+01:04:12,120 --> 01:04:19,380
+or sometimes just shorten to Z mod n or sometimes brackets are put around n.
+
+100
+01:04:20,510 --> 01:04:22,200
+These are all synonymous.
+
+101
+01:04:25,790 --> 01:04:27,210
+So, what next?
+
+102
+01:04:28,070 --> 01:04:40,530
+Well, again, sort of following what we saw last time visavis equivalence relations, there is a natural map from Z to Z mod NZ
+
+103
+01:04:41,430 --> 01:04:48,560
+that takes A to its equivalence class and the the fibers are the equivalence classes themselves.
+
+104
+01:04:49,520 --> 01:04:56,340
+But what we're about to do is put some additional structure on Z mod NZ.
+
+105
+01:04:56,990 --> 01:05:02,200
+We're going to make this a group and this thing is actually going to become a homomorphism.
+
+106
+01:05:04,820 --> 01:05:12,440
+So, let's start studying how this thing inherits an arithmetic from Z.
+
+107
+01:05:14,060 --> 01:05:24,520
+So, can do arithmetic in Z mod NZ.
+
+108
+01:05:26,570 --> 01:05:27,360
+Um,
+
+109
+01:05:28,450 --> 01:05:45,490
+so how do we define for instance, a sum of two things? Well, we're going to define it, although we should verify that this is well defined by um the equivalence class of A + B.
+
+110
+01:05:46,580 --> 01:05:57,670
+And likewise, we're going to define a multiplication or we define a multiplication by A bar times B bar being AB bar.
+
+111
+01:05:58,450 --> 01:06:02,600
+Now, why is this well defined? Well, it's it's a sort of simple verification.
+
+112
+01:06:04,770 --> 01:06:11,310
+But it's certainly important to check because we do offhand have a lot of different ways of writing A bar.
+
+113
+01:06:11,930 --> 01:06:31,280
+So, for instance, mod 12, we could write that either, you know, we could write two bar as 26 bar and there is some sort of verification necessary to ensure that uh if we change the representative, we aren't changing the outcome on the right hand side.
+
+114
+01:06:36,470 --> 01:06:43,030
+So, is this well defined?
+
+115
+01:06:43,900 --> 01:06:46,100
+Answer is of course, a resounding yes.
+
+116
+01:06:47,450 --> 01:07:16,400
+And so, I mean, well, just to make this completely explicit, if I have A1 bar equal B1 bar and A2 bar equal B2 bar, then A1 + B2 bar is A1 uh is uh sorry, A1 + B1 uh A1 or well, I could write this several different ways. But say A1 + A2 bar is B1 + B2 bar.
+
+117
+01:07:16,400 --> 01:07:27,240
+And likewise, A1 A2 bar is B1 B2 bar.
+
+118
+01:07:27,930 --> 01:07:32,050
+And it's a very, very easy verification. I'll just let you do that yourself.
+
+119
+01:07:32,860 --> 01:07:40,290
+Very easy verification.
+
+120
+01:07:44,800 --> 01:07:57,620
+But the critical observation here, or the first critical observation here, is that this addition law makes Z mod NZ into a group.
+
+121
+01:07:58,810 --> 01:08:04,180
+observation
+
+122
+01:08:05,630 --> 01:08:10,420
+The observation is that this thing is a group.
+
+123
+01:08:11,800 --> 01:08:13,890
+Well, why?
+
+124
+01:08:15,330 --> 01:08:17,560
+Why is the thing associative?
+
+125
+01:08:18,180 --> 01:08:21,030
+Why is this plus operation associative?
+
+126
+01:08:25,250 --> 01:08:26,150
+Go ahead.
+
+127
+01:08:26,640 --> 01:08:30,540
+Because the operation Exactly.
+
+128
+01:08:30,890 --> 01:08:33,240
+It inherits it from the integers.
+
+129
+01:08:33,700 --> 01:08:46,470
+Um, this is going to be a sort of repeated theme. We're going to look at a generalization of this idea and always the things that look similar to this are going to be associative because the thing that we constructed them out of was associative.
+
+130
+01:08:47,230 --> 01:08:53,130
+So, associative because Z+ was.
+
+131
+01:08:54,210 --> 01:09:09,210
+In other words, if I write a + b bar, a bar + b bar + c bar or a bar + b bar + c bar, both of these things equal a + b + c all bar.
+
+132
+01:09:14,790 --> 01:09:21,300
+The thing has uh um an identity element. What is it?
+
+133
+01:09:22,610 --> 01:09:24,280
+The class of zero.
+
+134
+01:09:25,480 --> 01:09:27,390
+Um, it has inverses.
+
+135
+01:09:28,610 --> 01:09:30,530
+ Sorry?
+
+136
+01:09:31,980 --> 01:09:34,310
+Absolutely. Um, there are a couple of different ways of writing it.
+
+137
+01:09:34,310 --> 01:10:13,660
+So, the inverse of A bar. Now, previously we'd used a sort of notation which was a power notation because we'd written our groups very multiplicatively. We'd written it as if the operation was multiplication. Here, we're writing our group with a plus sign. So it's very natural to write as the inverse of an element minus that thing. And so, as someone pointed out, this is, well, either there are many, many ways of writing this, but one can write it as n - A bar or just minus A bar.
+
+138
+01:10:15,850 --> 01:10:28,090
+Um And so in the language from last time, again, just sort of returning to what we did before.
+
+139
+01:10:30,250 --> 01:10:51,430
+So in the language from last time, the set of cosets of the subgroup NZ of Z form a group.
+
+140
+01:10:51,430 --> 01:10:58,140
+Is NZ a normal subgroup of Z?
+
+141
+01:10:59,870 --> 01:11:00,710
+Go ahead.
+
+142
+01:11:01,010 --> 01:11:01,560
+ Yes.
+
+143
+01:11:01,720 --> 01:11:02,330
+Yes?
+
+144
+01:11:02,830 --> 01:11:07,090
+Yes, it is. It is because Z is an abelian group.
+
+145
+01:11:07,920 --> 01:11:22,400
+And it's going to turn out that this isn't going to be true for arbitrary subgroups of a group. It's not going to be true that if I just have any subgroup, then the set of cosets are going to form a group. But it is going to be true in the case of normal subgroups.
+
+146
+01:11:22,790 --> 01:11:28,300
+But here that's just a trivial thing because Z is abelian, so every subgroup is a normal subgroup.
+
+147
+01:11:28,800 --> 01:11:31,020
+Is that clear? Are there any questions?
+
+148
+01:11:32,220 --> 01:11:33,420
+Very great. Oh, go ahead.
+
+149
+01:11:33,650 --> 01:11:38,060
+ you could just the one thing that you said just before any questions, could you repeat that?
+
+150
+01:11:38,610 --> 01:11:54,200
+Oh, I was just saying that um so it's not true that if I have some arbitrary subgroup, it's not going to be true. We're going to see this later on, but it's not going to be true that if I have an arbitrary subgroup of a group, then the set of cosets of that subgroup form a group.
+
+151
+01:11:54,640 --> 01:11:59,100
+But it will be true under the hypothesis that H is normal.
+
+152
+01:11:59,660 --> 01:12:04,300
+In the case of Z, this is a trivial hypothesis because all of its subgroups are normal.
+
+153
+01:12:13,270 --> 01:12:22,270
+Um, so, another observation.
+
+154
+01:12:24,740 --> 01:12:28,590
+So, a week ago, somebody asked the question,
+
+155
+01:12:28,590 --> 01:12:32,820
+is there a cyclic group of order n for every n?
+
+156
+01:12:33,840 --> 01:12:42,240
+And we gave an example of a subgroup of SN, the symmetric group on n letters, which was cyclic of order n.
+
+157
+01:12:42,600 --> 01:12:49,010
+So it's just this sort of cycle that goes one to two, two to three up to n which goes back to one.
+
+158
+01:12:50,090 --> 01:12:53,980
+Well, here's another nice construction of such a group.
+
+159
+01:12:55,360 --> 01:13:03,890
+Z mod NZ is also cyclic of order N.
+
+160
+01:13:04,500 --> 01:13:07,080
+And it's a nice sort of model for a cyclic group of order n.
+
+161
+01:13:07,390 --> 01:13:10,270
+Remember, we saw that all cyclic groups of order n are isomorphic.
+
+162
+01:13:10,930 --> 01:13:15,490
+So here is a very simple sort of way of studying cyclic groups of order n.
+
+163
+01:13:20,390 --> 01:13:31,660
+Of course, this is just generated by one bar because if I add one bar to itself K times, then this thing is just K bar.
+
+164
+01:13:33,270 --> 01:13:45,410
+So, I get all of one bar, two bar up to n - 1 bar and n bar, which is just zero bar.
+
+165
+01:13:54,120 --> 01:13:59,980
+ Excuse me, I I hate to say it I'm not exactly sure why one bar the second group generated by one bar is equal to Z mod Z.
+
+166
+01:13:59,980 --> 01:14:10,880
+So, why is the cyclic the question is, why is the cyclic group generated by one bar Z mod NZ? Well, what is the cyclic group?
+
+167
+01:14:14,090 --> 01:14:24,730
+It's the set of well, in one notation, the powers, but in our notation, this is sort of inappropriate.
+
+168
+01:14:25,230 --> 01:14:27,330
+We don't want powers, we want multiples.
+
+169
+01:14:27,800 --> 01:14:41,560
+So, these are things that look like g + g n times or when they're negative powers putting in the inverse as n ranges over Z.
+
+170
+01:14:42,110 --> 01:14:55,440
+In particular, the cyclic subgroup generated by one bar contains, well, one bar, one bar plus one bar, one bar plus one bar plus one bar. So it certainly contains one bar added to itself K times.
+
+171
+01:14:55,950 --> 01:15:09,200
+Well, if I add one bar to itself K times, then I get K bar because of associativity. 1 bar plus dot dot dot one bar just looks like 1 + K times all bar.
+
+172
+01:15:09,940 --> 01:15:11,700
+So that's K bar.
+
+173
+01:15:12,210 --> 01:15:21,300
+So, in particular, I have in the cyclic subgroup generated by one bar, one bar, two bar, all the way up to n - 1 bar and n bar, which is zero.
+
+174
+01:15:21,900 --> 01:15:29,350
+But we saw before that's all of the elements, that exhausts all of the elements of Z mod NZ.
+
+175
+01:15:30,690 --> 01:15:35,840
+So, if everything that's in here is in here, then these must be equal.
+
+176
+01:15:36,270 --> 01:15:37,700
+Is that clear? Great.
+
+177
+01:15:44,210 --> 01:16:15,220
+So, um I just uh maybe I'll just make something that I wrote over there even more explicit. notation When we use plus for our group operation, we write n times g for g added to itself n times, not the more multiplicative notation g to the n.
+
+178
+01:16:15,850 --> 01:16:37,780
+So, be careful because for instance, there are certainly two operations that we've defined on Z mod NZ. They're different operations and they have different notations for them.
+
+179
+01:16:46,350 --> 01:16:47,080
+Okay.
+
+180
+01:16:47,950 --> 01:17:20,100
+So, let's just make a further observation about just these two uh things. So, here's a further observation. The addition and multiplication on Z mod NZ distribute in the precise sense that if I multiply A bar times B bar plus c bar,
+
+181
+01:17:20,100 --> 01:17:33,290
+then this thing is the same as A bar B bar plus A bar C bar.
+
+182
+01:17:33,700 --> 01:17:39,450
+Now, of course, this seems like an utterly obvious thing because it's just inheriting what's going on from the integers.
+
+183
+01:17:40,110 --> 01:17:48,050
+So this is inherited from Z. And so it's a very, very simple verification.
+
+184
+01:17:48,770 --> 01:17:58,240
+Nonetheless, it's a very important point. It becomes a sort of repeated theme because we're going to have a lot of things that work very, very similarly to this.
+
+185
+01:17:58,980 --> 01:18:04,470
+And this is going to be a major theme when we get to the second part of the course on ring theory.
+
+186
+01:18:09,340 --> 01:18:12,390
+Okay, so,
+
+187
+01:18:12,850 --> 01:18:20,600
+here's an example of the usefulness of modular arithmetic.
+
+188
+01:18:28,310 --> 01:18:44,360
+So, somebody tell me how to compute the last two digits in the decimal expansion of 2 to the 1,000.
+
+189
+01:18:44,860 --> 01:18:45,700
+Go ahead.
+
+190
+01:18:46,040 --> 01:18:49,720
+It's the um Exactly.
+
+191
+01:18:50,440 --> 01:19:12,600
+So, the answer is, well, all we have to compute is 2 to the 1000 modulo 100, which makes the whole problem extremely manageable.
+
+192
+01:19:16,770 --> 01:19:26,390
+So, completely explicitly, just to show you how easy this is and also uh an essential technique used by computers.
+
+193
+01:19:27,130 --> 01:19:35,070
+So I mean it's it's often the case that you need to do things which are analogous to computing the last couple digits in 2 to the 1000 for instance.
+
+194
+01:19:35,510 --> 01:19:36,910
+This is how computers do it.
+
+195
+01:19:37,080 --> 01:19:46,380
+They don't, you know, crank out all of two to the 1000 because that's rather large number uh and convert it to decimal notation. That would be not so efficient.
+
+196
+01:19:46,690 --> 01:19:57,680
+So, here's a very, very simple short way of computing the thing. Well, this 2 to the 10 is 1024, which is congruent to 24 modulo 100.
+
+197
+01:19:58,270 --> 02:03,440
+So, I I do this in part because it's just you sort of you have to get used to writing things in this kind of notation.
+
+198
+02:04,110 --> 02:10,960
+Um if I square this, so 2 to the 20, well that's 2 to the 10 squared.
+
+199
+02:11,680 --> 02:25,210
+Um, and that means this is 24 squared modulo 100, which is 576, which is congruent to 76 modulo 100.
+
+200
+02:25,500 --> 02:28,760
+Are there any questions about the computation so far?
+
+201
+02:29,140 --> 02:32,070
+Is this clear? To everyone?
+
+202
+02:34,520 --> 02:44,320
+Now, if I square 76, this is 5776, which is just 76 mod 100.
+
+203
+02:45,150 --> 02:49,890
+What is 76 to the N modulo 100?
+
+204
+02:50,470 --> 02:51,250
+76.
+
+205
+02:51,980 --> 02:59,410
+This implies that 76 to the N is congruent to 76 modulo 100 by induction.
+
+206
+03:00,480 --> 03:17,140
+And so, well, this thing is 2 to the 20, which is uh, you know, sort of the 50th root of this thing, or in other words, this thing is this to the power 50, which is this to the power 50.
+
+207
+03:17,510 --> 03:22,910
+So, 2 to the 1,000 is just congruent to 76 modulo 100.
+
+208
+03:23,340 --> 03:25,750
+So the question is answered. Very, very simple.
+
+209
+03:29,150 --> 03:31,480
+So far
+
+210
+03:31,480 --> 03:35,540
+modular arithmetic
+
+211
+03:35,540 --> 03:38,010
+has given us
+
+212
+03:38,010 --> 03:39,560
+one group.
+
+213
+03:41,210 --> 03:48,340
+Is Z mod NZ with the multiplication
+
+214
+03:48,340 --> 03:49,900
+a group?
+
+215
+03:52,390 --> 03:53,310
+Somebody?
+
+216
+03:55,980 --> 03:57,030
+Yeah, somebody go ahead.
+
+217
+03:59,640 --> 04:00,130
+Right.
+
+218
+04:00,130 --> 04:01,850
+So this is definitely
+
+219
+04:01,850 --> 04:03,190
+not a group.
+
+220
+04:03,690 --> 04:04,400
+No.
+
+221
+04:05,560 --> 04:07,250
+Because for instance,
+
+222
+04:07,250 --> 04:12,440
+zero bar cannot possibly
+
+223
+04:12,440 --> 04:14,520
+have an inverse.
+
+224
+04:16,220 --> 04:19,860
+Because anything that you multiply it by gives you zero.
+
+225
+04:21,890 --> 04:26,160
+But can somebody see a subgroup
+
+226
+04:26,160 --> 04:30,870
+or can somebody see a subset of Z mod NZ which gives a group?
+
+227
+04:31,570 --> 04:32,310
+Go ahead.
+
+228
+04:32,780 --> 04:33,180
+Exactly.
+
+229
+04:33,180 --> 04:34,480
+You just do the simplest thing.
+
+230
+04:34,860 --> 04:37,810
+The problem here is that there are things which don't have inverses.
+
+231
+04:38,200 --> 04:39,890
+So you just take the ones that have inverses.
+
+232
+04:42,820 --> 04:43,330
+So,
+
+233
+04:43,330 --> 04:45,350
+we define
+
+234
+04:45,350 --> 04:47,180
+So, we also we do have
+
+235
+04:47,180 --> 04:50,410
+a subset though
+
+236
+04:50,410 --> 04:55,240
+of Z mod NZ which
+
+237
+04:55,240 --> 04:57,130
+gives a group
+
+238
+04:57,130 --> 04:59,890
+under multiplication.
+
+239
+05:00,570 --> 05:02,480
+Explicitly,
+
+240
+05:03,400 --> 05:05,680
+the set of things that have inverses.
+
+241
+05:06,690 --> 05:12,120
+So, the A bar in Z mod NZ
+
+242
+05:12,120 --> 05:15,920
+such that there is C bar
+
+243
+05:15,920 --> 05:19,510
+in Z mod NZ such that
+
+244
+05:19,510 --> 05:25,180
+A bar * C bar is one bar.
+
+245
+05:26,780 --> 05:31,740
+And the notation for this thing is
+
+246
+05:31,740 --> 05:34,390
+Z mod NZ cross.
+
+247
+05:34,910 --> 05:42,290
+This should be a familiar notation to you because when we talked about the real numbers and the complex numbers, we added a cross to denote the non-zero elements.
+
+248
+05:42,870 --> 05:44,830
+Well, those are exactly the elements which have inverses.
+
+249
+05:45,240 --> 05:47,180
+So this is an entirely consistent notation.
+
+250
+05:49,970 --> 05:50,440
+Okay.
+
+251
+05:50,440 --> 05:51,100
+So, well,
+
+252
+05:51,100 --> 05:52,750
+just to make sure that this is entirely clear,
+
+253
+05:52,750 --> 05:57,420
+well, the associativity again is inherited
+
+254
+05:57,420 --> 05:58,980
+from the integers.
+
+255
+05:59,520 --> 06:01,520
+The identity, well, I've already said what it is,
+
+256
+06:01,520 --> 06:02,400
+it's one bar.
+
+257
+06:03,200 --> 06:05,570
+One bar has a natural inverse, namely itself.
+
+258
+06:06,230 --> 06:08,010
+Um, so it's certainly in there.
+
+259
+06:08,770 --> 06:14,540
+Um, and the inverses, well, that's by definition, inverses by construction.
+
+260
+06:16,100 --> 06:20,750
+So let's have a brief recall on GCDs.
+
+261
+06:22,040 --> 06:27,370
+Because we're going to want to discover the structure of this thing.
+
+262
+06:27,370 --> 06:29,260
+We want to know what this thing looks like.
+
+263
+06:29,660 --> 06:34,110
+And it turns out that this is tied up with some very, very elementary arithmetic.
+
+264
+06:38,070 --> 06:39,010
+So,
+
+265
+06:40,540 --> 06:45,800
+um, to understand Z mod NZ
+
+266
+06:45,800 --> 06:56,210
+star review of greatest common divisors.
+
+267
+06:57,390 --> 07:04,590
+So, if I have M and N integers, and I'm going to assume not they're not both zero.
+
+268
+07:06,820 --> 07:11,720
+It's uh just a hypothesis that's going to make theorems easier to write down.
+
+269
+07:12,560 --> 07:14,170
+So, what is the GCD?
+
+270
+07:16,620 --> 07:31,050
+Well, you were probably taught this in elementary school as the largest positive integer, where this is a sort of redundant uh part of the the uh definition, the largest integer
+
+271
+07:32,930 --> 07:43,670
+um that divides both of these things, dividing M and N. But for the purposes of sort of understanding the GCD,
+
+272
+07:43,670 --> 07:49,510
+there is, of course, a better way of writing this down because it doesn't make reference to
+
+273
+07:49,510 --> 07:59,930
+the order structure on the integers uh um inherited from the real numbers. In other words, it doesn't it doesn't talk about positive and negatives.
+
+274
+07:59,930 --> 08:11,420
+There's another order structure, that that is induced by just multiplication or in other words, the division relationship between things.
+
+275
+08:12,060 --> 08:21,780
+So, this is the unique positive integer um such that
+
+276
+08:22,510 --> 08:34,260
+D divides M and N and if E divides M and N, then E divides D.
+
+277
+08:34,990 --> 08:45,000
+And it's very, very easy to verify, of course, you've done this surely in another course that this number has this property.
+
+278
+08:48,260 --> 08:59,510
+Now, the major fact, the main fact that that um I want to prove about GCDs
+
+279
+08:59,510 --> 09:01,510
+is that
+
+280
+09:01,510 --> 09:13,270
+they have a relationship to the group structure or subgroup structure on Z that we've studied so far.
+
+281
+09:13,930 --> 09:14,970
+Yes. Question.
+
+282
+09:15,610 --> 09:19,880
+ Sorry, what's the question?
+
+283
+09:19,880 --> 09:25,770
+ Oh. unique positive integer D such that D divides M and N and if E if you have another common divisor,
+
+284
+09:25,770 --> 09:31,710
+then it divides the greatest common divisor. So it's just it's just talking about the division structure of the thing.
+
+285
+09:34,000 --> 09:38,800
+So, MZ + NZ. First question.
+
+286
+09:39,680 --> 09:44,890
+These these are both subgroups of Z. Is MZ + NZ a subgroup of Z?
+
+287
+09:48,150 --> 09:51,290
+The answer is yes, and it's not hard to see. I mean,
+
+288
+09:51,290 --> 09:52,720
+zero is certainly in here.
+
+289
+09:53,540 --> 10:04,620
+Uh it's certainly closed under addition and the uh uh negative of something in here is certainly again in here because these are just things of the form MR + NS.
+
+290
+10:04,620 --> 10:06,590
+just negate those, etc.
+
+291
+10:07,190 --> 10:08,910
+So this is certainly a subgroup.
+
+292
+10:09,420 --> 10:18,020
+But we know what all the subgroups of Z look like, they look like some number, some positive integer in fact times Z.
+
+293
+10:18,670 --> 10:22,910
+So any guesses as to what this is?
+
+294
+10:25,380 --> 10:27,470
+Go ahead. Exactly.
+
+295
+10:27,900 --> 10:34,310
+The answer is GCD of MN Z. That was a hard one um to guess.
+
+296
+10:34,800 --> 10:39,480
+Proof. Well, this is this is a fairly easy verification, but I'll just go through it very quickly.
+
+297
+10:39,860 --> 10:41,530
+So, as I said, this thing is a subgroup.
+
+298
+10:41,530 --> 10:57,140
+So this is subgroup of Z. So it looks like something. So equals DZ for some Z, for some D rather. and we can assume D is a positive integer.
+
+299
+10:58,850 --> 11:07,330
+Um Now, since M is in MZ + NZ, um
+
+300
+11:07,330 --> 11:14,570
+which is exactly DZ, D certainly divides M.
+
+301
+11:15,850 --> 11:21,110
+Same argument, D divides N.
+
+302
+11:21,630 --> 11:27,740
+So, the first part of this is verified. The first part of this characterizing property is verified.
+
+303
+11:28,460 --> 11:32,450
+Second part, well, suppose I have E
+
+304
+11:32,450 --> 11:34,580
+dividing M and N.
+
+305
+11:35,520 --> 11:40,760
+Well, because D is in DZ,
+
+306
+11:41,560 --> 11:45,670
+I can write D as MR + NS.
+
+307
+11:46,310 --> 11:54,400
+And if E divides M and E divides N, then E divides MR + NS and hence E divides D.
+
+308
+11:54,740 --> 11:55,990
+Is that clear?
+
+309
+11:57,360 --> 11:59,330
+So, this is exactly the characterizing property.
+
+310
+11:59,690 --> 12:08,150
+This D divides M and N and if something divides M and N, then it divides D. So, we verified the properties and we've proved the lemma.
+
+311
+12:08,620 --> 12:10,450
+So, there you go.
+
+312
+12:13,360 --> 12:16,320
+Now, let's use this fact.
+
+313
+12:19,180 --> 12:23,640
+Use this fact to prove
+
+314
+12:23,640 --> 12:26,490
+proposition.
+
+315
+12:30,810 --> 12:36,390
+Z mod NZ star
+
+316
+12:36,390 --> 12:42,570
+looks like exactly the set of A bar in Z mod NZ
+
+317
+12:42,570 --> 12:44,880
+such that, any guesses?
+
+318
+12:45,250 --> 12:45,890
+Yes.
+
+319
+12:46,290 --> 12:46,760
+ Exactly.
+
+320
+12:47,200 --> 12:56,900
+The GCD of A and N is one, or to use uh a more abbreviated terminology, A and N are relatively prime.
+
+321
+12:57,670 --> 13:04,680
+So this is very easy to prove now that we've established these sorts of basic arithmetic facts about the subgroups of Z.
+
+322
+13:07,830 --> 13:09,010
+Um proof.
+
+323
+13:10,200 --> 13:13,370
+Well, I mean, there is one subtle point here.
+
+324
+13:14,020 --> 13:17,940
+What what would be a sort of subtle point in just writing down this set?
+
+325
+13:20,600 --> 13:21,340
+Yes.
+
+326
+13:21,580 --> 13:29,580
+ Well, the first thing is that um we don't know how many such A exist. Oh yeah.
+
+327
+13:30,080 --> 13:30,920
+Well, yeah.
+
+328
+13:30,920 --> 13:44,580
+Is is there another sort of There's a bit of an issue with writing this down because you'll notice that I I'm taking the A bar and Z mod NZ and no, on the left part of this and on the right part, I'm removing the bar.
+
+329
+13:45,030 --> 13:50,700
+Now there's no unique lift. If I have some equivalence class A bar, there are many, many possible representatives.
+
+330
+13:51,300 --> 14:00,200
+So there is a slightly subtle point here, namely that if I have one element of an equivalence class which is relatively prime to n, then every element of that equivalence class is also relatively prime to n.
+
+331
+14:00,770 --> 14:05,730
+Now this isn't difficult to show, but it's certainly a bit of a subtlety in writing down this thing.
+
+332
+14:08,140 --> 14:10,820
+But anyway, I'll go on and prove this proposition.
+
+333
+14:11,870 --> 14:16,000
+So, first, the right hand side
+
+334
+14:16,000 --> 14:17,880
+is included in the left hand side.
+
+335
+14:18,270 --> 14:24,830
+Well, if I have GCD AN equals 1,
+
+336
+14:25,320 --> 14:26,880
+then by the lemma,
+
+337
+14:27,820 --> 14:39,100
+So the lemma implies that I can write, well, AZ + NZ equals Z, or put another way one or uh uh yeah, put another way, it's equivalent but it's also just something that follows immediately because one is in here.
+
+338
+14:39,100 --> 14:45,080
+I can write one as AR + NS for some uh R and S.
+
+339
+14:45,860 --> 14:49,070
+So, why is this significant? Well, this tells us
+
+340
+14:51,140 --> 14:58,090
+that AR - 1 is in NZ or put another way,
+
+341
+14:58,090 --> 15:01,460
+A bar R bar is one bar.
+
+342
+15:02,660 --> 15:08,920
+So, A bar is certainly in um Z mod NZ
+
+343
+15:08,920 --> 15:10,220
+cross.
+
+344
+15:11,010 --> 15:15,920
+Now, the converse is very, very similar.
+
+345
+15:16,260 --> 15:19,710
+So, left hand side contained in right hand side.
+
+346
+15:20,630 --> 15:26,580
+Well, do the same sort of thing. If I have A bar * c bar equals 1 bar,
+
+347
+15:27,400 --> 15:33,120
+then I can write AC - 1 equals NB for some integer B.
+
+348
+15:33,790 --> 15:48,730
+So, 1 which is AC + NB is in AZ + NZ. But this thing is just GCD AN Z.
+
+349
+15:49,590 --> 15:59,920
+And if one is in the subgroup of the form DZ, then that D must be plus or minus one, it must be one.
+
+350
+16:01,460 --> 16:05,970
+Because if this were like two or three or four or something, one couldn't possibly be in there.
+
+351
+16:06,270 --> 16:11,950
+One uh two does not have a multiplicative inverse in Z for instance.
+
+352
+16:12,670 --> 16:16,730
+So, this proves the result. This gives us sort of structure.
+
+353
+16:17,340 --> 16:28,660
+So, example, what does Z mod PZ cross look like?
+
+354
+16:30,280 --> 16:31,260
+Yeah, go ahead.
+
+355
+16:31,730 --> 16:34,900
+Everything except zero.
+
+356
+16:35,760 --> 16:41,630
+All of 1, 2, 3 up to p - 1 are certainly relatively prime to p.
+
+357
+16:41,960 --> 16:46,280
+So this is 1, 2 up to p - 1.
+
+358
+16:48,090 --> 17:17,730
+So another example, more generally, what is the order of Z mod P to the E Z star? Any takers? Yes.
+
+359
+17:19,670 --> 17:20,510
+Yeah.
+
+360
+17:20,700 --> 17:24,160
+ It's P raised to E minus P raised to E minus 1. Why?
+
+361
+17:25,330 --> 17:39,020
+So the answer he gave is P to the E - P to the E - 1. Basically that's phi of P to the E, so Well, that's Okay, so the answer he gave makes a sort of reference to some number theoretic background.
+
+362
+17:39,520 --> 17:42,570
+But there's a very simple combinatorial way of seeing why that's true.
+
+363
+17:42,780 --> 17:43,480
+Yes, go ahead.
+
+364
+17:43,820 --> 17:47,480
+ Exactly.
+
+365
+17:48,230 --> 17:50,910
+This is everything except the multiples of P.
+
+366
+17:51,530 --> 17:53,210
+What are the multiples of P?
+
+367
+17:53,610 --> 18:01,170
+The multiples of P are 1 * p, 2 * p, 3 * p up to p to the E - 1 * p.
+
+368
+18:01,780 --> 18:19,030
+These are exactly the things, the things not relatively prime to P.
+
+369
+18:19,690 --> 18:31,990
+So we started out with a set of P to the E things, we took away P to the E - 1 things which were not relatively prime, and we're left over with P to the E - P to the E - 1 things which are relatively prime.
+
+370
+18:36,060 --> 18:39,770
+Okay. So this is a first sort of introduction to modular arithmetic.
+
+371
+18:40,270 --> 18:48,820
+But what we're going to be doing in the next class is sort of riffing further on the theme from the first part, which is just this sort of additive structure.
+
+372
+18:49,570 --> 18:56,080
+Um, this multiplicative structure is something that we're going to get to only later in the course.
+
+373
+18:56,550 --> 19:00,570
+in greater detail, but it's certainly useful to have seen now because you need it as a tool.
+
+374
+19:00,980 --> 19:16,200
+But what we're going to start discussing later on is that, as I said uh alluded to before, if I have some normal subgroup H of G,
+
+375
+19:16,630 --> 19:32,140
+we're going to be able to look at the coset space, which we're going to denote g mod H. So this is the set of cosets of H in G.
+
+376
+19:33,250 --> 19:36,250
+And we're going to see that there's a natural homomorphism.
+
+377
+19:40,960 --> 19:59,900
+There is a natural homomorphism from G to g mod H with full image and kernel exactly H.
+
+378
+19:59,900 --> 20:14,520
+And this will answer a question that one of you had in the last class. If one has a normal subgroup, is there always a homomorphism which has that normal subgroup as its kernel?
+
+379
+20:14,890 --> 20:29,660
+We've answered that in the special case of the group Z today. Why? Well, because the set of normal subgroups of Z are exactly the set of subgroups of Z, which are the things of the form NZ.
+
+380
+20:30,140 --> 20:40,770
+And we saw that there's a natural map which I called red,
+
+381
+20:40,770 --> 20:55,090
+short for reduction because this is the terminology used from Z to Z mod NZ.
+
+382
+20:56,100 --> 21:01,890
+And I didn't verify this, but it's a very easy verification that this map is a homomorphism.
+
+383
+21:03,150 --> 21:04,880
+Well, I did do it in some sense.
+
+384
+21:04,880 --> 21:19,930
+Um, I mean, that was just sort of the idea that if I could write A bar plus c bar, then that was the same thing as a plus c bar because this map is just taking some A to A bar.
+
+385
+21:20,510 --> 21:25,450
+So this is a verification of the fact that this is a homomorphism.
+
+386
+21:26,330 --> 21:34,240
+Moreover, it's surjective by construction. And finally,
+
+387
+21:34,670 --> 21:40,920
+this is a good verification. The kernel is exactly NZ.
+
+388
+21:42,100 --> 21:52,000
+So what we're going to do next time is see why this continues to work for any normal subgroup of a group.
+
+389
+21:53,810 --> 21:55,710
+Right. Thanks.
