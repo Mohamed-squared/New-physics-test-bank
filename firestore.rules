@@ -39,7 +39,8 @@ service cloud.firestore {
     function allowedUserUpdateFieldsOwner() {
       return [
         'displayName', 'photoURL', 'onboardingComplete', 'lastSelectedSubjectId',
-        'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges'
+        'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges',
+        'lastAppDataUpdate'
       ];
     }
 

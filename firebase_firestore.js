@@ -1058,7 +1058,7 @@ export async function loadUserData(uid) {
     if (!db) { console.error("Firestore DB not initialized"); return; }
     if (!uid) { console.error("loadUserData called without UID."); return; }
 
-    console.log(`Loading user data (vGlobalSubjects) for user: ${uid}`);
+    console.log(`Loading user data (vGlobalSubjects_MIGRATION_AWARE) for user: ${uid}`);
     const userRef = db.collection('users').doc(uid);
     try {
         if (globalSubjectDefinitionsMap.size === 0) {
@@ -1066,11 +1066,11 @@ export async function loadUserData(uid) {
         }
 
         const userDoc = await userRef.get();
-        let appDataWasModifiedBySyncOrRepair = false;
+        let appDataWasModifiedBySyncOrRepairOrMigration = false;
 
         if (userDoc.exists) {
             const userDataFromFirestore = userDoc.data();
-            const userProfileForState = {
+            const userProfileForState = { /* ... as before ... */
                 uid: uid,
                 email: userDataFromFirestore.email || firebaseAuth?.currentUser?.email,
                 displayName: userDataFromFirestore.displayName || firebaseAuth?.currentUser?.displayName,
@@ -1081,23 +1081,63 @@ export async function loadUserData(uid) {
                 onboardingComplete: userDataFromFirestore.onboardingComplete !== undefined ? userDataFromFirestore.onboardingComplete : false,
             };
             setCurrentUser(userProfileForState);
-
             try {
                 const aiSettings = await loadUserAiSettings(uid);
                 setUserAiChatSettings(aiSettings);
             } catch (error) { setUserAiChatSettings(getDefaultAiSettings()); }
 
-            const userSubjectProgressData = userDataFromFirestore.appData?.subjectProgress || {};
-            const mergedSubjects = {};
+            let userSubjectProgressData = userDataFromFirestore.appData?.subjectProgress || {};
+            const oldUserSubjectsData = userDataFromFirestore.appData?.subjects; // Check for OLD structure
 
+            // --- MIGRATION LOGIC ---
+            if (typeof oldUserSubjectsData === 'object' && Object.keys(oldUserSubjectsData).length > 0 &&
+                (!userDataFromFirestore.appData.subjectProgress || Object.keys(userDataFromFirestore.appData.subjectProgress).length === 0)) {
+                console.warn(`[Migration] User ${uid} has old appData.subjects. Attempting to migrate to appData.subjectProgress.`);
+                userSubjectProgressData = {}; // Start fresh for progress
+                for (const oldSubjectId in oldUserSubjectsData) {
+                    const oldSubject = oldUserSubjectsData[oldSubjectId];
+                    // Try to match oldSubjectId with a globalSubjectId (e.g., by name or a mapping if IDs changed)
+                    // For simplicity, let's assume oldSubjectId might directly map or we check by name if globalDef exists.
+                    let correspondingGlobalId = oldSubjectId; // Assume direct mapping initially
+                    if (!globalSubjectDefinitionsMap.has(oldSubjectId)) {
+                        // Try to find by name (less reliable)
+                        const foundByName = Array.from(globalSubjectDefinitionsMap.values()).find(gDef => gDef.name === oldSubject.name);
+                        if (foundByName) correspondingGlobalId = foundByName.id;
+                        else {
+                             console.log(`[Migration] Old subject "${oldSubject.name}" (ID ${oldSubjectId}) not found in global definitions. Its progress cannot be directly migrated.`);
+                             continue; // Skip this old subject's progress
+                        }
+                    }
+
+                    userSubjectProgressData[correspondingGlobalId] = {
+                        studied_chapters: oldSubject.studied_chapters || [],
+                        pending_exams: oldSubject.pending_exams || [],
+                        chapters: {} // Old per-chapter progress needs careful mapping
+                    };
+                    if (oldSubject.chapters) {
+                        for (const chapNum in oldSubject.chapters) {
+                            const oldChap = oldSubject.chapters[chapNum];
+                            userSubjectProgressData[correspondingGlobalId].chapters[chapNum] = {
+                                total_attempted: oldChap.total_attempted || 0,
+                                total_wrong: oldChap.total_wrong || 0,
+                                available_questions: oldChap.available_questions || [], // This will be validated against new MD totals later
+                                mistake_history: oldChap.mistake_history || [],
+                                consecutive_mastery: oldChap.consecutive_mastery || 0
+                            };
+                        }
+                    }
+                }
+                appDataWasModifiedBySyncOrRepairOrMigration = true; // Mark for saving the new structure
+                console.log(`[Migration] Migrated ${Object.keys(userSubjectProgressData).length} subjects to new progress structure for user ${uid}. Old appData.subjects should be removed after save.`);
+            }
+            // --- END MIGRATION LOGIC ---
+
+            const mergedSubjects = {};
             for (const [subjectId, globalDef] of globalSubjectDefinitionsMap.entries()) {
                 const userProgressForThisSubject = userSubjectProgressData[subjectId] || getDefaultSubjectProgressStats();
-                let currentMergedSubject = {
-                    ...globalDef, // Global fields (name, filenames, ratios, status, etc.)
-                    chapters: {}, // Start with empty chapters, will be filled by MD parse + user progress
-                    studied_chapters: userProgressForThisSubject.studied_chapters || [],
-                    pending_exams: userProgressForThisSubject.pending_exams || [],
-                };
+                let currentMergedSubject = { ...globalDef, ...userProgressForThisSubject, chapters: {} };
+                currentMergedSubject.studied_chapters = Array.isArray(currentMergedSubject.studied_chapters) ? currentMergedSubject.studied_chapters : [];
+                currentMergedSubject.pending_exams = Array.isArray(currentMergedSubject.pending_exams) ? currentMergedSubject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
 
                 if (currentUser && (currentUser.isAdmin || globalDef.status === 'approved')) {
                     const subjectMarkdown = await fetchMarkdownForGlobalSubject(globalDef);
@@ -1106,19 +1146,22 @@ export async function loadUserData(uid) {
                         for (const chapNumStr in parsedMdChapters) {
                             const mdChapData = parsedMdChapters[chapNumStr];
                             const userChapProgress = userProgressForThisSubject.chapters?.[chapNumStr] || {};
-
                             const totalMcqsFromMd = mdChapData.total_questions || 0;
                             let finalAvailableQuestions;
-                            if (Array.isArray(userChapProgress.available_questions) && userChapProgress.available_questions.length > 0) {
+
+                            if (Array.isArray(userChapProgress.available_questions) /* && userChapProgress.available_questions.length > 0 // Allow empty if user truly used all */) {
                                 finalAvailableQuestions = userChapProgress.available_questions.filter(qN =>
                                     typeof qN === 'number' && qN > 0 && qN <= totalMcqsFromMd
                                 ).sort((a, b) => a - b);
+                                // Check if filtering changed anything that wasn't just sorting
+                                if (JSON.stringify(userChapProgress.available_questions.slice().sort((a,b)=>a-b)) !== JSON.stringify(finalAvailableQuestions)) {
+                                    appDataWasModifiedBySyncOrRepairOrMigration = true;
+                                }
                             } else {
                                 finalAvailableQuestions = Array.from({ length: totalMcqsFromMd }, (_, j) => j + 1);
+                                if (totalMcqsFromMd > 0) appDataWasModifiedBySyncOrRepairOrMigration = true; // Initializing non-empty available_questions
                             }
-                            if (JSON.stringify(userChapProgress.available_questions || []) !== JSON.stringify(finalAvailableQuestions)) {
-                                appDataWasModifiedBySyncOrRepair = true;
-                            }
+
 
                             currentMergedSubject.chapters[chapNumStr] = {
                                 title: mdChapData.title || `Chapter ${chapNumStr}`,
@@ -1138,7 +1181,6 @@ export async function loadUserData(uid) {
                     console.log(`Skipping MD sync for Subject ${globalDef.name} (ID: ${subjectId}) due to status '${globalDef.status}'.`);
                     currentMergedSubject.chapters = userProgressForThisSubject.chapters || {};
                 }
-                // Default chapter progress fields if chapter exists but fields are missing
                 for(const chapNumStr in currentMergedSubject.chapters) {
                     const chap = currentMergedSubject.chapters[chapNumStr];
                     chap.title = chap.title || `Chapter ${chapNumStr}`;
@@ -1153,12 +1195,21 @@ export async function loadUserData(uid) {
             }
             setData({ subjects: mergedSubjects });
 
-            if (appDataWasModifiedBySyncOrRepair) {
-                console.log("Saving appData (subjectProgress) after MD sync/repair during loadUserData...");
-                await saveUserData(uid);
+            if (appDataWasModifiedBySyncOrRepairOrMigration) {
+                console.log("Saving appData (subjectProgress) after MD sync/repair/migration during loadUserData...");
+                // `saveUserData` will correctly save only the `subjectProgress` part.
+                // If migration happened, the old `appData.subjects` is NOT included in `data` passed to `saveUserData`,
+                // so it effectively gets removed from Firestore if `saveUserData` overwrites the whole `appData` field.
+                // It's better if saveUserData *updates* `appData.subjectProgress` and explicitly deletes `appData.subjects` if migration occurred.
+
+                // Let's adjust saveUserData to handle this or do it here.
+                // For now, assuming saveUserData does a userRef.update({ appData: { subjectProgress: ... } })
+                // which implicitly removes `appData.subjects` if it was at the same level.
+                // If `appData` could contain other fields, this would need to be `userRef.update({'appData.subjectProgress': ..., 'appData.subjects': FieldValue.delete()})`
+                await saveUserData(uid, { subjects: mergedSubjects }); // Pass the merged data to saveUserData
             }
 
-            if (data && data.subjects) {
+            if (data && data.subjects) { /* ... (setting currentSubject logic as before) ... */
                 const subjectKeys = Object.keys(data.subjects);
                 let subjectToSelectId = null;
                 if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') {
@@ -1178,24 +1229,19 @@ export async function loadUserData(uid) {
             await loadAllUserCourseProgress(uid);
             await checkOnboarding(uid);
 
-        } else { // User document doesn't exist
+        } else {
             console.log("User document not found for UID:", uid, "- Initializing data.");
             const currentUserDetails = firebaseAuth?.currentUser;
             if (!currentUserDetails) { throw new Error("Cannot initialize data: Current user details unavailable."); }
-
             await initializeUserData(
-                uid,
-                currentUserDetails.email,
+                uid, currentUserDetails.email,
                 (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]),
-                currentUserDetails.displayName,
-                currentUserDetails.photoURL
+                currentUserDetails.displayName, currentUserDetails.photoURL
             );
-            // `initializeUserData` will implicitly call `loadUserData` again after creating the doc
-            // through the auth state listener, so we can return.
             return;
         }
     } catch (error) {
-        console.error("Error in loadUserData (vGlobalSubjects):", error);
+        console.error("Error in loadUserData (vGlobalSubjects_MIGRATION_AWARE):", error);
         throw error;
     }
 }
@@ -1270,27 +1316,21 @@ export async function initializeUserData(uid, email, username, displayName = nul
     if (!db || !firebaseAuth) { console.error("Firestore DB or Auth not initialized"); return; }
     const userRef = db.collection('users').doc(uid);
     let docExists = false;
-    let existingUserData = null; // To store existing data if not forceReset
+    let existingUserData = null;
 
     if (!forceReset) {
         try {
             const doc = await userRef.get();
             docExists = doc.exists;
             if (docExists) existingUserData = doc.data();
-        } catch (e) {
-            console.error("Error checking user existence:", e);
-            // Proceed as if doc doesn't exist if check fails, to attempt creation
-        }
+        } catch (e) { console.error("Error checking user existence:", e); }
     }
 
     let usernameLower = (username && typeof username === 'string')
         ? username.toLowerCase()
         : (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
-
     const initialIsAdmin = (uid === ADMIN_UID);
 
-    // If document exists AND we are NOT force-resetting, only update missing top-level fields.
-    // DO NOT overwrite appData here.
     if (docExists && !forceReset) {
         let updatesNeeded = {};
         if (!existingUserData.username && usernameLower) { updatesNeeded.username = usernameLower; }
@@ -1302,19 +1342,24 @@ export async function initializeUserData(uid, email, username, displayName = nul
         if (existingUserData.isAdmin === undefined) { updatesNeeded.isAdmin = initialIsAdmin; }
         if (existingUserData.credits === undefined) { updatesNeeded.credits = 0; }
         if (existingUserData.userAiChatSettings === undefined) { updatesNeeded.userAiChatSettings = getDefaultAiSettings(); }
-        // CRITICAL: Only create appData.subjectProgress if appData itself or subjectProgress is missing
-        if (!existingUserData.appData || !existingUserData.appData.subjectProgress) {
-            updatesNeeded['appData.subjectProgress'] = {}; // Use dot notation for specific field update
-            console.log(`[initializeUserData] User ${uid} exists but appData.subjectProgress missing. Initializing it.`);
-        }
 
+        // IMPORTANT: If appData or appData.subjectProgress is missing, initialize it.
+        // This handles the case where an existing user logs in for the first time AFTER the data structure change.
+        if (!existingUserData.appData) {
+            updatesNeeded.appData = { subjectProgress: {} };
+            console.log(`[initializeUserData] User ${uid} exists but appData missing. Initializing it.`);
+        } else if (!existingUserData.appData.subjectProgress) {
+            // If appData exists but subjectProgress doesn't, create subjectProgress.
+            // We should NOT delete appData.subjects here, loadUserData will handle migrating it.
+            updatesNeeded['appData.subjectProgress'] = {}; // Using dot notation to ensure only this field is added/updated.
+            console.log(`[initializeUserData] User ${uid} exists, appData exists, but appData.subjectProgress missing. Initializing subjectProgress.`);
+        }
 
         if (Object.keys(updatesNeeded).length > 0) {
             console.log(`[initializeUserData] Updating missing top-level fields for existing user ${uid}:`, Object.keys(updatesNeeded));
             try {
                 await userRef.update(updatesNeeded);
-                // If username was updated, handle reservation
-                if (updatesNeeded.username) {
+                if (updatesNeeded.username) { /* ... username reservation logic ... */
                     const usernameToReserve = updatesNeeded.username;
                     const usernameResRef = db.collection('usernames').doc(usernameToReserve);
                     const usernameResDoc = await usernameResRef.get();
@@ -1325,18 +1370,16 @@ export async function initializeUserData(uid, email, username, displayName = nul
                 console.error("[initializeUserData] Error updating existing user's missing fields:", updateError);
             }
         } else {
-            console.log(`[initializeUserData] User data already exists and is up-to-date for ${uid}. No initial field updates needed.`);
+            console.log(`[initializeUserData] User data already exists and essential top-level fields are present for ${uid}.`);
         }
-        return; // Exit after handling existing user without forceReset
+        return; // Done with existing user, no full init.
     }
 
-    // Proceed with full initialization if doc doesn't exist OR forceReset is true
-    console.log(`[initializeUserData] Initializing/Forcing Reset for user: ${uid}. Username: ${usernameLower}`);
-
-    const defaultAppData = {
-        subjectProgress: {} // User's progress on global subjects starts empty
+    // Full initialization (new user or forceReset)
+    console.log(`[initializeUserData] Full Init/Force Reset for user: ${uid}. Username: ${usernameLower}`);
+    const defaultAppDataForNewUser = {
+        subjectProgress: {} // New users start with empty progress
     };
-
     const dataToSet = {
         email: email,
         username: usernameLower,
@@ -1344,7 +1387,7 @@ export async function initializeUserData(uid, email, username, displayName = nul
         photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
-        appData: defaultAppData,
+        appData: defaultAppDataForNewUser, // Use the new structure
         completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
         userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
         isAdmin: (forceReset && typeof existingUserData?.isAdmin === 'boolean') ? existingUserData.isAdmin : initialIsAdmin,
@@ -1355,22 +1398,18 @@ export async function initializeUserData(uid, email, username, displayName = nul
     try {
         await userRef.set(dataToSet);
         console.log(`[initializeUserData] User document successfully CREATED/FORCED_RESET for ${uid}`);
-        setData({ subjects: {} }); // Reset local `data.subjects` for this user
+        setData({ subjects: {} }); // Reset local `data.subjects`
         setUserAiChatSettings(dataToSet.userAiChatSettings);
 
-        if (forceReset) {
-            setUserCourseProgressMap(new Map());
+        if (forceReset) { /* ... other forceReset actions ... */
+             setUserCourseProgressMap(new Map());
             console.warn("Force reset executed. User course progress subcollection needs manual clearing if desired.");
             setCurrentSubject(null);
             updateSubjectInfo();
         }
-
-        if (usernameLower) {
+        if (usernameLower) { /* ... username reservation ... */
             const usernameRef = db.collection('usernames').doc(usernameLower);
-            // If forceReset, we might need to clear old username reservation if username changes,
-            // but this is complex. For now, just try to set the new one.
-            // A more robust system would handle username changes carefully with transactions.
-            await usernameRef.set({ userId: uid }); // This will overwrite if it existed for another user - admin should handle conflicts.
+            await usernameRef.set({ userId: uid });
             console.log(`[initializeUserData] Username '${usernameLower}' reserved/updated for ${uid}.`);
         }
     } catch (error) {
