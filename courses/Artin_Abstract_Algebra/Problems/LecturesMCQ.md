@@ -2257,3 +2257,1062 @@
     D.  A group can be represented as a group of permutations.
     E.  Properties of $\mathbb{Z}$ are transported to $\mathbb{Z}/N\mathbb{Z}$.
     ans: B
+
+### Chapter 3
+
+1.  If $H$ is a normal subgroup of $G$, and $K$ is a subgroup of $G$ such that $H \subseteq K$, what can be said about $H$ in relation to $K$?
+    A.  $H$ is not necessarily normal in $K$.
+    B.  $H$ is always normal in $K$.
+    C.  $H$ is normal in $K$ if and only if $K$ is normal in $G$.
+    D.  $H$ is normal in $K$ if and only if $G/H$ is abelian.
+    E.  $H$ is normal in $K$ only if $K=H$ or $K=G$.
+    ans: B
+
+2.  If $H$ is a normal subgroup of $G$, and $K$ is a subgroup of $G$ such that $H \subseteq K$, then $K/H$ (the set of cosets of $H$ in $K$) is:
+    A.  A normal subgroup of $G$.
+    B.  A subgroup of $G/H$.
+    C.  Isomorphic to $K$.
+    D.  Isomorphic to $G/K$.
+    E.  The trivial group.
+    ans: B
+
+3.  There is a bijection between the subgroups of $G/H$ (where $H$ is a normal subgroup of $G$) and:
+    A.  All subgroups of $G$.
+    B.  All normal subgroups of $G$.
+    C.  The subgroups of $G$ that are contained in $H$.
+    D.  The subgroups of $G$ that contain $H$.
+    E.  The elements of $H$.
+    ans: D
+
+4.  If $S'$ is a subgroup of $G/H$, the corresponding subgroup $K$ in $G$ (where $H \trianglelefteq G$) under the standard bijection is formed by:
+    A.  The intersection of all cosets in $S'$.
+    B.  The union of all cosets in $S'$.
+    C.  The set of representatives of cosets in $S'$.
+    D.  The normalizer of $S'$ in $G$.
+    E.  The image of $S'$ under a map from $G/H \to G$.
+    ans: B
+
+5.  Let $G = \mathbb{Z}$ (integers under addition) and $H = p\mathbb{Z}$ where $p$ is a prime number. The quotient group $\mathbb{Z}/p\mathbb{Z}$ is:
+    A.  An infinite cyclic group.
+    B.  A cyclic group of order $p$.
+    C.  A non-cyclic group of order $p$.
+    D.  Not a group as $p\mathbb{Z}$ is not always normal (it is, as $\mathbb{Z}$ is abelian).
+    E.  Isomorphic to $\mathbb{Z}$.
+    ans: B
+
+6.  A group of prime order $p$ has how many non-trivial subgroups?
+    A.  $p-1$
+    B.  $p$
+    C.  $1$ (only the group itself, which is non-trivial if $p>1$)
+    D.  $0$
+    E.  $2$ (the identity subgroup and the group itself)
+    ans: D
+
+7.  For $G = \mathbb{Z}$ and $H = p\mathbb{Z}$ (where $p$ is prime), if K is a subgroup such that $p\mathbb{Z} \subseteq K \subseteq \mathbb{Z}$, then:
+    A.  $K$ can be any $m\mathbb{Z}$ for $m|p$.
+    B.  $K = p\mathbb{Z}$ or $K = \mathbb{Z}$.
+    C.  $K = m\mathbb{Z}$ for any $m$ such that $p|m$.
+    D.  $K$ must be a finite group.
+    E.  There are infinitely many such distinct $K$.
+    ans: B
+
+8.  A subgroup $M$ of $G$ is called maximal if $M \neq G$ and for any subgroup $K$ with $M \subseteq K \subseteq G$:
+    A.  $K$ must be normal in $G$.
+    B.  $K = M$ or $K = G$.
+    C.  $K$ must be abelian.
+    D.  The index $[G:K]$ is prime.
+    E.  $K = M$.
+    ans: B
+
+9.  For a prime $p$, the subgroup $p\mathbb{Z}$ of $\mathbb{Z}$ (under addition) is:
+    A.  Not normal in $\mathbb{Z}$.
+    B.  Normal but not maximal in $\mathbb{Z}$.
+    C.  A maximal subgroup of $\mathbb{Z}$.
+    D.  The trivial subgroup $\{0\}$.
+    E.  The entire group $\mathbb{Z}$ if $p=1$.
+    ans: C
+
+10. A field $F$ is a set with two operations, addition ($+$) and multiplication ($\cdot$). Which statement correctly describes the group structures involved?
+    A.  $(F, +)$ is an Abelian group, and $(F, \cdot)$ is an Abelian group.
+    B.  $(F, +)$ is an Abelian group, and $(F \setminus \{0_F\}, \cdot)$ is an Abelian group, and distributive laws hold.
+    C.  $(F, +)$ is a group, and $(F \setminus \{0_F\}, \cdot)$ is a group, and distributive laws hold.
+    D.  $(F, +)$ is an Abelian group, and $(F, \cdot)$ is a monoid, and distributive laws hold.
+    E.  $(F, +)$ and $(F, \cdot)$ are both rings.
+    ans: B
+
+11. In the definition of a field, the additive identity $0_F$ and the multiplicative identity $1_F$ must satisfy:
+    A.  $0_F = 1_F$.
+    B.  $0_F \neq 1_F$.
+    C.  Both must be equal to the same element if the field has only two elements.
+    D.  $1_F$ is the additive inverse of $0_F$.
+    E.  $0_F$ is the multiplicative inverse of $1_F$.
+    ans: B
+
+12. Which of the following sets, under their standard addition and multiplication, is NOT a field?
+    A.  $\mathbb{Q}$ (rational numbers)
+    B.  $\mathbb{R}$ (real numbers)
+    C.  $\mathbb{C}$ (complex numbers)
+    D.  $\mathbb{Z}$ (integers)
+    E.  $\mathbb{Z}/p\mathbb{Z}$ (where $p$ is a prime number)
+    ans: D
+
+13. The simplest field, often denoted $\mathbb{F}_2$ or $\mathbb{Z}/2\mathbb{Z}$, contains exactly:
+    A.  One element.
+    B.  Two elements.
+    C.  Zero elements.
+    D.  Infinitely many elements.
+    E.  Three elements.
+    ans: B
+
+14. In the field $\mathbb{F}_2 = \{0, 1\}$, the sum $1+1$ equals:
+    A.  $1$
+    B.  $2$ (which is not an element of $\mathbb{F}_2$)
+    C.  $0$
+    D.  Undefined
+    E.  A new element distinct from $0$ and $1$.
+    ans: C
+
+15. For which positive integers $n$ does the ring of integers modulo $n$, $\mathbb{Z}/n\mathbb{Z}$, form a field?
+    A.  For all $n \ge 1$.
+    B.  Only when $n$ is an odd integer.
+    C.  Only when $n$ is a prime number.
+    D.  Only when $n$ is a power of a prime number.
+    E.  Only when $n=2$.
+    ans: C
+
+16. If $n$ is a composite number, $\mathbb{Z}/n\mathbb{Z}$ is not a field because:
+    A.  Vector addition is not always associative.
+    B.  The distributive law fails.
+    C.  The zero element $0_F$ does not exist.
+    D.  There are non-zero elements that do not have multiplicative inverses.
+    E.  $1_F=0_F$ in $\mathbb{Z}/n\mathbb{Z}$ if $n$ is composite.
+    ans: D
+
+17. The proof that every non-zero element $\bar{A} \in \mathbb{Z}/p\mathbb{Z}$ (p prime) has a multiplicative inverse relies on the fact that the subgroup $p\mathbb{Z} + A\mathbb{Z}$ of $\mathbb{Z}$ must be:
+    A.  Equal to $\mathbb{Z}$ itself.
+    B.  Equal to $p\mathbb{Z}$.
+    C.  Equal to $A\mathbb{Z}$.
+    D.  The trivial subgroup $\{0\}$.
+    E.  A finite group.
+    ans: A
+
+18. The characteristic of a field $F$ is the smallest positive integer $m$ such that $m \cdot 1_F = 0_F$. If no such $m$ exists, the characteristic is 0. What is the characteristic of the field $\mathbb{Z}/p\mathbb{Z}$ (p prime)?
+    A.  $0$
+    B.  $1$
+    C.  $p$
+    D.  $p-1$
+    E.  Infinite (This is equivalent to characteristic 0)
+    ans: C
+
+19. According to Galois's theory of finite fields, the number of elements in any finite field must be:
+    A.  A prime number $p$.
+    B.  A power of a prime number, $p^n$, for $n \ge 1$.
+    C.  An even number.
+    D.  Any positive integer $k$.
+    E.  A factorial $k!$.
+    ans: B
+
+20. Regarding the existence and uniqueness of finite fields, Galois proved that for each prime power $p^n$ (with $n \ge 1$):
+    A.  There are exactly $n$ non-isomorphic fields of order $p^n$.
+    B.  There exists a unique field of order $p^n$ (up to isomorphism).
+    C.  No field of order $p^n$ exists if $n > 1$.
+    D.  Fields of order $p^n$ exist only if $p=2$.
+    E.  All fields of order $p^n$ are subfields of $\mathbb{C}$.
+    ans: B
+
+21. A vector space $V$ over a field $F$ must, as a fundamental property, be:
+    A.  A field.
+    B.  An Abelian group under an operation called vector addition.
+    C.  A set equipped only with scalar multiplication.
+    D.  A non-empty set with no required algebraic structure.
+    E.  A ring.
+    ans: B
+
+22. Which of the following is a distributive law axiom for a vector space $V$ over a field $F$? (Let $c \in F$, $v, w \in V$)
+    A.  $c(vw) = (cv)w$ (This relates to module actions if $V$ is an algebra)
+    B.  $c+(v+w) = (c+v)+w$ (This mixes scalar and vector addition incorrectly)
+    C.  $c(v+w) = cv + cw$
+    D.  $cv = vc$ (Scalar multiplication is not necessarily commutative with vectors themselves, but $c \in F$ is a scalar)
+    E.  $c(cv) = (c \cdot c) v$ (This is related to $(ab)v=a(bv)$)
+    ans: C
+
+23. In a vector space $V$ over a field $F$, if $0_F$ is the additive identity in $F$ and $v \in V$, then $0_F \cdot v$ (scalar multiplication) is equal to:
+    A.  $v$
+    B.  $0_V$ (the additive identity vector in $V$)
+    C.  $1_F$ (the multiplicative identity in $F$)
+    D.  Undefined
+    E.  Dependent on the specific vector $v$.
+    ans: B
+
+24. In a vector space $V$ over a field $F$, if $1_F$ is the multiplicative identity in $F$ and $v \in V$, then $1_F \cdot v$ (scalar multiplication) is equal to:
+    A.  $0_V$
+    B.  $v$
+    C.  $1_F$ interpreted as a vector
+    D.  $-v$
+    E.  Dependent on the field $F$.
+    ans: B
+
+25. Which of the following is always an example of a vector space over the field $F$?
+    A.  The set of $n \times n$ invertible matrices with entries from $F$, under matrix multiplication.
+    B.  The field $F$ itself, with scalar multiplication being the field's multiplication.
+    C.  The set of integers $\mathbb{Z}$, with $F = \mathbb{Q}$.
+    D.  The set of all subgroups of a given Abelian group $A$.
+    E.  Any finite set containing at least two distinct elements.
+    ans: B
+
+26. For a field $F$, the set $F^n = \{ (a_1, \dots, a_n) \mid a_i \in F \}$ is a vector space. If $c \in F$, scalar multiplication $c \cdot (a_1, \dots, a_n)$ is defined as:
+    A.  $(ca_1, a_2, \dots, a_n)$
+    B.  $(ca_1, ca_2, \dots, ca_n)$
+    C.  $(c+a_1, c+a_2, \dots, c+a_n)$
+    D.  $(a_1/c, a_2/c, \dots, a_n/c)$ (assuming $c \neq 0_F$)
+    E.  $(c, a_1, \dots, a_n)$ (This would change the dimension/structure)
+    ans: B
+
+27. The set $F[X]$ of all polynomials in an indeterminate $X$ with coefficients in a field $F$ forms a vector space over $F$. This vector space is:
+    A.  Not a vector space because polynomial multiplication is also defined.
+    B.  Finite-dimensional if $F$ is finite.
+    C.  Always infinite-dimensional (assuming non-trivial polynomials).
+    D.  A field itself.
+    E.  A vector space only if $F = \mathbb{R}$ or $F = \mathbb{C}$.
+    ans: C
+
+28. A non-empty subset $W$ of a vector space $V$ (over field $F$) is a vector subspace if it is closed under vector addition and:
+    A.  $W$ contains the vector $1_F \cdot v$ for some $v \in V$.
+    B.  $W$ is closed under scalar multiplication by elements of $F$.
+    C.  $W$ has a finite basis.
+    D.  All elements of $W$ are non-zero, except possibly $0_V$.
+    E.  $W$ itself forms a field under the induced operations.
+    ans: B
+
+29. A linear transformation (or homomorphism of vector spaces) $T: V \to W$ (where $V,W$ are vector spaces over the same field $F$) must satisfy $T(v_1+v_2) = T(v_1)+T(v_2)$ for all $v_1, v_2 \in V$, and:
+    A.  $T(cv) = T(c)T(v)$ for $c \in F, v \in V$.
+    B.  $T(cv) = cT(v)$ for $c \in F, v \in V$.
+    C.  $T(cv) = (T(c))v$ for $c \in F, v \in V$.
+    D.  $T(V)$ must be equal to $W$ (i.e., $T$ is surjective).
+    E.  $T$ must be injective.
+    ans: B
+
+30. If $T: V \to W$ is a linear transformation between vector spaces over a field $F$, its kernel, $\text{Ker}(T) = \{v \in V \mid T(v) = 0_W\}$, is always:
+    A.  A subspace of $W$.
+    B.  A subspace of $V$.
+    C.  The zero subspace $\{0_V\}$ if $T$ is non-trivial.
+    D.  Isomorphic to the image $\text{Im}(T)$.
+    E.  A field.
+    ans: B
+
+31. If $T: V \to W$ is a linear transformation between vector spaces over a field $F$, its image, $\text{Im}(T) = \{T(v) \mid v \in V\}$, is always:
+    A.  A subspace of $V$.
+    B.  A subspace of $W$.
+    C.  Equal to $W$ if $T$ is non-trivial.
+    D.  Isomorphic to the kernel $\text{Ker}(T)$.
+    E.  The set of all non-zero vectors in $W$.
+    ans: B
+
+32. If $W$ is a subspace of a vector space $V$ over a field $F$, the quotient space $V/W$ is the set of:
+    A.  Elements in $V$ that are not in $W$.
+    B.  Subspaces of $V$ properly contained in $W$.
+    C.  Cosets of $W$ in $V$, i.e., sets of the form $v+W$ for $v \in V$.
+    D.  Linear transformations from $V$ to $W$.
+    E.  Elements $v \in V$ such that $vW = Wv$ (this syntax is for group theory).
+    ans: C
+
+33. In the quotient vector space $V/W$, scalar multiplication by $c \in F$ is defined for a coset $v+W$ as $c \cdot (v+W) = $:
+    A.  $c+(v+W)$
+    B.  $v+cW$ (where $cW = \{cw \mid w \in W\}$)
+    C.  $cv+W$
+    D.  $(c+v)+W$
+    E.  $cv+cW$ (This is not a single coset)
+    ans: C
+
+34. The natural map $\pi: V \to V/W$ (where $W$ is a subspace of $V$) defined by $\pi(v) = v+W$ is a linear transformation whose kernel is:
+    A.  $\{0_V\}$
+    B.  $W$
+    C.  $V$
+    D.  $V/W$
+    E.  Undefined for linear transformations.
+    ans: B
+
+35. When defining a linear transformation $T: V \to W$, it is fundamental that $V$ and $W$ are vector spaces:
+    A.  Over potentially different fields $F_1$ and $F_2$.
+    B.  Over the exact same field $F$.
+    C.  Exclusively over the field of real numbers $\mathbb{R}$.
+    D.  Exclusively over a finite field $\mathbb{F}_q$.
+    E.  Over a field of characteristic 0.
+    ans: B
+
+36. The lecture emphasizes that a significant portion of linear algebra theory (e.g., concepts of dimension, basis) is independent of:
+    A.  The choice of specific vectors.
+    B.  Whether the vector space is finite-dimensional or infinite-dimensional.
+    C.  The particular choice of the underlying field $F$ (as long as it is a field).
+    D.  The axioms governing scalar multiplication.
+    E.  The commutativity of the vector addition operation.
+    ans: C
+
+37. The vector addition and scalar multiplication operations in the vector space $F^n$ (where $F$ is a field) are defined:
+    A.  Using matrix multiplication.
+    B.  Component-wise, utilizing the addition and multiplication operations of the field $F$.
+    C.  Via a standard dot product inherited from $F$.
+    D.  Differently for each specific value of $n$.
+    E.  Only if $F$ is the field of real or complex numbers.
+    ans: B
+
+38. One of the distributive laws for a vector space $V$ over a field $F$ is $(a+b)v = av+bv$, where $a,b \in F$ and $v \in V$. In this identity:
+    A.  The addition $a+b$ is field addition, while $av+bv$ involves vector addition.
+    B.  The addition $a+b$ is vector addition, while $av+bv$ involves field addition.
+    C.  All addition operations are field additions.
+    D.  All addition operations are vector additions.
+    E.  This identity is optional for the definition of a vector space.
+    ans: A
+
+39. Which mathematician, renowned for foundational work in group theory, also made seminal contributions to the theory and classification of finite fields?
+    A.  Niels Henrik Abel
+    B.  Carl Friedrich Gauss
+    C.  Evariste Galois
+    D.  Emil Artin
+    E.  Euclid of Alexandria
+    ans: C
+
+40. A field $F$ has characteristic $p$ (a prime) if $p \cdot 1_F = 0_F$ (summing $1_F$ to itself $p$ times yields $0_F$). This property implies that such a field $F$:
+    A.  Must be isomorphic to $\mathbb{Z}/p\mathbb{Z}$.
+    B.  Cannot be embedded as a subfield within the complex numbers $\mathbb{C}$ (which have characteristic 0).
+    C.  Must necessarily be an infinite field.
+    D.  Has $p$ as its only non-zero element.
+    E.  Does not permit division by any of its elements.
+    ans: B
+
+41. If $H$ is a normal subgroup of a group $G$, the elements of the quotient group $G/H$ are:
+    A.  The elements of $G$ that are not in $H$.
+    B.  The subgroups of $G$ that properly contain $H$.
+    C.  The distinct cosets of $H$ in $G$.
+    D.  The elements of $H$ itself.
+    E.  Homomorphisms from $G$ onto $H$.
+    ans: C
+
+42. The set of all polynomials $F[X]$ with coefficients from a field $F$, when equipped with standard polynomial addition and scalar multiplication by elements of $F$, forms:
+    A.  A field.
+    B.  A finite group.
+    C.  A vector space over the field $F$.
+    D.  A non-abelian group under polynomial multiplication.
+    E.  A ring that lacks an additive identity.
+    ans: C
+
+43. If $H$ is a normal subgroup of $G$, the natural surjective homomorphism $f: G \to G/H$ defined by $f(g) = gH$ has its kernel $\text{ker}(f)$ equal to:
+    A.  The trivial subgroup $\{e\}$ of $G$.
+    B.  The subgroup $H$.
+    C.  The entire group $G$.
+    D.  The quotient group $G/H$.
+    E.  The center $Z(G)$.
+    ans: B
+
+44. Consider a normal subgroup $H$ of $G$ and the natural projection $\pi: G \to G/H$. If $S'$ is a subgroup of $G/H$, then its inverse image $\pi^{-1}(S')$ is:
+    A.  A subgroup of $H$.
+    B.  A subgroup of $G$ that contains $H$.
+    C.  A subgroup of $G$ that is contained in $H$.
+    D.  A normal subgroup of $G/H$.
+    E.  Necessarily the trivial subgroup of $G$.
+    ans: B
+
+45. The proofs of theorems regarding spanning sets, linear independence, and bases in a vector space over a field $F$ crucially rely on which property of the field $F$?
+    A.  $F$ has characteristic 0.
+    B.  Every non-zero element in $F$ has a multiplicative inverse.
+    C.  $F$ is an ordered field.
+    D.  $F$ is finite.
+    E.  $F$ contains the real numbers $\mathbb{R}$.
+    ans: B
+
+46. A vector $W$ is a linear combination of vectors $V_1, \dots, V_n$ from a vector space $V$ over a field $F$ if:
+    A.  $W = V_1 + V_2 + \dots + V_n$.
+    B.  $W = A_1 V_1 + A_2 V_2 + \dots + A_n V_n$ for some scalars $A_i \in F$.
+    C.  $W$ is a scalar multiple of one of the $V_i$.
+    D.  The set $\{W, V_1, \dots, V_n\}$ is linearly dependent.
+    E.  $W$ is perpendicular to all $V_i$.
+    ans: B
+
+47. The span of a set of vectors $S = \{V_1, \dots, V_n\}$, denoted $\text{Span}(S)$, is:
+    A.  The set $S$ itself.
+    B.  The set of all scalar multiples of $V_1$.
+    C.  The set of all linear combinations of the vectors in $S$.
+    D.  The largest vector in $S$.
+    E.  The number of vectors in $S$.
+    ans: C
+
+48. The span of any finite set of vectors $S$ in a vector space $V$:
+    A.  Is always $V$ itself.
+    B.  Is a subspace of $V$.
+    C.  Contains $S$ but may not be closed under addition.
+    D.  Is always the zero vector space $\{0\}$.
+    E.  Is a linearly independent set.
+    ans: B
+
+49. What is the span of the empty set of vectors, $\text{Span}(\emptyset)$?
+    A.  Undefined.
+    B.  The empty set itself.
+    C.  The entire vector space $V$.
+    D.  The zero vector space $\{0\}$.
+    E.  A basis for $V$.
+    ans: D
+
+50. A vector space $V$ is called finite-dimensional if:
+    A.  $V$ contains a finite number of vectors.
+    B.  There exists a finite set of vectors $S$ in $V$ such that $\text{Span}(S) = V$.
+    C.  Every vector in $V$ has a finite number of components.
+    D.  The underlying field $F$ is finite.
+    E.  $V$ is isomorphic to $\mathbb{R}^n$ for some $n$.
+    ans: B
+
+51. The vector space $F^n$ (n-tuples of elements from field $F$) is finite-dimensional because:
+    A.  It has exactly $n$ vectors.
+    B.  It is spanned by the $n$ standard basis vectors $e_i = (0, \dots, 1, \dots, 0)$.
+    C.  The field $F$ must be finite.
+    D.  All its vectors have finite length.
+    E.  It is a subspace of $F^{n+1}$.
+    ans: B
+
+52. Why is the vector space $F[x]$ of polynomials in $x$ with coefficients in a field $F$ NOT finite-dimensional?
+    A.  It contains infinitely many polynomials.
+    B.  Any finite set of polynomials has a maximum degree, and their span cannot produce polynomials of higher degree.
+    C.  The field $F$ must be infinite.
+    D.  Polynomials cannot be added.
+    E.  $F[x]$ does not have a zero vector.
+    ans: B
+
+53. A set of vectors $\{V_1, \dots, V_n\}$ is linearly independent if the relation $A_1 V_1 + \dots + A_n V_n = 0$ (where $0$ is the zero vector):
+    A.  Holds for any scalars $A_i$.
+    B.  Only holds if all $V_i$ are the zero vector.
+    C.  Only holds if all scalars $A_i$ are zero.
+    D.  Implies that the vectors span the space.
+    E.  Means no $V_i$ is a multiple of another $V_j$.
+    ans: C
+
+54. Consider the vectors $V_1 = (1,0,0)$, $V_2 = (1,1,0)$, and $V_3 = (1,2,3)$ in $\mathbb{R}^3$. These vectors are:
+    A.  Linearly dependent because $V_2$ contains $V_1$.
+    B.  Linearly independent.
+    C.  A spanning set for the $xy$-plane only.
+    D.  Not a basis because there are 3 vectors in $\mathbb{R}^3$.
+    E.  Linearly dependent because $1+1+1 \neq 0$.
+    ans: B
+
+55. The property of linear independence for a collection of vectors $\{V_1, \dots, V_n\}$:
+    A.  Depends on the order in which the vectors are listed.
+    B.  Depends only on the set of vectors, irrespective of order.
+    C.  Is only defined if $n$ is the dimension of the space.
+    D.  Implies that the set must span the vector space.
+    E.  Is equivalent to each vector being non-zero.
+    ans: B
+
+56. An ordered set of vectors $(V_1, \dots, V_n)$ forms a basis for a vector space $V$ if:
+    A.  The set spans $V$.
+    B.  The set is linearly independent.
+    C.  The set spans $V$ AND is linearly independent.
+    D.  $n$ is equal to the number of elements in the field $F$.
+    E.  Every vector in $V$ is one of the $V_i$.
+    ans: C
+
+57. If $(V_1, \dots, V_n)$ is a basis for $V$, then any vector $W \in V$:
+    A.  Can be written as a linear combination of $V_1, \dots, V_n$ in multiple ways.
+    B.  Is equal to one of the $V_i$.
+    C.  Can be uniquely expressed as a linear combination $A_1 V_1 + \dots + A_n V_n$.
+    D.  Must be linearly independent of the basis vectors.
+    E.  Has $A_i = 1$ for all $i$ in its linear combination.
+    ans: C
+
+58. A basis $(V_1, \dots, V_n)$ for a vector space $V$ over a field $F$ gives rise to an isomorphism $f: V \to F^n$. This map $f$ takes a vector $W \in V$ to:
+    A.  The sum of its components.
+    B.  The tuple of unique scalar coefficients $(A_1, \dots, A_n)$ such that $W = \sum A_i V_i$.
+    C.  The first basis vector $V_1$.
+    D.  A single scalar in $F$.
+    E.  The zero vector in $F^n$ if $W \neq 0$.
+    ans: B
+
+59. The isomorphism $f: V \to F^n$ induced by a basis $(V_1, \dots, V_n)$ is a homomorphism. This means if $W = \sum A_i V_i$ and $W' = \sum B_i V_i$:
+    A.  $f(W \cdot W') = f(W) \cdot f(W')$.
+    B.  $f(W + W') = (A_1+B_1, \dots, A_n+B_n)$.
+    C.  $f(W)$ is always the same as $f(V_1)$.
+    D.  $V$ must be equal to $F^n$.
+    E.  The sum of coefficients $A_i$ must be 1.
+    ans: B
+
+60. Which theorem states that if a finite set $S$ spans a vector space $V$, then some subset of $S$ forms a basis for $V$?
+    A.  The Dimension Theorem.
+    B.  The theorem that allows extending a linearly independent set to a basis.
+    C.  The theorem that states any spanning set contains a basis.
+    D.  Cayley-Hamilton Theorem.
+    E.  The Main Theorem relating sizes of spanning and linearly independent sets.
+    ans: C
+
+61. The proof that a spanning set $S$ contains a basis involves iteratively:
+    A.  Adding vectors from $V$ to $S$ until it becomes linearly independent.
+    B.  If $S$ is linearly dependent, finding a vector in $S$ that is a linear combination of others and removing it, without changing the span.
+    C.  Taking scalar multiples of vectors in $S$.
+    D.  Ensuring all vectors in $S$ are non-zero.
+    E.  Ordering the vectors in $S$ alphabetically.
+    ans: B
+
+62. Which theorem states that any linearly independent set $L$ in a finite-dimensional vector space $V$ can be extended to form a basis for $V$?
+    A.  The Basis Uniqueness Theorem.
+    B.  The theorem that allows extending a linearly independent set to a basis.
+    C.  The Spanning Set Reduction Theorem.
+    D.  The Rank-Nullity Theorem.
+    E.  The Isomorphism Theorem for Vector Spaces.
+    ans: B
+
+63. The proof that a linearly independent set $L$ can be extended to a basis involves iteratively:
+    A.  Removing vectors from $L$ if it doesn't span $V$.
+    B.  If $L$ does not span $V$, finding a vector $v$ (from a known finite spanning set of $V$) not in $\text{Span}(L)$ and adding $v$ to $L$, maintaining linear independence.
+    C.  Replacing vectors in $L$ with their negatives.
+    D.  Verifying that $L$ is not the empty set.
+    E.  Calculating the determinant of a matrix formed by vectors in $L$.
+    ans: B
+
+64. The "Main Theorem" discussed in the lecture states that if $S = \{V_1, \dots, V_n\}$ spans $V$ and $L = \{W_1, \dots, W_m\}$ is a linearly independent set in $V$, then:
+    A.  $m > n$.
+    B.  $m = n$.
+    C.  $m \le n$.
+    D.  $S$ must be a subset of $L$.
+    E.  $L$ must be a subset of $S$.
+    ans: C
+
+65. The proof of the Main Theorem ($m \le n$) involves expressing each $W_j = \sum_{i=1}^n A_{ij} V_i$ and considering a linear relation $\sum_{j=1}^m C_j W_j = 0$. This leads to a system of:
+    A.  $m$ linear equations in $n$ unknowns $C_j$.
+    B.  $n$ linear equations in $m$ unknowns $C_j$.
+    C.  $m \times n$ non-linear equations.
+    D.  $n$ quadratic equations in $m$ unknowns $V_i$.
+    E.  $m$ equations for the $A_{ij}$.
+    ans: B
+
+66. In the proof of the Main Theorem, if $m > n$ (more linearly independent vectors than spanning vectors), this would imply:
+    A.  The spanning set $S$ was not minimal.
+    B.  The linearly independent set $L$ was not maximal.
+    C.  A system of $n$ linear equations in $m$ unknowns $C_j$ (with $m>n$) has a non-trivial solution for $C_j$.
+    D.  All $A_{ij}$ must be zero.
+    E.  The field $F$ must be $\mathbb{R}$.
+    ans: C
+
+67. A crucial algebraic fact used in concluding the Main Theorem (if $m>n$, then $L$ is linearly dependent) is that a system of homogeneous linear equations with more unknowns than equations:
+    A.  Has only the trivial solution.
+    B.  Always has a non-trivial solution.
+    C.  May or may not have a non-trivial solution, depending on the coefficients.
+    D.  Is inconsistent.
+    E.  Requires the determinant of the coefficient matrix to be non-zero.
+    ans: B
+
+68. A fundamental corollary of the Main Theorem is that all bases of a finite-dimensional vector space $V$:
+    A.  Are subsets of each other.
+    B.  Contain the same number of elements.
+    C.  Must include the zero vector.
+    D.  Are infinite if $V$ is not the zero space.
+    E.  Consist of orthogonal vectors.
+    ans: B
+
+69. The dimension of a finite-dimensional vector space $V$, denoted $\text{dim}(V)$, is defined as:
+    A.  The number of elements in $V$.
+    B.  The number of elements in any basis of $V$.
+    C.  The maximum number of linearly dependent vectors in $V$.
+    D.  The number of elements in the underlying field $F$.
+    E.  The smallest $n$ such that $V$ is a subspace of $F^n$.
+    ans: B
+
+70. What is the dimension of the zero vector space $\{0\}$?
+    A.  Undefined.
+    B.  0.
+    C.  1.
+    D.  Infinite.
+    E.  Depends on the field $F$.
+    ans: B
+
+71. What is the dimension of the vector space $F^n$ over the field $F$?
+    A.  $n^2$.
+    B.  $2n$.
+    C.  $n$.
+    D.  $1$.
+    E.  Infinite if $F$ is infinite.
+    ans: C
+
+72. If $S$ is a finite set of vectors that spans $V$, and $\text{dim}(V) = d$, then the number of elements in $S$, $|S|$, must satisfy:
+    A.  $|S| < d$.
+    B.  $|S| = d$.
+    C.  $|S| \ge d$.
+    D.  $|S| = d!$.
+    E.  $|S|$ can be any positive integer.
+    ans: C
+
+73. If $L$ is a linearly independent set of vectors in $V$, and $\text{dim}(V) = d$, then the number of elements in $L$, $|L|$, must satisfy:
+    A.  $|L| > d$.
+    B.  $|L| = d$.
+    C.  $|L| \le d$.
+    D.  $|L| = 0$.
+    E.  $|L|$ can be any positive integer.
+    ans: C
+
+74. If $W$ is a subspace of a finite-dimensional vector space $V$, and $(W_1, \dots, W_m)$ is a basis for $W$, then:
+    A.  This basis cannot be extended to a basis for $V$.
+    B.  This basis can be extended to a basis for $V$, say $(W_1, \dots, W_m, V_{m+1}, \dots, V_d)$.
+    C.  $V$ must be equal to $W$.
+    D.  Any basis for $V$ must contain $(W_1, \dots, W_m)$ as its first $m$ vectors.
+    E.  $\text{dim}(W) > \text{dim}(V)$.
+    ans: B
+
+75. If $(W_1, \dots, W_m)$ is a basis for a subspace $W \subset V$, and $(W_1, \dots, W_m, V_{m+1}, \dots, V_d)$ is an extended basis for $V$, then a basis for the quotient space $V/W$ is formed by:
+    A.  The set $\{W_1+W, \dots, W_m+W\}$.
+    B.  The set $\{V_{m+1}+W, \dots, V_d+W\}$.
+    C.  The entire set $\{W_1+W, \dots, V_d+W\}$.
+    D.  Any $d-m$ vectors from $V$.
+    E.  The zero vector in $V/W$.
+    ans: B
+
+76. For a finite-dimensional vector space $V$ and a subspace $W$, the dimension formula states:
+    A.  $\text{dim}(V) = \text{dim}(W) \cdot \text{dim}(V/W)$.
+    B.  $\text{dim}(V) = \text{dim}(W) + \text{dim}(V/W)$.
+    C.  $\text{dim}(V) = \text{dim}(W) - \text{dim}(V/W)$.
+    D.  $\text{dim}(V/W) = \text{dim}(V) + \text{dim}(W)$.
+    E.  $\text{dim}(V) = \text{max}(\text{dim}(W), \text{dim}(V/W))$.
+    ans: B
+
+77. Given a subspace $W$ of $V$, and a basis $(V_{m+1}, \dots, V_d)$ for a complementary space $W'$ such that their images form a basis for $V/W$. The subspace $W' = \text{Span}(V_{m+1}, \dots, V_d)$ has the property that:
+    A.  $W' = W$.
+    B.  $W'$ is isomorphic to $V/W$.
+    C.  $W' = \{0\}$.
+    D.  $W \cap W' = W'$.
+    E.  $\text{dim}(W') = \text{dim}(V)$.
+    ans: B
+
+78. Consider the group $G = \mathbb{Z}/4\mathbb{Z}$ and its subgroup $H = 2\mathbb{Z}/4\mathbb{Z} \cong \mathbb{Z}/2\mathbb{Z}$. The quotient group $G/H \cong \mathbb{Z}/2\mathbb{Z}$. Can we always find another subgroup $H' \subset G$, $H' \neq H$, such that $H' \cong G/H$ and $G \cong H \times H'$?
+    A.  Yes, this is always possible for finite groups.
+    B.  No, in this specific example, the only subgroup of order 2 is $H$ itself.
+    C.  Yes, if $G$ is abelian.
+    D.  No, because $G/H$ is trivial.
+    E.  Yes, $H'$ can be chosen as $G$ itself.
+    ans: B
+
+79. The fact that for a subspace $W \subset V$, we can find a subspace $W' \subset V$ such that $V = W \oplus W'$ (meaning $W \cap W' = \{0\}$ and $W+W'=V$), where $W' \cong V/W$, is a property that:
+    A.  Holds for all abelian groups and their subgroups.
+    B.  Is specific to vector spaces (and more generally, free modules over certain rings).
+    C.  Only holds if $W$ is the zero subspace.
+    D.  Requires $V$ to be an inner product space.
+    E.  Is true for groups but not for vector spaces.
+    ans: B
+
+80. The ability to "lift" the quotient space $V/W$ to a subspace $W'$ within $V$ such that $V \cong W \oplus V/W$ (identifying $V/W$ with $W'$) is a consequence of:
+    A.  The underlying field being $\mathbb{R}$.
+    B.  The existence of bases and the ability to extend a basis of $W$ to a basis of $V$.
+    C.  The commutativity of vector addition.
+    D.  The finite dimensionality of $W$ only, $V$ can be infinite.
+    E.  All subspaces being normal (which is always true for the additive group of a vector space).
+    ans: B
+
+81. If $(V_1, \dots, V_n)$ is a basis for $V$, and a vector $W \in V$ has coordinates $(0, \dots, 0)$ with respect to this basis, then:
+    A.  $W$ is one of the basis vectors $V_i$.
+    B.  $W$ is the zero vector.
+    C.  This situation is impossible unless $n=0$.
+    D.  $W$ is linearly independent of all $V_i$.
+    E.  The basis is not valid.
+    ans: B
+
+82. If $S_1$ is a finite spanning set for $V$ and $S_2 \subset S_1$ is a basis for $V$, and $S_1 \neq S_2$, then $S_1$ must have been:
+    A.  Linearly independent.
+    B.  Linearly dependent.
+    C.  The empty set.
+    D.  A proper subset of $S_2$.
+    E.  A set containing the zero vector.
+    ans: B
+
+83. If a set of vectors $\{V_1, \dots, V_n\}$ is linearly dependent, and not all vectors are zero, then:
+    A.  All vectors must be multiples of $V_1$.
+    B.  At least one vector $V_k$ can be expressed as a linear combination of the other vectors in the set.
+    C.  The set must span the entire vector space.
+    D.  All scalars in any linear combination summing to zero must be non-zero.
+    E.  $n$ must be greater than the dimension of the space.
+    ans: B
+
+84. If $L = \{W_1, \dots, W_m\}$ is a linearly independent set and a vector $v$ is NOT in $\text{Span}(L)$, then the set $L' = L \cup \{v\}$ is:
+    A.  Always linearly dependent.
+    B.  Always linearly independent.
+    C.  Spans the entire vector space.
+    D.  Equal to $L$.
+    E.  The empty set.
+    ans: B
+
+85. The primary significance of a basis $(V_1, \dots, V_n)$ providing a *unique* linear combination $W = \sum A_i V_i$ for every vector $W \in V$ is that:
+    A.  It simplifies addition of vectors.
+    B.  It allows defining coordinates $(A_1, \dots, A_n)$ for $W$ unambiguously, establishing an isomorphism $V \cong F^n$.
+    C.  It proves the vector space is finite.
+    D.  It means all $A_i$ must be non-zero.
+    E.  It guarantees the $V_i$ are orthogonal.
+    ans: B
+
+86. When a basis $(V_1, \dots, V_n)$ induces an isomorphism $f: V \to F^n$, the "onto" property of $f$ means that:
+    A.  Every vector in $V$ maps to the zero vector in $F^n$.
+    B.  For any tuple of scalars $(A_1, \dots, A_n) \in F^n$, there exists a vector $W = \sum A_i V_i$ in $V$ that maps to it.
+    C.  Different vectors in $V$ map to different tuples in $F^n$.
+    D.  $V$ contains more vectors than $F^n$.
+    E.  The scalars $A_i$ must be integers.
+    ans: B
+
+87. When a basis $(V_1, \dots, V_n)$ induces an isomorphism $f: V \to F^n$, the "one-to-one" (injective) property of $f$ means that:
+    A.  If $f(W) = (0, \dots, 0)$, then $W$ must be the zero vector in $V$.
+    B.  Every tuple in $F^n$ is the image of some vector in $V$.
+    C.  $V$ and $F^n$ are the same set.
+    D.  The map $f$ preserves scalar multiplication but not necessarily addition.
+    E.  Any vector $W$ can be written as $\sum A_i V_i$.
+    ans: A
+
+88. The lecture begins by recalling a result from the previous session: a linearly independent subset `S` of a finite-dimensional vector space `V` can be:
+    A.  Shrunk to form a basis of `V`.
+    B.  Extended to form a basis of `V`.
+    C.  Is always already a basis of `V`.
+    D.  Used to span a subspace that is necessarily smaller than `V`.
+    E.  Replaced by an entirely different set to form a basis.
+    ans: B
+
+89. If `V` has a basis `\{v_1, ..., v_m\}`, and `W = \text{span}(v_1, ..., v_n)` and `W' = \text{span}(v_{n+1}, ..., v_m)` where `n < m`, then the intersection `W \cap W'` is:
+    A.  `W`
+    B.  `W'`
+    C.  `\{0\}` (the zero vector space)
+    D.  `V`
+    E.  A non-trivial subspace if `n > 0`.
+    ans: C
+
+90. The fact that `W \cap W' = \{0\}` (using notation from the previous question) primarily relies on which property of the set `\{v_1, ..., v_m\}`?
+    A.  It spans `V`.
+    B.  It is linearly independent.
+    C.  `V` is finite-dimensional.
+    D.  The underlying field `F` is `\mathbb{R}`.
+    E.  The definition of a subspace.
+    ans: B
+
+91. Given `W = \text{span}(v_1, ..., v_n)` and `W' = \text{span}(v_{n+1}, ..., v_m)` from a basis of `V`, the map `\phi: W \times W' \to V` defined by `\phi(w, w') = w + w'` is:
+    A.  Only injective.
+    B.  Only surjective.
+    C.  A linear isomorphism.
+    D.  Not necessarily a linear transformation.
+    E.  An isomorphism only if `W=V` or `W' = \{0\}`.
+    ans: C
+
+92. The surjectivity of the map `\phi(w, w') = w + w'` from `W \times W' \to V` (context from the previous question) primarily follows from:
+    A.  `W \cap W' = \{0\}`.
+    B.  The property that the set `\{v_1, ..., v_m\}` spans `V`.
+    C.  The component-wise definition of addition in `W \times W'`.
+    D.  `V` being a finite-dimensional vector space.
+    E.  The linear independence of `\{v_1, ..., v_m\}`.
+    ans: B
+
+93. The injectivity of the map `\phi(w, w') = w + w'` from `W \times W' \to V` primarily follows from:
+    A.  `W \cap W' = \{0\}`.
+    B.  The property that the set `\{v_1, ..., v_m\}` spans `V`.
+    C.  The component-wise definition of scalar multiplication in `W \times W'`.
+    D.  The underlying field `F` being infinite.
+    E.  The dimension of `V`.
+    ans: A
+
+94. If `W` is a subspace of a finite-dimensional vector space `V`, the lecture states there exists another subspace `W'` of `V` such that the canonical map `W' \to V/W` (sending `w' \in W'` to the coset `w' + W`) is:
+    A.  Always the zero map.
+    B.  An injective linear transformation but not necessarily surjective.
+    C.  A surjective linear transformation but not necessarily injective.
+    D.  A linear isomorphism.
+    E.  Not well-defined unless `W = \{0\}`.
+    ans: D
+
+95. In proving `W' \cong V/W` (where `W` is a subspace of `V`), how is the subspace `W'` typically constructed?
+    A.  As the orthogonal complement of `W` (assuming an inner product).
+    B.  By taking a basis of `W`, extending it to a basis of `V`, and `W'` is the span of the original basis vectors of `W`.
+    C.  By taking a basis of `W`, extending it to a basis of `V`, and `W'` is the span of the basis vectors added to extend the basis of `W`.
+    D.  As `V` itself.
+    E.  As the kernel of a projection map onto `W`.
+    ans: C
+
+96. For any subspace `W` of a finite-dimensional vector space `V`, which of the following isomorphisms holds?
+    A.  `V \cong W / (V/W)`
+    B.  `V \cong W \times (V/W)`
+    C.  `V/W \cong V \times W`
+    D.  `W \cong V \times (V/W)`
+    E.  `V \cong W + (V/W)` (where + denotes addition of subspaces not Cartesian product)
+    ans: B
+
+97. The isomorphism `V \cong W \times (V/W)` for a subspace `W` of `V` implies which relationship for their dimensions?
+    A.  `\dim(V) = \dim(W) \cdot \dim(V/W)`
+    B.  `\dim(V) = \dim(W) - \dim(V/W)`
+    C.  `\dim(V) = \dim(W) + \dim(V/W)`
+    D.  `\dim(V) = \dim(V/W) - \dim(W)`
+    E.  `\dim(V) = \max(\dim(W), \dim(V/W))`
+    ans: C
+
+98. For a linear transformation `F: V \to U`, the First Isomorphism Theorem for vector spaces states that `V/\text{ker}(F)` is linearly isomorphic to:
+    A.  `U`
+    B.  `\text{ker}(F)`
+    C.  `\text{Im}(F)`
+    D.  `V`
+    E.  `U/\text{Im}(F)`
+    ans: C
+
+99. By combining the First Isomorphism Theorem (`V/\text{ker}(F) \cong \text{Im}(F)`) with the result `V \cong W \times (V/W)` (letting `W=\text{ker}(F)`), for a linear map `F: V \to U`, we establish that:
+    A.  `V \cong \text{ker}(F) \times U`
+    B.  `V \cong V/\text{ker}(F) \times \text{Im}(F)`
+    C.  `V \cong \text{ker}(F) \times \text{Im}(F)`
+    D.  `U \cong \text{ker}(F) \times \text{Im}(F)`
+    E.  `V/\text{Im}(F) \cong \text{ker}(F)`
+    ans: C
+
+100. The Rank-Nullity Theorem, `\dim(V) = \dim(\text{ker}(F)) + \dim(\text{Im}(F))`, is a direct consequence of which isomorphism for a linear map `F: V \to U`?
+    A.  `V \cong U`
+    B.  `V \cong \text{ker}(F) \times \text{Im}(F)`
+    C.  `\text{ker}(F) \cong \text{Im}(F)`
+    D.  `V/\text{ker}(F) \cong U`
+    E.  `V \cong \text{ker}(F) / \text{Im}(F)`
+    ans: B
+
+101. The lecture notes that finding the kernel and image of a homomorphism is:
+    A.  Universally easy for all types of groups.
+    B.  Relatively easy for linear transformations between vector spaces but can be very difficult for general groups.
+    C.  Generally difficult for vector spaces but straightforward for finite groups.
+    D.  Always an unsolved problem in abstract algebra.
+    E.  Solvable by a single, universal algorithm applicable to all algebraic structures.
+    ans: B
+
+102. The comparative ease of determining kernels and images for linear transformations in vector spaces is primarily attributed to:
+    A.  The fact that all vector spaces are abelian under addition.
+    B.  The existence of bases, matrix representations, and associated matrix algorithms like row reduction.
+    C.  The property that all linear transformations are surjective.
+    D.  The restriction that the underlying field `F` must be `\mathbb{R}` or `\mathbb{C}`.
+    E.  The finite dimensionality of all vector spaces encountered in practical applications.
+    ans: B
+
+103. There is a one-to-one correspondence between ordered bases of an `n`-dimensional vector space `V` over a field `F` and:
+    A.  Linear transformations from `V` to `F^n`.
+    B.  Linear isomorphisms from `F^n` to `V`.
+    C.  All possible subspaces of `V`.
+    D.  `n \times n` matrices with entries in `F`.
+    E.  The set of all individual vectors in `V`.
+    ans: B
+
+104. Given an ordered basis `B = \{v_1, ..., v_n\}` of a vector space `V`, the associated isomorphism `\rho_B: F^n \to V` maps a column vector `(a_1, ..., a_n)^T \in F^n` to:
+    A.  The tuple `(a_1v_1, ..., a_nv_n) \in V^n`.
+    B.  The linear combination `\sum_{i=1}^n a_i v_i \in V`.
+    C.  The product `\prod_{i=1}^n a_i v_i` (if defined).
+    D.  The matrix whose columns are the vectors `a_i v_i`.
+    E.  The vector `(v_1/a_1, ..., v_n/a_n)` (if defined).
+    ans: B
+
+105. Conversely, given a linear isomorphism `\rho: F^n \to V`, the corresponding ordered basis for `V` consists of the set of vectors:
+    A.  `\{\rho(v) \mid v \text{ is any vector in } F^n\}`.
+    B.  `\{\rho(e_1), ..., \rho(e_n)\}` where `e_i` are the standard basis vectors of `F^n`.
+    C.  `\{\rho^{-1}(e_1), ..., \rho^{-1}(e_n)\}` where `e_i` are standard basis vectors of `F^n`.
+    D.  The columns of the matrix representation of `\rho` with respect to the standard basis of `F^n`.
+    E.  Any set of `n` linearly independent vectors chosen from the image `\text{Im}(\rho)`.
+    ans: B
+
+106. Linear transformations from `F^n` to `F^m` (with respect to the standard bases for `F^n` and `F^m`) are in one-to-one correspondence with:
+    A.  `n \times m` matrices over the field `F`.
+    B.  `m \times n` matrices over the field `F`.
+    C.  `n \times n` invertible matrices over `F`.
+    D.  `(m+n) \times 1` column vectors over `F`.
+    E.  Polynomials of degree `\max(n,m)` with coefficients in `F`.
+    ans: B
+
+107. If `F: F^n \to F^m` is a linear transformation, the `j`-th column of its matrix representation `[F]` (with respect to standard bases) is the vector:
+    A.  `F(u_j)` where `u_j` is the `j`-th standard basis vector of `F^m`.
+    B.  `F(e_j)` where `e_j` is the `j`-th standard basis vector of `F^n`.
+    C.  The `j`-th row of the matrix `F` applied to the first standard basis vector `e_1`.
+    D.  The standard basis vector `e_j \in F^n` itself.
+    E.  The solution vector `x` to the equation `F(x) = e_j`.
+    ans: B
+
+108. If `F_1, F_2: F^n \to F^m` are linear transformations and `c_1, c_2` are scalars from `F`, then the matrix `[c_1F_1 + c_2F_2]` is equal to:
+    A.  `c_1[F_1] + c_2[F_2]`
+    B.  `(c_1+c_2)([F_1]+[F_2])`
+    C.  `c_1c_2[F_1F_2]` (where `[F_1F_2]` denotes a product of matrices if defined)
+    D.  `[F_1][c_1I] + [F_2][c_2I]` (where `I` is an identity matrix)
+    E.  This algebraic structure is not preserved by matrix representation.
+    ans: A
+
+109. If `F_2: F^k \to F^n` and `F_1: F^n \to F^m` are linear transformations, then the matrix of their composition `[F_1 \circ F_2]` (mapping `F^k \to F^m`) is equal to:
+    A.  `[F_1] + [F_2]` (if `m=k`)
+    B.  `[F_2][F_1]` (matrix product)
+    C.  `[F_1][F_2]` (matrix product)
+    D.  `[F_1] \otimes [F_2]` (Kronecker product)
+    E.  `[F_2 \circ F_1]`
+    ans: C
+
+110. Let `F: V \to V'` be a linear transformation, `B` an ordered basis for `V`, and `B'` an ordered basis for `V'`. The matrix of `F` with respect to bases `B` and `B'`, denoted `[F]_{B,B'}`, is defined as the matrix representation of the composite map:
+    A.  `\rho_B \circ F \circ \rho_{B'}^{-1}`
+    B.  `\rho_{B'}^{-1} \circ F \circ \rho_B`
+    C.  `F \circ \rho_B \circ \rho_{B'}^{-1}`
+    D.  `\rho_B \circ \rho_{B'}^{-1} \circ F`
+    E.  The matrix whose columns are `F(v)` for `v \in B`, expressed in standard coordinates.
+    ans: B
+
+111. If `F: V \to V'`, `B=\{v_1,...,v_n\}` is an ordered basis for `V`, `B'=\{w_1,...,w_m\}` is an ordered basis for `V'`, and `F(v_j) = \sum_{i=1}^m a_{ij} w_i`, then the scalar `a_{ij}` is the entry in which position of the matrix `[F]_{B,B'}`?
+    A.  `i`-th row and `j`-th column.
+    B.  `j`-th row and `i`-th column.
+    C.  `i`-th diagonal position (only if `i=j` and `m=n`).
+    D.  Last (`m`-th) row and `j`-th column.
+    E.  `i`-th row and first (`1`st) column.
+    ans: A
+
+112. Let `[F]_{B_1,B_1'}` be the matrix of `F: V \to V'`. Let `P = \rho_{B_1}^{-1} \rho_{B_2}` be the change of basis matrix in `V` (coordinates from `B_2` to `B_1`), and `Q_m = \rho_{B_1'}^{-1} \rho_{B_2'}` be the change of basis matrix in `V'` (coordinates from `B_2'` to `B_1'`). Then `[F]_{B_2,B_2'}` is given by:
+    A.  `P [F]_{B_1,B_1'} Q_m`
+    B.  `Q_m^{-1} [F]_{B_1,B_1'} P`
+    C.  `P^{-1} [F]_{B_1,B_1'} Q_m`
+    D.  `Q_m [F]_{B_1,B_1'} P^{-1}`
+    E.  `[F]_{B_1,B_1'} P Q_m^{-1}`
+    ans: B
+
+113. Consider a linear operator `F: V \to V`. Let `B_1, B_2` be two ordered bases for `V`. If `P = \rho_{B_1}^{-1} \rho_{B_2}` is the change of basis matrix (transforming coordinates with respect to `B_2` into coordinates with respect to `B_1`), then `[F]_{B_2,B_2}` is related to `[F]_{B_1,B_1}` by:
+    A.  `P [F]_{B_1,B_1} P^{-1}`
+    B.  `P^{-1} [F]_{B_1,B_1} P`
+    C.  `P [F]_{B_1,B_1} P`
+    D.  `P^{-1} [F]_{B_1,B_1} P^{-1}`
+    E.  `[F]_{B_1,B_1}` (it does not change)
+    ans: B
+
+114. The relationship `[F]_{B_2,B_2} = P^{-1} [F]_{B_1,B_1} P` between matrix representations of an operator `F: V \to V` under different bases is known in group theory as:
+    A.  Commutation.
+    B.  Association.
+    C.  Conjugation.
+    D.  Inversion.
+    E.  Transposition.
+    ans: C
+
+115. The set `GL(V)` is defined as the set of:
+    A.  All linear transformations from `V` to `V`.
+    B.  All injective linear transformations from `V` to `V`.
+    C.  All surjective linear transformations from `V` to `V`.
+    D.  All linear isomorphisms from `V` to `V` (invertible linear transformations).
+    E.  All ordered bases of `V`.
+    ans: D
+
+116. `GL(V)` forms a group under which operation?
+    A.  Addition of functions.
+    B.  Composition of functions.
+    C.  Pointwise multiplication of function values.
+    D.  Matrix addition (after fixing a basis).
+    E.  Direct sum of transformations.
+    ans: B
+
+117. If `V` is an `n`-dimensional vector space over a field `F`, choosing an ordered basis `B` for `V` establishes a group isomorphism between `GL(V)` and:
+    A.  `M_n(F)` (the ring of all `n \times n` matrices over `F`).
+    B.  `SL_n(F)` (the special linear group of `n \times n` matrices with determinant 1).
+    C.  `GL_n(F)` (the general linear group of `n \times n` invertible matrices over `F`).
+    D.  `F^n` (the vector space of `n`-tuples).
+    E.  The symmetric group `S_n`.
+    ans: C
+
+118. The lecture notation `\text{Hom}(V,V)^*` for `GL(V)` implies that `GL(V)` consists of the invertible elements (units) of the ring `\text{Hom}(V,V)` (linear maps from `V` to `V`). The `*` signifies:
+    A.  The dual space.
+    B.  The set of units (invertible elements with respect to multiplication/composition).
+    C.  Complex conjugation.
+    D.  The zero map.
+    E.  Adjoint transformation.
+    ans: B
+
+119. When a linear transformation `F: V \to U` is represented by a matrix `A` (with respect to chosen bases for `V` and `U`), the image of `F`, `\text{Im}(F)`, corresponds to which vector space associated with the matrix `A`?
+    A.  The null space of `A`.
+    B.  The row space of `A`.
+    C.  The column space of `A`.
+    D.  The space spanned by the eigenvectors of `A`.
+    E.  The space of solutions to `Ax=0`.
+    ans: C
+
+120. Similarly, when `F: V \to U` is represented by matrix `A`, the kernel of `F`, `\text{ker}(F)`, corresponds to which vector space associated with `A`?
+    A.  The null space of `A` (or kernel of `A`).
+    B.  The row space of `A`.
+    C.  The column space of `A`.
+    D.  The space spanned by the rows of `A`.
+    E.  The image of `A^T`.
+    ans: A
+
+121. Which standard matrix algorithm is commonly employed to find bases for the column space and null space of a matrix?
+    A.  Gaussian elimination (Row reduction to echelon form).
+    B.  QR decomposition.
+    C.  Singular Value Decomposition (SVD).
+    D.  Gram-Schmidt orthogonalization process.
+    E.  Jacobi or Gauss-Seidel iterative methods.
+    ans: A
+
+122. The property that for a subspace `W \subseteq V`, `V` is isomorphic to `W \times (V/W)` signifies that the short exact sequence `0 \to W \to V \to V/W \to 0` for vector spaces:
+    A.  Rarely exists.
+    B.  Is exact only if `V` is over `\mathbb{R}`.
+    C.  Always splits.
+    D.  Implies `W` must be the trivial subspace `\{0\}`.
+    E.  Implies `V/W` must be the trivial subspace `\{0\}`.
+    ans: C
+
+123. The induced map `F_{bar}: V/\text{ker}(F) \to \text{Im}(F)` from the First Isomorphism Theorem, defined by `F_{bar}(v + \text{ker}(F)) = F(v)`, is:
+    A.  Well-defined only if `F` is surjective onto `U`.
+    B.  A linear isomorphism.
+    C.  Injective if and only if `\text{ker}(F) = \{0\}`.
+    D.  A group homomorphism but not necessarily a linear transformation.
+    E.  Always a map from `V/\text{ker}(F)` to the codomain `U`, not necessarily restricted to `\text{Im}(F)`.
+    ans: B
+
+124. The algebraic rule `[F_1 \circ F_2] = [F_1][F_2]` (where `[\cdot]` denotes matrix representation) is fundamental because it:
+    A.  Simplifies the process of adding linear transformations.
+    B.  Demonstrates that matrix multiplication is inherently commutative.
+    C.  Translates the abstract operation of function composition into an algorithmic matrix multiplication.
+    D.  Provides a method to define the inverse of a linear transformation.
+    E.  Is valid only when `F_1` and `F_2` are represented by square matrices.
+    ans: C
+
+125. The map `\rho_B: F^n \to V` constructed from an ordered basis `B = \{v_1, ..., v_n\}` of `V` takes a coordinate vector `(a_1, ..., a_n)^T \in F^n` and produces:
+    A.  A new coordinate vector with respect to a different basis of `V`.
+    B.  A scalar value, such as the length of the resulting vector.
+    C.  The unique vector in `V` that is the linear combination `a_1v_1 + ... + a_nv_n`.
+    D.  The `n \times n` matrix `[B]` whose columns are `v_i`.
+    E.  The coordinate vector of the inverse element in `V`.
+    ans: C
+
+126. The inverse map `\rho_B^{-1}: V \to F^n` (associated with basis `B` of `V`) performs which function?
+    A.  Constructs the basis `B` from the vector space `V`.
+    B.  Multiplies a vector from `V` by a sequence of scalars from `F^n`.
+    C.  Determines the unique `n`-tuple of coordinates in `F^n` for any given vector `v \in V` with respect to basis `B`.
+    D.  Projects the vector space `V` onto its subspace `F^n`.
+    E.  Verifies the linear independence of the basis `B`.
+    ans: C
+
+127. The change of basis matrix `P = \rho_{B_1}^{-1} \rho_{B_2}` (where `B_1, B_2` are bases of `V`) transforms:
+    A.  Coordinates of a vector with respect to basis `B_1` into coordinates with respect to basis `B_2`.
+    B.  Coordinates of a vector with respect to basis `B_2` into coordinates with respect to basis `B_1`.
+    C.  The basis vectors of `B_1` into the basis vectors of `B_2`.
+    D.  The basis vectors of `B_2` into the basis vectors of `B_1`.
+    E.  A linear operator `F` from its `B_1` matrix to its `B_2` matrix directly by `[F]_{B_2} = P[F]_{B_1}`.
+    ans: B
+
+128. `GL(V)` can be understood as the group of automorphisms of `V` that preserve the vector space structure. This means they preserve vector addition and:
+    A.  A specific inner product or metric on `V`.
+    B.  The ordering of elements in any chosen basis.
+    C.  Scalar multiplication by elements of the field `F`.
+    D.  Only the origin of the vector space `V`.
+    E.  The determinant of any associated matrix representation.
+    ans: C
+
+129. The translation of abstract linear algebra problems into the language of matrices is powerful mainly because:
+    A.  Matrices are conceptually simpler objects than abstract vector spaces for all purposes.
+    B.  Matrix operations (like multiplication, inversion, row reduction) are concrete, algorithmic, and computationally implementable.
+    C.  All finite-dimensional vector spaces are identical to `F^n` in every respect.
+    D.  Using matrices eliminates the need for formal proofs of linear algebra theorems.
+    E.  Abstract vector spaces cannot effectively handle infinite dimensions, whereas matrices can.
+    ans: B
+
+130. The definition of a basis for a vector space `V` ensures that every vector in `V` can be written uniquely as a linear combination of the basis vectors. This uniqueness is key for:
+    A.  Ensuring `V` is finite-dimensional.
+    B.  The well-definedness and invertibility of the isomorphism `\rho_B: F^n \to V`.
+    C.  The commutativity of vector addition.
+    D.  The existence of a zero vector in `V`.
+    E.  The closure of `V` under scalar multiplication.
+    ans: B
+
+131. The lecture mentions that for general vector spaces (possibly infinite-dimensional), proving the existence of a basis requires more advanced set theory, including:
+    A.  The Peano Axioms for natural numbers.
+    B.  The Axiom of Choice.
+    C.  Cantor's diagonalization argument for uncountability.
+    D.  The Principle of Mathematical Induction.
+    E.  The Completeness Axiom specific to real numbers.
+    ans: B
+
+132. While many results in the lecture apply broadly, a caution is given regarding vector spaces over finite fields, stating that they:
+    A.  Behave identically to vector spaces over `\mathbb{R}` in all aspects of linear algebra.
+    B.  Can exhibit "weird properties," particularly when dealing with sums of finite sets of vectors.
+    C.  Do not allow for the concept of linear independence.
+    D.  Cannot be used to define linear transformations.
+    E.  Are always trivial or one-dimensional.
+    ans: B
+

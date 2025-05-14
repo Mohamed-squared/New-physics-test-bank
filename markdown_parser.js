@@ -145,7 +145,6 @@ export function parseChaptersFromMarkdown(mdContent) {
  */
 export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMap, sourceType = 'unknown') {
     const extracted = { questions: [], answers: {} };
-    // *** MODIFIED: Handle potentially empty/null mdContent gracefully ***
     if (!mdContent || !chapterScopeOrQuestionMap) {
         console.warn("extractQuestionsFromMarkdown: Invalid args or empty content/scope.");
         return extracted;
@@ -160,28 +159,29 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
         specificQuestionsMode = true; // We are in specific question extraction mode
     } else {
         console.warn("extractQuestionsFromMarkdown: Invalid chapterScopeOrQuestionMap type. Expected array or object.", chapterScopeOrQuestionMap);
-        return extracted; // Return empty if invalid
+        return extracted;
     }
 
     if (chapterKeysInScope.length === 0) {
-        // console.warn("extractQuestionsFromMarkdown: Empty scope.");
         return extracted;
     }
 
     const lines = mdContent.split('\n');
-    let currentChapter = null;
-    let currentQuestion = null;
-    let processingState = 'seeking_chapter';
+    let currentChapter = null; // String: current chapter number being processed if in scope
+    let currentQuestion = null; // Object: current question being built
+    let processingState = 'seeking_chapter'; // 'seeking_chapter', 'seeking_question', 'in_question_text', 'in_options', 'found_answer'
 
-    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i;
+    const chapterRegex = /^###\s+Chapter\s+(\d+):?.*?$/i; // For MCQs
+    // More flexible question start: number followed by . or ) or just space, then text
     const questionStartRegex = /^\s*(\d+)\s*[\.\)]\s*(.*)/;
-    const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/;
+    const optionRegex = /^\s*([A-Ea-e])[\.\)]\s*(.*)/; // Option: A. or A)
+    // Flexible answer line: "Answer: A", "Ans: B.", "ANSWER : C" (case insensitive, optional space/dot)
     const answerRegex = /(?:ans|answer)\s*:\s*([a-zA-Z\d])\s*$/i;
     const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/g;
 
     function finalizeQuestion() {
+        // ... (finalizeQuestion logic remains the same as in your provided file) ...
         if (currentQuestion && currentChapter) {
-            // *** MODIFIED ID to include sourceType ***
             const questionId = `c${currentChapter}q${currentQuestion.number}-${sourceType}`;
             let rawText = currentQuestion.textLines.join('\n').trim();
             let answer = null;
@@ -208,25 +208,27 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
 
             extracted.questions.push({
                 id: questionId,
-                chapter: currentChapter, // Keep as string
+                chapter: String(currentChapter), 
                 number: currentQuestion.number,
                 text: rawText,
                 options: formattedOptions,
                 image: imageUrl,
-                correctAnswer: answer, // Stored here for review UI
-                isProblem: false
+                correctAnswer: answer, 
+                isProblem: false // MCQs are not problems in this context
             });
             if (answer) {
-                extracted.answers[questionId] = answer; // Populate answers map for scoring
+                extracted.answers[questionId] = answer; 
             } else {
-                 console.warn(`Answer missing or unparsed for Q ${questionId}. Check MD format.`);
+                 console.warn(`Answer missing or unparsed for Q ${questionId} (File: ${sourceType}). Check MD format.`);
             }
         }
         currentQuestion = null;
     }
 
+
     for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]; const trimmedLine = line.trim();
+        const line = lines[i];
+        const trimmedLine = line.trim();
         const chapterMatch = trimmedLine.match(chapterRegex);
 
         if (chapterMatch) {
@@ -235,48 +237,51 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
             if (chapterKeysInScope.includes(chapterNumStr)) {
                 currentChapter = chapterNumStr;
                 processingState = 'seeking_question';
-                // console.log(`Extracting from Chapter ${currentChapter} (${sourceType})`);
+                console.log(`[extractQuestions] Now processing Chapter ${currentChapter} from ${sourceType}`);
             } else {
-                currentChapter = null; // Not in scope
+                currentChapter = null;
                 processingState = 'seeking_chapter';
             }
             continue;
         }
 
-        // Skip lines if chapter is not in scope
-        if (!currentChapter) continue;
+        if (!currentChapter) continue; // Skip if not in an active, scoped chapter
 
         const questionMatch = line.match(questionStartRegex);
         if (questionMatch) {
             finalizeQuestion();
             const qNum = parseInt(questionMatch[1], 10);
             const firstLineText = questionMatch[2];
-            
+
             if (!isNaN(qNum) && qNum > 0) {
+                // *** MODIFIED LOGIC FOR specificQuestionsMode ***
                 if (specificQuestionsMode) {
                     const questionsToExtractForThisChapter = chapterScopeOrQuestionMap[currentChapter];
-                    if (questionsToExtractForThisChapter && questionsToExtractForThisChapter.includes(qNum)) {
+                    // If questionsToExtractForThisChapter is null, it means "extract all" for this chapter
+                    // If it's an array, check if qNum is in that array
+                    if (questionsToExtractForThisChapter === null || 
+                        (Array.isArray(questionsToExtractForThisChapter) && questionsToExtractForThisChapter.includes(qNum))) {
                         currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
                         processingState = 'in_question_text';
+                        // console.log(`[extractQuestions] Starting Q${qNum} in Ch ${currentChapter}`);
                     } else {
-                        // This specific question number is not requested for this chapter
-                        currentQuestion = null;
-                        // console.log(`Skipping Q${qNum} in Ch ${currentChapter} as it's not in the specific selection map.`);
+                        currentQuestion = null; // This specific question number is not requested
+                        // console.log(`[extractQuestions] Skipping Q${qNum} in Ch ${currentChapter} (not in specific list).`);
                     }
-                } else {
-                    // Not in specific questions mode (i.e., chapterScopeOrQuestionMap was an array of chapters)
-                    // Extract all questions from this chapter.
+                } else { // Not specificQuestionsMode (chapterScopeOrQuestionMap was an array of chapter numbers)
                     currentQuestion = { number: qNum, textLines: [firstLineText], options: [], answerLine: null };
                     processingState = 'in_question_text';
+                    // console.log(`[extractQuestions] Starting Q${qNum} in Ch ${currentChapter} (chapter in scope).`);
                 }
             } else {
-                 console.warn(`Invalid question number found in Ch ${currentChapter}, Line: ${line}`);
-                 currentQuestion = null;
-                 processingState = 'seeking_question';
+                console.warn(`[extractQuestions] Invalid question number found in Ch ${currentChapter}, Line: "${line}" (File: ${sourceType})`);
+                currentQuestion = null;
+                processingState = 'seeking_question';
             }
             continue;
         }
 
+        // ... (rest of the line processing logic for options, answer, text appending remains the same) ...
         if (currentQuestion) {
             const optionMatch = trimmedLine.match(optionRegex);
             if (optionMatch) {
@@ -287,13 +292,18 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
 
             const isPotentialAnswerLine = answerRegex.test(trimmedLine);
             if (isPotentialAnswerLine) {
-                let nextLineIndex = i + 1; let nextSignificantLine = null;
-                while(nextLineIndex < lines.length) { nextSignificantLine = lines[nextLineIndex].trim(); if(nextSignificantLine !== '') break; nextLineIndex++; }
+                let nextLineIndex = i + 1;
+                let nextSignificantLine = null;
+                while(nextLineIndex < lines.length) {
+                    nextSignificantLine = lines[nextLineIndex].trim();
+                    if(nextSignificantLine !== '') break;
+                    nextLineIndex++;
+                }
                 const nextIsNewQ = nextSignificantLine && /^\s*\d+[\.\)]\s+.*/.test(nextSignificantLine);
                 const nextIsNewChapter = nextSignificantLine && /^###\s+Chapter\s+\d+:?.*?$/i.test(nextSignificantLine);
-                const isLastLine = nextLineIndex >= lines.length;
+                const isLastLineProcessed = nextLineIndex >= lines.length; // Check if we've processed all lines or if nextSignificantLine is null
 
-                if (nextSignificantLine === null || nextIsNewQ || nextIsNewChapter || isLastLine) {
+                if (nextSignificantLine === null || nextIsNewQ || nextIsNewChapter || isLastLineProcessed) {
                     currentQuestion.answerLine = trimmedLine;
                     processingState = 'found_answer';
                     continue;
@@ -301,18 +311,18 @@ export function extractQuestionsFromMarkdown(mdContent, chapterScopeOrQuestionMa
             }
 
             if (processingState === 'in_options' && currentQuestion.options.length > 0) {
-                // Append to the last option's text if it's a multi-line option
                 currentQuestion.options[currentQuestion.options.length - 1].text += '\n' + line;
-            } else if (processingState !== 'found_answer') { // Append to question text if not an answer line or option continuation
+            } else if (processingState !== 'found_answer' && processingState !== 'seeking_question') { // Append to question text if not an answer line or option continuation
                 currentQuestion.textLines.push(line);
             }
         }
     }
     finalizeQuestion(); // Finalize last question
 
-    // console.log(`Markdown Extraction (${sourceType}) finished. Found ${extracted.questions.length} questions in scope.`);
+    console.log(`[extractQuestions] Markdown Extraction for "${sourceType}" finished. Extracted ${extracted.questions.length} questions in scope.`);
     return extracted;
 }
+
 
 
 // --- Skip Exam Text Parser (AI Output) ---
