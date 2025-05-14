@@ -122,9 +122,28 @@ export function setActiveCourseId(newId) {
 }
 export function updateUserCourseProgress(courseId, progressData) {
     if (userCourseProgressMap.has(courseId)) {
-        userCourseProgressMap.set(courseId, { ...userCourseProgressMap.get(courseId), ...progressData });
+        // When updating, preserve fields that might not be in progressData by merging
+        const existingProgress = userCourseProgressMap.get(courseId);
+        const updatedProgress = { ...existingProgress, ...progressData };
+        
+        // Specifically ensure nested objects like dailyProgress are merged, not overwritten,
+        // if progressData only contains a partial update for them.
+        if (progressData.dailyProgress && existingProgress.dailyProgress) {
+            updatedProgress.dailyProgress = { ...existingProgress.dailyProgress, ...progressData.dailyProgress };
+        }
+        if (progressData.watchedVideoDurations && existingProgress.watchedVideoDurations) {
+            updatedProgress.watchedVideoDurations = { ...existingProgress.watchedVideoDurations, ...progressData.watchedVideoDurations };
+        }
+         if (progressData.pdfProgress && existingProgress.pdfProgress) {
+            updatedProgress.pdfProgress = { ...existingProgress.pdfProgress, ...progressData.pdfProgress };
+        }
+        // ... and so on for other nested objects if they exist and need merging behavior
+
+        userCourseProgressMap.set(courseId, updatedProgress);
+        console.log(`[State] Updated progress for course ${courseId} in local map.`);
     } else {
         userCourseProgressMap.set(courseId, progressData);
+        console.log(`[State] Set new progress for course ${courseId} in local map.`);
     }
 }
 export function updateGlobalCourseData(courseId, courseData) {

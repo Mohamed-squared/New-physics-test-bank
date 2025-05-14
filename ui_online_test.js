@@ -8,7 +8,7 @@ import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
-import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT, MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE } from './config.js'; // Added MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 import { generateLatexToolbar } from './ui_latex_toolbar.js';
 // --- Online Test UI & Logic ---
@@ -646,7 +646,9 @@ export async function submitOnlineTest() {
                 let bonusAppliedToCourseId = null;
                 const testGenScorePercent = examRecord.markingResults.maxPossibleScore > 0 ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) : 0;
                 
-                const MAX_BONUS_FROM_TESTGEN = 2; // Max raw bonus points
+                // Using constants from config.js
+                // const MAX_BONUS_FROM_TESTGEN = 2; already imported
+                // const MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE = 10; already imported
 
                 if (testGenScorePercent > 0.5) { // Only apply if score > 50%
                     const bonusPoints = Math.min(MAX_BONUS_FROM_TESTGEN, testGenScorePercent * MAX_BONUS_FROM_TESTGEN);
@@ -672,19 +674,17 @@ export async function submitOnlineTest() {
                         const courseProgressToUpdate = userCourseProgressMap.get(bonusAppliedToCourseId);
                         if (courseProgressToUpdate) {
                             const oldBonus = courseProgressToUpdate.testGenBonus || 0;
-                            const MAX_TOTAL_TESTGEN_BONUS_CAP = 10;
                             const newPotentialTotalBonus = oldBonus + bonusPoints;
-                            courseProgressToUpdate.testGenBonus = Math.min(newPotentialTotalBonus, MAX_TOTAL_TESTGEN_BONUS_CAP);
+                            courseProgressToUpdate.testGenBonus = Math.min(newPotentialTotalBonus, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE);
                             
                             console.log(`Applying ${bonusPoints.toFixed(2)} TestGen bonus (new total: ${courseProgressToUpdate.testGenBonus.toFixed(2)}) to course ${bonusAppliedToCourseId}`);
                             
                             await saveUserCourseProgress(currentUser.uid, bonusAppliedToCourseId, courseProgressToUpdate);
                             updateUserCourseProgress(bonusAppliedToCourseId, courseProgressToUpdate); // Update local state
-                            // The alert is now part of displayOnlineTestResults logic or a separate toast.
-                            // We can add a specific toast here if preferred:
+                            
                             const bonusToast = document.createElement('div');
-                            bonusToast.className = 'toast-notification toast-info animate-fade-in'; // Use a distinct style
-                            bonusToast.innerHTML = `<p>Bonus of ${bonusPoints.toFixed(1)} points from your TestGen exam applied to course: ${globalCourseDataMap.get(bonusAppliedToCourseId)?.name || bonusAppliedToCourseId}!</p>`;
+                            bonusToast.className = 'toast-notification toast-info animate-fade-in';
+                            bonusToast.innerHTML = `<p>Bonus of ${bonusPoints.toFixed(1)} points from your TestGen exam applied to course: ${escapeHtml(globalCourseDataMap.get(bonusAppliedToCourseId)?.name || bonusAppliedToCourseId)}!</p>`;
                             document.body.appendChild(bonusToast);
                             setTimeout(() => bonusToast.remove(), 5000);
                         }

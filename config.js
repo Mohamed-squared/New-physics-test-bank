@@ -136,7 +136,8 @@ export const GRADING_WEIGHTS = {
     midcourseExams: 0.20,
     finalExams: 0.20,
     attendance: 0.05,
-    extraPracticeBonusMax: 5,
+    extraPracticeBonusMax: 5, // Max points for specific extra practice (managed separately)
+    // testGenBonusMax: 10 // Overall cap for bonus from TestGen (applied to course totalMark)
 };
 
 export const PASSING_GRADE_PERCENT = 65;
@@ -193,4 +194,9 @@ export const FOP_COURSE_DEFINITION = {
 export const AVAILABLE_AI_MODELS = ["gemini-2.5-flash-preview-04-17", "gemini-2.5-pro-preview-05-06", "gemini-1.5-flash", "gemini-1.0-pro"];
 export const DEFAULT_PRIMARY_AI_MODEL = "gemini-2.5-flash-preview-04-17"; // Fallback if user settings are not loaded
 export const DEFAULT_FALLBACK_AI_MODEL = "gemini-2.5-flash-preview-04-17"; // Fallback if primary fails
+
+// --- START MODIFICATION: TestGen Bonus Cap ---
+export const MAX_BONUS_FROM_TESTGEN = 2; // Max raw bonus points *per TestGen exam*
+export const MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE = 10; // Max total bonus points from all TestGen exams *for a single course*
+// --- END MODIFICATION ---
 // --- END OF FILE config.js ---

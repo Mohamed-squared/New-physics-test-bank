@@ -1,5 +1,5 @@
 // --- START OF FILE ui_test_generation.js ---
-import { currentSubject, currentUser, data } from './state.js';
+import { currentSubject, currentUser, data } from './state.js'; 
 import { displayContent, setActiveSidebarLink } from './ui_core.js';
 // Import test_logic functions
 import { allocateQuestions, selectQuestions, parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions, selectNewQuestionsAndUpdate } from './test_logic.js';
@@ -19,7 +19,7 @@ import {
     DEFAULT_ONLINE_TEST_DURATION_MINUTES,
     DEFAULT_MAX_QUESTIONS,
     COURSE_BASE_PATH,
-    SUBJECT_RESOURCE_FOLDER, // MODIFIED: Was DEFAULT_COURSE_QUESTIONS_FOLDER
+    SUBJECT_RESOURCE_FOLDER, 
     DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME
  } from './config.js';
 // Import filename utility
@@ -45,14 +45,19 @@ async function getCurrentSubjectMarkdown() {
     }
     const safeMcqFileName = cleanTextForFilename(currentSubject.mcqFileName);
 
-    // *** USE THE CORRECT CONSTANT HERE ***
     const url = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileName}?t=${new Date().getTime()}`;
 
     console.log(`Fetching main subject Markdown (for MCQs during TestGen) from: ${url}`);
     try {
         const response = await fetch(url);
         if (!response.ok) {
-            // ... (error handling as before) ...
+             if (response.status === 404) {
+                 console.warn(`Main subject Markdown file NOT FOUND: ${url}. Subject: ${currentSubject.name}`);
+                 alert(`Warning: MCQ definition file (${safeMcqFileName}) not found for subject "${currentSubject.name}". MCQs from this source will be unavailable.`);
+             } else {
+                 console.error(`HTTP error fetching main subject Markdown! status: ${response.status} for ${url}`);
+                 alert(`Error loading MCQ definitions for subject "${currentSubject.name}". Status: ${response.status}. Check console.`);
+             }
             return null;
         }
         const mdContent = await response.text();
@@ -73,12 +78,9 @@ export function showTestGenerationDashboard() {
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
     }
-     // Check if chapters object exists and has keys AFTER initial loading/parsing
      if (!currentSubject.chapters || Object.keys(currentSubject.chapters).length === 0) {
-          // This might happen if the initial parse failed or the MD file was empty/malformed
           const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
-          const mcqFile = currentSubject.fileName ? cleanTextForFilename(currentSubject.fileName) : 'Not Specified';
-          // *** MODIFIED: Use SUBJECT_RESOURCE_FOLDER in expected path ***
+          const mcqFile = currentSubject.mcqFileName ? cleanTextForFilename(currentSubject.mcqFileName) : 'MCQ file not specified';
           const expectedPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFile}`;
           displayContent(`<p class="text-yellow-500 p-4">The current subject '${escapeHtml(currentSubject.name)}' has no chapters loaded. This could be due to a missing or incorrectly formatted Markdown file. Expected path for MCQs: <code>${escapeHtml(expectedPath)}</code>. Please check the subject setup and file.</p><button onclick="window.initializeApp()" class="btn-secondary mt-2">Reload Data</button>`);
          setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
@@ -105,31 +107,26 @@ export function showTestGenerationDashboard() {
     setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
-export async function promptChapterSelectionForTest() { // Make it async if not already
+export async function promptChapterSelectionForTest() { 
     if (!currentSubject || !currentSubject.chapters) {
-        showTestGenerationDashboard(); // Go back if data is missing
+        showTestGenerationDashboard(); 
         return;
     }
     const chapters = currentSubject.chapters;
+    showLoading("Loading chapter details for selection...");
 
-    // Ensure problems for the default text source are parsed and cached
-    // This assumes parseChapterProblems updates window.subjectProblemCache
-    // and uses currentSubject.textProblemsFileName or a default.
-    const problemSourceTypeForDisplay = 'text_problems'; // Primary problem source for display
+    const problemSourceTypeForDisplay = 'text_problems'; 
     const courseDir = currentSubject.courseDirName
         ? cleanTextForFilename(currentSubject.courseDirName)
         : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
 
-    // --- MODIFIED: Use SUBJECT_RESOURCE_FOLDER ---
     const problemsFileToParse = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '')
         ? cleanTextForFilename(currentSubject.textProblemsFileName)
-        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME; // Fallback if not specified in subject
+        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME; 
     
     const problemsFilePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToParse}`;
 
-    // Call parseChapterProblems to ensure the cache is populated for the current subject's text problems
-    // parseChapterProblems is async, so we await it.
-    if (currentSubject.textProblemsFileName || DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME) { // Only parse if a filename is available
+    if (currentSubject.textProblemsFileName || problemsFileToParse === DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME) {
         console.log(`[promptChapterSelectionForTest] Ensuring problem cache for subject ${currentSubject.id}, source: ${problemSourceTypeForDisplay}, path: ${problemsFilePath}`);
         await parseChapterProblems(problemsFilePath, currentSubject.id, problemSourceTypeForDisplay);
     } else {
@@ -143,19 +140,16 @@ export async function promptChapterSelectionForTest() { // Make it async if not 
         .filter(num => {
             const chap = chapters[num];
             const hasMcqs = chap && chap.total_questions > 0 && chap.available_questions?.length > 0;
-            // Check problems from the specific cache for this source type
             const hasProblems = problemCache[num]?.length > 0;
             return hasMcqs || hasProblems;
         })
         .sort((a, b) => parseInt(a) - parseInt(b));
 
+    hideLoading();
     if (chapterNumbers.length === 0) {
-        // ... (existing error display logic) ...
         const mcqFile = currentSubject.mcqFileName ? cleanTextForFilename(currentSubject.mcqFileName) : 'MCQ file not specified';
-        // --- MODIFIED: Use SUBJECT_RESOURCE_FOLDER in expected paths ---
         const expectedMCQPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${mcqFile}`;
-        const expectedProblemPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToParse}`; // Use determined problemsFileToParse
-        // ... (rest of your existing error HTML for no chapters) ...
+        const expectedProblemPath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToParse}`;
         displayContent(`<p class="text-red-500 p-4">No chapters with available MCQs or Problems found. Expected paths:</p>
         <ul class="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 pl-4">
              <li>MCQs: <code>${escapeHtml(expectedMCQPath)}</code></li>
@@ -171,9 +165,8 @@ export async function promptChapterSelectionForTest() { // Make it async if not 
         const chapterTitle = chap?.title ? escapeHtml(chap.title) : 'No Title';
         const availableMcqCount = chap?.available_questions?.length || 0;
         const totalMcqCount = chap?.total_questions || 0;
-        // Get problem count from the specific cache for this chapter
         const problemCount = problemCache[num]?.length || 0;
-        const studied = currentSubject.studied_chapters?.includes(num); // Ensure num is string if studied_chapters stores strings
+        const studied = currentSubject.studied_chapters?.includes(num); 
 
         return `
         <div class="flex items-center p-2 bg-gray-50 dark:bg-gray-700 rounded hover:bg-gray-100 dark:hover:bg-gray-600">
@@ -189,7 +182,6 @@ export async function promptChapterSelectionForTest() { // Make it async if not 
         `;
     }).join('');
 
-    // ... (rest of the HTML generation and displayContent call)
     const html = `
         <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-4 animate-fade-in">
             <h2 class="text-xl font-semibold mb-4 text-primary-600 dark:text-primary-400">Select Chapters for Test</h2>
@@ -233,7 +225,12 @@ export async function promptTestType(mode, selectedChapters = null) {
     showLoading("Preparing Test Configuration...");
 
     let chaptersInScopeNumbers = [];
-    let totalAvailableMcqsInScope = 0; // From main subject MCQ file
+    let totalAvailableMcqsInScope = 0; 
+    let totalAvailableTextProblemsInScope = 0;
+    const lectureResourceDetails = [];
+
+    const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
+    const resourceBasePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/`;
 
     if (mode === 'studied') {
         const studied = (currentSubject.studied_chapters || []).map(String);
@@ -244,20 +241,8 @@ export async function promptTestType(mode, selectedChapters = null) {
             return;
         }
         chaptersInScopeNumbers = studied;
-        studied.forEach(chapNum => {
-            const chap = currentSubject.chapters[chapNum];
-            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
-                totalAvailableMcqsInScope += chap.available_questions.length;
-            }
-        });
     } else if (mode === 'specific' && selectedChapters) {
         chaptersInScopeNumbers = selectedChapters.map(String);
-        selectedChapters.forEach(chapNum => {
-            const chap = currentSubject.chapters[chapNum];
-            if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
-                totalAvailableMcqsInScope += chap.available_questions.length;
-            }
-        });
     } else {
         hideLoading();
         displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection provided.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>');
@@ -265,68 +250,103 @@ export async function promptTestType(mode, selectedChapters = null) {
         return;
     }
 
-    // Fetch problem counts from the main subject problem file
-    const problemSourceTypeForDisplay = 'text_problems';
-    const courseDir = currentSubject.courseDirName
-        ? cleanTextForFilename(currentSubject.courseDirName)
-        : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
-
-    const problemsFileToParse = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '')
-        ? cleanTextForFilename(currentSubject.textProblemsFileName)
-        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
-    
-    const problemsFilePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${problemsFileToParse}`;
-    
-    let totalAvailableProblemsInScope = 0;
-    if (currentSubject.textProblemsFileName || problemsFileToParse === DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME) { // Check if a file is expected
-        console.log(`[promptTestType] Ensuring problem cache for subject ${currentSubject.id}, source: ${problemSourceTypeForDisplay}, path: ${problemsFilePath}`);
-        await parseChapterProblems(problemsFilePath, currentSubject.id, problemSourceTypeForDisplay);
-        const problemCacheKey = `${currentSubject.id}|${problemSourceTypeForDisplay}`;
-        const problemCache = window.subjectProblemCache?.get(problemCacheKey) || {};
-        chaptersInScopeNumbers.forEach(chapNum => {
-            totalAvailableProblemsInScope += (problemCache[chapNum]?.length || 0);
-        });
-    } else {
-        console.log(`[promptTestType] No textProblemsFileName specified for subject ${currentSubject.id}. Main problem counts will be 0.`);
-    }
-    
-    const chapterScopeDescription = `Based on the ${chaptersInScopeNumbers.length} chapter(s) in scope. Available from main files: ${totalAvailableMcqsInScope} MCQs, ${totalAvailableProblemsInScope} Problems. Lecture content availability varies.`;
-
     if (chaptersInScopeNumbers.length === 0) {
         hideLoading();
         displayContent(`<p class="text-red-500 p-4">No chapters selected or available in the current scope.</p><button onclick="window.showTestGenerationDashboard()" class="btn-secondary mt-2">Back</button>`);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
     }
+    
+    // Calculate total available MCQs from main subject file for the selected scope
+    chaptersInScopeNumbers.forEach(chapNum => {
+        const chap = currentSubject.chapters[chapNum];
+        if (chap && chap.total_questions > 0 && chap.available_questions?.length > 0) {
+            totalAvailableMcqsInScope += chap.available_questions.length;
+        }
+    });
 
+    // Fetch and calculate total available Text Problems from main subject problem file
+    const textProblemSourceType = 'text_problems';
+    const textProblemsFileToParse = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '')
+        ? cleanTextForFilename(currentSubject.textProblemsFileName)
+        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
+    const textProblemsFilePath = `${resourceBasePath}${textProblemsFileToParse}`;
+    
+    if (currentSubject.textProblemsFileName || textProblemsFileToParse === DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME) {
+        await parseChapterProblems(textProblemsFilePath, currentSubject.id, textProblemSourceType);
+        const textProblemCacheKey = `${currentSubject.id}|${textProblemSourceType}`;
+        const textProblemCache = window.subjectProblemCache?.get(textProblemCacheKey) || {};
+        chaptersInScopeNumbers.forEach(chapNum => {
+            totalAvailableTextProblemsInScope += (textProblemCache[chapNum]?.length || 0);
+        });
+    }
 
-    // Lecture Resources Section
-    let lectureResourcesHtml = '';
+    // Fetch and calculate counts for Lecture Resources
     if (currentSubject.lectureResources && currentSubject.lectureResources.length > 0) {
-        lectureResourcesHtml = '<h4 class="text-md font-semibold mt-6 mb-3 text-gray-700 dark:text-gray-300 border-t dark:border-gray-600 pt-4">Content from Lectures:</h4><div class="space-y-3">';
-        
         for (const [index, lec] of currentSubject.lectureResources.entries()) {
+            if (!lec || !lec.title) continue;
             const lecKey = cleanTextForFilename(lec.title || `lecture_${index}`);
+            let availableLecMcqs = 0;
+            let availableLecProbs = 0;
+
+            if (lec.mcqFile) {
+                const lecMcqFilePath = `${resourceBasePath}${cleanTextForFilename(lec.mcqFile)}`;
+                const mdContent = await fetchContentForSource(lecMcqFilePath, `Lecture MCQs: ${lec.title}`);
+                if (mdContent) {
+                    const { questions } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), `tg_lec_mcq_${lecKey}`);
+                    availableLecMcqs = questions.length;
+                }
+            }
+            if (lec.problemFile) {
+                const lecProbFilePath = `${resourceBasePath}${cleanTextForFilename(lec.problemFile)}`;
+                // Ensure problems are parsed and cached for this lecture source
+                await parseChapterProblems(lecProbFilePath, currentSubject.id, `tg_lec_prob_${lecKey}`);
+                const problemCacheKeyLec = `${currentSubject.id}|tg_lec_prob_${lecKey}`;
+                const lectProblemsFromCache = window.subjectProblemCache?.get(problemCacheKeyLec) || {};
+                chaptersInScopeNumbers.forEach(chapNum => {
+                    availableLecProbs += (lectProblemsFromCache[chapNum]?.length || 0);
+                });
+            }
+            lectureResourceDetails.push({
+                key: lecKey,
+                title: lec.title,
+                hasMcqFile: !!lec.mcqFile,
+                availableMcqs: availableLecMcqs,
+                hasProblemFile: !!lec.problemFile,
+                availableProblems: availableLecProbs
+            });
+        }
+    }
+    
+    const chapterScopeDescription = `Based on the ${chaptersInScopeNumbers.length} chapter(s) in scope.`;
+
+    let lectureResourcesHtml = '';
+    if (lectureResourceDetails.length > 0) {
+        lectureResourcesHtml = '<h4 class="text-md font-semibold mt-6 mb-3 text-gray-700 dark:text-gray-300 border-t dark:border-gray-600 pt-4">Content from Lectures:</h4><div class="space-y-3">';
+        lectureResourceDetails.forEach(lec => {
             lectureResourcesHtml += `
                 <div class="mb-3 p-3 border dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
                     <p class="text-sm font-medium mb-2 text-gray-800 dark:text-gray-200">${escapeHtml(lec.title)}</p>`;
             
-            if (lec.mcqFile) {
+            if (lec.hasMcqFile) {
                 lectureResourcesHtml += `
                     <div class="mt-1">
-                        <label for="lec-${index}-mcq-count" class="text-xs text-gray-600 dark:text-gray-400">MCQs from this lecture (enter 0 for auto):</label>
-                        <input type="number" id="lec-${index}-mcq-count" name="lectureMcqCounts[${lecKey}]" min="0" value="0" class="form-control-sm text-xs w-20 ml-2">
+                        <label for="lec-${lec.key}-mcq-count" class="text-xs text-gray-600 dark:text-gray-400">MCQs (max ${lec.availableMcqs}, 0 for auto):</label>
+                        <input type="number" id="lec-${lec.key}-mcq-count" name="lectureMcqCounts[${lec.key}]" min="0" max="${lec.availableMcqs}" value="0" class="form-control-sm text-xs w-20 ml-2">
                     </div>`;
             }
-            if (lec.problemFile) {
+            if (lec.hasProblemFile) {
                 lectureResourcesHtml += `
                     <div class="mt-1">
-                        <label for="lec-${index}-problem-count" class="text-xs text-gray-600 dark:text-gray-400">Problems from this lecture (enter 0 for auto):</label>
-                        <input type="number" id="lec-${index}-problem-count" name="lectureProblemCounts[${lecKey}]" min="0" value="0" class="form-control-sm text-xs w-20 ml-2">
+                        <label for="lec-${lec.key}-problem-count" class="text-xs text-gray-600 dark:text-gray-400">Problems (max ${lec.availableProblems}, 0 for auto):</label>
+                        <input type="number" id="lec-${lec.key}-problem-count" name="lectureProblemCounts[${lec.key}]" min="0" max="${lec.availableProblems}" value="0" class="form-control-sm text-xs w-20 ml-2">
                     </div>`;
+            }
+            if (!lec.hasMcqFile && !lec.hasProblemFile) {
+                lectureResourcesHtml += `<p class="text-xs text-muted italic">No MCQ or Problem files configured for this lecture.</p>`;
             }
             lectureResourcesHtml += `</div>`;
-        }
+        });
         lectureResourcesHtml += `</div>`;
     }
 
@@ -337,24 +357,24 @@ export async function promptTestType(mode, selectedChapters = null) {
         <div class="content-card animate-fade-in">
             <h2 class="text-xl font-semibold mb-2 text-primary-600 dark:text-primary-400">Configure Your Test</h2>
             <p class="text-gray-600 dark:text-gray-400 mb-4 text-sm">${chapterScopeDescription}</p>
-            <p class="text-xs text-muted mb-4">Specify the number of questions from each source. The total will be capped by availability. Enter 0 for a source to let the system allocate automatically from it if needed to meet the 'Target Total'.</p>
+            <p class="text-xs text-muted mb-4">Specify the number of questions from each source. The "Target Total" acts as a guideline. If specific counts sum to less, the test will be smaller. If they sum to more, you'll be warned. Enter 0 for a source if you don't want questions from it or want the system to auto-allocate if the Target Total isn't met.</p>
 
             <form id="test-config-form">
                 <div class="space-y-4">
                     <div>
                         <label for="total-questions-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Target Total Questions in Test</label>
                         <input type="number" id="total-questions-input" name="totalQuestions" min="10" value="${defaultTotalQuestions}" class="form-control mt-1" required>
-                        <p class="text-xs text-muted mt-1">Minimum 10. Final count depends on availability from selected sources.</p>
+                        <p class="text-xs text-muted mt-1">Minimum 10. Final count depends on availability and specific requests.</p>
                     </div>
 
                     <h4 class="text-md font-semibold mt-6 mb-3 text-gray-700 dark:text-gray-300 border-t dark:border-gray-600 pt-4">Content from Main Subject Files:</h4>
                     <div>
-                        <label for="text-mcq-count" class="text-sm text-gray-600 dark:text-gray-400">MCQs from Text/Main File (max ${totalAvailableMcqsInScope}, enter 0 for auto):</label>
+                        <label for="text-mcq-count" class="text-sm text-gray-600 dark:text-gray-400">MCQs from Text/Main File (max ${totalAvailableMcqsInScope}, 0 for auto):</label>
                         <input type="number" id="text-mcq-count" name="textMcqCount" min="0" max="${totalAvailableMcqsInScope}" value="0" class="form-control-sm text-xs w-20 ml-2">
                     </div>
                     <div>
-                        <label for="text-problem-count" class="text-sm text-gray-600 dark:text-gray-400">Problems from Text/Main File (max ${totalAvailableProblemsInScope}, enter 0 for auto):</label>
-                        <input type="number" id="text-problem-count" name="textProblemCount" min="0" max="${totalAvailableProblemsInScope}" value="0" class="form-control-sm text-xs w-20 ml-2">
+                        <label for="text-problem-count" class="text-sm text-gray-600 dark:text-gray-400">Problems from Text/Main File (max ${totalAvailableTextProblemsInScope}, 0 for auto):</label>
+                        <input type="number" id="text-problem-count" name="textProblemCount" min="0" max="${totalAvailableTextProblemsInScope}" value="0" class="form-control-sm text-xs w-20 ml-2">
                     </div>
 
                     ${lectureResourcesHtml}
@@ -441,44 +461,45 @@ window.collectAndStartTestGeneration = function(mode, selectedChapters, testForm
     }
 
     // Collect lecture-specific counts
-    if (currentSubject.lectureResources) {
-        currentSubject.lectureResources.forEach((lec, index) => {
+    if (currentSubject.lectureResources) { 
+        currentSubject.lectureResources.forEach((lec) => { 
             if (!lec || !lec.title) return;
-            const lecKey = lec.title.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+            const lecKey = cleanTextForFilename(lec.title || `lecture_unknown`); 
             
             const mcqCountEl = form.elements[`lectureMcqCounts[${lecKey}]`];
             if (mcqCountEl) {
                 const count = parseInt(mcqCountEl.value);
-                if (!isNaN(count) && count > 0) testGenConfig.lectureMcqCounts[lecKey] = count;
+                if (!isNaN(count) && count >= 0) testGenConfig.lectureMcqCounts[lecKey] = count; 
             }
             
             const probCountEl = form.elements[`lectureProblemCounts[${lecKey}]`];
             if (probCountEl) {
                 const count = parseInt(probCountEl.value);
-                if (!isNaN(count) && count > 0) testGenConfig.lectureProblemCounts[lecKey] = count;
+                if (!isNaN(count) && count >= 0) testGenConfig.lectureProblemCounts[lecKey] = count; 
             }
         });
     }
 
-    let sumOfRequestedQuestions = testGenConfig.textMcqCount + testGenConfig.textProblemCount;
-    Object.values(testGenConfig.lectureMcqCounts).forEach(c => sumOfRequestedQuestions += c);
-    Object.values(testGenConfig.lectureProblemCounts).forEach(c => sumOfRequestedQuestions += c);
 
-    if (sumOfRequestedQuestions === 0) {
-        alert("Please request at least one question from any source (Text or Lectures).");
+    let sumOfSpecificRequests = testGenConfig.textMcqCount + testGenConfig.textProblemCount;
+    Object.values(testGenConfig.lectureMcqCounts).forEach(c => sumOfSpecificRequests += c);
+    Object.values(testGenConfig.lectureProblemCounts).forEach(c => sumOfSpecificRequests += c);
+
+    if (sumOfSpecificRequests === 0 && targetTotalQuestions > 0) {
+        console.log("All specific counts are 0. System will attempt to auto-allocate up to target total.");
+    } else if (sumOfSpecificRequests === 0 && targetTotalQuestions <=0 ) { 
+        alert("Please request at least one question from any source, or set a valid target total of at least 10.");
         return;
     }
     
-    if (sumOfRequestedQuestions > targetTotalQuestions) {
-        if (!confirm(`The sum of questions requested from individual sources (${sumOfRequestedQuestions}) is greater than your target total questions (${targetTotalQuestions}).
-The test will be generated with ${sumOfRequestedQuestions} questions. Continue?`)) {
+    if (sumOfSpecificRequests > targetTotalQuestions) {
+        if (!confirm(`The sum of questions specifically requested (${sumOfSpecificRequests}) is greater than your target total questions (${targetTotalQuestions}).
+The test will be generated attempting to fulfill your specific requests, potentially resulting in ${sumOfSpecificRequests} questions if all are available. Continue?`)) {
             return;
         }
-        // If user proceeds, the targetTotalQuestions effectively becomes sumOfRequestedQuestions for allocation logic
-        // but startTestGeneration will use sumOfRequestedQuestions as the effective target based on the config.
-    } else if (sumOfRequestedQuestions < targetTotalQuestions) {
-         if (!confirm(`The sum of questions requested from individual sources (${sumOfRequestedQuestions}) is less than your target total questions (${targetTotalQuestions}).
-The test will be generated with ${sumOfRequestedQuestions} questions. Continue?`)) {
+    } else if (sumOfSpecificRequests < targetTotalQuestions && sumOfSpecificRequests > 0) { 
+         if (!confirm(`The sum of questions specifically requested (${sumOfSpecificRequests}) is less than your target total questions (${targetTotalQuestions}).
+The test will be generated with ${sumOfSpecificRequests} questions, as auto-filling the remainder from '0-count' sources is not fully supported when other specific counts are given. To get exactly ${targetTotalQuestions}, adjust your specific counts or set all to 0 for full auto-allocation. Continue with ${sumOfSpecificRequests} questions?`)) {
             return;
         }
     }
@@ -515,15 +536,14 @@ function selectRandomItems(itemsArray, count) {
 }
 
 // Helper to build the scope map for extractQuestionsFromMarkdown
-// For general chapter scope, questionNumbers can be null (meaning all questions)
 function buildScopeMap(chapterNumbersArray, questionNumbersMap = null) {
     const map = {};
     chapterNumbersArray.forEach(cnStr => {
-        const cn = String(cnStr); // Ensure it's a string key
+        const cn = String(cnStr); 
         if (questionNumbersMap && questionNumbersMap[cn]) {
-            map[cn] = questionNumbersMap[cn]; // Specific question numbers for this chapter
+            map[cn] = questionNumbersMap[cn]; 
         } else {
-            map[cn] = null; // null means all questions in this chapter
+            map[cn] = null; 
         }
     });
     return map;
@@ -534,12 +554,14 @@ function formatProblemsForExam(rawProblems, subjectId, sourceTypeSuffix) {
     return rawProblems.map((prob, index) => ({
         id: prob.id || `subj${subjectId}-chap${prob.chapter}-prob${index + 1}-${sourceTypeSuffix}`,
         chapter: String(prob.chapter),
-        number: index + 1, // This 'number' is just for local indexing within this selection
+        number: index + 1, 
         text: prob.text || "Problem text missing.",
         options: [],
-        image: null, // Assuming problems don't have images in this flow, or it's part of text
-        correctAnswer: null, // Problems usually manually graded
-        type: prob.type || 'Problem', // Carry over type if parsed
+        image: null, 
+        correctAnswer: null, 
+        type: prob.type || 'Problem', 
+        difficulty: prob.difficulty,
+        topics: prob.topics || [],
         isProblem: true
     }));
 }
@@ -550,151 +572,212 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
     if (!currentUser || !currentSubject || !data || !currentSubject.chapters) {
         alert("User, subject, or chapter data not loaded. Please reload or select a subject.");
         hideLoading();
-        window.showTestGenerationDashboard(); // Use window scope
+        window.showTestGenerationDashboard(); 
         return;
     }
     showLoading(`Generating ${testType === 'online' ? 'Online Test' : 'Test Files'}...`);
-    await new Promise(resolve => setTimeout(resolve, 100)); // Allow UI to update
+    await new Promise(resolve => setTimeout(resolve, 100)); 
 
-    // 1. Determine Chapter Scope
     let chaptersInScopeNumbers = [];
     if (mode === 'studied') {
-        const studied = (currentSubject.studied_chapters || []).map(String);
-        if (studied.length === 0) {
+        chaptersInScopeNumbers = (currentSubject.studied_chapters || []).map(String);
+        if (chaptersInScopeNumbers.length === 0) {
             hideLoading();
             displayContent('<p class="text-red-500 p-4">No chapters marked as studied.</p><button onclick="window.showManageStudiedChapters()" class="btn-secondary mt-4">Manage Studied Chapters</button>');
             setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
             return;
         }
-        chaptersInScopeNumbers = studied;
     } else if (mode === 'specific' && selectedChapters) {
         chaptersInScopeNumbers = selectedChapters.map(String);
     } else {
-        hideLoading();
-        displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
-        setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
-        return;
+        hideLoading(); displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
+        setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); return;
     }
     if (chaptersInScopeNumbers.length === 0) {
-         hideLoading();
-         displayContent('<p class="text-red-500 p-4">No chapters selected for the test.</p>');
-         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
-         return;
+         hideLoading(); displayContent('<p class="text-red-500 p-4">No chapters selected for the test.</p>');
+         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); return;
     }
 
-    // 2. Prepare to fetch and parse content from ALL sources specified in testGenConfig
     const allSelectedMcqs = [];
     const allSelectedProblems = [];
-    const allMcqAnswers = {}; // For MCQs, answers are known
-    let actualTotalMcqsFetched = 0;
-    let actualTotalProblemsFetched = 0;
-
+    const allMcqAnswers = {};
+    // Ensure actualTotalQuestionsGenerated is declared at the function scope
+    let actualTotalQuestionsGenerated = 0;
+    
     const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
     const resourceBasePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/`;
+    const subjectId = currentSubject.id;
 
-    // 2.A. Fetch Text MCQs (from main subject file)
-    if (testGenConfig.textMcqCount > 0 && currentSubject.mcqFileName) {
-        const mcqFilePath = `${resourceBasePath}${cleanTextForFilename(currentSubject.mcqFileName)}`;
-        console.log(`Fetching Text MCQs from: ${mcqFilePath}`);
-        const mdContent = await fetchContentForSource(mcqFilePath, "Text MCQs");
-        if (mdContent) {
-            const { questions, answers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), 'text_mcq');
-            const randomSelection = selectRandomItems(questions, testGenConfig.textMcqCount);
-            allSelectedMcqs.push(...randomSelection);
-            Object.assign(allMcqAnswers, answers);
-            actualTotalMcqsFetched += randomSelection.length;
-            console.log(`Added ${randomSelection.length} Text MCQs.`);
+    // Helper to fetch, parse, select MCQs
+    async function processMcqSource(filePath, requestedCount, sourceLogName, sourceTypeKey) {
+        if (requestedCount > 0 && filePath) {
+            console.log(`Processing ${sourceLogName} from: ${filePath}`);
+            const mdContent = await fetchContentForSource(filePath, sourceLogName);
+            if (mdContent) {
+                const { questions, answers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), sourceTypeKey);
+                const randomSelection = selectRandomItems(questions, requestedCount);
+                allSelectedMcqs.push(...randomSelection);
+                Object.assign(allMcqAnswers, answers); 
+                console.log(`Added ${randomSelection.length} MCQs from ${sourceLogName}.`);
+            }
         }
     }
-
-    // 2.B. Fetch Text Problems
-    const textProblemsFileToUse = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '')
-        ? cleanTextForFilename(currentSubject.textProblemsFileName)
+    // Helper to fetch, parse, select Problems
+    async function processProblemSource(filePath, requestedCount, sourceLogName, problemCacheTypeKey) {
+        if (requestedCount > 0 && filePath) {
+            console.log(`Processing ${sourceLogName} from: ${filePath}`);
+            await parseChapterProblems(filePath, subjectId, problemCacheTypeKey);
+            const problemCacheKey = `${subjectId}|${problemCacheTypeKey}`;
+            const problemsFromCache = window.subjectProblemCache?.get(problemCacheKey) || {};
+            const problemsInScope = [];
+            chaptersInScopeNumbers.forEach(chapNum => {
+                if (problemsFromCache[chapNum]) {
+                    problemsInScope.push(...problemsFromCache[chapNum]);
+                }
+            });
+            const randomSelection = selectRandomItems(problemsInScope, requestedCount);
+            allSelectedProblems.push(...formatProblemsForExam(randomSelection, subjectId, problemCacheTypeKey));
+            console.log(`Added ${randomSelection.length} Problems from ${sourceLogName}.`);
+        }
+    }
+    
+    // --- Phase 1: Fulfill Explicit Positive Requests ---
+    if (currentSubject.mcqFileName) {
+        await processMcqSource(`${resourceBasePath}${cleanTextForFilename(currentSubject.mcqFileName)}`, testGenConfig.textMcqCount, "Text MCQs (Main File)", "tg_text_mcq");
+    }
+    const textProblemsFileActual = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '') 
+        ? cleanTextForFilename(currentSubject.textProblemsFileName) 
         : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
-
-    if (testGenConfig.textProblemCount > 0 && textProblemsFileToUse) {
-        const probFilePath = `${resourceBasePath}${textProblemsFileToUse}`;
-        console.log(`Fetching Text Problems from: ${probFilePath}`);
-        await parseChapterProblems(probFilePath, currentSubject.id, 'testgen_text_problems');
-        const problemCacheKey = `${currentSubject.id}|testgen_text_problems`;
-        const textProblemsFromCache = window.subjectProblemCache?.get(problemCacheKey) || {};
-
-        const problemsInScope = [];
-        chaptersInScopeNumbers.forEach(chapNum => {
-            if (textProblemsFromCache[chapNum]) {
-                problemsInScope.push(...textProblemsFromCache[chapNum]);
-            }
-        });
-        const randomSelection = selectRandomItems(problemsInScope, testGenConfig.textProblemCount);
-        allSelectedProblems.push(...formatProblemsForExam(randomSelection, currentSubject.id, 'text_problems'));
-        actualTotalProblemsFetched += randomSelection.length;
-        console.log(`Added ${randomSelection.length} Text Problems.`);
+    if (textProblemsFileActual) { 
+        await processProblemSource(`${resourceBasePath}${textProblemsFileActual}`, testGenConfig.textProblemCount, "Text Problems (Main File)", "tg_text_prob");
     }
 
-    // 2.C. Fetch Lecture MCQs & Problems
     if (currentSubject.lectureResources) {
-        for (const [lecKey, mcqCount] of Object.entries(testGenConfig.lectureMcqCounts)) {
-            if (mcqCount > 0) {
-                const lectureResource = currentSubject.lectureResources.find(lr => lr.title.replace(/\s+/g, '_') === lecKey);
-                if (lectureResource && lectureResource.mcqFile) {
-                    const lecMcqFilePath = `${resourceBasePath}${cleanTextForFilename(lectureResource.mcqFile)}`;
-                    console.log(`Fetching Lecture MCQs for "${lectureResource.title}" from: ${lecMcqFilePath}`);
-                    const mdContent = await fetchContentForSource(lecMcqFilePath, `Lecture MCQs: ${lectureResource.title}`);
+        for (const lec of currentSubject.lectureResources) {
+            if (!lec || !lec.title) continue;
+            const lecKey = cleanTextForFilename(lec.title || `lecture_unknown`);
+            if (lec.mcqFile && testGenConfig.lectureMcqCounts[lecKey] > 0) {
+                await processMcqSource(`${resourceBasePath}${cleanTextForFilename(lec.mcqFile)}`, testGenConfig.lectureMcqCounts[lecKey], `Lecture MCQs: ${lec.title}`, `tg_lec_mcq_${lecKey}`);
+            }
+            if (lec.problemFile && testGenConfig.lectureProblemCounts[lecKey] > 0) {
+                await processProblemSource(`${resourceBasePath}${cleanTextForFilename(lec.problemFile)}`, testGenConfig.lectureProblemCounts[lecKey], `Lecture Problems: ${lec.title}`, `tg_lec_prob_${lecKey}`);
+            }
+        }
+    }
+
+    let currentSelectedTotal = allSelectedMcqs.length + allSelectedProblems.length;
+    let deficit = targetTotalQuestionsFromForm - currentSelectedTotal;
+
+    // --- Phase 2: Handle Deficit with "Auto" Sources (where user entered 0 for a source count) ---
+    if (deficit > 0) {
+        console.log(`Deficit of ${deficit} questions. Attempting to fill from "auto" (0-count) sources, respecting subject's MCQ/Problem ratio.`);
+        
+        const autoSources = [];
+        // Identify "auto" Text MCQs
+        if (testGenConfig.textMcqCount === 0 && currentSubject.mcqFileName) {
+            const available = [];
+            const mdContent = await fetchContentForSource(`${resourceBasePath}${cleanTextForFilename(currentSubject.mcqFileName)}`, "Auto Text MCQs");
+            if (mdContent) {
+                const { questions, answers: autoTextMcqAnswers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), "auto_tg_text_mcq");
+                available.push(...questions);
+                Object.assign(allMcqAnswers, autoTextMcqAnswers); 
+            }
+            if (available.length > 0) autoSources.push({ type: 'mcq', sourceName: 'Text (Main)', availableItems: available, sourceTypeKey: "auto_tg_text_mcq"});
+        }
+        // Identify "auto" Text Problems
+        if (testGenConfig.textProblemCount === 0 && textProblemsFileActual) {
+            const available = [];
+            await parseChapterProblems(`${resourceBasePath}${textProblemsFileActual}`, subjectId, "tg_text_prob");
+            const problemCacheKey = `${subjectId}|tg_text_prob`;
+            const problemsFromCache = window.subjectProblemCache?.get(problemCacheKey) || {};
+            chaptersInScopeNumbers.forEach(chapNum => { if (problemsFromCache[chapNum]) available.push(...problemsFromCache[chapNum]); });
+            if (available.length > 0) autoSources.push({ type: 'problem', sourceName: 'Text Problems (Main)', availableItems: available, sourceTypeKey: "auto_tg_text_prob" });
+        }
+
+        if (currentSubject.lectureResources) {
+            for (const lec of currentSubject.lectureResources) {
+                if (!lec || !lec.title) continue;
+                const lecKey = cleanTextForFilename(lec.title || `lecture_unknown`);
+                if (lec.mcqFile && (testGenConfig.lectureMcqCounts[lecKey] === 0 || testGenConfig.lectureMcqCounts[lecKey] === undefined)) {
+                    const available = [];
+                    const mdContent = await fetchContentForSource(`${resourceBasePath}${cleanTextForFilename(lec.mcqFile)}`, `Auto Lecture MCQs: ${lec.title}`);
                     if (mdContent) {
-                        const { questions, answers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), `lec_mcq_${lecKey}`);
-                        const randomSelection = selectRandomItems(questions, mcqCount);
-                        allSelectedMcqs.push(...randomSelection);
-                        Object.assign(allMcqAnswers, answers);
-                        actualTotalMcqsFetched += randomSelection.length;
-                        console.log(`Added ${randomSelection.length} MCQs from Lecture "${lectureResource.title}".`);
+                        const { questions, answers: autoLecMcqAnswers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), `auto_tg_lec_mcq_${lecKey}`);
+                        available.push(...questions);
+                        Object.assign(allMcqAnswers, autoLecMcqAnswers); 
                     }
+                    if (available.length > 0) autoSources.push({ type: 'mcq', sourceName: `Lecture: ${lec.title}`, availableItems: available, sourceTypeKey: `auto_tg_lec_mcq_${lecKey}`});
                 }
-            }
-        }
-        for (const [lecKey, probCount] of Object.entries(testGenConfig.lectureProblemCounts)) {
-            if (probCount > 0) {
-                const lectureResource = currentSubject.lectureResources.find(lr => lr.title.replace(/\s+/g, '_') === lecKey);
-                if (lectureResource && lectureResource.problemFile) {
-                    const lecProbFilePath = `${resourceBasePath}${cleanTextForFilename(lectureResource.problemFile)}`;
-                    console.log(`Fetching Lecture Problems for "${lectureResource.title}" from: ${lecProbFilePath}`);
-                    await parseChapterProblems(lecProbFilePath, currentSubject.id, `testgen_lec_problems_${lecKey}`);
-                    const problemCacheKeyLec = `${currentSubject.id}|testgen_lec_problems_${lecKey}`;
+                if (lec.problemFile && (testGenConfig.lectureProblemCounts[lecKey] === 0 || testGenConfig.lectureProblemCounts[lecKey] === undefined)) {
+                    const available = [];
+                    await parseChapterProblems(`${resourceBasePath}${cleanTextForFilename(lec.problemFile)}`, subjectId, `tg_lec_prob_${lecKey}`);
+                    const problemCacheKeyLec = `${subjectId}|tg_lec_prob_${lecKey}`;
                     const lectProblemsFromCache = window.subjectProblemCache?.get(problemCacheKeyLec) || {};
-
-                    const problemsInScopeLec = [];
-                    chaptersInScopeNumbers.forEach(chapNum => {
-                        if (lectProblemsFromCache[chapNum]) {
-                            problemsInScopeLec.push(...lectProblemsFromCache[chapNum]);
-                        }
-                    });
-                    const randomSelection = selectRandomItems(problemsInScopeLec, probCount);
-                    allSelectedProblems.push(...formatProblemsForExam(randomSelection, currentSubject.id, `lec_problems_${lecKey}`));
-                    actualTotalProblemsFetched += randomSelection.length;
-                    console.log(`Added ${randomSelection.length} Problems from Lecture "${lectureResource.title}".`);
+                    chaptersInScopeNumbers.forEach(chapNum => { if (lectProblemsFromCache[chapNum]) available.push(...lectProblemsFromCache[chapNum]); });
+                    if (available.length > 0) autoSources.push({ type: 'problem', sourceName: `Lecture Problems: ${lec.title}`, availableItems: available, sourceTypeKey: `auto_tg_lec_prob_${lecKey}` });
                 }
+            }
+        }
+        
+        if (autoSources.length > 0) {
+            const allAutoMcqsPool = autoSources.filter(s => s.type === 'mcq').flatMap(s => s.availableItems);
+            const allAutoProblemsPoolRaw = autoSources.filter(s => s.type === 'problem').flatMap(s => s.availableItems);
+            
+            let numAutoMcqsToSelect = Math.round(deficit * (currentSubject.mcqProblemRatio || DEFAULT_MCQ_PROBLEM_RATIO));
+            let numAutoProblemsToSelect = deficit - numAutoMcqsToSelect;
+
+            numAutoMcqsToSelect = Math.min(numAutoMcqsToSelect, allAutoMcqsPool.length);
+            numAutoProblemsToSelect = Math.min(numAutoProblemsToSelect, allAutoProblemsPoolRaw.length);
+
+            const remainingDeficitAfterCaps = deficit - (numAutoMcqsToSelect + numAutoProblemsToSelect);
+            if (remainingDeficitAfterCaps > 0) {
+                if (allAutoMcqsPool.length > numAutoMcqsToSelect) { 
+                    const canAddMcqs = allAutoMcqsPool.length - numAutoMcqsToSelect;
+                    const addMoreMcqs = Math.min(remainingDeficitAfterCaps, canAddMcqs);
+                    numAutoMcqsToSelect += addMoreMcqs;
+                } else if (allAutoProblemsPoolRaw.length > numAutoProblemsToSelect) { 
+                    const canAddProbs = allAutoProblemsPoolRaw.length - numAutoProblemsToSelect;
+                    const addMoreProbs = Math.min(remainingDeficitAfterCaps, canAddProbs);
+                    numAutoProblemsToSelect += addMoreProbs;
+                }
+            }
+            
+            if (numAutoMcqsToSelect > 0) {
+                const randomAutoMcqSelection = selectRandomItems(allAutoMcqsPool, numAutoMcqsToSelect);
+                allSelectedMcqs.push(...randomAutoMcqSelection);
+                console.log(`Added ${randomAutoMcqSelection.length} MCQs from "auto" sources.`);
+            }
+            if (numAutoProblemsToSelect > 0) {
+                const randomAutoProbSelectionRaw = selectRandomItems(allAutoProblemsPoolRaw, numAutoProblemsToSelect);
+                allSelectedProblems.push(...formatProblemsForExam(randomAutoProbSelectionRaw, subjectId, "auto_combined_prob"));
+                console.log(`Added ${randomAutoProbSelectionRaw.length} Problems from "auto" sources.`);
             }
         }
     }
 
-    console.log(`Total fetched: ${actualTotalMcqsFetched} MCQs and ${actualTotalProblemsFetched} Problems.`);
+    const finalExamItemsCombined = combineProblemsWithQuestions(allSelectedProblems, allSelectedMcqs);
+    let finalExamItems;
 
-    // 3. Combine and Shuffle
-    const finalExamItems = combineProblemsWithQuestions(allSelectedProblems, allSelectedMcqs);
-    let actualTotalQuestionsGenerated = finalExamItems.length;
-
-    // Cap at targetTotalQuestionsFromForm if it's less than what was fetched/selected
+    // --- Phase 3: Final Capping/Adjustment ---
+    actualTotalQuestionsGenerated = finalExamItemsCombined.length; // Assign to the function-scoped variable
     if (actualTotalQuestionsGenerated > targetTotalQuestionsFromForm) {
-        console.warn(`Generated ${actualTotalQuestionsGenerated} items, but form target was ${targetTotalQuestionsFromForm}. Truncating.`);
-        finalExamItems.length = targetTotalQuestionsFromForm; // Simple truncation
-        actualTotalQuestionsGenerated = finalExamItems.length;
+        console.log(`Generated ${actualTotalQuestionsGenerated} questions, but target was ${targetTotalQuestionsFromForm}. Truncating by random selection.`);
+        finalExamItems = selectRandomItems(finalExamItemsCombined, targetTotalQuestionsFromForm); 
+    } else {
+        finalExamItems = finalExamItemsCombined;
     }
-
-
-    if (actualTotalQuestionsGenerated === 0) {
+    actualTotalQuestionsGenerated = finalExamItems.length; // Re-assign after potential truncation
+    
+    if (actualTotalQuestionsGenerated === 0 || (actualTotalQuestionsGenerated < 10 && targetTotalQuestionsFromForm >=10)) {
         hideLoading();
-        displayContent(`<p class="text-red-500 p-4 font-semibold">Test Generation Failed: No questions could be selected from the specified sources based on your counts. Please check counts and file availability.</p>`);
+        let errorMsg = `Test Generation Failed: Only ${actualTotalQuestionsGenerated} questions could be selected. Need at least 10.`;
+        if (actualTotalQuestionsGenerated === 0) errorMsg = "Test Generation Failed: No questions could be selected from the specified sources for the chosen chapters. Please check counts and file availability.";
+        displayContent(`<p class="text-red-500 p-4 font-semibold">${errorMsg}</p><button onclick="window.promptTestType('${mode}', ${JSON.stringify(selectedChapters)})" class="btn-secondary mt-2">Reconfigure Test</button>`);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
+    }
+    if (actualTotalQuestionsGenerated < targetTotalQuestionsFromForm) {
+        alert(`Warning: Could only generate ${actualTotalQuestionsGenerated} questions, though ${targetTotalQuestionsFromForm} were targeted. Check availability in selected chapters/sources.`);
     }
     console.log(`Final questions in exam: ${actualTotalQuestionsGenerated} (MCQs: ${finalExamItems.filter(q=>!q.isProblem).length}, Problems: ${finalExamItems.filter(q=>q.isProblem).length})`);
 
@@ -710,15 +793,15 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
     } else { // 'default' or fallback
         testDuration = currentSubject.defaultTestDurationMinutes || DEFAULT_ONLINE_TEST_DURATION_MINUTES;
     }
-    testDuration = Math.max(10, testDuration); // Ensure min 10 minutes
+    testDuration = Math.max(10, testDuration); 
 
     // 5. Create Exam ID and State
     const examId = `TestGen-${currentSubject.id || 'SUBJ'}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
 
     const examStateBase = {
         examId: examId,
-        questions: finalExamItems,
-        correctAnswers: allMcqAnswers,
+        questions: finalExamItems, 
+        correctAnswers: allMcqAnswers, 
         userAnswers: {},
         startTime: Date.now(),
         timerInterval: null,
@@ -726,8 +809,8 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
         status: 'active',
         durationMinutes: testDuration,
         subjectId: currentSubject.id,
-        courseContext: null, // This is a TestGen exam
-        testGenConfig: testGenConfig // Store the configuration used
+        courseContext: null, 
+        testGenConfig: testGenConfig 
     };
 
     // 6. Launch Online Test or PDF
@@ -742,19 +825,23 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
         currentSubject.pending_exams = currentSubject.pending_exams || [];
         currentSubject.pending_exams.push({
             id: examId,
-            // Store the counts for PDF result entry more accurately
             allocation: finalExamItems.filter(q => !q.isProblem).reduce((acc, mcq) => {
-                if (!acc[mcq.chapter]) acc[mcq.chapter] = [];
-                acc[mcq.chapter].push(mcq.number); // This 'number' is its order in the final test
+                const chapStr = String(mcq.chapter);
+                if (!acc[chapStr]) acc[chapStr] = [];
+                acc[chapStr].push(mcq.number); 
                 return acc;
             }, {}),
-            problemAllocation: finalExamItems.filter(q => q.isProblem).map(p => ({ chapter: p.chapter, id: p.id, textPreview: p.text.substring(0,50) })),
+            problemAllocation: finalExamItems.filter(q => q.isProblem).map(p => ({ 
+                chapter: String(p.chapter), 
+                id: p.id, 
+                textPreview: p.text.substring(0,50) 
+            })),
             results_entered: false,
             timestamp: new Date().toISOString(),
-            totalQuestions: actualTotalQuestionsGenerated,
-            testGenConfig: testGenConfig
+            totalQuestions: actualTotalQuestionsGenerated, // Correct variable used here
+            testGenConfig: testGenConfig 
         });
-        await saveUserData(currentUser.uid);
+        await saveUserData(currentUser.uid); 
 
         const safeSubjectNameCleaned = cleanTextForFilename(currentSubject.name || 'Subject');
         const dateTimeSuffix = examId.split('-').slice(2).join('-');
@@ -763,20 +850,21 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
         const numMcqsInPdf = finalExamItems.filter(q => !q.isProblem).length;
         const numProblemsInPdf = finalExamItems.filter(q => q.isProblem).length;
         
-        let allocationDetailsHtmlFinal = `<p class="font-medium">Test Configuration:</p>
-            <p class="text-xs">Total Questions: ${actualTotalQuestionsGenerated} (Target: ${targetTotalQuestionsFromForm})</p>
-            <p class="text-xs">Duration: ${testDuration} min (Timing: ${testGenConfig.timingOption})</p>
+        let allocationDetailsHtmlFinal = `<p class="font-medium">Test Configuration Used:</p>
+            <p class="text-xs">Target Total Questions (from form): ${targetTotalQuestionsFromForm}</p>
+            <p class="text-xs">Actual Questions in Test: ${actualTotalQuestionsGenerated}</p> 
+            <p class="text-xs">Duration: ${testDuration} min (Timing mode: ${testGenConfig.timingOption})</p>
             <p class="text-xs mt-1"><strong>Actual Content Breakdown:</strong></p>
             <ul class="list-disc list-inside ml-4 text-xs">
             ${numMcqsInPdf > 0 ? `<li>Total MCQs: ${numMcqsInPdf}</li>` : ''}
             ${numProblemsInPdf > 0 ? `<li>Total Problems: ${numProblemsInPdf}</li>` : ''}
             </ul>
-            <p class="text-xs mt-1"><strong>Requested Sources:</strong></p>
+            <p class="text-xs mt-1"><strong>Requested Source Counts (User Input):</strong></p>
             <ul class="list-disc list-inside ml-4 text-xs">
-            ${testGenConfig.textMcqCount > 0 ? `<li>Text MCQs: ${testGenConfig.textMcqCount}</li>` : ''}
-            ${testGenConfig.textProblemCount > 0 ? `<li>Text Problems: ${testGenConfig.textProblemCount}</li>` : ''}
-            ${Object.entries(testGenConfig.lectureMcqCounts).map(([lecKey, count]) => count > 0 ? `<li>${lecKey.replace(/_/g, ' ')} MCQs: ${count}</li>` : '').filter(Boolean).join('')}
-            ${Object.entries(testGenConfig.lectureProblemCounts).map(([lecKey, count]) => count > 0 ? `<li>${lecKey.replace(/_/g, ' ')} Problems: ${count}</li>` : '').filter(Boolean).join('')}
+            ${testGenConfig.textMcqCount > 0 ? `<li>Text MCQs: ${testGenConfig.textMcqCount}</li>` : (testGenConfig.textMcqCount === 0 ? '<li>Text MCQs: Auto</li>' : '')}
+            ${testGenConfig.textProblemCount > 0 ? `<li>Text Problems: ${testGenConfig.textProblemCount}</li>` : (testGenConfig.textProblemCount === 0 ? '<li>Text Problems: Auto</li>' : '')}
+            ${Object.entries(testGenConfig.lectureMcqCounts).map(([lecKey, count]) => count > 0 ? `<li>${lecKey.replace(/_/g, ' ')} MCQs: ${count}</li>` : (count === 0 ? `<li>${lecKey.replace(/_/g, ' ')} MCQs: Auto</li>` : '')).filter(Boolean).join('')}
+            ${Object.entries(testGenConfig.lectureProblemCounts).map(([lecKey, count]) => count > 0 ? `<li>${lecKey.replace(/_/g, ' ')} Problems: ${count}</li>` : (count === 0 ? `<li>${lecKey.replace(/_/g, ' ')} Problems: Auto</li>`: '')).filter(Boolean).join('')}
             </ul>`;
 
         displayContent(`
@@ -810,13 +898,7 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
 
 window.downloadTexFileWrapper = (filename, base64Content) => {
      try {
-        // The function downloadTexFile expects the raw content, not base64
-        // The base64 encoding/decoding should happen inside the onclick attribute or be passed differently.
-        // Original was: `downloadTexFile(texContent, filename);` which is incorrect.
-        // Correct usage is downloadTexFile(filename, base64Content) and let it decode.
-        // OR, decode here and pass raw content.
-        // The ui_pdf_generation.js's downloadTexFile expects filename, then base64content.
-         downloadTexFile(filename, base64Content); // Pass base64 directly
+         downloadTexFile(filename, base64Content); 
      } catch (e) {
          console.error("Error in downloadTexFileWrapper:", e);
          alert("Failed to prepare TeX file for download. The content might be invalidly encoded or corrupted.");

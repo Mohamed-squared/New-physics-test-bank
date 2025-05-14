@@ -15,6 +15,9 @@ import { displayTestingAidsSection } from './admin_testing_aids.js';
 import { confirmDeleteAllFeedbackAndIssues } from './admin_moderation.js'
 import { populateAdminCourseSelect, loadPlaylistForAdmin, toggleSelectAllVideosAdmin, toggleVideoSelectionAdmin, handleAssignVideoToChapter, handleUnassignVideoFromChapter, handleDeleteUserFormulaSheetAdmin, handleDeleteUserChapterSummaryAdmin } from './admin_playlist_and_content_deletion.js';
 import { getAdminOverviewStats } from './firebase_firestore.js'
+import { displayDatabaseManagementSection } from './admin_database_management.js';
+
+
 // --- Main Admin Dashboard UI ---
 
 // State for current active admin section
@@ -83,6 +86,11 @@ export function showAdminDashboard() {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.25-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" /></svg>
                     Moderation
                 </a>
+                <!-- NEW: Database Management Link -->
+                <a href="#" onclick="window.showAdminSection('databaseManagement'); return false;" data-section="databaseManagement" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" /></svg>
+                    Database
+                </a>
                 <a href="#" onclick="window.showAdminSection('systemOperations'); return false;" data-section="systemOperations" class="admin-nav-link">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.646.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.43.992a6.759 6.759 0 0 1 0 1.255c-.008.379.138.75.43.992l1.004.827a1.125 1.125 0 0 1 .26 1.43l-1.296 2.247a1.125 1.125 0 0 1-1.37.491l-1.217-.456c-.355-.133-.75-.072-1.075.124a6.512 6.512 0 0 1-.22.127c-.333.183-.583.495-.646.87l-.213 1.28c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.646-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 0 1-1.37-.49l-1.296-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.758 6.758 0 0 1 0-1.255c.008-.379-.138-.75-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.296-2.247a1.125 1.125 0 0 1 1.37-.491l1.217.456c.355.133.75.072 1.075-.124a6.512 6.512 0 0 1 .22-.127c.333-.183.583-.495.646-.87l.213-1.281Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                     System
@@ -98,7 +106,7 @@ export function showAdminDashboard() {
             <!-- Content for the selected section will be loaded here -->
         </main>
     </div>
-`;
+    `;
 
     displayContent(adminPanelHtml);
     updateAdminPanelBackgroundRGBs(); // IMPORTANT: Call this to set CSS vars for RGB
@@ -164,6 +172,9 @@ export async function showAdminSection(sectionName) {
         case 'testingAids':
             displayTestingAidsSection(contentArea);
             break;
+        case 'databaseManagement': // NEW CASE
+            displayDatabaseManagementSection(contentArea);
+            break;
         default:
             contentArea.innerHTML = `<p class="text-red-500 p-4">Error: Unknown admin section "${sectionName}".</p>`;
     }
@@ -206,6 +217,8 @@ async function loadAdminOverviewStats() {
         statsGrid.innerHTML = `<p class="text-red-500 col-span-full text-center">Could not load platform statistics: ${error.message}</p>`;
     }
 }
+
+
 
 // Helper to create stat card HTML
 function createStatCard(title, value, iconType, baseBgRgbString, iconColorClass) {

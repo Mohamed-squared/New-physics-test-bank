@@ -1,6 +1,6 @@
 // --- START OF FILE course_logic.js ---
 
-import { GRADING_WEIGHTS, PASSING_GRADE_PERCENT, PACE_MULTIPLIER, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS } from './config.js';
+import { GRADING_WEIGHTS, PASSING_GRADE_PERCENT, PACE_MULTIPLIER, SKIP_EXAM_PASSING_PERCENT, PDF_PAGE_EQUIVALENT_SECONDS, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE } from './config.js'; // Added MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
 import { daysBetween, getFormattedDate, getYouTubeVideoId } from './utils.js';
 import { globalCourseDataMap, videoDurationMap } from './state.js'; // Import videoDurationMap
 // *** MODIFIED: Removed import of calculateChapterCombinedProgress from ui_course_study_material.js to break circular dependency risk and because the function is now defined here. ***
@@ -12,12 +12,12 @@ import { globalCourseDataMap, videoDurationMap } from './state.js'; // Import vi
  * @param {number} chapterNum - The chapter number.
  * @param {object} chapterVideoDurationMap - Map of { videoId: durationInSeconds } for this chapter.
  * @param {object | null} pdfInfo - Object like { currentPage: number, totalPages: number } or null if no PDF.
- * @returns {{ percent: number, watchedStr: string, totalStr: string }}
+ * @returns {{ percent: number, watchedStr: string, totalStr: string, isComplete: boolean }}
  */
 export function calculateChapterCombinedProgress(progress, chapterNum, chapterVideoDurationMap, pdfInfo) {
     // Return 0 if viewer mode
     if (progress?.enrollmentMode === 'viewer') {
-         return { percent: 0, watchedStr: "N/A", totalStr: "N/A" };
+         return { percent: 0, watchedStr: "N/A", totalStr: "N/A", isComplete: false };
      }
 
     const watchedVideoDurations = progress.watchedVideoDurations?.[chapterNum] || {};
@@ -27,33 +27,51 @@ export function calculateChapterCombinedProgress(progress, chapterNum, chapterVi
     let totalVideoSeconds = 0;
     let watchedVideoSeconds = 0;
     let hasVideo = false;
+    let allVideosWatched = true;
+
     if (chapterVideoDurationMap && Object.keys(chapterVideoDurationMap).length > 0) {
         hasVideo = true;
         Object.entries(chapterVideoDurationMap).forEach(([videoId, duration]) => {
             if (typeof duration === 'number' && duration > 0) {
                 totalVideoSeconds += duration;
-                // Clamp watched time PER VIDEO before summing
-                watchedVideoSeconds += Math.min(watchedVideoDurations[videoId] || 0, duration);
+                const watchedForThisVideo = Math.min(watchedVideoDurations[videoId] || 0, duration);
+                watchedVideoSeconds += watchedForThisVideo;
+                if (watchedForThisVideo < duration * 0.9) { // Consider 90% as watched for completion flag
+                    allVideosWatched = false;
+                }
+            } else {
+                allVideosWatched = false; // If any video has no valid duration, can't confirm all watched
             }
         });
-        // No need to clamp the sum again if clamped individually
+    } else {
+        allVideosWatched = true; // No videos, so vacuously true
     }
 
     let totalPdfEquivalentSeconds = 0;
     let completedPdfEquivalentSeconds = 0;
     let hasPdf = false;
+    let pdfCompleted = true;
+
     if (chapterPdfProgress && chapterPdfProgress.totalPages > 0) {
         hasPdf = true;
         totalPdfEquivalentSeconds = chapterPdfProgress.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
         const currentPage = chapterPdfProgress.currentPage || 0;
-        completedPdfEquivalentSeconds = Math.min(currentPage, chapterPdfProgress.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS; // Clamp current page
+        completedPdfEquivalentSeconds = Math.min(currentPage, chapterPdfProgress.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS;
+        if (currentPage < chapterPdfProgress.totalPages) {
+            pdfCompleted = false;
+        }
     } else if (pdfInfo && pdfInfo.totalPages > 0) {
-         // Fallback to passed pdfInfo if available (e.g., right after PDF load)
          hasPdf = true;
          totalPdfEquivalentSeconds = pdfInfo.totalPages * PDF_PAGE_EQUIVALENT_SECONDS;
          const currentPage = pdfInfo.currentPage || 0;
          completedPdfEquivalentSeconds = Math.min(currentPage, pdfInfo.totalPages) * PDF_PAGE_EQUIVALENT_SECONDS;
+         if (currentPage < pdfInfo.totalPages) {
+            pdfCompleted = false;
+        }
+    } else {
+        pdfCompleted = true; // No PDF, so vacuously true
     }
+
 
     // Format time helper
     const formatTime = (seconds) => {
@@ -79,14 +97,18 @@ export function calculateChapterCombinedProgress(progress, chapterNum, chapterVi
         combinedCompletedSeconds = completedPdfEquivalentSeconds;
         progressPercent = combinedTotalSeconds > 0 ? Math.min(100, Math.round((combinedCompletedSeconds / combinedTotalSeconds) * 100)) : 0;
     } else {
-        // No video or PDF content associated
-        return { percent: 0, watchedStr: "0s", totalStr: "0s" };
+        // No video or PDF content associated, considered complete for study purposes
+        return { percent: 100, watchedStr: "N/A", totalStr: "N/A", isComplete: true };
     }
+    
+    const isChapterComplete = (hasVideo ? allVideosWatched : true) && (hasPdf ? pdfCompleted : true);
+
 
     return {
         percent: progressPercent,
         watchedStr: formatTime(combinedCompletedSeconds),
-        totalStr: formatTime(combinedTotalSeconds)
+        totalStr: formatTime(combinedTotalSeconds),
+        isComplete: isChapterComplete // Add this flag
     };
 }
 
@@ -109,28 +131,24 @@ export function calculateTotalMark(progressData) {
         return null;
     }
 
-    // GRADING_WEIGHTS should be imported from config.js
     const weights = GRADING_WEIGHTS;
     let totalMark = 0;
-    let totalWeightAchieved = 0; // Track weight of components with scores
+    let totalWeightAchieved = 0;
 
-    // Helper to calculate average score from a scores object/array
     const calculateAverage = (scores) => {
         if (!scores) return { average: 0, count: 0 };
         const values = (Array.isArray(scores) ? scores : Object.values(scores))
-                       .filter(s => s !== null && s !== undefined); // Filter out null/undefined scores
+                       .filter(s => s !== null && s !== undefined);
         if (values.length === 0) return { average: 0, count: 0 };
-        const sum = values.reduce((acc, score) => acc + (Number(score) || 0), 0); // Ensure scores are numbers
+        const sum = values.reduce((acc, score) => acc + (Number(score) || 0), 0);
         return { average: (sum / values.length), count: values.length };
     };
 
-    // Calculate Overall Chapter Completion (using combined progress)
     let totalChapterProgressSum = 0;
-    const totalChapters = courseDef.totalChapters || 1; // Avoid division by zero
+    const totalChapters = courseDef.totalChapters || 1;
 
     for (let i = 1; i <= totalChapters; i++) {
          const chapterResources = courseDef.chapterResources?.[i] || {};
-         // Ensure getYouTubeVideoId and videoDurationMap are accessible
          const lecturesForChapter = (Array.isArray(chapterResources.lectureUrls) ? chapterResources.lectureUrls : [])
                                     .filter(lec => typeof lec === 'object' && lec.url && lec.title);
          const videoIdsForChapter = lecturesForChapter.map(lec => getYouTubeVideoId(lec.url)).filter(id => id !== null);
@@ -141,12 +159,10 @@ export function calculateTotalMark(progressData) {
              }
          });
          const pdfInfo = progressData.pdfProgress?.[i] || null;
-
          const { percent: chapterPercent } = calculateChapterCombinedProgress(progressData, i, chapterVideoDurationMap, pdfInfo);
          totalChapterProgressSum += chapterPercent;
     }
     const overallChapterCompletionAvg = totalChapters > 0 ? (totalChapterProgressSum / totalChapters) : 0;
-
     totalMark += (overallChapterCompletionAvg * weights.chapterCompletion);
     totalWeightAchieved += weights.chapterCompletion;
     console.log(`Chapter Completion Avg: ${overallChapterCompletionAvg.toFixed(1)}%, Contribution: ${(overallChapterCompletionAvg * weights.chapterCompletion).toFixed(1)}`);
@@ -179,7 +195,6 @@ export function calculateTotalMark(progressData) {
          console.log(`Final Exams Avg: ${finalResult.average.toFixed(1)}%, Contribution: ${(finalResult.average * weights.finalExams).toFixed(1)}`);
     }
 
-    // Ensure calculateAttendanceScore is defined and accessible
     const attendance = progressData.attendanceScore === undefined ? calculateAttendanceScore(progressData) : progressData.attendanceScore;
     totalMark += (attendance * weights.attendance);
     totalWeightAchieved += weights.attendance;
@@ -189,13 +204,16 @@ export function calculateTotalMark(progressData) {
     totalMark += bonus;
     console.log(`Extra Practice Bonus: ${bonus}pts`);
 
-    // Add TestGen Bonus
+    // --- START MODIFICATION: Add TestGen Bonus ---
+    // Ensure MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE is used.
+    // The testGenBonus field in progressData should already be capped by MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
+    // when it's saved in ui_online_test.js after a TestGen exam.
     const testGenBonusPoints = progressData.testGenBonus || 0;
-    totalMark += testGenBonusPoints;
-    console.log(`TestGen Bonus Points: ${testGenBonusPoints}pts`);
+    totalMark += testGenBonusPoints; // Directly add the capped bonus.
+    console.log(`TestGen Bonus Points (applied to total mark): ${testGenBonusPoints}pts`);
+    // --- END MODIFICATION ---
 
     console.log(`Total Weighted Mark (Before Clamp): ${totalMark.toFixed(1)}%, Achieved Weight (for weighted components): ${totalWeightAchieved.toFixed(2)}`);
-    // Clamp mark between 0 and potentially > 100 due to bonus. Max not capped at 100 to allow bonus.
     return Math.max(0, totalMark);
 }
 

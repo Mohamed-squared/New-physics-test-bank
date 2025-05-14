@@ -1,12 +1,11 @@
+// --- START OF FILE firebase_auth.js ---
+
 // firebase_auth.js
-import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js'; // Added auth import
+import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
-// --- START MODIFICATION: Added sendWelcomeGuideMessage import ---
 import { initializeUserData, loadUserData, loadGlobalCourseDefinitions, sendWelcomeGuideMessage } from './firebase_firestore.js';
-// --- END MODIFICATION ---
 import { showLoginUI, hideLoginUI, fetchAndUpdateUserInfo, clearUserInfoUI, setActiveSidebarLink, displayContent } from './ui_core.js';
 import { updateAdminPanelVisibility } from './script.js';
-// REMOVED: showMyCoursesDashboard import - rely on global assignment in script.js
 import { showHomeDashboard } from './ui_home_dashboard.js';
 
 // --- Authentication Functions ---
@@ -40,30 +39,24 @@ export async function signUpUser(username, email, password) {
         const user = userCredential.user;
         console.log('[signUpUser] Firebase user created:', user.uid);
 
-        // Pass username to initializeUserData
-        // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
-        await initializeUserData(user.uid, email, username, null, null, false); // Pass username (not usernameLower here, initializeUserData handles lowercasing)
-        // --- MODIFICATION: Added log after initializeUserData ---
+        // initializeUserData will handle setting user doc and reserving username.
+        // Pass the 'user' object from userCredential for fallbacks.
+        await initializeUserData(user.uid, user.email, username, user.displayName, user.photoURL, false, user);
         console.log("[signUpUser] initializeUserData completed for " + user.uid);
 
+        // REMOVED Redundant Username Reservation:
+        // console.log("[signUpUser] Attempting to reserve username '" + usernameLower + "' for user " + user.uid);
+        // await db.collection('usernames').doc(usernameLower).set({ userId: user.uid }); // This is now done in initializeUserData
+        // console.log("[signUpUser] Username '" + usernameLower + "' successfully reserved.");
 
-        // Reserve username in the separate collection
-        // --- MODIFICATION: Added log before reserving username ---
-        console.log("[signUpUser] Attempting to reserve username '" + usernameLower + "' for user " + user.uid);
-        await db.collection('usernames').doc(usernameLower).set({ userId: user.uid });
-        // --- MODIFICATION: Added log after reserving username ---
-        console.log("[signUpUser] Username '" + usernameLower + "' successfully reserved.");
-        
-        // --- START MODIFICATION: Send welcome guide message ---
         if (user && user.uid) {
             console.log("New user signed up. Sending welcome guide message.");
             sendWelcomeGuideMessage(user.uid).catch(err => {
                 console.error("Error sending welcome guide message on signup:", err);
             });
         }
-        // --- END MODIFICATION ---
-        // onAuthStateChanged will handle UI updates and loading data
-        // hideLoading() will be handled by onAuthStateChanged or error cases
+        // onAuthStateChanged will handle UI updates and loading data.
+        // hideLoading() will be handled by onAuthStateChanged or error cases.
 
     } catch (error) {
         console.error("Sign up error:", error);
@@ -71,13 +64,18 @@ export async function signUpUser(username, email, password) {
             alert("Sign up failed: The email address is already in use by another account.");
         } else if (error.code === 'auth/weak-password') {
             alert("Sign up failed: Password is too weak.");
-        } else {
+        } else if (error.message && error.message.includes("A valid Firebase Auth user object is required")) {
+            // This specific error message comes from our modified initializeUserData
+            alert("Sign up process failed: There was an issue setting up your user profile. Please try again or contact support if the problem persists.");
+        }
+         else {
             alert("Sign up failed: " + error.message + (error.code ? ` (Code: ${error.code})` : ''));
         }
         hideLoading();
     }
 }
 
+// ... (rest of firebase_auth.js: signInUser, signInWithGoogle, signOutUser, sendPasswordReset, setupAuthListener) ...
 export async function signInUser(identifier, password) {
     if (!auth || !db) { console.error("Firebase not initialized"); return; }
     if (!identifier || !password) {
@@ -119,7 +117,6 @@ export async function signInUser(identifier, password) {
             console.log(`Found email (${email}) for username ${identifier}. Signing in...`);
             await auth.signInWithEmailAndPassword(email, password);
         }
-        // Success handled by onAuthStateChanged
     } catch (error) {
         console.error("Sign in error:", error);
         if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
@@ -139,39 +136,35 @@ export function signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider)
         .then(async (result) => {
-            showLoading("Processing Google Sign-in..."); // Update loading message
+            showLoading("Processing Google Sign-in...");
             const user = result.user;
-            // --- START MODIFICATION: Check if it's a new user for welcome message ---
             const isNewUser = result.additionalUserInfo?.isNewUser || false;
-            // --- END MODIFICATION ---
             console.log('Google sign in success:', user, 'Is new user:', isNewUser);
 
-            // Generate a potential username and check for uniqueness
             const potentialUsernameBase = (user.email?.split('@')[0] || `user_${user.uid.substring(0,6)}`).replace(/[^a-zA-Z0-9_]/g, '').substring(0, 20);
             let finalUsername = potentialUsernameBase;
             let checkCounter = 0;
-            const MAX_CHECKS = 5; // Max attempts to find a unique username variation
+            const MAX_CHECKS = 5;
 
             if (!db) throw new Error("Firestore DB not available for username check.");
 
-            // Simple username check loop
-            while (checkCounter <= MAX_CHECKS) { // Use <= to allow the base username check + MAX_CHECKS variations
+            while (checkCounter <= MAX_CHECKS) {
                  try {
                      const usernameToCheck = (checkCounter === 0) ? finalUsername : `${potentialUsernameBase}${checkCounter}`;
                      const usernameRef = db.collection('usernames').doc(usernameToCheck.toLowerCase());
                      const usernameDoc = await usernameRef.get();
                      if (!usernameDoc.exists) {
-                         finalUsername = usernameToCheck; // Found unique username
-                         break; 
+                         finalUsername = usernameToCheck;
+                         break;
                      }
                  } catch (dbError) {
                      console.error("Error checking username during Google Sign-In:", dbError);
-                     finalUsername = potentialUsernameBase; // Fallback on error
-                     break; 
+                     finalUsername = potentialUsernameBase;
+                     break;
                  }
                  checkCounter++;
-                 if (checkCounter > MAX_CHECKS) { // Exhausted checks
-                    finalUsername = `${potentialUsernameBase}_${Date.now().toString().slice(-4)}`; // More unique fallback
+                 if (checkCounter > MAX_CHECKS) {
+                    finalUsername = `${potentialUsernameBase}_${Date.now().toString().slice(-4)}`;
                     console.warn(`Could not find a unique username for Google Sign-In user within ${MAX_CHECKS} attempts. Using time-suffixed fallback: ${finalUsername}`);
                     break;
                  }
@@ -179,21 +172,15 @@ export function signInWithGoogle() {
             }
             console.log(`[signInWithGoogle] Final username determined: ${finalUsername}`);
 
-
-            // Initialize user data (or update if exists), passing the chosen username
-            // initializeUserData will set isAdmin to false by default, or true if user.uid === ADMIN_UID
-            await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL);
+            await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL, false, user); // Pass user object
             console.log("[signInWithGoogle] initializeUserData completed for " + user.uid);
             
-            // --- START MODIFICATION: Send welcome guide message if new Google user ---
             if (isNewUser && user && user.uid) {
                 console.log("New Google user signed up. Sending welcome guide message.");
                 sendWelcomeGuideMessage(user.uid).catch(err => {
                     console.error("Error sending welcome guide message on Google signup:", err);
                 });
             }
-            // --- END MODIFICATION ---
-             // onAuthStateChanged will handle subsequent UI updates and data loading
         })
         .catch((error) => {
             console.error("Google sign in error:", error);
@@ -213,19 +200,13 @@ export function signOutUser() {
     showLoading("Signing out...");
     auth.signOut().then(() => {
         console.log('Sign out successful');
-        // onAuthStateChanged will handle UI updates and state clearing
     }).catch((error) => {
         console.error("Sign out error:", error);
         alert("Sign out failed: " + error.message);
-        hideLoading(); // Ensure loading is hidden on error
+        hideLoading();
     });
 }
 
-// --- Password Reset ---
-/**
- * Sends a password reset email to the specified address.
- * @param {string} email The user's email address.
- */
 export async function sendPasswordReset(email) {
     if (!auth) {
         console.error("Firebase Auth not initialized. Cannot send password reset.");
@@ -256,50 +237,38 @@ export async function sendPasswordReset(email) {
     }
 }
 
-
-// --- Auth Listener Setup ---
 export function setupAuthListener() {
     if (!auth) {
         console.error("Cannot set up auth listener: Firebase auth not initialized.");
         return;
     }
     console.log("Setting up Firebase Auth listener...");
-    auth.onAuthStateChanged(async user => {
-        console.log("Auth state changed. User:", user ? user.uid : 'None');
+    auth.onAuthStateChanged(async userAuthObj => {
+        console.log("Auth state changed. User:", userAuthObj ? userAuthObj.uid : 'None');
         
-        // --- MODIFICATION: setCurrentUser is now called AFTER fetchAndUpdateUserInfo ---
-        // This ensures that custom user data (like isAdmin) from Firestore is included
-        // when setting the global currentUser state.
-        // updateAdminPanelVisibility() is called after currentUser is fully set.
-
-        if (user) {
-            console.log("User signed in: ", user.uid);
+        if (userAuthObj) {
+            console.log("User signed in: ", userAuthObj.uid);
             showLoading("Loading user data..."); 
 
             document.getElementById('public-homepage-container')?.classList.add('hidden');
             document.querySelector('.app-layout')?.classList.remove('hidden');
 
-            // fetchAndUpdateUserInfo fetches Firestore data and then calls setCurrentUser internally.
-            await fetchAndUpdateUserInfo(user); 
-            // Now currentUser in state.js should have the isAdmin field if fetched.
-
-            updateAdminPanelVisibility(); // Call after currentUser is fully set with Firestore data
+            await fetchAndUpdateUserInfo(userAuthObj); 
+            
+            updateAdminPanelVisibility(); 
 
             console.log("Loading global course definitions...");
             await loadGlobalCourseDefinitions(); 
 
             console.log("Calling loadUserData (includes course progress)...");
             try {
-                // loadUserData might update parts of the user document (like appData or missing fields)
-                // but fetchAndUpdateUserInfo is responsible for the initial load for currentUser state.
-                await loadUserData(user.uid); 
+                await loadUserData(userAuthObj.uid, userAuthObj); 
                 console.log("loadUserData (including onboarding check) finished.");
 
                 if (!document.getElementById('onboarding-container')) {
-                    hideLoginUI(); // This will hide #login-section
+                    hideLoginUI(); 
                     showHomeDashboard();
                 }
-                // Ensure hideLoading is called after all async operations related to login are complete
                 if (!document.getElementById('onboarding-container')) {
                     hideLoading();
                 }
@@ -309,21 +278,23 @@ export function setupAuthListener() {
                 let alertMessage = `Critical error loading user data: ${loadError.message}. Please try signing out and back in.`;
                 if (loadError.message && (loadError.message.toLowerCase().includes('permission') || loadError.message.toLowerCase().includes('missing or insufficient permissions'))) {
                     alertMessage = "Critical error loading user data: Permission denied. This often indicates a Firestore Security Rules issue. Please check the rules or contact support, then try signing out and back in.";
+                } else if (loadError.message.includes("Authentication context is missing")) {
+                    alertMessage = "Critical error during user setup: Authentication session became invalid. Please try signing in again.";
+                } else if (loadError.message.includes("A valid email is required to initialize user data")) {
+                    alertMessage = "Sign up process failed: There was an issue with your email during setup. Please try again or contact support.";
                 }
                 alert(alertMessage);
                 hideLoading();
                 signOutUser(); 
             }
-        } else { // User is signed out
+        } else { 
             console.log("User signed out. Showing public homepage.");
-            // --- MODIFICATION: Added specific log for account deletion scenario ---
-            const previousUser = window.currentUser; // Check if there was a currentUser before this state change
-            if (previousUser && !user) { // Check if a user was just signed out (could be deletion or normal sign out)
+            const previousUser = window.currentUser; 
+            if (previousUser && !userAuthObj) { 
                  console.log("Account deletion processed or user signed out. Showing login UI.");
             }
-            // --- END MODIFICATION ---
-            setCurrentUser(null); // Clear global user state immediately
-            updateAdminPanelVisibility(); // Update admin link visibility
+            setCurrentUser(null); 
+            updateAdminPanelVisibility(); 
             clearUserSession();       
             clearUserInfoUI();      
             
@@ -331,9 +302,8 @@ export function setupAuthListener() {
             document.querySelector('.app-layout')?.classList.add('hidden');
             
             setActiveSidebarLink(''); 
-            // Explicitly ensure login UI is visible when signed out, unless onboarding is active (which is handled elsewhere)
             if (!document.getElementById('onboarding-container')) {
-                showLoginUI(); // This shows the #login-section
+                showLoginUI(); 
             }
             hideLoading();            
         }

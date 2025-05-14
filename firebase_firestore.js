@@ -1054,7 +1054,7 @@ export async function saveGlobalAiPrompts(promptsObject) {
  * Syncs subject data with Markdown files.
  * @param {string} uid - The user's unique ID.
  */
-export async function loadUserData(uid) {
+export async function loadUserData(uid, authUserFromEvent = null) {
     if (!db) { console.error("Firestore DB not initialized"); return; }
     if (!uid) { console.error("loadUserData called without UID."); return; }
 
@@ -1070,11 +1070,11 @@ export async function loadUserData(uid) {
 
         if (userDoc.exists) {
             const userDataFromFirestore = userDoc.data();
-            const userProfileForState = { /* ... as before ... */
+            const userProfileForState = {
                 uid: uid,
-                email: userDataFromFirestore.email || firebaseAuth?.currentUser?.email,
-                displayName: userDataFromFirestore.displayName || firebaseAuth?.currentUser?.displayName,
-                photoURL: userDataFromFirestore.photoURL || firebaseAuth?.currentUser?.photoURL,
+                email: userDataFromFirestore.email || authUserFromEvent?.email,
+                displayName: userDataFromFirestore.displayName || authUserFromEvent?.displayName,
+                photoURL: userDataFromFirestore.photoURL || authUserFromEvent?.photoURL,
                 username: userDataFromFirestore.username || null,
                 isAdmin: userDataFromFirestore.isAdmin !== undefined ? (uid === ADMIN_UID || userDataFromFirestore.isAdmin) : (uid === ADMIN_UID),
                 credits: userDataFromFirestore.credits !== undefined ? Number(userDataFromFirestore.credits) : 0,
@@ -1087,32 +1087,28 @@ export async function loadUserData(uid) {
             } catch (error) { setUserAiChatSettings(getDefaultAiSettings()); }
 
             let userSubjectProgressData = userDataFromFirestore.appData?.subjectProgress || {};
-            const oldUserSubjectsData = userDataFromFirestore.appData?.subjects; // Check for OLD structure
+            const oldUserSubjectsData = userDataFromFirestore.appData?.subjects;
 
-            // --- MIGRATION LOGIC ---
             if (typeof oldUserSubjectsData === 'object' && Object.keys(oldUserSubjectsData).length > 0 &&
                 (!userDataFromFirestore.appData.subjectProgress || Object.keys(userDataFromFirestore.appData.subjectProgress).length === 0)) {
                 console.warn(`[Migration] User ${uid} has old appData.subjects. Attempting to migrate to appData.subjectProgress.`);
-                userSubjectProgressData = {}; // Start fresh for progress
+                userSubjectProgressData = {};
                 for (const oldSubjectId in oldUserSubjectsData) {
                     const oldSubject = oldUserSubjectsData[oldSubjectId];
-                    // Try to match oldSubjectId with a globalSubjectId (e.g., by name or a mapping if IDs changed)
-                    // For simplicity, let's assume oldSubjectId might directly map or we check by name if globalDef exists.
-                    let correspondingGlobalId = oldSubjectId; // Assume direct mapping initially
+                    let correspondingGlobalId = oldSubjectId;
                     if (!globalSubjectDefinitionsMap.has(oldSubjectId)) {
-                        // Try to find by name (less reliable)
                         const foundByName = Array.from(globalSubjectDefinitionsMap.values()).find(gDef => gDef.name === oldSubject.name);
                         if (foundByName) correspondingGlobalId = foundByName.id;
                         else {
                              console.log(`[Migration] Old subject "${oldSubject.name}" (ID ${oldSubjectId}) not found in global definitions. Its progress cannot be directly migrated.`);
-                             continue; // Skip this old subject's progress
+                             continue;
                         }
                     }
 
                     userSubjectProgressData[correspondingGlobalId] = {
                         studied_chapters: oldSubject.studied_chapters || [],
                         pending_exams: oldSubject.pending_exams || [],
-                        chapters: {} // Old per-chapter progress needs careful mapping
+                        chapters: {}
                     };
                     if (oldSubject.chapters) {
                         for (const chapNum in oldSubject.chapters) {
@@ -1120,24 +1116,24 @@ export async function loadUserData(uid) {
                             userSubjectProgressData[correspondingGlobalId].chapters[chapNum] = {
                                 total_attempted: oldChap.total_attempted || 0,
                                 total_wrong: oldChap.total_wrong || 0,
-                                available_questions: oldChap.available_questions || [], // This will be validated against new MD totals later
+                                available_questions: oldChap.available_questions || [],
                                 mistake_history: oldChap.mistake_history || [],
                                 consecutive_mastery: oldChap.consecutive_mastery || 0
                             };
                         }
                     }
                 }
-                appDataWasModifiedBySyncOrRepairOrMigration = true; // Mark for saving the new structure
-                console.log(`[Migration] Migrated ${Object.keys(userSubjectProgressData).length} subjects to new progress structure for user ${uid}. Old appData.subjects should be removed after save.`);
+                appDataWasModifiedBySyncOrRepairOrMigration = true;
+                console.log(`[Migration] Migrated ${Object.keys(userSubjectProgressData).length} subjects to new progress structure for user ${uid}.`);
             }
-            // --- END MIGRATION LOGIC ---
+
 
             const mergedSubjects = {};
             for (const [subjectId, globalDef] of globalSubjectDefinitionsMap.entries()) {
-                const userProgressForThisSubject = userSubjectProgressData[subjectId] || getDefaultSubjectProgressStats();
-                let currentMergedSubject = { ...globalDef, ...userProgressForThisSubject, chapters: {} };
-                currentMergedSubject.studied_chapters = Array.isArray(currentMergedSubject.studied_chapters) ? currentMergedSubject.studied_chapters : [];
-                currentMergedSubject.pending_exams = Array.isArray(currentMergedSubject.pending_exams) ? currentMergedSubject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
+                 const userProgressForThisSubject = userSubjectProgressData[subjectId] || getDefaultSubjectProgressStats();
+                 let currentMergedSubject = { ...globalDef, ...userProgressForThisSubject, chapters: {} };
+                 currentMergedSubject.studied_chapters = Array.isArray(currentMergedSubject.studied_chapters) ? currentMergedSubject.studied_chapters : [];
+                 currentMergedSubject.pending_exams = Array.isArray(currentMergedSubject.pending_exams) ? currentMergedSubject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
 
                 if (currentUser && (currentUser.isAdmin || globalDef.status === 'approved')) {
                     const subjectMarkdown = await fetchMarkdownForGlobalSubject(globalDef);
@@ -1149,19 +1145,17 @@ export async function loadUserData(uid) {
                             const totalMcqsFromMd = mdChapData.total_questions || 0;
                             let finalAvailableQuestions;
 
-                            if (Array.isArray(userChapProgress.available_questions) /* && userChapProgress.available_questions.length > 0 // Allow empty if user truly used all */) {
+                            if (Array.isArray(userChapProgress.available_questions)) {
                                 finalAvailableQuestions = userChapProgress.available_questions.filter(qN =>
                                     typeof qN === 'number' && qN > 0 && qN <= totalMcqsFromMd
                                 ).sort((a, b) => a - b);
-                                // Check if filtering changed anything that wasn't just sorting
                                 if (JSON.stringify(userChapProgress.available_questions.slice().sort((a,b)=>a-b)) !== JSON.stringify(finalAvailableQuestions)) {
                                     appDataWasModifiedBySyncOrRepairOrMigration = true;
                                 }
                             } else {
                                 finalAvailableQuestions = Array.from({ length: totalMcqsFromMd }, (_, j) => j + 1);
-                                if (totalMcqsFromMd > 0) appDataWasModifiedBySyncOrRepairOrMigration = true; // Initializing non-empty available_questions
+                                if (totalMcqsFromMd > 0) appDataWasModifiedBySyncOrRepairOrMigration = true;
                             }
-
 
                             currentMergedSubject.chapters[chapNumStr] = {
                                 title: mdChapData.title || `Chapter ${chapNumStr}`,
@@ -1197,19 +1191,33 @@ export async function loadUserData(uid) {
 
             if (appDataWasModifiedBySyncOrRepairOrMigration) {
                 console.log("Saving appData (subjectProgress) after MD sync/repair/migration during loadUserData...");
-                // `saveUserData` will correctly save only the `subjectProgress` part.
-                // If migration happened, the old `appData.subjects` is NOT included in `data` passed to `saveUserData`,
-                // so it effectively gets removed from Firestore if `saveUserData` overwrites the whole `appData` field.
-                // It's better if saveUserData *updates* `appData.subjectProgress` and explicitly deletes `appData.subjects` if migration occurred.
-
-                // Let's adjust saveUserData to handle this or do it here.
-                // For now, assuming saveUserData does a userRef.update({ appData: { subjectProgress: ... } })
-                // which implicitly removes `appData.subjects` if it was at the same level.
-                // If `appData` could contain other fields, this would need to be `userRef.update({'appData.subjectProgress': ..., 'appData.subjects': FieldValue.delete()})`
-                await saveUserData(uid, { subjects: mergedSubjects }); // Pass the merged data to saveUserData
+                const appDataToSaveToFirestore = { subjectProgress: {} };
+                for (const subjId in mergedSubjects) {
+                    const mergedSubj = mergedSubjects[subjId];
+                    appDataToSaveToFirestore.subjectProgress[subjId] = {
+                        studied_chapters: mergedSubj.studied_chapters,
+                        pending_exams: mergedSubj.pending_exams,
+                        chapters: {}
+                    };
+                    for (const chapNum in mergedSubj.chapters) {
+                        const mergedChap = mergedSubj.chapters[chapNum];
+                        appDataToSaveToFirestore.subjectProgress[subjId].chapters[chapNum] = {
+                            total_attempted: mergedChap.total_attempted,
+                            total_wrong: mergedChap.total_wrong,
+                            available_questions: mergedChap.available_questions,
+                            mistake_history: mergedChap.mistake_history,
+                            consecutive_mastery: mergedChap.consecutive_mastery
+                        };
+                    }
+                }
+                await userRef.update({
+                    appData: appDataToSaveToFirestore,
+                    lastAppDataUpdate: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log("Updated appData in Firestore with new subjectProgress structure.");
             }
 
-            if (data && data.subjects) { /* ... (setting currentSubject logic as before) ... */
+            if (data && data.subjects) {
                 const subjectKeys = Object.keys(data.subjects);
                 let subjectToSelectId = null;
                 if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') {
@@ -1224,20 +1232,35 @@ export async function loadUserData(uid) {
                 if (subjectToSelectId && subjectToSelectId !== userDataFromFirestore.lastSelectedSubjectId) {
                      await userRef.update({ lastSelectedSubjectId: subjectToSelectId }).catch(e => console.error("Error saving lastSelectedSubjectId:", e));
                 }
-            } else { setCurrentSubject(null); updateSubjectInfo(); }
+            } else {
+                setCurrentSubject(null);
+                updateSubjectInfo();
+            }
 
             await loadAllUserCourseProgress(uid);
             await checkOnboarding(uid);
 
         } else {
             console.log("User document not found for UID:", uid, "- Initializing data.");
-            const currentUserDetails = firebaseAuth?.currentUser;
-            if (!currentUserDetails) { throw new Error("Cannot initialize data: Current user details unavailable."); }
+            // If authUserFromEvent is null, it means this loadUserData call wasn't directly from onAuthStateChanged
+            // or the user object wasn't passed down correctly.
+            // This could happen if loadUserData is called from somewhere else without the auth object.
+            const authUserToUseForInit = authUserFromEvent || firebaseAuth?.currentUser;
+
+            if (!authUserToUseForInit) {
+                console.error(`[loadUserData] CRITICAL: authUserFromEvent/firebaseAuth.currentUser is null when trying to initialize new user ${uid}. This indicates an auth state issue or incorrect call stack.`);
+                throw new Error("Authentication session invalid. Cannot initialize new user data for non-existent document.");
+            }
             await initializeUserData(
-                uid, currentUserDetails.email,
-                (currentUserDetails.displayName || currentUserDetails.email.split('@')[0]),
-                currentUserDetails.displayName, currentUserDetails.photoURL
+                uid,
+                authUserToUseForInit.email, // Use the email from the auth object
+                (authUserToUseForInit.displayName || authUserToUseForInit.email?.split('@')[0] || `user_${uid.substring(0,6)}`), // Use display name or derive username
+                authUserToUseForInit.displayName,
+                authUserToUseForInit.photoURL,
+                false,
+                authUserToUseForInit // Pass the auth object itself for fallback if needed by initializeUserData
             );
+            await loadUserData(uid, authUserToUseForInit); // Recursive call with the auth object
             return;
         }
     } catch (error) {
@@ -1245,6 +1268,7 @@ export async function loadUserData(uid) {
         throw error;
     }
 }
+
 
 
 /**
@@ -1311,9 +1335,34 @@ export async function reloadUserDataAfterChange(uid) {
 
 /**
  * Initializes the user document in Firestore with default appData and profile info.
+ * @param {string} uid - The user's unique ID.
+ * @param {string | null} email - User's email.
+ * @param {string} username - User's chosen or derived username.
+ * @param {string | null} [displayName=null] - User's display name.
+ * @param {string | null} [photoURL=null] - User's photo URL.
+ * @param {boolean} [forceReset=false] - Whether to force reset even if doc exists.
+ * @param {object | null} [authUserObject=null] - The Firebase Auth user object, passed to ensure correct details are used.
  */
-export async function initializeUserData(uid, email, username, displayName = null, photoURL = null, forceReset = false) {
-    if (!db || !firebaseAuth) { console.error("Firestore DB or Auth not initialized"); return; }
+export async function initializeUserData(uid, emailParam, usernameParam, displayNameParam = null, photoURLParam = null, forceReset = false, authUserObjectForFallback = null) {
+    if (!db || !firebaseAuth) {
+        console.error("Firestore DB or Auth not initialized");
+        throw new Error("Firestore DB or Auth not initialized.");
+    }
+
+    // Validate essential parameters for new user creation
+    if (!uid || typeof uid !== 'string' || uid.trim() === '') {
+        console.error("[initializeUserData] CRITICAL: UID parameter is missing or invalid. Cannot proceed.");
+        throw new Error("User ID is invalid. Cannot initialize user data.");
+    }
+    if (!emailParam || typeof emailParam !== 'string' || !emailParam.includes('@')) {
+        console.error(`[initializeUserData] CRITICAL: Email parameter is missing or invalid for UID ${uid}. Email received: ${emailParam}. Cannot proceed.`);
+        throw new Error("A valid email is required to initialize user data.");
+    }
+    if (!usernameParam || typeof usernameParam !== 'string' || usernameParam.trim().length < 3) {
+        console.error(`[initializeUserData] CRITICAL: Username parameter is missing or invalid for UID ${uid}. Username received: ${usernameParam}. Cannot proceed.`);
+        throw new Error("A valid username (min 3 chars) is required to initialize user data.");
+    }
+
     const userRef = db.collection('users').doc(uid);
     let docExists = false;
     let existingUserData = null;
@@ -1326,32 +1375,36 @@ export async function initializeUserData(uid, email, username, displayName = nul
         } catch (e) { console.error("Error checking user existence:", e); }
     }
 
-    let usernameLower = (username && typeof username === 'string')
-        ? username.toLowerCase()
-        : (email ? email.split('@')[0] : `user_${uid.substring(0,6)}`).toLowerCase();
+    const usernameLower = usernameParam.toLowerCase();
     const initialIsAdmin = (uid === ADMIN_UID);
+
+    // Use parameters for core fields, then authUserObjectForFallback for display fields if params are null
+    const finalDisplayName = (forceReset && existingUserData?.displayName) ? existingUserData.displayName
+                           : (displayNameParam || authUserObjectForFallback?.displayName || (emailParam ? emailParam.split('@')[0] : `User ${uid.substring(0,4)}`));
+    const finalPhotoURL = (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL
+                        : (photoURLParam || authUserObjectForFallback?.photoURL || DEFAULT_PROFILE_PIC_URL);
+    const finalEmail = emailParam; // Always use the email passed from the auth event for the document
 
     if (docExists && !forceReset) {
         let updatesNeeded = {};
-        if (!existingUserData.username && usernameLower) { updatesNeeded.username = usernameLower; }
-        if (!existingUserData.displayName) { updatesNeeded.displayName = displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`); }
+        // Only update if the field is UNDEFINED in existingUserData.
+        // This prevents overwriting valid existing data with derived/fallback values.
+        if (existingUserData.username === undefined && usernameLower) { updatesNeeded.username = usernameLower; }
+        if (existingUserData.displayName === undefined) { updatesNeeded.displayName = finalDisplayName; }
         if (existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
-        if (existingUserData.photoURL === undefined) { updatesNeeded.photoURL = photoURL || DEFAULT_PROFILE_PIC_URL; }
-        if (!existingUserData.completedCourseBadges) { updatesNeeded.completedCourseBadges = []; }
-        if (!existingUserData.userNotes) { updatesNeeded.userNotes = {}; }
+        if (existingUserData.photoURL === undefined) { updatesNeeded.photoURL = finalPhotoURL; }
+        if (existingUserData.completedCourseBadges === undefined) { updatesNeeded.completedCourseBadges = []; }
+        if (existingUserData.userNotes === undefined) { updatesNeeded.userNotes = {}; }
         if (existingUserData.isAdmin === undefined) { updatesNeeded.isAdmin = initialIsAdmin; }
         if (existingUserData.credits === undefined) { updatesNeeded.credits = 0; }
         if (existingUserData.userAiChatSettings === undefined) { updatesNeeded.userAiChatSettings = getDefaultAiSettings(); }
+        if (existingUserData.email === undefined && finalEmail) { updatesNeeded.email = finalEmail; } // Ensure email is present
 
-        // IMPORTANT: If appData or appData.subjectProgress is missing, initialize it.
-        // This handles the case where an existing user logs in for the first time AFTER the data structure change.
         if (!existingUserData.appData) {
             updatesNeeded.appData = { subjectProgress: {} };
             console.log(`[initializeUserData] User ${uid} exists but appData missing. Initializing it.`);
-        } else if (!existingUserData.appData.subjectProgress) {
-            // If appData exists but subjectProgress doesn't, create subjectProgress.
-            // We should NOT delete appData.subjects here, loadUserData will handle migrating it.
-            updatesNeeded['appData.subjectProgress'] = {}; // Using dot notation to ensure only this field is added/updated.
+        } else if (existingUserData.appData.subjectProgress === undefined) {
+            updatesNeeded['appData.subjectProgress'] = {};
             console.log(`[initializeUserData] User ${uid} exists, appData exists, but appData.subjectProgress missing. Initializing subjectProgress.`);
         }
 
@@ -1359,11 +1412,11 @@ export async function initializeUserData(uid, email, username, displayName = nul
             console.log(`[initializeUserData] Updating missing top-level fields for existing user ${uid}:`, Object.keys(updatesNeeded));
             try {
                 await userRef.update(updatesNeeded);
-                if (updatesNeeded.username) { /* ... username reservation logic ... */
+                if (updatesNeeded.username) {
                     const usernameToReserve = updatesNeeded.username;
                     const usernameResRef = db.collection('usernames').doc(usernameToReserve);
                     const usernameResDoc = await usernameResRef.get();
-                    if (!usernameResDoc.exists) await usernameResRef.set({ userId: uid });
+                    if (!usernameResDoc.exists) await usernameResRef.set({ userId: uid, username: usernameToReserve });
                     else if (usernameResDoc.data().userId !== uid) console.warn(`Username ${usernameToReserve} taken during update for ${uid}.`);
                 }
             } catch (updateError) {
@@ -1372,22 +1425,21 @@ export async function initializeUserData(uid, email, username, displayName = nul
         } else {
             console.log(`[initializeUserData] User data already exists and essential top-level fields are present for ${uid}.`);
         }
-        return; // Done with existing user, no full init.
+        return;
     }
 
-    // Full initialization (new user or forceReset)
-    console.log(`[initializeUserData] Full Init/Force Reset for user: ${uid}. Username: ${usernameLower}`);
+    console.log(`[initializeUserData] Full Init/Force Reset for user: ${uid}. Username: ${usernameLower}. Email for doc: ${finalEmail}`);
     const defaultAppDataForNewUser = {
-        subjectProgress: {} // New users start with empty progress
+        subjectProgress: {}
     };
     const dataToSet = {
-        email: email,
+        email: finalEmail, // Storing the email from auth event. Rule checks this against token.
         username: usernameLower,
-        displayName: (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayName || usernameLower || (email ? email.split('@')[0] : `User ${uid.substring(0,4)}`)),
-        photoURL: (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURL || DEFAULT_PROFILE_PIC_URL),
+        displayName: finalDisplayName,
+        photoURL: finalPhotoURL,
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
-        appData: defaultAppDataForNewUser, // Use the new structure
+        appData: defaultAppDataForNewUser,
         completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
         userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
         isAdmin: (forceReset && typeof existingUserData?.isAdmin === 'boolean') ? existingUserData.isAdmin : initialIsAdmin,
@@ -1398,25 +1450,32 @@ export async function initializeUserData(uid, email, username, displayName = nul
     try {
         await userRef.set(dataToSet);
         console.log(`[initializeUserData] User document successfully CREATED/FORCED_RESET for ${uid}`);
-        setData({ subjects: {} }); // Reset local `data.subjects`
+        setData({ subjects: {} });
         setUserAiChatSettings(dataToSet.userAiChatSettings);
 
-        if (forceReset) { /* ... other forceReset actions ... */
+        if (forceReset) {
              setUserCourseProgressMap(new Map());
             console.warn("Force reset executed. User course progress subcollection needs manual clearing if desired.");
             setCurrentSubject(null);
             updateSubjectInfo();
         }
-        if (usernameLower) { /* ... username reservation ... */
+        if (usernameLower) {
             const usernameRef = db.collection('usernames').doc(usernameLower);
-            await usernameRef.set({ userId: uid });
+            await usernameRef.set({ userId: uid, username: usernameLower });
             console.log(`[initializeUserData] Username '${usernameLower}' reserved/updated for ${uid}.`);
         }
     } catch (error) {
         console.error(`[initializeUserData] Error setting user data for ${uid} (Create/Force Reset):`, error);
-        alert("Error setting up user data: " + error.message);
+        try {
+            const dataAttemptedLog = JSON.stringify(dataToSet, (key, value) =>
+                (value && value._methodName === 'FieldValue.serverTimestamp') ? "{SERVER_TIMESTAMP}" : value, 2);
+            console.error(`Data attempted for set: ${dataAttemptedLog}`);
+        } catch (e) { console.error("Could not stringify dataToSet for logging."); }
+        // alert("Error setting up user data: " + error.message); // This alert is often too early / covered by signup
+        throw error; // Re-throw so calling function (signUpUser) can handle it
     }
 }
+
 
 
 // --- Onboarding Check ---
@@ -3175,54 +3234,29 @@ export async function getAdminOverviewStats() {
     }
 
     try {
-        // Fetch total users
         const usersSnapshot = await db.collection('users').get();
         const totalUsers = usersSnapshot.size;
 
-        // Fetch pending courses
         const pendingCoursesSnapshot = await db.collection('courses').where('status', '==', 'pending').get();
         const pendingCourses = pendingCoursesSnapshot.size;
 
-        // Fetch approved courses
         const approvedCoursesSnapshot = await db.collection('courses').where('status', '==', 'approved').get();
         const approvedCourses = approvedCoursesSnapshot.size;
 
-        // Fetch reported courses
         const reportedCoursesSnapshot = await db.collection('courses').where('status', '==', 'reported').get();
         const reportedCourses = reportedCoursesSnapshot.size;
 
-        // Fetch total TestGen subjects (count documents in 'subjects' map within each user's appData)
-        // This is more complex and less performant. A better approach for a large number of users
-        // would be to maintain a separate counter or use a Cloud Function.
-        // For now, a simplified count of users who *have* appData.subjects:
-        let totalSubjectsCount = 0;
-        // This is still not ideal as it iterates all users.
-        // A placeholder or a limited query might be better for large scale.
-        // For this example, let's assume a reasonable number of users to iterate for `appData.subjects` count.
-        // Or, if `data.subjects` in `state.js` represents the global TestGen subjects defined by admins:
-        // totalSubjectsCount = window.data?.subjects ? Object.keys(window.data.subjects).length : 0;
-        // For now, let's assume `data.subjects` are global subjects defined by admins.
-        // If `data` refers to the current user's loaded appData, this isn't global.
-        // Let's assume global TestGen subjects are those in `state.js -> data.subjects` loaded from ADMIN's appData.
-        // This interpretation is tricky without knowing the exact intent of "Total TestGen Subjects".
-        // If it means total unique subjects across all users, that's very hard without aggregation.
-        // If it means system-defined subjects (like the default Physics), then:
-        const systemSubjects = window.data?.subjects ? Object.keys(window.data.subjects).filter(id => window.data.subjects[id].creatorUid === ADMIN_UID || window.data.subjects[id].status === 'approved').length : 0;
-        totalSubjectsCount = systemSubjects;
+        // --- MODIFIED: Get total global subjects (TestGen definitions) ---
+        const globalSubjectsSnapshot = await db.collection('subjects').get();
+        const totalGlobalSubjects = globalSubjectsSnapshot.size;
+        // --- END MODIFICATION ---
 
+        const totalExamsTaken = 'N/A (Needs Counter)';
 
-        // Fetch total exams taken (from userExams)
-        // This would require iterating all users then all their exams, very expensive.
-        // A dedicated counter document updated by a Cloud Function on exam creation is ideal.
-        // For now, returning a placeholder or -1 to indicate it needs a better solution.
-        const totalExamsTaken = 'N/A (Needs Counter)'; // Placeholder
-
-        // Fetch pending feedback/issues
         const feedbackSnapshot = await db.collection('feedback').where('status', '==', 'new').get();
         const issuesSnapshot = await db.collection('examIssues').where('status', '==', 'new').get();
         const pendingFeedback = feedbackSnapshot.size + issuesSnapshot.size;
 
-        // Fetch admin count
         const adminSnapshot = await db.collection('users').where('isAdmin', '==', true).get();
         const adminCount = adminSnapshot.size;
 
@@ -3232,7 +3266,7 @@ export async function getAdminOverviewStats() {
             pendingCourses,
             approvedCourses,
             reportedCourses,
-            totalSubjects: totalSubjectsCount,
+            totalSubjects: totalGlobalSubjects, // Use the new count
             totalExamsTaken,
             pendingFeedback,
             adminCount
@@ -3240,9 +3274,10 @@ export async function getAdminOverviewStats() {
 
     } catch (error) {
         console.error("Error fetching admin overview stats:", error);
-        throw error; // Re-throw to be caught by the UI
+        throw error;
     }
 }
+
 
 export async function adminSimulateDaysPassed(targetUserId, courseId, daysToSimulate) {
     if (!currentUser || !currentUser.isAdmin) { // Ensure current user is admin

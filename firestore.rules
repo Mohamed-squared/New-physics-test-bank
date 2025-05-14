@@ -1,4 +1,4 @@
-rules_version = '2'; 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -12,7 +12,7 @@ service cloud.firestore {
     }
 
     function isPrimaryAdminUid(uid) {
-      return uid == "04amtH9UgfTWxPH0rqn2quaKiNf1";
+      return uid == "04amtH9UgfTWxPH0rqn2quaKiNf1"; // Ensure this is your actual primary admin UID
     }
 
     function isPrimaryAdmin() {
@@ -69,7 +69,8 @@ service cloud.firestore {
             'lastActivityDate', 'pdfProgress', 'watchedVideoDurations',
             'courseStudiedChapters', 'dailyProgress', 'userRating', 'userReview',
             'status',
-            'selectedPace', 'customPaceDays'
+            'selectedPace', 'customPaceDays',
+            'testGenBonus'
         ];
     }
 
@@ -83,75 +84,16 @@ service cloud.firestore {
              config.textSourceRatio is number && config.textSourceRatio >= 0 && config.textSourceRatio <= 1;
     }
 
-    // --- Helper function for Test Gen Config (can be expanded) ---
     function isValidTestGenConfig(config) {
       return config is map &&
              config.keys().hasAll(['textMcqCount', 'textProblemCount', 'lectureMcqCounts', 'lectureProblemCounts', 'timingOption']) &&
              config.textMcqCount is number && config.textMcqCount >= 0 &&
              config.textProblemCount is number && config.textProblemCount >= 0 &&
-             config.lectureMcqCounts is map && // keys are lecture IDs (strings), values are numbers
-             config.lectureProblemCounts is map && // keys are lecture IDs (strings), values are numbers
+             config.lectureMcqCounts is map &&
+             config.lectureProblemCounts is map &&
              config.timingOption is string && (config.timingOption == 'default' || config.timingOption == 'calculated' || config.timingOption == 'custom') &&
              (config.timingOption != 'custom' || (config.timingOption == 'custom' && config.customDurationMinutes is number && config.customDurationMinutes >= 10)) &&
-             // Min 10 questions validation is hard to do directly in rules for sums of map values.
-             // Best handled client-side / Cloud Function before write.
-             // We can check individual counts are not excessively large if needed.
-             true; // Add more checks if necessary, e.g., map values are numbers >= 0
-    }
-
-
-    match /userExams/{userId}/exams/{examId} {
-      allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isLoggedIn() && isOwner(userId) &&
-                       request.resource.data.userId == userId &&
-                       request.resource.data.examId == examId && // examId is typically generated client-side
-                       request.resource.data.courseId is string && // Need courseId to link to subject for default timing
-                       request.resource.data.questions is list && // Populated based on config
-                       request.resource.data.answers is map && // User's answers
-                       request.resource.data.markingResults is map && // Auto-grading results
-                       request.resource.data.score is number && request.resource.data.score >= 0 &&
-                       request.resource.data.maxScore is number && request.resource.data.maxScore > 0 &&
-                       request.resource.data.status is string && (request.resource.data.status == 'started' || request.resource.data.status == 'completed') &&
-                       request.resource.data.createdAt == request.time &&
-                       request.resource.data.completedAt == (request.resource.data.status == 'completed' ? request.time : null) &&
-                       request.resource.data.durationMinutes is number && request.resource.data.durationMinutes >= 5 && // Final duration
-                       request.resource.data.isTestGen is bool &&
-                       (
-                         ( request.resource.data.isTestGen == false &&
-                           // For regular exams, ensure no testGenConfig is present or it's null
-                           (!('testGenConfig' in request.resource.data) || request.resource.data.testGenConfig == null) &&
-                           request.resource.data.keys().hasOnly([
-                             'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
-                             'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
-                             'examType' // e.g., 'weekly', 'midterm', 'final', 'practice' - you might have this
-                           ]) // Adjust this list based on your existing regular exam structure
-                         ) ||
-                         ( request.resource.data.isTestGen == true &&
-                           request.resource.data.testGenConfig is map &&
-                           isValidTestGenConfig(request.resource.data.testGenConfig) &&
-                           // Ensure total questions from testGenConfig adds up to at least 10.
-                           // This is complex for rules. Assume client/CF validated.
-                           // We can check questions list size matches config.
-                           // request.resource.data.questions.size() >= 10 && (complex sum here)
-                           request.resource.data.keys().hasOnly([
-                             'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
-                             'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
-                             'testGenConfig'
-                           ])
-                         )
-                       );
-
-      // Generally, exams are immutable once created or only status/score/markingResults can be updated (e.g., by a grading function)
-      // For simplicity, let's stick to no updates after creation for now, as per original rule.
-      // If you need updates (e.g., 'started' -> 'completed'), this needs to be more granular.
-      allow update: if false; // Or allow specific updates if needed, e.g., by an admin/grading function
-                        // if (isAdmin() || request.auth.uid == resource.data.userId) &&
-                        //    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'answers', 'score', 'markingResults']) &&
-                        //    request.resource.data.status == 'completed' &&
-                        //    request.resource.data.completedAt == request.time &&
-                        //    resource.data.status == 'started'; // Example update logic
-
-      allow delete: if isLoggedIn() && isOwner(userId);
+             true;
     }
 
     // --- Usernames Registry ---
@@ -165,36 +107,41 @@ service cloud.firestore {
                          isPrimaryAdmin()
                        );
       allow update: if false;
-      allow delete: if isPrimaryAdmin();
+      // MODIFIED: Allow owner of the username record (by checking userId field) or primary admin to delete
+      allow delete: if isLoggedIn() &&
+                       ( (request.auth.uid == resource.data.userId) || // Check current user against userId field in doc
+                         isPrimaryAdmin()
+                       );
     }
 
     // --- Users Collection ---
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isLoggedIn() && request.auth.uid == userId &&
-                      request.resource.data.email == request.auth.token.email &&
+                      (request.resource.data.email == request.auth.token.email || request.resource.data.email == null) &&
                       isValidString(request.resource.data.username, 3, 20) &&
                       isValidString(request.resource.data.displayName, 1, 50) &&
                       (request.resource.data.photoURL is string || request.resource.data.photoURL == null) &&
                       request.resource.data.createdAt == request.time &&
                       request.resource.data.onboardingComplete == false &&
-                      request.resource.data.isAdmin == isPrimaryAdminUid(userId) &&
+                      request.resource.data.isAdmin == isPrimaryAdminUid(userId) && // Crucial
                       request.resource.data.credits is number && request.resource.data.credits == 0 &&
-                      request.resource.data.appData is map &&
-                      request.resource.data.appData.subjects is map &&
-                      request.resource.data.userNotes is map &&
-                      request.resource.data.userAiChatSettings is map &&
-                      isValidString(request.resource.data.userAiChatSettings.primaryModel, 1, 100) &&
-                      isValidString(request.resource.data.userAiChatSettings.fallbackModel, 1, 100) &&
-                      request.resource.data.userAiChatSettings.customSystemPrompts is map &&
-                      request.resource.data.completedCourseBadges is list &&
-                      request.resource.data.keys().hasAll([
+                      request.resource.data.appData is map && // Must be a map
+                      request.resource.data.appData.subjectProgress is map && // appData must contain a 'subjects' map
+                      request.resource.data.userNotes is map && // Must be a map
+                      request.resource.data.userAiChatSettings is map && // Must be a map
+                      isValidString(request.resource.data.userAiChatSettings.primaryModel, 1, 100) && // Must exist and be valid
+                      isValidString(request.resource.data.userAiChatSettings.fallbackModel, 1, 100) && // Must exist and be valid
+                      request.resource.data.userAiChatSettings.customSystemPrompts is map && // Must exist and be a map
+                      request.resource.data.completedCourseBadges is list && // Must be a list
+                      request.resource.data.keys().hasAll([ // Exactly these 12 keys, no more, no less
                         'email', 'username', 'displayName', 'photoURL', 'createdAt',
                         'onboardingComplete', 'isAdmin', 'credits', 'appData', 'userNotes',
                         'userAiChatSettings', 'completedCourseBadges'
                       ]) && request.resource.data.keys().size() == 12;
+    
 
-      allow delete: if isOwner(userId) || isPrimaryAdmin();
+      allow delete: if isOwner(userId) || isPrimaryAdmin(); // This is for the main user document
       allow update: if isLoggedIn() && (
                        ( isOwner(userId) &&
                          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits', 'email', 'createdAt', 'username']) &&
@@ -203,6 +150,7 @@ service cloud.firestore {
                          (request.resource.data.photoURL == null || request.resource.data.photoURL is string) &&
                          (request.resource.data.appData == null || request.resource.data.appData is map) &&
                          (request.resource.data.userNotes == null || request.resource.data.userNotes is map) &&
+                         (request.resource.data.appData.subjectProgress is map) &&
                          (request.resource.data.userAiChatSettings == null || (
                             request.resource.data.userAiChatSettings is map &&
                             isValidString(request.resource.data.userAiChatSettings.primaryModel, 1, 100) &&
@@ -255,7 +203,11 @@ service cloud.firestore {
                            (request.resource.data.performedBy == 'system') ||
                            (isAdmin() && request.resource.data.performedBy == request.auth.uid)
                          );
-        allow update, delete: if false;
+        allow update: if false; // Keep update false
+        // MODIFIED: Allow owner or admin to delete credit logs.
+        // If these are sensitive audit logs, you might reconsider client-side deletion.
+        // But for full account data removal, this is often necessary.
+        allow delete: if isOwner(userId) || isPrimaryAdmin();
       }
       match /aiChatSessions/{sessionId} {
         allow read, delete: if isOwner(userId);
@@ -274,83 +226,135 @@ service cloud.firestore {
                          request.resource.data.systemPromptKey == resource.data.systemPromptKey &&
                          request.resource.data.keys().hasOnly(['name', 'history', 'createdAt', 'lastModified', 'systemPromptKey']);
       }
-    }
+    } // End /users/{userId}
 
-    match /userCourseProgress/{userId}/courses/{courseId} {
+    // MODIFIED: Added rule for the parent document userCourseProgress/{userId}
+    match /userCourseProgress/{userId} {
+      // This rule is for the document AT userCourseProgress/{userId} itself, if it exists.
+      // Your client code might be trying to delete this document after clearing the 'courses' subcollection.
       allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isLoggedIn() && isOwner(userId) &&
-               request.resource.data.courseId == courseId &&
-               request.resource.data.status == 'enrolled' &&
-               request.resource.data.enrollmentMode is string &&
-                 (request.resource.data.enrollmentMode == 'full' || request.resource.data.enrollmentMode == 'viewer') &&
-               request.resource.data.selectedPace is string &&
-               (request.resource.data.customPaceDays == null || (request.resource.data.customPaceDays is number && request.resource.data.customPaceDays >= 7)) &&
-               request.resource.data.baseMediocrePace == null &&
-               request.resource.data.currentPace == null &&
-               request.resource.data.currentChapterTarget == 1 &&
-               request.resource.data.currentDayObjective is string &&
-               request.resource.data.courseStudiedChapters is list && request.resource.data.courseStudiedChapters.size() == 0 &&
-               request.resource.data.dailyProgress is map && request.resource.data.dailyProgress.size() == 0 &&
-               request.resource.data.watchedVideoUrls is map && request.resource.data.watchedVideoUrls.size() == 0 &&
-               request.resource.data.watchedVideoDurations is map && request.resource.data.watchedVideoDurations.size() == 0 &&
-               request.resource.data.pdfProgress is map && request.resource.data.pdfProgress.size() == 0 &&
-               request.resource.data.skipExamAttempts is map && request.resource.data.skipExamAttempts.size() == 0 &&
-               request.resource.data.lastSkipExamScore is map && request.resource.data.lastSkipExamScore.size() == 0 &&
-               request.resource.data.assignmentScores is map && request.resource.data.assignmentScores.size() == 0 &&
-               request.resource.data.weeklyExamScores is map && request.resource.data.weeklyExamScores.size() == 0 &&
-               request.resource.data.midcourseExamScores is map && request.resource.data.midcourseExamScores.size() == 0 &&
-               request.resource.data.finalExamScores == null &&
-               request.resource.data.attendanceScore == 100 &&
-               request.resource.data.extraPracticeBonus == 0 &&
-               request.resource.data.testGenBonus == 0 &&
-               request.resource.data.totalMark == null &&
-               request.resource.data.grade == null &&
-               request.resource.data.completionDate == null &&
-               // Allow enrollmentDate and lastActivityDate if they are server timestamps
-               request.resource.data.enrollmentDate == request.time &&
-               request.resource.data.lastActivityDate == request.time &&
-               // Update the hasOnly list to include these two fields
-               request.resource.data.keys().hasOnly([
-                 'courseId', 'status', 'enrollmentMode',
-                 'selectedPace', 'customPaceDays', 'baseMediocrePace', 'currentPace',
-                 'currentChapterTarget', 'currentDayObjective',
-                 'courseStudiedChapters', 'dailyProgress',
-                 'watchedVideoUrls', 'watchedVideoDurations', 'pdfProgress',
-                 'skipExamAttempts', 'lastSkipExamScore',
-                 'assignmentScores', 'weeklyExamScores', 'midcourseExamScores', 'finalExamScores',
-                 'attendanceScore', 'extraPracticeBonus', 'testGenBonus',
-                 'totalMark', 'grade', 'completionDate',
-                 'enrollmentDate', 'lastActivityDate' // Add them here
-               ]);
-      allow update: if isLoggedIn() && (
-                      ( isOwner(userId) &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedCourseProgressUpdateFieldsOwner()) &&
-                        request.resource.data.courseId == resource.data.courseId &&
-                        request.resource.data.enrollmentDate == resource.data.enrollmentDate
-                      ) ||
-                      ( isAdmin() &&
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedCourseProgressUpdateFieldsAdmin()) &&
-                        request.resource.data.courseId == resource.data.courseId &&
-                        (request.resource.data.enrollmentDate == resource.data.enrollmentDate || request.resource.data.enrollmentDate is timestamp) &&
-                        (request.resource.data.totalMark == null || request.resource.data.totalMark is number) &&
-                        (request.resource.data.completionDate == null || request.resource.data.completionDate is timestamp)
-                      )
-                    );
       allow delete: if isLoggedIn() && (isOwner(userId) || isPrimaryAdmin());
-    }
+      // No create/update rules for this parent doc unless you need them.
 
-    match /userExams/{userId}/exams/{examId} {
+      match /courses/{courseId} {
+        allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
+        allow create: if isLoggedIn() && isOwner(userId) &&
+                 request.resource.data.courseId == courseId &&
+                 request.resource.data.status == 'enrolled' &&
+                 request.resource.data.enrollmentMode is string &&
+                   (request.resource.data.enrollmentMode == 'full' || request.resource.data.enrollmentMode == 'viewer') &&
+                 request.resource.data.selectedPace is string &&
+                 (request.resource.data.customPaceDays == null || (request.resource.data.customPaceDays is number && request.resource.data.customPaceDays >= 7)) &&
+                 request.resource.data.baseMediocrePace == null &&
+                 request.resource.data.currentPace == null &&
+                 request.resource.data.currentChapterTarget == 1 &&
+                 request.resource.data.currentDayObjective is string &&
+                 request.resource.data.courseStudiedChapters is list && request.resource.data.courseStudiedChapters.size() == 0 &&
+                 request.resource.data.dailyProgress is map && request.resource.data.dailyProgress.size() == 0 &&
+                 request.resource.data.watchedVideoUrls is map && request.resource.data.watchedVideoUrls.size() == 0 && // This field seems to be missing in your allowed fields list
+                 request.resource.data.watchedVideoDurations is map && request.resource.data.watchedVideoDurations.size() == 0 &&
+                 request.resource.data.pdfProgress is map && request.resource.data.pdfProgress.size() == 0 &&
+                 request.resource.data.skipExamAttempts is map && request.resource.data.skipExamAttempts.size() == 0 &&
+                 request.resource.data.lastSkipExamScore is map && request.resource.data.lastSkipExamScore.size() == 0 &&
+                 request.resource.data.assignmentScores is map && request.resource.data.assignmentScores.size() == 0 &&
+                 request.resource.data.weeklyExamScores is map && request.resource.data.weeklyExamScores.size() == 0 &&
+                 request.resource.data.midcourseExamScores is map && request.resource.data.midcourseExamScores.size() == 0 &&
+                 request.resource.data.finalExamScores == null &&
+                 request.resource.data.attendanceScore == 100 &&
+                 request.resource.data.extraPracticeBonus == 0 &&
+                 request.resource.data.testGenBonus == 0 &&
+                 request.resource.data.totalMark == null &&
+                 request.resource.data.grade == null &&
+                 request.resource.data.completionDate == null &&
+                 request.resource.data.enrollmentDate == request.time &&
+                 request.resource.data.lastActivityDate == request.time &&
+                 request.resource.data.keys().hasOnly([
+                   'courseId', 'status', 'enrollmentMode',
+                   'selectedPace', 'customPaceDays', 'baseMediocrePace', 'currentPace',
+                   'currentChapterTarget', 'currentDayObjective',
+                   'courseStudiedChapters', 'dailyProgress',
+                   'watchedVideoUrls', 'watchedVideoDurations', 'pdfProgress', // Added watchedVideoUrls here
+                   'skipExamAttempts', 'lastSkipExamScore',
+                   'assignmentScores', 'weeklyExamScores', 'midcourseExamScores', 'finalExamScores',
+                   'attendanceScore', 'extraPracticeBonus', 'testGenBonus',
+                   'totalMark', 'grade', 'completionDate',
+                   'enrollmentDate', 'lastActivityDate'
+                 ]);
+        allow update: if isLoggedIn() && (
+                        ( isOwner(userId) &&
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedCourseProgressUpdateFieldsOwner()) &&
+                          request.resource.data.courseId == resource.data.courseId &&
+                          request.resource.data.enrollmentDate == resource.data.enrollmentDate
+                        ) ||
+                        ( isAdmin() &&
+                          request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedCourseProgressUpdateFieldsAdmin()) &&
+                          request.resource.data.courseId == resource.data.courseId &&
+                          (request.resource.data.enrollmentDate == resource.data.enrollmentDate || request.resource.data.enrollmentDate is timestamp) &&
+                          (request.resource.data.totalMark == null || request.resource.data.totalMark is number) &&
+                          (request.resource.data.completionDate == null || request.resource.data.completionDate is timestamp)
+                        )
+                      );
+        allow delete: if isLoggedIn() && (isOwner(userId) || isPrimaryAdmin());
+      }
+    } // End /userCourseProgress/{userId}
+
+    // MODIFIED: Added rule for the parent document userExams/{userId}
+    match /userExams/{userId} {
+      // This rule is for the document AT userExams/{userId} itself, if it exists.
       allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
-      allow create: if isLoggedIn() && isOwner(userId) &&
-                       request.resource.data.userId == userId &&
-                       request.resource.data.examId == examId &&
-                       request.resource.data.questions is list &&
-                       request.resource.data.markingResults is map &&
-                       request.resource.data.status == 'completed' &&
-                       request.resource.data.timestamp is number;
-      allow update: if false;
-      allow delete: if isLoggedIn() && isOwner(userId);
-    }
+      allow delete: if isLoggedIn() && isOwner(userId); // Or isPrimaryAdmin() if admins should also be able to clear this
+      // No create/update rules for this parent doc unless you need them.
+
+      match /exams/{examId} {
+        allow read: if isLoggedIn() && (isOwner(userId) || isAdmin());
+        // Your original rule had two 'userExams/{userId}/exams/{examId}' blocks. I'm merging/using the more detailed one.
+        // This one allows create with specific fields.
+        allow create: if isLoggedIn() && isOwner(userId) &&
+                         request.resource.data.userId == userId &&
+                         request.resource.data.examId == examId && // examId is typically generated client-side
+                         request.resource.data.courseId is string &&
+                         request.resource.data.questions is list &&
+                         request.resource.data.answers is map &&
+                         request.resource.data.markingResults is map &&
+                         request.resource.data.score is number && request.resource.data.score >= 0 &&
+                         request.resource.data.maxScore is number && request.resource.data.maxScore > 0 &&
+                         request.resource.data.status is string && (request.resource.data.status == 'started' || request.resource.data.status == 'completed') &&
+                         request.resource.data.createdAt == request.time &&
+                         request.resource.data.completedAt == (request.resource.data.status == 'completed' ? request.time : null) &&
+                         request.resource.data.durationMinutes is number && request.resource.data.durationMinutes >= 5 &&
+                         request.resource.data.isTestGen is bool &&
+                         (
+                           ( request.resource.data.isTestGen == false &&
+                             (!('testGenConfig' in request.resource.data) || request.resource.data.testGenConfig == null) &&
+                             request.resource.data.keys().hasOnly([
+                               'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
+                               'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
+                               'examType'
+                             ])
+                           ) ||
+                           ( request.resource.data.isTestGen == true &&
+                             request.resource.data.testGenConfig is map &&
+                             isValidTestGenConfig(request.resource.data.testGenConfig) &&
+                             request.resource.data.keys().hasOnly([
+                               'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
+                               'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
+                               'testGenConfig'
+                             ])
+                           )
+                         );
+        // The original second definition of userExams update was 'if false'.
+        // If you need to update exam status (e.g. from 'started' to 'completed'), you'll need a rule like:
+        // allow update: if (isAdmin() || request.auth.uid == resource.data.userId) &&
+        //                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'completedAt', 'answers', 'score', 'markingResults']) &&
+        //                    request.resource.data.status == 'completed' &&
+        //                    request.resource.data.completedAt == request.time &&
+        //                    resource.data.status == 'started';
+        // For now, sticking to the more restrictive one to avoid opening up too much.
+        allow update: if false;
+        allow delete: if isLoggedIn() && isOwner(userId);
+      }
+    } // End /userExams/{userId}
+
 
     match /feedback/{feedbackId} {
       allow create: if isLoggedIn() &&
@@ -388,7 +392,7 @@ service cloud.firestore {
                        (request.resource.data.coverUrl == null || request.resource.data.coverUrl is string) &&
                        request.resource.data.chapterResources is map;
       allow update: if isAdmin();
-      allow delete: if isAdmin() && courseId != "fop_physics_v1";
+      allow delete: if isAdmin() && courseId != "fop_physics_v1"; // Be careful with this hardcoded value
     }
 
     match /sharedCourseNotes/{noteId} {
@@ -438,18 +442,7 @@ service cloud.firestore {
     match /subjects/{subjectId} {
       allow read: if isLoggedIn();
       allow write: if isAdmin();
-      // You can uncomment and complete the more specific rules below if needed
-      // allow create, update: if isAdmin() &&
-      //                     request.resource.data.name is string && request.resource.data.name.size() > 0 &&
-      //                     request.resource.data.fileName is string && request.resource.data.fileName.size() > 0 &&
-      //                     request.resource.data.chapters is map &&
-      //                     request.resource.data.mcqProblemRatio is number && request.resource.data.mcqProblemRatio >= 0 && request.resource.data.mcqProblemRatio <= 1 &&
-      //                     request.resource.data.defaultTestDurationMinutes is number && request.resource.data.defaultTestDurationMinutes >= 5 &&
-      //                     request.resource.data.max_questions_per_test is number && request.resource.data.max_questions_per_test >= 1 &&
-      //                     request.resource.data.status == 'approved' &&
-      //                     request.resource.data.creatorUid == request.auth.uid &&
-      //                     request.resource.data.createdAt == request.time;
-    } // <<<< THIS IS THE CORRECTED CLOSING BRACE FOR /subjects/{subjectId}
+    }
 
   } // End /databases/{database}/documents
 }
