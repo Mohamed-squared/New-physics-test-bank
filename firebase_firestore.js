@@ -3372,4 +3372,83 @@ export async function adminDeleteGlobalSubject(subjectId) {
     // Potentially trigger a re-merge for current user's `data.subjects`
 }
 
+
+export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSenderId) {
+    if (!db || !currentUser || !currentUser.isAdmin) {
+        return { success: false, count: 0, message: "Admin privileges required." };
+    }
+    if (!subject || !body) {
+        return { success: false, count: 0, message: "Subject and body are required." };
+    }
+
+    console.log(`Admin ${adminSenderId} sending global announcement: "${subject}"`);
+    let usersProcessed = 0;
+    const BATCH_SIZE = 400; // Firestore batch limit is 500 writes, leave some room.
+
+    try {
+        let lastUserSnapshot = null;
+        let moreUsers = true;
+        let totalUsersSnapshots = 0;
+
+        while (moreUsers) {
+            let query = db.collection('users').orderBy(firebase.firestore.FieldPath.documentId()).limit(BATCH_SIZE);
+            if (lastUserSnapshot) {
+                query = query.startAfter(lastUserSnapshot);
+            }
+
+            const usersSnapshot = await query.get();
+            totalUsersSnapshots += usersSnapshot.size;
+
+            if (usersSnapshot.empty) {
+                moreUsers = false;
+                break;
+            }
+
+            const batch = db.batch();
+            usersSnapshot.forEach(userDoc => {
+                const userId = userDoc.id;
+                const inboxRef = db.collection('users').doc(userId).collection('inbox').doc(); // Auto-generate ID
+                batch.set(inboxRef, {
+                    senderId: adminSenderId, // Could also be 'system_announcement'
+                    senderName: `Admin (${currentUser.displayName || 'Lyceum'})`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    subject: `📢 Announcement: ${subject}`,
+                    body: body, // Body can contain HTML, will be rendered as such in inbox
+                    isRead: false,
+                    isGlobalAnnouncement: true // Flag for special styling/handling
+                });
+                usersProcessed++;
+            });
+
+            await batch.commit();
+            console.log(`Sent announcement to batch of ${usersSnapshot.size} users. Total processed so far: ${usersProcessed}`);
+
+            if (usersSnapshot.size < BATCH_SIZE) {
+                moreUsers = false; // Last batch
+            } else {
+                lastUserSnapshot = usersSnapshot.docs[usersSnapshot.docs.length - 1];
+            }
+            // Safety break if something goes wrong with pagination, though less likely with document ID ordering
+            if (totalUsersSnapshots > 10000 && BATCH_SIZE > 0) { // Arbitrary large number
+                 console.warn("Global announcement processing stopped after 10,000 users to prevent runaway loop.");
+                 moreUsers = false;
+                 return { success: false, count: usersProcessed, message: "Processing stopped after 10,000 users. Some users may not have received the announcement." };
+            }
+        }
+
+        console.log(`Global announcement sent to ${usersProcessed} users.`);
+        return { success: true, count: usersProcessed, message: `Announcement sent to ${usersProcessed} users.` };
+
+    } catch (error) {
+        console.error("Error sending global announcement:", error);
+        let message = `Failed to send global announcement: ${error.message}`;
+        if (error.code === 'permission-denied') {
+             message = `Failed to send global announcement: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        return { success: false, count: usersProcessed, message: message };
+    }
+}
+
+
+
 // --- END OF FILE firebase_firestore.js ---

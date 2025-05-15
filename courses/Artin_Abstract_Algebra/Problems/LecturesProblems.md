@@ -1370,3 +1370,179 @@
     D.  Cannot be used to define linear transformations.
     E.  Are always trivial or one-dimensional.
     ans: B
+
+# Chapter 4
+
+1.  Define a linear operator (or linear transformation) $T: V \to W$ between two vector spaces $V$ and $W$ over the same field $F$. List the two main properties it must satisfy.
+2.  Consider the differentiation operator $D = \frac{d}{dx}$ acting on the vector space $P_n(\mathbb{R})$ of real polynomials of degree at most $n$. Show explicitly that $D$ is a linear operator.
+3.  Define the kernel of a linear operator $T: V \to W$, denoted $\text{Ker}(T)$. Prove that $\text{Ker}(T)$ is a subspace of $V$.
+4.  Define the image of a linear operator $T: V \to W$, denoted $\text{Im}(T)$. Prove that $\text{Im}(T)$ is a subspace of $W$.
+5.  State the Dimension Formula (also known as the Rank-Nullity Theorem) for a linear operator $T: V \to W$, where $V$ is a finite-dimensional vector space.
+6.  Outline the main steps in the proof of the Dimension Formula. Specifically, explain how a basis for $\text{Ker}(T)$ is extended, and how the images of the additional basis vectors form a basis for $\text{Im}(T)$.
+7.  In the proof of the Dimension Formula, if $\{v_1, \dots, v_k\}$ is a basis for $\text{Ker}(T)$ and $\{v_1, \dots, v_k, v_{k+1}, \dots, v_n\}$ is a basis for $V$, prove that the set $\{T(v_{k+1}), \dots, T(v_n)\}$ spans $\text{Im}(T)$.
+8.  Continuing from the previous question, prove that the set $\{T(v_{k+1}), \dots, T(v_n)\}$ is linearly independent.
+9.  Let $T: V \to V$ be a linear operator on a finite-dimensional vector space $V$. Using the Dimension Formula, prove that $T$ is injective if and only if $T$ is surjective.
+10. Define an isomorphism between two vector spaces $V$ and $W$. What conditions must a linear operator $T: V \to W$ satisfy to be an isomorphism?
+11. Define an automorphism of a vector space $V$.
+12. Define the "rank" and "nullity" of a linear operator $T: V \to W$. How are they related by the Dimension Formula?
+13. Let $P_n(\mathbb{R})$ be the space of real polynomials of degree at most $n$. Consider the differentiation operator $D: P_n(\mathbb{R}) \to P_{n-1}(\mathbb{R})$.
+    a.  What is $\text{Ker}(D)$? What is its dimension (the nullity of $D$)?
+    b.  Using the Dimension Formula, determine the dimension of $\text{Im}(D)$ (the rank of $D$).
+    c.  Is $D$ surjective in this case? Explain.
+14. Consider the differentiation operator $D: P_p(F_p) \to P_{p-1}(F_p)$ where $F_p = \mathbb{Z}/p\mathbb{Z}$ is the field with $p$ elements ( $p$ prime). The lecture notes that $x^p$ is in the kernel of $D$ (since $D(x^p) = px^{p-1} = 0$ in $F_p$). What is the dimension of $\text{Ker}(D)$ in this case?
+15. Using the result from the previous question, what is the dimension of $\text{Im}(D)$ for $D: P_p(F_p) \to P_{p-1}(F_p)$? Is $D$ surjective in this case? Explain why $x^{p-1}$ is not in the image of $D$.
+16. Let $V$ and $W$ be finite-dimensional vector spaces over a field $F$. Let $B = \{v_1, \dots, v_n\}$ be an ordered basis for $V$ and $B' = \{w_1, \dots, w_m\}$ be an ordered basis for $W$. If $T: V \to W$ is a linear operator, explain how the matrix representation $[T]_{B,B'}$ is constructed. Specifically, what do the columns of this matrix represent?
+17. If $T(v_j) = \sum_{i=1}^m a_{ij} w_i$, what is the entry in the $i$-th row and $j$-th column of the matrix $[T]_{B,B'}$?
+18. Explain the correspondence between the algebra of linear operators (addition, scalar multiplication, composition) and the algebra of their matrix representations. Specifically, if $[T_1]$ and $[T_2]$ are matrices for $T_1, T_2: V \to W$, and $[S]$ is a matrix for $S: U \to V$, what are the matrices for $T_1+T_2$, $cT_1$, and $T_1 \circ S$?
+19. Let $V$ be a vector space with ordered basis $B_1$. Let $A_1 = [T]_{B_1,B_1}$ be the matrix of a linear operator $T: V \to V$ with respect to $B_1$. If $B_2$ is another ordered basis for $V$, and $P$ is the change of basis matrix whose columns are the coordinates of the vectors in $B_2$ expressed in terms of $B_1$ (i.e., $P$ maps coordinates w.r.t $B_2$ to coordinates w.r.t $B_1$), what is the formula for $A_2 = [T]_{B_2,B_2}$ in terms of $A_1$ and $P$?
+20. The relationship $A_2 = P^{-1} A_1 P$ is called a similarity transformation or conjugation. What does it signify about the matrices $A_1$ and $A_2$?
+21. Explain the significance of choosing an appropriate basis when representing a linear operator $T: V \to V$. What is the general goal?
+22. If a linear operator $T: V \to V$ is diagonalizable, what does its matrix representation look like with respect to a basis of eigenvectors? What are the entries on the diagonal?
+23. The lecture mentions a theorem (Artin's proposition) that for any linear transformation $T: V \to W$ between finite-dimensional vector spaces, one can choose an ordered basis $\{v_1, \dots, v_n\}$ for $V$ and an ordered basis $\{w_1, \dots, w_m\}$ for $W$ such that the matrix of $T$ has the block form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$.
+    a. What does $r$ represent in this matrix?
+    b. Describe how the basis vectors $v_j$ are chosen in relation to $\text{Ker}(T)$ and $\text{Im}(T)$.
+    c. Describe how the basis vectors $w_i$ are chosen in relation to $\text{Im}(T)$.
+24. For the matrix form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ of $T: V \to W$:
+    a. To what do $T(v_1), \dots, T(v_r)$ map?
+    b. To what do $T(v_{r+1}), \dots, T(v_n)$ map?
+25. Why is the canonical form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ generally *not* achievable for a linear operator $T: V \to V$ if we are restricted to using the *same* basis for $V$ as both the domain and codomain (unless $T$ is particularly simple, like the identity or zero map on a subspace)?
+26. Define $GL(V)$, the general linear group of a vector space $V$. What type of linear operators does it contain? What is the group operation?
+27. Explain why, upon choosing an ordered basis for an $n$-dimensional vector space $V$ over a field $F$, the group $GL(V)$ is isomorphic to the group $GL_n(F)$ of $n \times n$ invertible matrices over $F$.
+28. The lecture mentioned the notation $\text{Hom}(V,V)^*$ for $GL(V)$. What does $\text{Hom}(V,V)$ typically denote, and what does the superscript $*$ signify in this algebraic context?
+29. Explain the perspective that a linear operator $T$ is an intrinsic "geometric" object, while its matrix representation is a "coordinate-dependent description." How does the change of basis formula support this view?
+30. What historical developments motivated the study of linear algebra, as mentioned in the lecture?
+31. If $T: V \to V$ is a linear operator on a finite-dimensional vector space $V$. Prove that if $T$ is injective, then its matrix representation $A$ (with respect to any basis) must be invertible.
+32. If $T: V \to V$ is a linear operator on a finite-dimensional vector space $V$. Prove that if $T$ is surjective, then its matrix representation $A$ (with respect to any basis) must be invertible.
+33. Let $P_2(\mathbb{R})$ be the space of polynomials of degree at most 2. Let $T: P_2(\mathbb{R}) \to P_2(\mathbb{R})$ be defined by $T(f(x)) = f(x) + f'(x)$.
+    a. Show $T$ is a linear operator.
+    b. Find the matrix of $T$ with respect to the basis $\{1, x, x^2\}$.
+    c. Find the kernel and image of $T$. Is $T$ an isomorphism?
+34. Consider the linear operator $T: \mathbb{R}^2 \to \mathbb{R}^2$ given by $T(x,y) = (x+y, x-y)$.
+    a. Find the matrix of $T$ with respect to the standard basis $B_1 = \{(1,0), (0,1)\}$.
+    b. Consider a new basis $B_2 = \{(1,1), (1,-1)\}$. Find the change of basis matrix $P$ from $B_2$ coordinates to $B_1$ coordinates.
+    c. Find $P^{-1}$.
+    d. Calculate the matrix of $T$ with respect to the basis $B_2$ using the formula $A_2 = P^{-1} A_1 P$.
+35. "The advantage of the abstract vector space $V, T$ point of view over the $F^n, A$ point of view is that by choosing a convenient basis, we can get a simpler form for our operator." Elaborate on this statement.
+36. Let $V$ be the vector space of $2 \times 2$ real matrices. Let $T: V \to V$ be the transpose operator, $T(A) = A^t$.
+    a. Show $T$ is a linear operator.
+    b. Choose a basis for $V$ (e.g., matrices with a single 1 and other entries 0). Find the matrix of $T$ with respect to this basis.
+    c. What is $T^2$? What does this imply about the matrix of $T$?
+37. If $T: V \to W$ is a linear transformation, and $\dim(V) < \dim(W)$, can $T$ be surjective? Explain using the Rank-Nullity Theorem.
+38. If $T: V \to W$ is a linear transformation, and $\dim(V) > \dim(W)$, can $T$ be injective? Explain using the Rank-Nullity Theorem.
+39. The lecture discussed the "total derivative" of a function from $\mathbb{R}^n$ to $\mathbb{R}^m$ as an example of a linear map. How does this connect to the idea that linear algebra grew out of calculus?
+40. Discuss the difference in the kernel and image of the differentiation operator $D$ on $P_n(F)$ when $F=\mathbb{R}$ versus when $F=F_p$ (field of characteristic $p$) and $n \ge p$. Why does $x^p$ cause a difference?
+41. If $A$ and $B$ are two $n \times n$ matrices that are similar (i.e., $B = P^{-1}AP$ for some invertible $P$), prove that $\det(A) = \det(B)$.
+42. If $A$ and $B$ are similar matrices, do they necessarily represent the same linear operator? Explain the role of the bases.
+43.  Explain the "diagonalization problem" for a linear operator $T: V \to V$. What form of matrix are we seeking, and what kind of basis would achieve this?
+44.  The lecture stated that the matrix representation of $T_1 \circ T_2$ is $[T_1][T_2]$. Why is the order of matrix multiplication important here, and how does it correspond to the order of applying the linear transformations?
+45.  If $T: V \to W$ is a linear transformation and $\{v_1, \dots, v_k\}$ is a linearly dependent set in $V$, is the set $\{T(v_1), \dots, T(v_k)\}$ in $W$ necessarily linearly dependent? Prove or provide a counterexample.
+46.  If $T: V \to W$ is an injective linear transformation and $\{v_1, \dots, v_k\}$ is a linearly independent set in $V$, prove that $\{T(v_1), \dots, T(v_k)\}$ is a linearly independent set in $W$.
+47.  Can two distinct linear operators $T_1, T_2: V \to W$ have the same matrix representation with respect to some fixed bases $B$ for $V$ and $B'$ for $W$? Explain.
+48.  Define what it means for a subspace $W$ of a vector space $V$ to be an invariant subspace under a linear operator $T: V \to V$.
+49.  If $W$ is a $T$-invariant subspace of $V$, and a basis for $V$ is chosen by first selecting a basis for $W$ and then extending it to $V$, describe the general block form of the matrix representation of $T$ with respect to this basis.
+50.  Suppose $V = W \oplus W'$, where both $W$ and $W'$ are $T$-invariant subspaces of $V$. Describe the block form of the matrix of $T$ with respect to a basis formed by concatenating a basis for $W$ and a basis for $W'$.
+51.  Define an eigenvector and its corresponding eigenvalue for a linear operator $T: V \to V$. What is the significance of the condition that an eigenvector must be non-zero?
+52.  Explain the geometric interpretation of an eigenvector and an eigenvalue for a linear operator.
+53.  If a linear operator $T$ on an $n$-dimensional vector space $V$ has a basis consisting of $n$ eigenvectors, what is the structure of the matrix representation of $T$ with respect to this basis?
+54.  Consider a linear operator $T: \mathbb{R}^2 \to \mathbb{R}^2$ representing a rotation by an angle $\theta$, where $\theta$ is not an integer multiple of $\pi$. Explain why this operator generally has no real eigenvectors.
+55.  Let $T: F^2 \to F^2$ be a linear operator defined by $T(e_1) = e_1$ and $T(e_2) = e_1 + e_2$, where $\{e_1, e_2\}$ is the standard basis.
+    a.  Find the matrix of $T$ with respect to the standard basis.
+    b.  Determine all eigenvalues of $T$.
+    c.  For each eigenvalue, find the corresponding eigenspace (the set of all eigenvectors for that eigenvalue, plus the zero vector).
+    d.  Is $T$ diagonalizable over $F$? Explain.
+56.  The term "eigen" in eigenvector and eigenvalue originates from which language, and what does it mean?
+57.  If $V$ is a vector space and $T: V \to V$ is a linear operator. If $w$ is an eigenvector of $T$ with eigenvalue $c$, prove that $w$ is also an eigenvector of $T^k$ for any positive integer $k$. What is the corresponding eigenvalue of $T^k$?
+58.  If $T$ is an invertible linear operator and $w$ is an eigenvector of $T$ with eigenvalue $c \neq 0$, prove that $w$ is also an eigenvector of $T^{-1}$. What is its corresponding eigenvalue?
+59.  Explain the relationship between a scalar $c$ being an eigenvalue of an operator $T$ and the invertibility of the operator $T - cI$, where $I$ is the identity operator.
+60.  Define the characteristic polynomial $f_A(t)$ of an $n \times n$ matrix $A$. How is it typically computed using determinants?
+61.  What is the degree of the characteristic polynomial of an $n \times n$ matrix $A$?
+62.  For the characteristic polynomial $f_A(t) = \det(tI - A) = t^n + c_{n-1}t^{n-1} + \dots + c_1t + c_0$ of an $n \times n$ matrix $A$:
+    a.  What is the coefficient $c_{n-1}$ in terms of $A$?
+    b.  What is the constant term $c_0$ in terms of $A$?
+63.  Prove that similar matrices (i.e., matrices $A$ and $P^{-1}AP$) have the same characteristic polynomial.
+64.  Explain why the characteristic polynomial of a linear operator $T: V \to V$ (on a finite-dimensional space $V$) is independent of the choice of basis used to represent $T$ as a matrix.
+65.  What is the relationship between the eigenvalues of a linear operator $T$ and the roots of its characteristic polynomial $f_T(t)$?
+66.  State the Factor Theorem for polynomials. How is it used to argue that a polynomial of degree $n$ over a field $F$ has at most $n$ distinct roots in $F$?
+67.  What is the maximum number of distinct eigenvalues that a linear operator on an $n$-dimensional vector space $V$ over a field $F$ can have?
+68.  State the Cayley-Hamilton Theorem.
+69.  For a general $2 \times 2$ matrix $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$, first write down its characteristic polynomial $f_A(t)$. Then, explicitly write out the matrix equation $f_A(A) = 0$ that the Cayley-Hamilton theorem asserts.
+70.  If a linear operator $T$ on an $n$-dimensional vector space $V$ is diagonalizable, meaning there exists a basis of $V$ consisting of eigenvectors $\{v_1, \dots, v_n\}$ with corresponding eigenvalues $c_1, \dots, c_n$, prove the Cayley-Hamilton theorem for $T$. (Hint: Show that $f_T(T)(v_i) = \mathbf{0}$ for each basis eigenvector $v_i$).
+71.  The set of all linear operators $L(V,V)$ on an $n$-dimensional vector space $V$ forms a vector space. What is its dimension?
+72.  Using the dimensionality of $L(V,V)$, explain why any linear operator $T \in L(V,V)$ must satisfy some polynomial equation $p(T) = \mathbf{0}$ (the zero operator). What is the maximum degree of such a polynomial guaranteed by this dimensionality argument alone?
+73.  How does the Cayley-Hamilton theorem provide a more precise (lower degree) polynomial that an operator $T$ must satisfy, compared to the general argument based on the dimension of $L(V,V)$?
+74.  The lecture provided a direct computation to verify the Cayley-Hamilton theorem for a $2 \times 2$ matrix $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$. Outline the main steps of this verification:
+    a.  What is $A^2$?
+    b.  What is $-\text{trace}(A) \cdot A$?
+    c.  What is $\det(A) \cdot I$?
+    d.  Show their sum is the zero matrix.
+75.  Consider the matrix $A = \begin{pmatrix} 3 & 1 \\ 2 & 4 \end{pmatrix}$.
+    a.  Calculate its characteristic polynomial $f_A(t)$.
+    b.  Verify the Cayley-Hamilton theorem for this matrix by computing $f_A(A)$.
+76.  If the characteristic polynomial of an operator $T$ on an $n$-dimensional space factors into $n$ distinct linear factors over the field $F$, i.e., $f_T(t) = (t-c_1)(t-c_2)\dots(t-c_n)$ with all $c_i \in F$ distinct, what can be concluded about the diagonalizability of $T$? Why?
+77.  What is meant by "trace of a matrix"? How does it appear in the characteristic polynomial of an $n \times n$ matrix?
+78.  How is the constant term of the characteristic polynomial $f_A(t)$ related to $\det(A)$? Specifically, if $f_A(t) = t^n + c_{n-1}t^{n-1} + \dots + c_0$, what is $c_0$?
+79.  Who were Arthur Cayley and Sir William Rowan Hamilton? What mathematical fields are they most known for, besides their association with the Cayley-Hamilton theorem?
+80.  Why is the condition that eigenvectors must be non-zero important in their definition?
+81.  The lecture mentions that the space of operators $L(V,V)$ has dimension $n^2$. Consider the sequence of operators $I, T, T^2, \ldots, T^{n^2}$. Why must this set be linearly dependent?
+82.  If $W$ is a one-dimensional $T$-invariant subspace spanned by a vector $w$, how does $T$ act on $w$? Relate this to eigenvectors.
+83.  Provide an example of a $2 \times 2$ real matrix that has no real eigenvalues, and explain why based on its characteristic polynomial.
+84.  If an operator $T$ has a basis of eigenvectors, its matrix with respect to this basis is diagonal. What are the diagonal entries?
+85.  Can a matrix be diagonalizable even if its characteristic polynomial has repeated roots? If so, under what condition related to the eigenspaces? (This might go slightly beyond the direct lecture but is a key concept).
+86.  The lecture discusses $A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$. It is stated that this matrix is not diagonalizable. What does this imply about its eigenvectors?
+87.  How does the Fundamental Theorem of Algebra relate to the eigenvalues of a complex $n \times n$ matrix?
+88.  If $f_T(t)$ is the characteristic polynomial of $T$, and $T$ is invertible, can $f_T(0)$ be zero? Explain.
+89.  Let $T$ be a linear operator on $V$. If $T$ satisfies a polynomial $p(t)$ (i.e., $p(T)=0$), prove that every eigenvalue of $T$ must be a root of $p(t)$.
+90.  Using the Cayley-Hamilton theorem, explain how one might compute $A^{-1}$ for an invertible $2 \times 2$ matrix $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$ using its characteristic polynomial, assuming $ad-bc \neq 0$.
+91.  If an operator $T$ is nilpotent, meaning $T^k = 0$ for some positive integer $k$, what can you say about its eigenvalues? (Hint: use $T(v) = \lambda v$).
+92.  The lecture ends by saying that for the matrix $A = \begin{pmatrix} 4 & 1 \\ 2 & 3 \end{pmatrix}$, the eigenvalues are 5 and 2, and since these are distinct and we are in a 2-dimensional space, we get a basis of eigenvectors. Elaborate on why distinct eigenvalues in an $n$-dimensional space guarantee $n$ linearly independent eigenvectors (and thus a basis). (This is a standard theorem).
+93.  Why is the concept of "diagonalizing" an operator or matrix so important in linear algebra and its applications? What simplifications does it offer?
+94.  The general proof of the Cayley-Hamilton theorem (for non-diagonalizable matrices) is more complex. Briefly, why does the simpler proof, which involves showing $f_T(T)v_i = 0$ for a basis of eigenvectors $v_i$, not extend directly to the non-diagonalizable case?
+95.  Define a cyclic group. Prove that every subgroup of a cyclic group is cyclic. (This was Problem 1 in the lecture's discussion, so a full detailed proof is expected).
+96.  Let $G = \langle a \rangle$ be a cyclic group. If $H$ is a non-trivial subgroup of $G$, and $k$ is the smallest positive integer such that $a^k \in H$, explain in detail why every element of $H$ must be a power of $a^k$.
+97.  Consider the cyclic group $C_4 = \langle a \mid a^4 = e \rangle$. Is $a^2$ a generator of $C_4$? Is $a^3$ a generator? Justify your answers.
+98.  Let $H$ be a normal subgroup of $G$. The lecture stated that if $H$ is normal, then $gHgH = g^2H$. Provide a step-by-step derivation of this result, clearly stating where the normality of $H$ is used.
+99.  Suppose $H$ is a subgroup of $G$ such that for every $g \in G$, the set $HGH = \{h_1gh_2 \mid h_1, h_2 \in H\}$ is a left coset of $H$. Prove that $H$ must be a normal subgroup of $G$.
+100. Define the commutator of two elements $x, y$ in a group $G$, denoted $[x,y]$. What is the significance of the condition $[x,y] \in N$ (where $N$ is a normal subgroup) in relation to the commutativity of $\bar{x}$ and $\bar{y}$ in the quotient group $G/N$?
+101. Define the center of a group $G$, $Z(G)$. Prove that $Z(G)$ is always a normal subgroup of $G$.
+102. Prove that if a group $G$ has exactly one element $a$ of order 2 (i.e., $a \neq e, a^2=e$), then this element $a$ must be in the center of $G$. (Hint: Consider $gag^{-1}$ for any $g \in G$).
+103. If an element $x$ in a group $G$ has order $n$, prove that the order of $gxg^{-1}$ is also $n$ for any $g \in G$.
+104. Can a non-trivial group $G$ have a unique element of order 3? Explain why or why not. If $a$ has order 3, what is the order of $a^2$?
+105. Let $M_n(\mathbb{R})$ be the set of all $n \times n$ real matrices. Let $S_n(\mathbb{R})$ be the subset of symmetric matrices ($A^T = A$). Prove that $S_n(\mathbb{R})$ is a vector subspace of $M_n(\mathbb{R})$.
+106. What is the dimension of the vector space of $n \times n$ real symmetric matrices? Derive this formula.
+107. Provide a specific counterexample using $2 \times 2$ symmetric matrices to show that the set of symmetric matrices is not closed under matrix multiplication.
+108. Define the General Linear Group $GL_n(F)$ over a field $F$. What condition defines its elements?
+109. Explain the bijection between the set of all ordered bases of an $n$-dimensional vector space $F^n$ and the elements of the group $GL_n(F)$. How is a matrix in $GL_n(F)$ constructed from an ordered basis, and vice-versa?
+110. Calculate the order of the group $GL_2(\mathbb{F}_3)$, where $\mathbb{F}_3 = \mathbb{Z}/3\mathbb{Z}$. Show the step-by-step counting argument.
+111. Write down the general formula for the order of $GL_n(\mathbb{F}_p)$ where $p$ is a prime. Explain the origin of each term in the product $\prod_{k=0}^{n-1} (p^n - p^k)$.
+112. Define the Orthogonal Group $O_n(F)$. What is the defining property for a matrix $A \in GL_n(F)$ to be in $O_n(F)$?
+113. If $A \in O_n(F)$, prove that $(\det(A))^2 = 1_F$. What does this imply for $\det(A)$ if $F=\mathbb{R}$? What if $F=\mathbb{F}_2$?
+114. Define the Special Orthogonal Group $SO_n(F)$. How is it related to $O_n(F)$?
+115. If $1_F \neq -1_F$ in a field $F$, prove that $SO_n(F)$ is a normal subgroup of $O_n(F)$ and determine its index. (Hint: consider the determinant homomorphism from $O_n(F)$).
+116. Show that a matrix $A \in M_n(\mathbb{R})$ is in $O_n(\mathbb{R})$ (i.e., $A^T A = I$) if and only if its columns form an orthonormal basis of $\mathbb{R}^n$ (with respect to the standard dot product).
+117. Explain why any permutation matrix (a matrix obtained by permuting the columns of the identity matrix) is an orthogonal matrix.
+118. What is the determinant of a permutation matrix corresponding to a permutation $\sigma \in S_n$? How does this allow $S_n$ to be embedded in $O_n(F)$ and $A_n$ (the alternating group) to be embedded in $SO_n(F)$?
+119. Describe the geometric interpretation of the group $O_n(\mathbb{R})$ acting on the vector space $\mathbb{R}^n$. What geometric properties (e.g., lengths, angles) are preserved by transformations in $O_n(\mathbb{R})$? Justify this using the inner product.
+120. Define the standard inner product (dot product) for two vectors $v=(a_1, \dots, a_n)$ and $w=(b_1, \dots, b_n)$ in $\mathbb{R}^n$. How can this be expressed using matrix multiplication if $v$ and $w$ are column vectors?
+121. Define the Euclidean norm (length) of a vector $v \in \mathbb{R}^n$ in terms of the inner product. Show that if $A \in O_n(\mathbb{R})$, then $\|Av\| = \|v\|$.
+122. State the Cauchy-Schwarz inequality for vectors $v, w \in \mathbb{R}^n$. How is it used to define the angle $\theta$ between two non-zero vectors via the formula $v \cdot w = \|v\| \|w\| \cos\theta$?
+123. The lecture mentioned Kepler's attempt to model the solar system using Platonic solids. Briefly describe this idea and contrast it with the modern group-theoretic view of symmetries in physical systems.
+124. If $A \in O_n(\mathbb{R})$ is a diagonal matrix, what are the possible values for its diagonal entries? Prove your assertion.
+125. Let $A \in O_n(\mathbb{R})$. If $v$ is a real eigenvector of $A$ with eigenvalue $\lambda \in \mathbb{R}$ (i.e., $Av = \lambda v$ and $v \neq 0$), prove that $\lambda$ must be $\pm 1$.
+126. Consider the matrix $A = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$. Show that $A \in SO_2(\mathbb{R})$. What is the geometric interpretation of this transformation?
+127. Consider the matrix $B = \begin{pmatrix} \cos\theta & \sin\theta \\ \sin\theta & -\cos\theta \end{pmatrix}$. Show that $B \in O_2(\mathbb{R})$ but $B \notin SO_2(\mathbb{R})$ (unless $\theta$ is a multiple of $\pi$ such that $-\cos\theta=1$). What is the geometric interpretation of this transformation if, for instance, $\theta=0$?
+128. Prove that $O_n(F)$ is indeed a subgroup of $GL_n(F)$. (Verify closure, identity, inverse).
+129. The lecture implies that "most" mathematical groups arise as symmetries of some object preserving some structure. Provide two distinct examples discussed in the lecture that fit this paradigm (e.g., $GL_n(F)$ and $O_n(\mathbb{R})$), and for each, identify the object and the structure being preserved.
+130. What were the median and mean grades for the exam discussed at the beginning of the lecture? What general advice was given based on these scores?
+131. Explain the strategy the professor used in the lecture to prove that a subgroup $H$ of a cyclic group $G = \langle a \rangle$ is cyclic. What was the key element $a^k$ chosen for the generator of $H$?
+132. In the context of the problem about $HGH$ being a left coset, why is it important that if $H$ is a subgroup, $HH=H$?
+133. The lecture mentioned that the proof of the "Main Theorem" in linear algebra (relating sizes of spanning sets and linearly independent sets) uses the fact that a system of $n$ homogeneous linear equations in $m$ unknowns (with $m>n$) has a non-trivial solution. Briefly, why is this fact true (without a full proof, what is the core idea)?
+134. The lecture showed that if $H$ is a subgroup of $G$ and if for every $x \in G$, $xHx^{-1} \subseteq H$, then $H$ is normal. Is the condition $xHx^{-1} \subseteq H$ for all $x \in G$ equivalent to $xHx^{-1} = H$ for all $x \in G$? Explain.
+135. If $A \in GL_n(\mathbb{F}_p)$ is an upper triangular matrix, what condition must its diagonal entries satisfy for $A$ to be invertible? What is the determinant of such a matrix?
+136. Discuss the historical significance of Evariste Galois's work on finite fields and group theory, particularly noting how long it took for his work to be appreciated.
+137. Let $F$ be a field. Consider the subset $D_n(F)$ of $GL_n(F)$ consisting of all invertible diagonal matrices. Prove that $D_n(F)$ is a subgroup of $GL_n(F)$. Is $D_n(F)$ generally abelian?
+138. Consider the specific example given for calculating the last two digits of $2^{1000}$, which involved computations modulo 100.
+    a. Why was it useful to first establish $2^{10} \equiv 24 \pmod{100}$?
+    b. Explain how $2^{20} \equiv 76 \pmod{100}$ was derived.
+    c. What property of $76 \pmod{100}$ (namely $76^k \equiv 76 \pmod{100}$ for $k \ge 1$) was crucial for the final step?
+139. Let $v, w \in \mathbb{R}^n$. If $A \in O_n(\mathbb{R})$, prove directly that $(Av) \cdot (Aw) = v \cdot w$ using the matrix definition of the inner product ($x \cdot y = x^T y$) and the property $A^T A = I$.
+140. Explain the "change of basis" formula for the matrix of a linear operator $F: V \to V$. If $A = [F]_{B_1}$ and $A' = [F]_{B_2}$, and $P$ is the change of basis matrix from $B_2$ to $B_1$ (i.e., $P$ takes $B_2$-coordinates to $B_1$-coordinates), what is the relationship between $A, A'$, and $P$? What is this relationship called?

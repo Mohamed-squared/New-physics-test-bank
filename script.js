@@ -1,28 +1,28 @@
-// --- START OF FILE script.js ---
-
 // script.js
 // --- Core State & Config Imports ---
-import { setAuth, setDb, auth, db, currentUser,
-         currentSubject, activeCourseId, userCourseProgressMap,
-         setGlobalAiSystemPrompts, courseExamDefaults } from './state.js'; // Added userCourseProgressMap, setGlobalAiSystemPrompts
-import { ADMIN_UID, FOP_COURSE_ID } from './config.js';
+import {
+    setAuth, setDb, auth, db, currentUser,
+    currentSubject, activeCourseId, userCourseProgressMap,
+    setGlobalAiSystemPrompts, courseExamDefaults, musicPlayerState, setMusicPlayerState // Added musicPlayerState, setMusicPlayerState
+} from './state.js';
+import { ADMIN_UID, FOP_COURSE_ID,
+    // --- NEW: Music Config Import for init ---
+    DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
+} from './config.js';
+
 
 // --- Utility Imports ---
-import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js'; // Added renderMathIn
+import { showLoading, hideLoading, escapeHtml, renderMathIn } from './utils.js';
 
 // --- Firebase Imports ---
 import { setupAuthListener, signInUser, signUpUser, signInWithGoogle, signOutUser } from './firebase_auth.js';
-// MODIFIED: Added adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts import
-import { 
-    saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead, 
-    updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions, 
-    markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser, 
-    handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote, 
-    loadUserFormulaSheet, saveUserFormulaSheet, loadUserChapterSummary, saveUserChapterSummary, 
+import {
+    saveUserData, loadUserData, initializeUserData, submitFeedback, sendAdminReply, markMessageAsRead,
+    updateCourseDefinition, saveUserCourseProgress, loadAllUserCourseProgress, loadGlobalCourseDefinitions,
+    markChapterStudiedInCourse, unenrollFromCourse, updateCourseStatusForUser, handleAddBadgeForUser,
+    handleRemoveBadgeForUser, loadUserNotes, saveUserNotes, loadSharedNotes, saveSharedNote,
     sendWelcomeGuideMessage, adminUpdateUserSubjectStatus, updateUserCredits, loadGlobalAiPrompts,
-    // --- START MODIFICATION: Added loadCourseExamDefaults ---
     loadCourseExamDefaults, loadGlobalSubjectDefinitionsFromFirestore
-    // --- END MODIFICATION ---
 } from './firebase_firestore.js';
 
 
@@ -39,24 +39,22 @@ import {
     promptFeedback, triggerAIExplanationWrapper, promptAdminEditAnswerPlaceholder
 } from './ui_exams_dashboard.js';
 import { showManageStudiedChapters, toggleStudiedChapter } from './ui_studied_chapters.js';
-// MODIFIED: Added handleSubjectApproval to import
 import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubject, confirmDeleteSubject, deleteSubject, handleSubjectApproval } from './ui_subjects.js';
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
-// MODIFIED: Added loadUserSubjectsForAdmin, handleAdminSubjectApproval
-import { showAdminDashboard, promptAdminReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js';
+import { showAdminDashboard, promptAdminReply as promptAdminModerationReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js'; // Renamed promptAdminReply to avoid conflict
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
-import { showInbox, handleMarkRead } from './ui_inbox.js';
+import { showInbox, handleMarkRead, showContactAdminModal, showReplyToAdminModal } from './ui_inbox.js'; // Added new inbox functions
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
-import { showGlobalChat, sendChatMessage, deleteChatMessage } from './ui_chat.js';
+import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatMessage, togglePinMessage as toggleGlobalChatPin, showPinnedMessages as showGlobalPinnedMessages, startReply as startGlobalChatReply, cancelReply as cancelGlobalChatReply } from './ui_chat.js'; // Renamed chat functions
 
-// --- NEW Leaderboard/Marketplace Imports ---
+// --- Leaderboard/Marketplace Imports ---
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
-// --- NEW AI Chat Studio Import ---
+// --- AI Chat Studio Import ---
 import { showAiChatStudio } from './ui_ai_chat_studio.js';
-// --- NEW AI Settings UI Import ---
+// --- AI Settings UI Import ---
 import { showAiChatSettings } from './ui_ai_settings.js';
 
 
@@ -69,17 +67,19 @@ import {
      initPdfViewer, cleanupPdfViewer, handlePdfSnapshotForAI,
      triggerSkipExamGeneration, askQuestionAboutTranscription,
      handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf, getYouTubeVideoId,
-     displayChapterSummary, downloadChapterSummaryPdf
+     displayChapterSummary, downloadChapterSummaryPdf, askAboutFullPdf // Added askAboutFullPdf
 } from './ui_course_study_material.js';
-import { showCourseAssignmentsExams, startAssignmentOrExam } from './ui_course_assignments_exams.js';
-import { showCourseProgressDetails, renderCourseCharts } from './ui_course_progress.js';
+import { showCourseAssignmentsExams, startAssignmentOrExam, confirmDeleteCourseActivity, handleDeleteCourseActivity } from './ui_course_assignments_exams.js'; // Added confirmDeleteCourseActivity and handleDeleteCourseActivity
+import { showCourseProgressDetails, renderCourseCharts as renderCourseProgressCharts, regenerateCertificatePreview, downloadCertImage, downloadCertPdf } from './ui_course_progress.js'; // Renamed renderCourseCharts
 import { displayCourseContentMenu } from './ui_course_content_menu.js';
-import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, showCurrentNotesDocuments } from './ui_notes_documents.js';
-import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection } from './exam_storage.js';
-import { convertNoteToLatex } from './ai_integration.js';
+import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, previewLatexNote, extractAndConvertImageNoteToLatexWrapper, downloadNoteAsPdfWrapper } from './ui_notes_documents.js'; // Added new note functions
+import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection, askAIFollowUp, deleteCompletedExamV2 as deleteCompletedTestgenExam } from './exam_storage.js'; // Renamed deleteCompletedExamV2
 import { calculateChapterCombinedProgress } from './course_logic.js';
 import { showBackgroundManagement, loadAndApplyBackgroundPreference, loadAndApplyCardOpacityPreference} from './ui_background_management.js';
 
+// --- NEW: Music Player UI Import ---
+import { showMusicPlayerDashboard } from './ui_music_player.js';
+import { playUiSound } from './audio_service.js';
 
 // --- Initialization ---
 
@@ -89,6 +89,17 @@ async function initializeApp() {
 
     loadAndApplyBackgroundPreference();
     loadAndApplyCardOpacityPreference();
+
+    // --- NEW: Initialize Music Player State ---
+    setMusicPlayerState({
+        // Load preferences from localStorage if they exist, otherwise use defaults
+        volume: parseFloat(localStorage.getItem('lyceumMusicVolume')) || DEFAULT_MUSIC_VOLUME,
+        ambientVolume: parseFloat(localStorage.getItem('lyceumAmbientVolume')) || DEFAULT_AMBIENT_SOUND_VOLUME,
+        uiSoundsEnabled: localStorage.getItem('lyceumUiSoundsEnabled') === 'false' ? false : DEFAULT_UI_SOUNDS_ENABLED,
+        // Other states like currentTrack, playlist will be transient or loaded later
+    });
+    console.log("Initializing with music player state:", musicPlayerState);
+    // --- END NEW ---
 
     const publicHomepageContainer = document.getElementById('public-homepage-container');
     if (publicHomepageContainer) {
@@ -130,15 +141,15 @@ async function initializeApp() {
 
              const progressDash = document.getElementById('dashboard');
              const courseDashArea = document.getElementById('course-dashboard-area');
-             const courseProgressCanvas = document.getElementById('assignmentScoresChart');
+             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); // Check one chart
 
-             if (progressDash && !progressDash.classList.contains('hidden')) {
+             if (progressDash && !progressDash.classList.contains('hidden') && typeof window.renderCharts === 'function') { // Check if renderCharts is available
                 window.renderCharts();
              }
-             if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseCharts === 'function') {
+             if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseProgressCharts === 'function') {
                  console.log("Theme changed, attempting to re-render course charts if visible.");
                  if (userCourseProgressMap && activeCourseId && userCourseProgressMap.has(activeCourseId)) {
-                     window.renderCourseCharts(userCourseProgressMap.get(activeCourseId));
+                     window.renderCourseProgressCharts(userCourseProgressMap.get(activeCourseId));
                  } else {
                      console.warn("Could not re-render course charts: active course ID or progress data missing.", {
                          hasProgressMap: !!userCourseProgressMap,
@@ -148,7 +159,7 @@ async function initializeApp() {
                  }
              }
 
-             if (typeof mermaid !== 'undefined') {
+             if (typeof mermaid !== 'undefined' && mermaid) {
                   mermaid.initialize({
                     startOnLoad: false,
                     theme: isDark ? 'dark' : 'default',
@@ -168,19 +179,16 @@ async function initializeApp() {
         themeToggle.dataset.listenerAttached = 'true';
     }
 
-    if (themeToggle && !themeToggle.dataset.bgListenerAttached) { // Use a new data attribute
+    if (themeToggle && !themeToggle.dataset.bgListenerAttached) {
         themeToggle.addEventListener('click', () => {
-            const currentPref = JSON.parse(localStorage.getItem('lyceumAppBackground') || '{}'); // MODIFIED KEY
+            const currentPref = JSON.parse(localStorage.getItem('lyceumAppBackground') || '{}');
             if (currentPref.type === 'default' || !currentPref.type) {
-                // If the current preference is default, re-apply it to reflect theme change
-                // Small delay to allow theme classes on <html> to update first
                 setTimeout(() => loadAndApplyBackgroundPreference(), 50);
             }
         });
         themeToggle.dataset.bgListenerAttached = 'true';
     }
 
-     // Mobile Menu Init
      const menuButton = document.getElementById('mobile-menu-button');
      const sidebar = document.getElementById('sidebar');
      const overlay = document.getElementById('mobile-overlay');
@@ -210,7 +218,6 @@ async function initializeApp() {
           console.warn("Mobile menu elements not found during initialization.");
      }
 
-    // Firebase Init
     if (typeof firebase === 'undefined' || !firebase.app) {
          hideLoading();
          console.error("Firebase SDK not loaded! Ensure Firebase scripts are included correctly in index.html.");
@@ -226,34 +233,31 @@ async function initializeApp() {
          }
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        window.auth = firebase.auth();
+        window.auth = firebase.auth(); // Make compat Firebase globally available
         window.db = firebase.firestore();
 
         await loadGlobalSubjectDefinitionsFromFirestore();
         console.log("[initializeApp] Global Subject Definitions loaded initially.");
 
-        // --- MODIFICATION: Load Global AI Prompts ---
         try {
             const globalPrompts = await loadGlobalAiPrompts();
             setGlobalAiSystemPrompts(globalPrompts);
             console.log("[initializeApp] Global AI System Prompts loaded and set.", globalPrompts);
         } catch (error) {
             console.error("[initializeApp] Error loading Global AI System Prompts. Using defaults/empty.", error);
-            setGlobalAiSystemPrompts({}); // Ensure state is at least an empty object
+            setGlobalAiSystemPrompts({});
         }
-        // --- START MODIFICATION: Load Course Exam Defaults ---
-        await loadCourseExamDefaults(); 
+        await loadCourseExamDefaults();
         console.log("Initialized with Course Exam Defaults:", courseExamDefaults);
-        // --- END MODIFICATION ---
 
-        setupAuthListener(); // This will handle UI changes based on auth state
+        setupAuthListener();
     } catch (e) {
         hideLoading();
         console.error("Firebase initialization error:", e);
         alert("Error initializing Firebase services: " + e.message);
     }
 
-     if (typeof mermaid !== 'undefined') {
+     if (typeof mermaid !== 'undefined' && mermaid) {
          const isDark = document.documentElement.classList.contains('dark');
          mermaid.initialize({ startOnLoad: false, theme: isDark ? 'dark' : 'default' });
          console.log("Mermaid initialized.");
@@ -261,7 +265,7 @@ async function initializeApp() {
          console.warn("Mermaid not loaded yet. Will initialize later if needed.");
      }
 
-    loadYouTubeAPI();
+    loadYouTubeAPI(); // For course study material
 
     console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
@@ -278,13 +282,10 @@ window.closeDashboard = closeDashboard;
 window.initializeApp = initializeApp;
 window.showLoginUI = showLoginUI;
 
-// NEW Leaderboard / Marketplace assignments
 window.showLeaderboard = showLeaderboard;
 window.showMarketplacePlaceholder = showMarketplacePlaceholder;
 
-// NEW AI Chat Studio assignment
 window.showAiChatStudio = showAiChatStudio;
-// NEW AI Settings UI assignment
 window.showAiChatSettings = showAiChatSettings;
 
 
@@ -322,6 +323,7 @@ window.cleanupPdfViewer = cleanupPdfViewer;
 window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;
 window.triggerSkipExamGeneration = triggerSkipExamGeneration;
 window.askQuestionAboutTranscription = askQuestionAboutTranscription;
+window.askAboutFullPdf = askAboutFullPdf;
 window.handleTranscriptionClick = handleTranscriptionClick;
 window.highlightTranscriptionLine = highlightTranscriptionLine;
 window.downloadFormulaSheetPdf = downloadFormulaSheetPdf;
@@ -330,9 +332,15 @@ window.getYouTubeVideoId = getYouTubeVideoId;
 
 window.showCourseAssignmentsExams = showCourseAssignmentsExams;
 window.startAssignmentOrExam = startAssignmentOrExam;
+window.confirmDeleteCourseActivity = confirmDeleteCourseActivity;
+window.handleDeleteCourseActivity = handleDeleteCourseActivity;
 
 window.showCourseProgressDetails = showCourseProgressDetails;
-window.renderCourseCharts = renderCourseCharts;
+window.renderCourseProgressCharts = renderCourseProgressCharts;
+window.regenerateCertificatePreview = regenerateCertificatePreview;
+window.downloadCertImage = downloadCertImage;
+window.downloadCertPdf = downloadCertPdf;
+
 
 window.displayCourseContentMenu = displayCourseContentMenu;
 
@@ -348,13 +356,18 @@ window.convertNoteToLatexWrapper = convertNoteToLatexWrapper;
 window.improveNoteWithAIWrapper = improveNoteWithAIWrapper;
 window.reviewNoteWithAIWrapper = reviewNoteWithAIWrapper;
 window.downloadNoteAsTexWrapper = downloadNoteAsTexWrapper;
+window.previewLatexNote = previewLatexNote;
+window.extractAndConvertImageNoteToLatexWrapper = extractAndConvertImageNoteToLatexWrapper;
+window.downloadNoteAsPdfWrapper = downloadNoteAsPdfWrapper;
 
 window.showExamReviewUI = showExamReviewUI;
 window.showAIExplanationSection = showAIExplanationSection;
-window.reportQuestionIssue = showIssueReportingModal;
+window.askAIFollowUp = askAIFollowUp;
+window.reportQuestionIssue = showIssueReportingModal; // Note: showIssueReportingModal is the actual function
 window.showIssueReportingModal = showIssueReportingModal;
 window.submitIssueReport = submitIssueReport;
-
+window.deleteCompletedTestgenExam = deleteCompletedTestgenExam; // For TestGen exams via ui_exams_dashboard
+window.deleteCompletedExamV2 = deleteCompletedTestgenExam; // Alias for clarity, used by exam_storage
 
 window.promptTestType = promptTestType;
 window.promptChapterSelectionForTest = promptChapterSelectionForTest;
@@ -381,14 +394,12 @@ window.promptAdminEditAnswer = promptAdminEditAnswerPlaceholder;
 
 window.toggleStudiedChapter = toggleStudiedChapter;
 
-// Subject Management (Standard Test Gen)
 window.selectSubject = selectSubject;
 window.editSubject = editSubject;
 window.updateSubject = updateSubject;
 window.addSubject = addSubject;
 window.confirmDeleteSubject = confirmDeleteSubject;
 window.deleteSubject = deleteSubject;
-// MODIFIED: Assign subject approval handler from ui_subjects
 window.handleSubjectApproval = handleSubjectApproval;
 
 window.updateUserProfile = updateUserProfile;
@@ -396,9 +407,17 @@ window.signOutUserWrapper = signOutUser;
 window.handleProfilePictureSelect = handleProfilePictureSelect;
 window.showInbox = showInbox;
 window.handleMarkRead = handleMarkRead;
+window.showContactAdminModal = showContactAdminModal; // New Inbox Function
+window.showReplyToAdminModal = showReplyToAdminModal; // New Inbox Function
+
 window.showGlobalChat = showGlobalChat;
-window.sendChatMessage = sendChatMessage;
-window.deleteChatMessage = deleteChatMessage;
+window.sendChatMessage = sendChatMessage; // Renamed to avoid conflict with global chat's internal send
+window.deleteGlobalChatMessage = deleteGlobalChatMessage; // Specific to global chat
+window.toggleGlobalChatPin = toggleGlobalChatPin;
+window.showGlobalPinnedMessages = showGlobalPinnedMessages;
+window.startGlobalChatReply = startGlobalChatReply;
+window.cancelGlobalChatReply = cancelGlobalChatReply;
+
 
 window.importData = importData;
 window.exportData = exportData;
@@ -407,9 +426,8 @@ window.showImportExportDashboard = showImportExportDashboard;
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
-// Admin Dashboard Functions
 window.showAdminDashboard = showAdminDashboard;
-window.promptAdminReply = promptAdminReply;
+window.promptAdminReply = promptAdminModerationReply; // Renamed from admin_moderation
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
@@ -418,8 +436,10 @@ window.confirmRemoveBadge = confirmRemoveBadge;
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
 window.showBackgroundManagement = showBackgroundManagement;
+window.renderMathIn = renderMathIn; // Make global for dynamic content
 
-window.renderMathIn = renderMathIn;
+window.showMusicPlayerDashboard = showMusicPlayerDashboard; // Music Player
+window.playUiSound = playUiSound; // Global UI sound player
 
 window.toggleSidebarDropdown = function(contentId, arrowId) {
     const content = document.getElementById(contentId);
@@ -436,7 +456,7 @@ window.toggleSidebarDropdown = function(contentId, arrowId) {
 
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
-    const adminIcon = document.getElementById('admin-indicator-icon');
+    const adminIcon = document.getElementById('admin-indicator-icon'); // This might not exist, but check
     const stateCurrentUser = currentUser;
 
     const isAdmin = stateCurrentUser && (stateCurrentUser.uid === ADMIN_UID || stateCurrentUser.isAdmin === true);
@@ -448,9 +468,7 @@ export function updateAdminPanelVisibility() {
          adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
 
-    if (stateCurrentUser) {
-        fetchAndUpdateUserInfo(stateCurrentUser);
-    }
+    // No need to call fetchAndUpdateUserInfo here, auth listener handles it.
 }
 
 
@@ -490,23 +508,6 @@ function attachAuthListeners() {
     console.log("Finished attempting to attach auth listeners.");
 }
 
-// Update sidebar links in index.html to include the new AI Settings link.
-// This function is called by initializeApp or directly.
-// For the purpose of this response, I'll ensure the structure in index.html (mental model) would contain this link.
-// The actual index.html is not modified here, but the script will work if the link exists.
-// Example:
-// <nav id="sidebar-standard-nav" ...>
-// ...
-//  <li>
-//    <a href="#" onclick="window.showAiChatSettings()" class="sidebar-link group" id="ai-settings-link">
-//      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-300">
-//          <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.566.379-1.566 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.566 2.6 1.566 2.978 0a1.532 1.532 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.532 1.532 0 01-.947-2.287c1.566-.379 1.566-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106A1.532 1.532 0 0111.49 3.17zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
-//      </svg>
-//      AI Settings
-//    </a>
-//  </li>
-// ...
-// </nav>
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

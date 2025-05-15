@@ -1,0 +1,453 @@
+// --- START OF FILE exam_storage.js ---
+
+import { db, currentUser, globalCourseDataMap, currentSubject, data, setData, setCurrentSubject } from './state.js';
+import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
+import { markFullExam, generateExplanation } from './ai_exam_marking.js';
+import { renderMathIn } from './utils.js';
+import { displayContent, setActiveSidebarLink} from './ui_core.js';
+import { showProgressDashboard } from './ui_progress_dashboard.js';
+import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
+import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+
+// --- Exam Storage and Retrieval Functions ---
+
+export async function storeExamResult(courseId, examState, examType) {
+    if (!db || !currentUser) {
+        console.error("Cannot store exam: DB or user not available.");
+        return null;
+    }
+    if (!examState || !examState.examId) {
+        console.error("Cannot store exam: Invalid examState or missing examId.");
+        return null;
+    }
+
+    showLoading("Finalizing and Storing Exam...");
+    let savedExamRecordForUI; // To store the structure that UI functions expect
+
+    try {
+        console.log(`[StoreExam] Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
+        const markingResults = await markFullExam(examState); // Assumes this function is correctly implemented
+        console.log(`[StoreExam] Marking complete for Exam ID: ${examState.examId}`);
+
+        const isTestGenExam = !courseId; // True if courseId is null/undefined, meaning it's a TestGen exam
+        const actualExamId = examState.examId;
+
+        // Construct the record for Firestore, adhering strictly to security rules
+        let examRecordForFirestore = {
+            userId: currentUser.uid,
+            examId: actualExamId,
+            questions: examState.questions,
+            answers: examState.userAnswers, // Rule expects 'answers'
+            markingResults: markingResults,
+            score: markingResults.totalScore,
+            maxScore: markingResults.maxPossibleScore,
+            status: 'completed',
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
+            isTestGen: isTestGenExam,
+        };
+
+        if (isTestGenExam) {
+            examRecordForFirestore.subjectId = examState.subjectId || null;
+            examRecordForFirestore.courseId = null; // Explicitly null for pure TestGen
+            examRecordForFirestore.testGenConfig = examState.testGenConfig || { // Ensure testGenConfig exists
+                textMcqCount: 0, textProblemCount: 0, lectureMcqCounts: {}, lectureProblemCounts: {}, timingOption: 'default'
+            };
+        } else {
+            examRecordForFirestore.courseId = courseId; // Must be a string for course exams
+            examRecordForFirestore.examType = examType; // e.g., 'assignment', 'weekly_exam'
+            // 'testGenConfig' should not be present for non-TestGen exams
+        }
+
+        // Prepare the record for UI functions (this can have extra fields not sent to Firestore)
+        savedExamRecordForUI = {
+            id: actualExamId, // Keep 'id' for UI consistency if needed elsewhere
+            examId: actualExamId,
+            userId: currentUser.uid,
+            courseId: courseId || null,
+            subjectId: examState.subjectId || null,
+            type: examType, // This is the high-level type ('assignment', 'testgen', etc.)
+            timestamp: examState.startTime, // UI might expect this as a JS timestamp
+            durationMinutes: examRecordForFirestore.durationMinutes,
+            questions: examState.questions,
+            userAnswers: examState.userAnswers,
+            markingResults: markingResults,
+            status: 'completed',
+            courseContext: examState.courseContext || null, // For UI to know details
+            testGenConfig: examState.testGenConfig // Include if it was a TestGen exam
+        };
+
+
+        const examDocRef = db.collection('userExams').doc(currentUser.uid)
+                           .collection('exams').doc(actualExamId);
+
+        try {
+            console.log("[StoreExam] Attempting to write exam record to Firestore path:", examDocRef.path);
+            // Firestore will convert serverTimestamp() before writing
+            await examDocRef.set(examRecordForFirestore);
+            console.log(`[StoreExam] Exam record ${actualExamId} saved successfully to userExams subcollection.`);
+        } catch (writeError) {
+            console.error(`[StoreExam] Firestore write error for exam ${actualExamId}:`, writeError);
+            try { console.error("[StoreExam] Data that failed Firestore save (examRecordForFirestore):", JSON.stringify(examRecordForFirestore, null, 2)); }
+            catch { console.error("[StoreExam] Data that failed Firestore save (could not stringify):", examRecordForFirestore); }
+            throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
+        }
+
+        let creditsAwarded = 0;
+        let creditReason = "";
+        switch (examType) {
+            case 'assignment':
+                creditsAwarded = 5;
+                creditReason = `Completed Course Assignment: ${examState.courseContext?.activityId || actualExamId}`;
+                break;
+            case 'weekly_exam':
+                creditsAwarded = 10;
+                creditReason = `Completed Weekly Exam: ${examState.courseContext?.activityId || actualExamId}`;
+                break;
+            case 'midcourse': // Assuming midcourse exam type is 'midcourse'
+                creditsAwarded = 25;
+                creditReason = `Completed Midcourse Exam: ${examState.courseContext?.activityId || actualExamId}`;
+                break;
+            case 'final': // Assuming final exam type is 'final'
+                creditsAwarded = 50;
+                creditReason = `Completed Final Exam: ${examState.courseContext?.activityId || actualExamId}`;
+                break;
+            case 'skip_exam':
+                creditsAwarded = 2;
+                creditReason = `Completed Skip Exam: Ch ${examState.courseContext?.chapterNum || 'Unknown'}`;
+                break;
+            case 'testgen': // This is the general TestGen type
+            case 'practice': // If you differentiate practice TestGen
+                creditsAwarded = 3;
+                creditReason = `Completed Practice Test: ${examState.subjectId || actualExamId}`;
+                break;
+            default:
+                creditsAwarded = 1;
+                creditReason = `Completed Exam: ${examType} - ${actualExamId}`;
+        }
+
+        if (creditsAwarded > 0) {
+            await updateUserCredits(currentUser.uid, creditsAwarded, creditReason);
+        }
+
+        hideLoading();
+        return savedExamRecordForUI; // Return the UI-consistent record
+
+    } catch (error) {
+        hideLoading();
+        console.error(`[StoreExam] Error storing exam result ${examState.examId}:`, error);
+        if (savedExamRecordForUI) { // If marking succeeded but subsequent steps failed
+             try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(savedExamRecordForUI, null, 2)); }
+             catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", savedExamRecordForUI);}
+        }
+        if (error.message.includes("Failed to save exam data to Firestore")) {
+             alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
+        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+             alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
+        } else {
+             alert(`Error storing exam results: ${error.message || String(error)}`);
+        }
+        return null;
+    }
+}
+
+export async function getExamDetails(userId, examId) {
+    if (!db || !userId || !examId) {
+        console.error("[GetExamDetails] Cannot get exam details: Missing DB, userId, or examId.");
+        return null;
+    }
+    try {
+        const examDocRef = db.collection('userExams').doc(userId).collection('exams').doc(examId);
+        const docSnap = await examDocRef.get();
+        if (docSnap.exists) {
+            console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
+            const data = docSnap.data();
+            // Add the 'id' field back for UI consistency if needed, as it's not in the stored doc typically
+            return { id: docSnap.id, ...data };
+        } else {
+            console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[GetExamDetails] Error retrieving exam details for ${examId}:`, error);
+        return null;
+    }
+}
+
+export async function getExamHistory(userId, filterId = null, filterType = 'all') {
+    if (!db || !userId) {
+        console.error("[GetExamHistory] Cannot get exam history: Missing DB or userId.");
+        return [];
+    }
+    try {
+        let query = db.collection('userExams').doc(userId).collection('exams');
+
+        if (filterType === 'course' && filterId) {
+            query = query.where('courseId', '==', filterId).where('isTestGen', '==', false);
+            console.log(`[GetExamHistory] Filtering exam history by courseId: ${filterId}`);
+        } else if (filterType === 'subject' && filterId) {
+            // For TestGen subject exams, courseId might be null or the linked course.
+            // We should ensure isTestGen is true and subjectId matches.
+            query = query.where('subjectId', '==', filterId).where('isTestGen', '==', true);
+            console.log(`[GetExamHistory] Filtering exam history by subjectId: ${filterId} (and isTestGen == true)`);
+        } else if (filterType === 'all') {
+            console.log(`[GetExamHistory] Fetching all exam history for user ${userId}`);
+        }
+
+        query = query.orderBy('createdAt', 'desc').limit(50); // Use createdAt for ordering (timestamp from server)
+
+        const snapshot = await query.get();
+        const history = [];
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const isCourseExam = data.courseId && !data.isTestGen; // More precise check
+            const subjectName = data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name ?? data.subjectId) : null;
+            const courseName = data.courseId ? (globalCourseDataMap?.get(data.courseId)?.name ?? data.courseId) : null;
+
+            let maxScore = data.markingResults?.maxPossibleScore;
+            if (!maxScore || maxScore <= 0) {
+                 maxScore = (data.questions || []).reduce((sum, q) => {
+                      const isProblem = q.isProblem || !q.options || q.options.length === 0;
+                      return sum + (isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
+                 }, 0);
+            }
+
+            history.push({
+                id: doc.id, // Use Firestore doc ID as the primary ID
+                examId: data.examId, // Keep original examId if needed for other references
+                type: data.examType || (data.isTestGen ? 'testgen' : 'unknown'), // Use examType for course, or 'testgen'
+                timestamp: data.createdAt?.toMillis() || data.timestamp || Date.now(), // Prefer server-set createdAt
+                score: data.markingResults?.totalScore ?? 0,
+                maxScore: maxScore || 0,
+                name: courseName || subjectName || 'Unknown Context',
+                courseId: data.courseId,
+                subjectId: data.subjectId,
+                status: data.status || 'completed'
+            });
+        });
+        console.log(`[GetExamHistory] Retrieved ${history.length} exam history entries for user ${userId} (Filter: ${filterType}, ID: ${filterId || 'None'})`);
+        return history;
+    } catch (error) {
+        console.error(`[GetExamHistory] Error retrieving exam history for user ${userId}:`, error);
+        if (error.code === 'failed-precondition' && error.message.includes('index')) {
+            console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions. Likely culprit: a composite index on (isTestGen, subjectId, createdAt desc) or (isTestGen, courseId, createdAt desc) within the 'exams' subcollection.");
+            alert("Error fetching history: Database index required. Please check the developer console for details on the required index.");
+        } else if (error.code === 'permission-denied') {
+             alert("Error fetching history: Permission denied. Check Firestore rules for userExams collection.");
+        } else {
+             alert(`Error fetching history: ${error.message}`);
+        }
+        return [];
+    }
+}
+
+if (!window.currentExplanationHistories) {
+     window.currentExplanationHistories = {};
+}
+
+export async function showExamReviewUI(userId, examId) {
+    console.log(`[showExamReviewUI] Starting review for User ID: ${userId}, Exam ID: ${examId}`);
+    console.log(`[showExamReviewUI] Current timestamp: ${new Date().toISOString()}`);
+
+    if (!userId || !examId) {
+        console.error("[showExamReviewUI] Cannot show exam review: Missing userId or examId");
+        displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content');
+        return;
+    }
+    // Decide sidebar link based on context. If exam has courseId and !isTestGen, it's a course exam.
+    // For now, defaulting to TestGen dashboard link from where this is usually called for TestGen exams.
+    // Course exam reviews might be initiated from course-specific UIs in future.
+    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
+    showLoading("Loading Exam Review...");
+    window.currentExplanationHistories = {};
+
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+
+        if (!examDetails) {
+            hideLoading();
+            console.error(`[showExamReviewUI] No exam details found for exam ${examId}`);
+            displayContent(`<p class="text-red-500 p-4">Error: Could not find details for exam ID: ${examId}. It might have been deleted or the ID is incorrect.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
+            return;
+        }
+
+        console.log(`[showExamReviewUI] Successfully fetched exam details for ${examId}, rendering review UI.`);
+
+        const { markingResults, courseContext, timestamp, examType, isTestGen, subjectId, courseId, questions, userAnswers } = examDetails;
+        const score = markingResults?.totalScore ?? 0;
+        const maxScore = markingResults?.maxPossibleScore ?? 0;
+        const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
+        const actualTimestamp = examDetails.createdAt?.toMillis() || timestamp || Date.now();
+        const date = new Date(actualTimestamp).toLocaleString();
+
+        const durationMinutes = examDetails.durationMinutes;
+        const typeForDisplay = examType || (isTestGen ? 'TestGen Practice' : 'Unknown Type');
+
+        const passThreshold = typeForDisplay.toLowerCase().includes('skip') ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
+        const isPassing = parseFloat(percentage) >= passThreshold;
+
+        const contextName = courseId ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
+                           : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
+                           : 'General Test';
+        const contextTypeDisplay = courseId ? 'Course' : subjectId ? 'Subject' : '';
+
+        let questionsHtml = '<p class="text-center text-muted italic">No question data found in this record.</p>';
+        if (questions && questions.length > 0 && markingResults?.questionResults) {
+            questionsHtml = '<div class="space-y-4">';
+            questions.forEach((q, index) => {
+                 const questionId = q.id || `q-${index+1}`; // Fallback ID
+                 const result = markingResults.questionResults.find(r => r.questionId === questionId);
+                 const qScore = result?.score ?? 0;
+                 const isProblemType = q.isProblem || !q.options || q.options.length === 0;
+                 const qMaxScore = isProblemType ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
+                 const qFeedback = result?.feedback || "No specific feedback.";
+                 const keyPoints = result?.key_points || [];
+                 const improvements = result?.improvement_suggestions || [];
+                 const userAnswerForDisplay = userAnswers?.[questionId] || "<i>Not Answered</i>";
+
+                 let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800';
+                 if (qMaxScore > 0) {
+                     if (qScore === qMaxScore) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30';
+                     else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30';
+                     else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30';
+                 }
+
+                 const imageHtml = q.image ? `<div class="my-3 flex justify-center"><img src="${q.image}" alt="Question Image" class="max-w-md h-auto border dark:border-gray-600 rounded" crossorigin="anonymous"></div>` : '';
+
+                 let optionsOrAnswerHtml = '';
+                 if (isProblemType) {
+                     optionsOrAnswerHtml = `<div class="mt-2"><p class="text-xs font-semibold mb-1">Your Answer:</p><div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 whitespace-pre-wrap">${escapeHtml(userAnswerForDisplay)}</div></div>`;
+                 } else { // MCQ
+                     optionsOrAnswerHtml = '<ol class="list-none pl-0 space-y-1 my-3">';
+                     optionsOrAnswerHtml += (q.options || []).map(opt => {
+                         const isSelected = userAnswerForDisplay === opt.letter;
+                         const isCorrectAnswer = q.correctAnswer === opt.letter;
+                         let optionClass = 'text-gray-700 dark:text-gray-300';
+                         if (isCorrectAnswer) optionClass = 'font-semibold text-green-700 dark:text-green-300';
+                         if (isSelected && !isCorrectAnswer) optionClass = 'text-red-700 dark:text-red-400 line-through';
+
+                         return `<li class="flex items-baseline text-sm ${isSelected ? 'ring-1 ring-offset-1 dark:ring-offset-gray-800 ring-blue-400 rounded px-1' : ''}"><span class="font-mono w-5 text-right mr-1.5 shrink-0">${opt.letter}.</span><span class="${optionClass} option-text-container">${opt.text}</span></li>`;
+                     }).join('');
+                     optionsOrAnswerHtml += '</ol>';
+                     optionsOrAnswerHtml += `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Your Answer: ${userAnswerForDisplay} | Correct: ${q.correctAnswer || 'N/A'}</p>`;
+                 }
+
+                 questionsHtml += `
+                    <div class="question-review-item border rounded-md p-4 ${statusClass}">
+                        <div class="flex justify-between items-start mb-2">
+                             <p class="font-medium text-gray-800 dark:text-gray-200">Question ${index + 1} ${q.chapter ? `(Ch ${q.chapter})` : ''}</p>
+                             <span class="font-semibold text-sm ${qMaxScore > 0 && qScore === qMaxScore ? 'text-green-600' : qScore > 0 ? 'text-yellow-600' : 'text-red-600'}">${qScore.toFixed(1)} / ${qMaxScore.toFixed(1)} pts</span>
+                        </div>
+                        <div class="prose prose-sm dark:prose-invert max-w-none question-text-container mb-2">${q.text || '[Question text missing]'}</div>
+                        ${imageHtml}
+                        ${optionsOrAnswerHtml}
+
+                        <!-- AI Marking Feedback -->
+                        <div class="mt-3 pt-3 border-t border-dashed dark:border-gray-600">
+                             <p class="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">AI Feedback:</p>
+                             <div class="text-xs text-gray-700 dark:text-gray-300 mb-2 prose prose-xs dark:prose-invert max-w-none">${qFeedback.includes('<p>') || qFeedback.includes('<li>') ? qFeedback : escapeHtml(qFeedback).replace(/\n/g, '<br>')}</div>
+                             ${keyPoints.length > 0 ? `<p class="text-xs font-medium mt-1">Key Points:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${keyPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : ''}
+                             ${improvements.length > 0 ? `<p class="text-xs font-medium mt-1">Suggestions:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${improvements.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+                        </div>
+
+                        <!-- AI Explanation Section (Hidden initially) -->
+                        <div id="ai-explanation-${index}" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
+                            <div class="ai-explanation-content-area bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700 space-y-3 max-h-80 overflow-y-auto">
+                                <p class="text-sm italic text-muted">Loading explanation...</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-3 text-right space-x-2">
+                            <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                                Explain (AI)
+                             </button>
+                            <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
+                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                Report Issue
+                            </button>
+                        </div>
+                    </div>
+                 `;
+            });
+            questionsHtml += '</div>';
+        }
+
+        let overallFeedbackHtml = '<p class="text-muted italic text-center my-4">No overall feedback available for this exam.</p>';
+        if (markingResults.overallFeedback) {
+            const fb = markingResults.overallFeedback;
+            overallFeedbackHtml = `
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg shadow-md border border-blue-200 dark:border-blue-700 overall-feedback-area">
+                    <h3 class="text-lg font-semibold mb-4 text-blue-800 dark:text-blue-300">Overall AI Feedback</h3>
+                    <div class="space-y-4 text-sm">
+                         <div class="prose prose-sm dark:prose-invert max-w-none">${fb.overall_feedback || 'N/A'}</div>
+                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div><h4 class="font-medium text-green-600 mb-2">Strengths</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
+                              <div><h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
+                         </div>
+                         ${fb.study_recommendations ? `
+                         <div class="mt-4"><h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.study_recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}</ul></div>` : '' }
+                    </div>
+                </div>`;
+        }
+
+        const reviewHtml = `
+            <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+                    <div class="flex justify-between items-start mb-4">
+                         <div>
+                              <h2 class="text-2xl font-bold mb-1">Exam Review: ${escapeHtml(typeForDisplay)}</h2>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Context: ${escapeHtml(contextName)} ${contextTypeDisplay ? `(${contextTypeDisplay})` : ''}</p>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Exam ID: ${escapeHtml(examId)}</p>
+                              <p class="text-sm text-gray-500 dark:text-gray-400">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
+                         </div>
+                         <button onclick="window.showExamsDashboard()" class="btn-secondary-small flex-shrink-0">Back to Exams List</button>
+                    </div>
+                    <div class="text-center border-t dark:border-gray-600 pt-4">
+                         <p class="text-lg text-gray-600 dark:text-gray-400 mb-1">Overall Score</p>
+                         <p class="text-5xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'} mb-1">${percentage}%</p>
+                         <p class="text-lg text-gray-700 dark:text-gray-300 mb-2">${score.toFixed(1)} / ${maxScore.toFixed(1)} points</p>
+                         <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passThreshold}%)</p>
+                    </div>
+                </div>
+
+                ${overallFeedbackHtml}
+
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
+                    <h3 class="text-lg font-semibold mb-4">Question Breakdown</h3>
+                    <div id="review-questions-container" class="max-h-[70vh] overflow-y-auto pr-2">
+                        ${questionsHtml}
+                    </div>
+                </div>
+
+                <div class="text-center mt-6">
+                    <button onclick="window.showExamsDashboard()" class="btn-secondary">Back to Exams List</button>
+                </div>
+            </div>
+        `;
+
+        displayContent(reviewHtml, 'content');
+        const questionsContainer = document.getElementById('review-questions-container');
+        if (questionsContainer) await renderMathIn(questionsContainer);
+        const overallFeedbackContainer = document.querySelector('.overall-feedback-area');
+        if (overallFeedbackContainer) await renderMathIn(overallFeedbackContainer);
+
+        hideLoading();
+
+    } catch (error) {
+        hideLoading();
+        console.error(`[showExamReviewUI] Error showing exam review for ${examId}:`, error);
+        displayContent(`<p class="text-red-500 p-4">An error occurred while loading the exam review: ${error.message}. Please try again later.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
+    }
+}
+
+// Assign to window scope
+window.showExamReviewUI = showExamReviewUI;
+window.showIssueReportingModal = showIssueReportingModal;
+window.submitIssueReport = submitIssueReport;
+window.deleteCompletedExamV2 = deleteCompletedExamV2; // Global for completed exam deletion
+
+
+// --- END OF FILE exam_storage.js ---

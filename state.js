@@ -4,50 +4,57 @@
 export let auth = null;
 export let db = null;
 
-// Holds the MERGED view for TestGen: global subject definitions + user's progress on them.
-// Structure: { subjects: { [subjectId]: MergedSubjectData } }
-// MergedSubjectData contains global def fields + user progress fields like
-// total_attempted, available_questions, studied_chapters.
 export let data = { subjects: {} };
 
-export let currentUser = null; // Holds the Firebase Auth user object AND potentially custom profile data
-export let currentSubject = null; // Holds a subject object from 'data.subjects'
-export let charts = {}; // For the progress dashboard
-export let currentOnlineTestState = null; // Holds state during an online test
+export let currentUser = null;
+export let currentSubject = null;
+export let charts = {};
+export let currentOnlineTestState = null;
 
-// --- NEW: Cache for raw global subject definitions ---
-// Key: subjectId, Value: SubjectDefinitionObject (from /subjects collection)
 export let globalSubjectDefinitionsMap = new Map();
-// --- END NEW ---
 
-import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG } from './config.js';
+import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG,
+         DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
+       } from './config.js';
 import {DEFAULT_AI_SYSTEM_PROMPTS} from './ai_prompts.js'
 
-// --- Course State ---
-// Stores progress for all courses the user is enrolled in
-// Key: courseId (e.g., "fop_physics_v1"), Value: UserCourseProgress object
 export let userCourseProgressMap = new Map();
-// Stores the definition data for courses (fetched from global collection)
-// Key: courseId, Value: CourseDefinition object
 export let globalCourseDataMap = new Map();
-// Currently active course ID being viewed/worked on
 export let activeCourseId = null;
 
-// --- Video Duration Cache ---
-// Cache for video durations - Map of { videoId: durationInSeconds }
 export let videoDurationMap = {};
 
-// --- AI Chat Studio State ---
 export let userAiChatSettings = {
     primaryModel: DEFAULT_PRIMARY_AI_MODEL,
     fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
-    customSystemPrompts: {} // Key: functionKey, Value: custom prompt string
+    customSystemPrompts: {}
 };
-// Global system prompts, potentially loaded from a central DB collection.
-export let globalAiSystemPrompts = {}; // Key: functionKey, Value: global default prompt string
+export let globalAiSystemPrompts = {};
 
-// --- Course Exam Defaults State ---
-export let courseExamDefaults = null; // Will hold defaults loaded from Firestore
+export let courseExamDefaults = null;
+
+export let musicPlayerState = {
+    currentTrack: null,
+    currentPlaylist: [],
+    currentPlaylistName: null,
+    isPlaying: false,
+    volume: DEFAULT_MUSIC_VOLUME,
+    isShuffled: false,
+    repeatMode: 'none',
+    currentTime: 0,
+    showMiniPlayer: false,
+    miniPlayerVideoActive: false, // NEW: True if video is playing in the mini-player
+    miniPlayerYouTubeInstance: null, // NEW: Holds the YT.Player instance for the mini-player
+    linkedServices: {
+        spotify: { linked: false, playlists: [] },
+        youtubeMusic: { linked: false, playlists: [] },
+    },
+    currentAmbientSound: null,
+    ambientVolume: DEFAULT_AMBIENT_SOUND_VOLUME,
+    isAmbientPlaying: false,
+    uiSoundsEnabled: DEFAULT_UI_SOUNDS_ENABLED,
+    userSavedPlaylists: [], // NEW: For client-side saved playlists
+};
 
 // --- State Modifiers ---
 export function setAuth(newAuth) {
@@ -57,7 +64,6 @@ export function setDb(newDb) {
     db = newDb;
 }
 
-// Sets the merged data (global subject defs + user progress for TestGen)
 export function setData(newData) {
     data = newData;
 }
@@ -98,19 +104,14 @@ export function setCurrentOnlineTestState(newState) {
     currentOnlineTestState = newState;
 }
 
-// --- NEW: Modifier for globalSubjectDefinitionsMap ---
 export function setGlobalSubjectDefinitionsMap(newMap) {
     globalSubjectDefinitionsMap = newMap;
     console.log("[State] Global Subject Definitions Map updated:", globalSubjectDefinitionsMap);
 }
 export function updateGlobalSubjectDefinition(subjectId, subjectDef) {
     globalSubjectDefinitionsMap.set(subjectId, subjectDef);
-    // This function might also trigger a re-merge into `data.subjects` if a user is logged in.
-    // For now, `loadUserData` or a dedicated sync function handles the re-merge.
 }
-// --- End NEW ---
 
-// --- Course State Modifiers ---
 export function setUserCourseProgressMap(newMap) {
     userCourseProgressMap = newMap;
 }
@@ -122,12 +123,9 @@ export function setActiveCourseId(newId) {
 }
 export function updateUserCourseProgress(courseId, progressData) {
     if (userCourseProgressMap.has(courseId)) {
-        // When updating, preserve fields that might not be in progressData by merging
         const existingProgress = userCourseProgressMap.get(courseId);
         const updatedProgress = { ...existingProgress, ...progressData };
         
-        // Specifically ensure nested objects like dailyProgress are merged, not overwritten,
-        // if progressData only contains a partial update for them.
         if (progressData.dailyProgress && existingProgress.dailyProgress) {
             updatedProgress.dailyProgress = { ...existingProgress.dailyProgress, ...progressData.dailyProgress };
         }
@@ -137,10 +135,8 @@ export function updateUserCourseProgress(courseId, progressData) {
          if (progressData.pdfProgress && existingProgress.pdfProgress) {
             updatedProgress.pdfProgress = { ...existingProgress.pdfProgress, ...progressData.pdfProgress };
         }
-        // ... and so on for other nested objects if they exist and need merging behavior
-
         userCourseProgressMap.set(courseId, updatedProgress);
-        console.log(`[State] Updated progress for course ${courseId} in local map.`);
+        // console.log(`[State] Updated progress for course ${courseId} in local map.`); // Too noisy
     } else {
         userCourseProgressMap.set(courseId, progressData);
         console.log(`[State] Set new progress for course ${courseId} in local map.`);
@@ -150,7 +146,6 @@ export function updateGlobalCourseData(courseId, courseData) {
      globalCourseDataMap.set(courseId, courseData);
 }
 
-// --- AI Chat Studio State Modifiers ---
 export function setUserAiChatSettings(settings) {
     if (settings && typeof settings.primaryModel === 'string' &&
         typeof settings.fallbackModel === 'string' &&
@@ -176,21 +171,45 @@ export function setGlobalAiSystemPrompts(prompts) {
     }
 }
 
-// --- Course Exam Defaults Modifier ---
 export function setCourseExamDefaults(newDefaults) {
     if (newDefaults && typeof newDefaults === 'object') {
         courseExamDefaults = newDefaults;
         console.log("[State] Course Exam Defaults set:", courseExamDefaults);
     } else {
         console.warn("[State] Attempted to set invalid Course Exam Defaults. Using fallback.", newDefaults);
-        courseExamDefaults = { ...FALLBACK_EXAM_CONFIG }; // Ensure deep copy of fallback
+        courseExamDefaults = { ...FALLBACK_EXAM_CONFIG };
     }
 }
 
-// --- State Reset ---
+export function setMusicPlayerState(newState) {
+    const oldState = { ...musicPlayerState };
+    musicPlayerState = { ...musicPlayerState, ...newState };
+    
+    // If currentTrack changed and it's a YouTube video, ensure main player is updated/created
+    if (newState.currentTrack && oldState.currentTrack?.id !== newState.currentTrack.id) {
+        if ((newState.currentTrack.source === 'youtube' || newState.currentTrack.source === 'youtubeMusic') && typeof window.createMainYouTubePlayer === 'function') {
+            if (window.mainYouTubePlayer) {
+                window.mainYouTubePlayer.loadVideoById(newState.currentTrack.videoId);
+                if (musicPlayerState.isPlaying) window.mainYouTubePlayer.playVideo();
+            } else {
+                // Player might not be initialized if music tab isn't open
+                // window.createMainYouTubePlayer(newState.currentTrack.videoId); // This will be handled by showMusicPlayerDashboard or the mini-player logic
+            }
+        }
+    }
+
+    if (typeof window.updateAllPlayerUIs === 'function') { // Update main player UI if visible
+        window.updateAllPlayerUIs();
+    }
+    if (typeof window.updateMiniPlayerVisibility === 'function') { // Update mini player visibility and content
+        window.updateMiniPlayerVisibility();
+    }
+    // console.log("[State] Music player state updated:", musicPlayerState); // Can be noisy
+}
+
 export function clearUserSession() {
     setCurrentSubject(null);
-    setData({ subjects: {} }); // Reset to empty subjects object
+    setData({ subjects: {} });
     setCurrentOnlineTestState(null);
     setCharts({});
     setUserCourseProgressMap(new Map());
@@ -201,6 +220,34 @@ export function clearUserSession() {
         fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
         customSystemPrompts: {}
     });
+    setMusicPlayerState({
+        currentTrack: null,
+        currentPlaylist: [],
+        currentPlaylistName: null,
+        isPlaying: false,
+        volume: DEFAULT_MUSIC_VOLUME, // Keep user's volume preference
+        isShuffled: false,
+        repeatMode: 'none',
+        currentTime: 0,
+        showMiniPlayer: musicPlayerState.showMiniPlayer, // Persist mini-player visibility preference
+        miniPlayerVideoActive: false,
+        miniPlayerYouTubeInstance: null, // Destroy instance on logout
+        linkedServices: {
+            spotify: { linked: false, playlists: [] },
+            youtubeMusic: { linked: false, playlists: [] },
+        },
+        currentAmbientSound: null,
+        ambientVolume: DEFAULT_AMBIENT_SOUND_VOLUME, // Keep user's ambient volume preference
+        isAmbientPlaying: false,
+        uiSoundsEnabled: musicPlayerState.uiSoundsEnabled, // Persist UI sounds preference
+        userSavedPlaylists: [], // Clear user saved playlists from memory (they are in localStorage)
+    });
+    // Stop any playing audio from HTML5 audio elements
+    if (typeof window.stopAmbientSound === 'function') window.stopAmbientSound();
+    if (typeof window.stopStreamableMusic === 'function') window.stopStreamableMusic();
+    // Destroy YouTube player instances
+    if (typeof window.destroyYouTubePlayers === 'function') window.destroyYouTubePlayers();
+
 
     document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');
@@ -208,8 +255,7 @@ export function clearUserSession() {
     document.getElementById('subject-info')?.replaceChildren();
 
     window.cleanupPdfViewer?.();
-    window.cleanupYouTubePlayers?.();
-
+    window.cleanupYouTubePlayers?.(); 
     document.getElementById('course-dashboard-area')?.replaceChildren();
     document.getElementById('course-dashboard-area')?.classList.add('hidden');
     console.log("[State] User session data cleared.");

@@ -1,0 +1,1595 @@
+1
+00:00:12,421 --> 00:00:22,641
+Then we're going to uh cover that material on Friday, review it on Monday, and then there's a mid-term next Wednesday in class, October 15th.
+
+2
+00:00:24,181 --> 00:00:30,581
+It's one hour mid actually, we don't have class next Monday. That's the whole point, right?
+
+3
+00:00:28,961 --> 00:00:30,731
+Next Monday is a holiday. So,
+
+4
+00:00:30,911 --> 00:00:32,511
+I was a little confused. This material will be covered Friday.
+
+5
+00:00:32,511 --> 00:00:36,851
+That will be all the material that we have on the exam.
+
+6
+00:00:37,741 --> 00:00:44,171
+We have a midterm next week on Wednesday. It's an hour during class time, closed book, all the assigned material.
+
+7
+00:00:44,171 --> 00:00:47,541
+So, all the material on groups, all the material on vector spaces.
+
+8
+00:00:47,981 --> 00:00:54,701
+Peter will have revised office hours Tuesdays 5:30, 7:00 p.m.
+
+9
+00:00:54,701 --> 01:01,611
+So in particular that will be the Tuesday before the exam, so you can come and that'll probably go from 5:30 to 11:00 p.m. but never mind.
+
+10
+01:01,611 --> 01:06,791
+Um remember that there there there's no class Monday because of uh Columbus Day.
+
+11
+01:07,231 --> 01:16,421
+Now, there's an interesting phenomenon about the add drop day this, which is, you know, the usually the fifth Monday this of the term, this year it's Tuesday.
+
+12
+01:16,931 --> 01:18,941
+Which is a day before the hour exam.
+
+13
+01:18,941 --> 01:28,611
+So we tried to move the hour exam up so you'd have an idea before the add drop deadline, it was just impossible to do so, but you should have a pretty good idea while you're preparing for the hour exam how you're doing.
+
+14
+01:30,151 --> 01:30,471
+Okay?
+
+15
+01:30,911 --> 01:31,281
+Good.
+
+16
+01:31,911 --> 01:33,911
+So, I will announce this again on Friday.
+
+17
+01:34,331 --> 01:39,851
+There's also a midterm coming up for the the people taking this course online. That that takes place
+
+18
+01:40,391 --> 01:40,721
+Tuesday.
+
+19
+01:41,651 --> 01:43,291
+Tuesday, October 14th.
+
+20
+01:44,551 --> 01:45,861
+Hi, people online.
+
+21
+01:46,681 --> 01:47,231
+Okay.
+
+22
+01:47,791 --> 02:00,111
+Let's go back and go over some of the material that Peter covered because this business with uh vector spaces, bases, linear operators and matrices is just fundamental.
+
+23
+02:00,371 --> 02:03,931
+Allows us to gives us a lot of good examples and uh
+
+24
+02:05,911 --> 02:06,921
+So remember,
+
+25
+02:09,211 --> 02:12,601
+chapter four is not about vector spaces, but about linear operators.
+
+26
+02:12,601 --> 02:24,181
+So V and W in this lecture will be finite dimensional vector spaces over the field F.
+
+27
+02:24,181 --> 02:30,611
+And again, we want to see what we can do about vector spaces over any field, not necessarily the real numbers or the complex numbers.
+
+28
+02:31,41 --> 02:35,651
+And uh in this lecture I'll denote T to be a linear operator from V to W.
+
+29
+02:38,981 --> 02:48,991
+So that's just a homomorphism in the language of vector spaces. It preserves the addition and it preserves the scalar multiplication.
+
+30
+02:59,271 --> 03:06,381
+So, a famous linear operator and in one sense, the uh the basis of the theory of linear operators is differentiation.
+
+31
+03:07,191 --> 03:25,51
+So if our first vector space for for example, the polynomials in X over F of degree less than or equal to n and our second vector space were the polynomials in X of degree less than or equal to n - 1.
+
+32
+03:25,811 --> 03:34,371
+So this is a finite dimensional vector space of dimension n + 1. This is a finite dimensional vector space of dimension n, because remember you have the constants.
+
+33
+03:34,891 --> 03:44,61
+Then there's a linear operator d by dx is a map from V to W.
+
+34
+03:44,681 --> 03:53,341
+Namely, if you take a polynomial whose degree is less than or equal to n and you differentiate it with respect, you get a polynomial of degree less than or equal to n - 1. Correct?
+
+35
+03:53,791 --> 04:8,61
+And it's linear because you have the formulas for differentiation that if you differentiate the sum of two functions, you get the sum of their derivatives. And if you differentiate a constant times a function, you get a constant times the derivative of the function.
+
+36
+04:8,611 --> 04:15,221
+Well, that's over the real numbers, but you can differentiate polynomials over any field by the usual algebraic rules.
+
+37
+04:16,171 --> 04:17,711
+So it works over any field.
+
+38
+04:18,811 --> 04:25,501
+And uh the study of calculus is what brought linear operators into mathematics, not the other way around.
+
+39
+04:25,861 --> 04:37,361
+Uh when you do uh when you do calculus of several variables, you find that the total derivative is is a linear map.
+
+40
+04:37,911 --> 04:47,371
+of a function from Rn to Rm at a point X is a linear map.
+
+41
+04:48,51 --> 04:53,51
+And in fact, it's the linear map from Rn to Rm that best approximates the function at that point.
+
+42
+04:53,661 --> 04:57,31
+So that's where linear operators came into mathematics, out of calculus.
+
+43
+04:57,461 --> 05:2,811
+Now, uh if you think of there are things that change over an arbitrary field too, you shouldn't think it's that easy.
+
+44
+05:2,811 --> 05:13,101
+So for example, if you do this where F is the real numbers and you consider this differentiation map from V to W, right? The dimension of V is n + 1, the dimension of W is n.
+
+45
+05:13,791 --> 05:18,391
+So you can ask, is the map surjective? Is it has a kernel, etc.
+
+46
+05:18,391 --> 05:25,151
+So is every polynomial of degree n - 1 or less a derivative of a polynomial of degree n?
+
+47
+05:26,211 --> 05:27,611
+Yeah, that's not so hard.
+
+48
+05:27,781 --> 05:29,351
+And what's the kernel of the mapping?
+
+49
+05:29,721 --> 05:35,11
+Well, the kernel uh the the the functions who have derivative zero are the constants.
+
+50
+05:35,111 --> 05:38,301
+So this would have a one-dimensional kernel and it would be surjective.
+
+51
+05:38,821 --> 05:40,791
+That's not true over an arbitrary field.
+
+52
+05:41,441 --> 05:50,391
+So you might try to think about what is the kernel is the kernel of d by dx?
+
+53
+05:51,311 --> 05:56,391
+When say for example, F is equal to Z mod PZ.
+
+54
+05:57,211 --> 05:58,741
+That's a perfectly good field.
+
+55
+05:59,671 --> 06:3,41
+Well, um it always contains the constants. Kernel of T contains F.
+
+56
+06:6,311 --> 06:15,641
+Always, whenever you differentiate a constant, you get zero, but but uh if n is bigger than or equal to P,
+
+57
+06:16,621 --> 06:20,51
+the degree of the polynomials is bigger than or equal to P, this P,
+
+58
+06:20,801 --> 06:26,821
+also have polynomial X to the P in the kernel.
+
+59
+06:28,961 --> 06:41,61
+Because the derivative with respect to X of X to the P is by our usual formula, P X to the P - 1. Looks pretty good, except multiplication by P is zero in Z mod PZ. Remember?
+
+60
+06:44,651 --> 06:48,611
+So all kinds of strange things can start happening when you work on general fields.
+
+61
+06:49,261 --> 06:50,841
+But still it's a linear operator.
+
+62
+06:52,791 --> 06:53,151
+Okay?
+
+63
+06:56,171 --> 07:0,911
+So that's an interesting question. What's the kernel and co-kernel in the general case? You might think about that.
+
+64
+07:1,791 --> 07:2,181
+All right.
+
+65
+07:2,691 --> 07:12,441
+Now if we have a linear operator, we define the kernel of T as before, like for a group homomorphism, as the set of vectors V and V such that T V is equal to zero.
+
+66
+07:13,331 --> 07:14,841
+And that's a subspace in V.
+
+67
+07:16,1 --> 07:27,501
+And we define the image of T as the set of vectors W and W which are of the form T of V. And that's a subspace of W.
+
+68
+07:30,101 --> 07:33,371
+And we're going to prove a big formula about the dimensions of these spaces.
+
+69
+07:33,831 --> 07:41,41
+So here's our here's our dimension formula, which we've already proved in various guises, but can't do it, you can't do this one too many times.
+
+70
+07:43,841 --> 07:53,721
+That the dimension of V is the dimension of the kernel plus the dimension of the image of T.
+
+71
+07:56,651 --> 08:5,481
+So in particular, if you take this case, this map is surjective if and only if its kernel has dimension one.
+
+72
+08:6,941 --> 08:20,351
+So, the fact that in the case where we were over this field, we had more elements in the kernel would indicate that the map couldn't be surjective in that case because we had at least a two-dimensional kernel.
+
+73
+08:20,891 --> 08:26,601
+Can someone see some polynomial in W which is not in the image because X to the P is in the kernel?
+
+74
+08:28,361 --> 08:29,501
+X to the p - 1. Very good.
+
+75
+08:30,841 --> 08:44,641
+X to the p - 1 in W is not in the image. Because if you wanted to it's just like trying, just like 1 over X is not in the image of differentiation in the general case, you have to have a new function.
+
+76
+08:45,101 --> 08:50,61
+There's there's no function, no multiple of X to the P will ever have non-zero derivative because of this formula.
+
+77
+08:50,631 --> 08:52,701
+So you'll never hit this this polynomial.
+
+78
+08:53,431 --> 08:54,21
+Cool, huh?
+
+79
+08:54,921 --> 08:56,581
+All right, so let's prove this.
+
+80
+08:56,741 --> 08:57,461
+Proof.
+
+81
+08:59,201 --> 09:12,641
+Let W be the sub I'm sorry, I can't call W. Let um V1 through VK be a basis of the kernel of T.
+
+82
+09:15,11 --> 09:34,291
+And extend this to a basis V1 through VK and then um VK + 1 up to VN of V.
+
+83
+09:34,931 --> 09:40,61
+So in other words, we take these first, you can always, first of all, this is a subspace, so it has a basis.
+
+84
+09:40,61 --> 09:42,91
+Finite dimensional vector spaces have bases.
+
+85
+09:43,421 --> 10:4,991
+And once we have a subset which is linearly independent, which we know it is in V, since linearly independent in V, we can extend to a basis of the vector space by continuing to add one vector until we get to a spanning set.
+
+86
+10:4,991 --> 10:5,401
+all still linearly independent.
+
+87
+10:7,361 --> 10:7,871
+Okay.
+
+88
+10:8,861 --> 10:38,151
+The claim that will prove our theorem then W uh WI is equal to T of V of K + I is a basis for the image of T.
+
+89
+10:40,31 --> 10:52,611
+In other words, W1 is T of VK + 1 all the way down to W um n - K, which is T of VK.
+
+90
+10:53,541 --> 11:0,111
+So if you take the image of these remaining basis vectors over here,
+
+91
+11:0,581 --> 11:6,471
+and you call this W1 and this W2, etc., then that's a basis of the image. And if that's true, we're done.
+
+92
+11:6,781 --> 11:16,271
+Because the dimension of the kernel here would be K and the dimension of the image would be n - K, and those two things would add up to the dimension of V, which is n.
+
+93
+11:17,461 --> 11:20,941
+So if we can prove this statement, we have this what they call the counting formula.
+
+94
+11:22,261 --> 11:28,481
+Okay, well the first is to the prove that they're a basis, you have to check that they span and that they're linearly independent.
+
+95
+11:29,221 --> 11:39,501
+So spanning is easy because they span as any W in the image is T of V can be written as T of the summation from I equal 1 to K
+
+96
+11:44,641 --> 11:56,501
+of AI * VI plus the summation from uh K + 1 up to n of BI VI.
+
+97
+11:56,891 --> 12:10,771
+So, any vector in V because these VIs gave a basis of V can be written as a sum of terms. These terms under the transformation all go to zero because the VIs are in the kernel. This because it's a homomorphism is the summation of AI T of VI.
+
+98
+12:13,861 --> 12:23,591
+I equal 1 to K plus the summation from K + 1 to n of BI T of VI. That's because T is a homomorphism.
+
+99
+12:24,881 --> 12:41,271
+These are all zero because the original vectors were chosen to be basis of the kernel. So this is the summation of BI T of VI, which is the same as the summation of BI WI from I equal 1 to n - K.
+
+100
+12:42,511 --> 12:47,161
+And that shows that any vector in the range is a linear combination of the Ws.
+
+101
+12:48,161 --> 12:49,261
+So they span.
+
+102
+12:53,381 --> 12:56,281
+Second thing, they are linearly independent.
+
+103
+12:56,911 --> 13:3,481
+So we assume that. Assume we have a relation.
+
+104
+13:3,481 --> 13:10,551
+And our relation we write as the summation of BI WI is equal to zero.
+
+105
+13:17,731 --> 13:26,331
+So we have to show that um that those things are uh that the BIs are all zero.
+
+106
+13:27,111 --> 13:41,731
+So consider the vector summation of BI VI where I goes from uh K + 1 N. Well, V I plus, let's go from I equal 1 to N - K and BI * VI + K.
+
+107
+13:41,731 --> 13:51,301
+In other words, pull this relation back to V. Maybe these VI map to the WI, VI + K maps to the WI.
+
+108
+13:51,301 --> 13:58,381
+So consider this vector in V.
+
+109
+14:0,21 --> 14:7,271
+I claim, let's call this vector V0 or something. I claim that T of V0 is equal to zero.
+
+110
+14:17,411 --> 14:25,441
+Why? Because T of this vector is this vector and this vector was assumed to be the zero vector in W.
+
+111
+14:28,781 --> 14:30,871
+What does that mean about V0?
+
+112
+14:31,551 --> 14:35,761
+If T of V0 is zero, what does that say about V0?
+
+113
+14:35,851 --> 14:36,931
+It's in the kernel.
+
+114
+14:40,931 --> 14:40,991
+Okay.
+
+115
+14:43,811 --> 14:50,11
+Since V0 is in the kernel, we can express it in terms of the basis of our kernel.
+
+116
+14:54,681 --> 15:1,901
+I equal 1 to K AI VI.
+
+117
+15:2,701 --> 15:12,281
+But on the other hand, it's also the summation from I equal 1 to n - K BI VI + K.
+
+118
+15:14,481 --> 15:25,491
+Because this was the definition of V0 and this follows because it's in the kernel and these elements, the first elements in our basis of V give a basis of the kernel, so we can express it.
+
+119
+15:25,811 --> 15:42,441
+And that gives us a linear relation, hence the summation of AI VI from 1 to K minus the summation of BI VI + K from 1 to n - K is equal to zero.
+
+120
+15:43,761 --> 15:46,521
+That's a linear relation on the VIs.
+
+121
+15:47,141 --> 15:51,941
+The VIs were, this thing was extended to be a basis, so they were linearly independent.
+
+122
+15:52,791 --> 16:3,691
+This is a linear relation on our basis of V.
+
+123
+16:4,261 --> 16:12,571
+So, all AI equals 0 and all BI equals 0.
+
+124
+16:13,861 --> 16:24,971
+And since all the BIs are equal to zero, we've just shown that the vectors WI are linearly independent because anytime we had a relation, we've just proved the BIs are zero.
+
+125
+16:26,971 --> 16:27,501
+Done.
+
+126
+16:29,601 --> 16:36,251
+This isn't difficult and we've done this kind of argument a few times in different guises, but it's nice to understand.
+
+127
+16:37,71 --> 16:42,171
+So this is a fundamental counting formula, which is used all the time in vector space theory.
+
+128
+16:42,431 --> 16:49,111
+If you have a map between two vector spaces of the same dimension and you want to prove it's surjective, all you have to do is prove it has no kernel.
+
+129
+16:50,621 --> 16:50,961
+Okay?
+
+130
+16:56,301 --> 16:56,741
+Okay.
+
+131
+16:58,151 --> 17:0,831
+Uh another corollary of this.
+
+132
+17:1,931 --> 17:4,11
+Can I erase some of this? Sure, why not?
+
+133
+17:12,531 --> 17:18,971
+Another way of stating this, Carl Larry,
+
+134
+17:20,151 --> 17:41,281
+if V is finite dimensional and W is a subspace of V, then dimension of W plus the dimension of the quotient space V over W is equal to the dimension of V. Proof,
+
+135
+17:44,531 --> 18:12,151
+There is a homomorphism T from V to the quotient space taking a vector to its coset of W, which is surjective with kernel W.
+
+136
+18:13,911 --> 18:18,111
+Right? We have anytime we have a subspace, it gives us a homomorphism to the quotient space.
+
+137
+18:18,631 --> 18:27,741
+This is onto, so the dimension of the image is this dimension here. The dimension of the kernel is the dimension of W, hence this.
+
+138
+18:30,511 --> 18:31,231
+Okay. Now,
+
+139
+18:35,531 --> 18:47,701
+By the way, these things have names uh in the literature because these fundamental concepts of kernel and image arose in a lot of different places in mathematics before they were all formalized.
+
+140
+18:48,531 --> 19:0,761
+So, uh the image, the dimension of the image is sometimes called the rank of T. This is sometimes called the nullity of T.
+
+141
+19:2,581 --> 19:39,811
+Development of linear algebra is a very interesting subject. As I said, it grew out of calculus. A lot of subtle things came out of calculus. We're going to eventually get to orthogonal groups and quadratic forms. That also came out of calculus when you did the second derivative test. If any of you have studied multivariable calculus, you know that the first derivative is a linear operator and the second derivative is this n by of of a function from Rn to R is an n by n symmetric matrix which gives a quadratic form.
+
+142
+19:39,811 --> 19:42,811
+And the number of positive and negative eigen values tells you all kinds of things about saddle points. That all grew out of calculus.
+
+143
+19:42,811 --> 19:39,931
+And linear algebra as we study it today was only formalized at the end of the 19th century.
+
+144
+19:42,791 --> 19:43,141
+Okay.
+
+145
+19:45,921 --> 19:53,111
+Now, Peter talked a little bit about matrices uh last time and I'm going to review that.
+
+146
+19:53,581 --> 19:55,491
+One shouldn't get too carried away with this.
+
+147
+19:55,651 --> 19:58,831
+Uh the end of the 19th century, people became totally carried away with matrices.
+
+148
+19:58,831 --> 20:5,31
+If you go to the basement of Cat library, you can find shelves and shelves of 19th century books which are about matrix algebra.
+
+149
+20:5,711 --> 20:11,201
+And people lost sight of the fact that all they were talking about was linear operators. They got so involved with the notation.
+
+150
+20:11,751 --> 20:14,111
+So, let's recall how matrices come up.
+
+151
+20:14,691 --> 20:20,621
+When you have a vector space V and you pick a basis for it, V1 through Vn.
+
+152
+20:20,921 --> 20:28,461
+Then we're going to have another vector space W and we're going to pick a basis for it, W1 through WM.
+
+153
+20:29,611 --> 20:40,591
+Now, the basis I as I think Peter showed you last time, basis gives an isomorphism between V
+
+154
+20:43,301 --> 20:47,131
+and the finite dimensional vector space F to the N.
+
+155
+20:49,221 --> 21:1,431
+Which takes an arbitrary vector V to its coordinates with respect to this basis. So you write V as the summation of AI VI.
+
+156
+21:1,891 --> 21:9,501
+Now that's a unique expression because this is a basis and you map V to the n tuple A1, A2 AN.
+
+157
+21:10,171 --> 21:15,791
+And if you add vectors, you add their coordinates. And if you multiply by vector by a scalar, you multiply by a coordinates.
+
+158
+21:15,791 --> 21:19,701
+So you got a natural homomorphism here, which is in fact an isomorphism.
+
+159
+21:20,961 --> 21:20,991
+It's
+
+160
+21:24,741 --> 21:35,451
+it's clearly onto because any coordinate gives you a vector and its kernel is zero because if the coordinates of a vector are all zero, then the vector is the zero vector.
+
+161
+21:35,971 --> 21:42,571
+So a choice of a basis gives you an isomorphism of vector spaces between your abstract space and this very concrete space.
+
+162
+21:43,601 --> 21:52,301
+Likewise, your basis of W gives you an isomorphism from W to FM, similar isomorphism.
+
+163
+21:53,501 --> 22:2,201
+Now, the question is, what does a linear operator look like once we've chosen these isomorphisms?
+
+164
+22:2,491 --> 22:17,621
+Obviously, it's going if you have a linear map from V to W and you choose an isomorphism here, it's going to give you a linear map from Fn to Fm. So we're going to have a little diagram that looks like this.
+
+165
+22:17,621 --> 22:21,441
+If you allow me to write it. Here's our linear operator T. Here's our isomorphism which I'll denote by a little squiggle under the arrow.
+
+166
+22:21,441 --> 22:24,311
+with Fn. Here's our isomorphism here.
+
+167
+22:24,311 --> 22:32,401
+with Fm. And the question is, what does it look like over on this map from Fn to Fm once we use this isomorphism? Okay?
+
+168
+22:32,401 --> 22:34,341
+We'll come back to that.
+
+169
+22:34,341 --> 22:34,571
+Well,
+
+170
+22:35,991 --> 23:2,731
+let's see what this basis does with a linear operator.
+
+171
+23:3,291 --> 23:19,771
+If I apply the linear operator to a basis of V, each T of VI for every vector in the basis of V, if I apply my linear operator, I get a vector in W.
+
+172
+23:20,541 --> 23:24,481
+And I can write it out in terms of my basis of W.
+
+173
+23:24,891 --> 23:42,201
+So in fact, I'll do it for V VJ is the summation, sorry, over I equal 1 to M of A I J times W I. And that is for J equal 1, 2 all the way up to n.
+
+174
+23:44,121 --> 23:48,361
+And these Aij are elements in my field F.
+
+175
+23:49,661 --> 23:59,41
+Right? Because when I apply T to my basis vector of V, I get a vector in W and I can write it as a linear combination of the W W uniquely.
+
+176
+24:0,551 --> 24:11,241
+So, these Aij are elements in F determined by T and the choice of basis.
+
+177
+24:11,241 --> 24:14,671
+And you have to choose both bases before you get the Aij.
+
+178
+24:14,671 --> 24:19,231
+Otherwise you couldn't do it. Conversely,
+
+179
+24:20,301 --> 24:28,761
+if I have bases of V and W and I give you these Aij, they determine T.
+
+180
+24:29,841 --> 24:40,731
+The scalars Aij determine T.
+
+181
+24:40,991 --> 24:48,941
+You need all of them. I equal 1 to n, J equal 1 to M.
+
+182
+24:50,351 --> 25:0,691
+So MN scalars determine the transformation T. Why?
+
+183
+25:0,891 --> 25:11,681
+Because if I want to know what T does to any vector of V, I write V as a linear combination of the VJ.
+
+184
+25:11,681 --> 25:19,621
+I know what T of VJ is, so therefore I know what T of anything is. Why?
+
+185
+25:21,321 --> 25:28,971
+Write V is equal to the summation of XJ VJ.
+
+186
+25:30,751 --> 25:54,661
+J equal 1 to n, then T of V is equal to the summation from J equal 1 to n XJ times T of VJ which is the summation Aij from I equal 1 to M of WI.
+
+187
+25:55,181 --> 25:57,591
+And that tells me what the vector is. So I know what T does to any vector.
+
+188
+25:58,531 --> 25:59,791
+It's a formula.
+
+189
+26:1,261 --> 26:7,971
+Okay. Now if you make that formula precise, it's a matrix multiplication.
+
+190
+26:7,971 --> 26:21,531
+That's the big thing here. So that to make this precise, if we define A to be the m by n matrix AIJ, which means,
+
+191
+26:21,531 --> 26:24,901
+and I always remember it this way, that you put
+
+192
+26:26,381 --> 26:31,291
+the image of T of VJ in the Jth column.
+
+193
+26:33,461 --> 26:40,521
+And these are the coordinates of the vector T of VJ with respect to the basis WI.
+
+194
+26:40,731 --> 26:40,941
+Okay?
+
+195
+26:42,71 --> 27:7,571
+Then this formula is given if we wrote this out as a as a formula as a summation of Y let's rewrite it here as the summation of Y WI I equal 1 to M.
+
+196
+27:1,791 --> 27:14,681
+Then we would find that the YIs are gotten by taking this matrix and applying it to the XJs. So Y as a as a as a column vector,
+
+197
+27:15,141 --> 27:28,1
+which means Y1 down to YM is equal to AX, which means A applied to the column vector X1 down to Xn.
+
+198
+27:29,241 --> 27:31,131
+That's what that formula says.
+
+199
+27:34,721 --> 27:40,671
+So that associated to a linear transformation and the choices of bases on the first space and the second,
+
+200
+27:40,671 --> 27:48,461
+we get a collection of scalars, MN scalars, which we put into a matrix.
+
+201
+27:48,731 --> 28:7,291
+And the linear transformation is given by applying that matrix, left multiplying that matrix times the vector. In other words, this diagram fills in like this.
+
+202
+28:7,291 --> 28:13,121
+This map here is left multiplication by the matrix A.
+
+203
+28:14,11 --> 28:14,881
+Peter, you did this on
+
+204
+28:16,331 --> 28:18,11
+Yom Kippur, right? There should be a certain amount of suffering on Yom Kippur.
+
+205
+28:18,111 --> 28:20,901
+That's what you had. Yes.
+
+206
+28:22,601 --> 28:25,581
+Let's pause. There are a lot of indices here and it's really important to get the indices right.
+
+207
+28:47,461 --> 28:47,701
+Okay.
+
+208
+28:58,81 --> 28:58,801
+Yes.
+
+209
+29:0,791 --> 29:2,701
+No, I think these should be
+
+210
+29:4,571 --> 29:5,661
+Is. I've been using Js for the Vs
+
+211
+29:7,531 --> 29:10,41
+because those turn out to be like the column vectors
+
+212
+29:10,871 --> 29:12,151
+and Is for the Ws.
+
+213
+29:12,841 --> 29:20,821
+So, if you write the So as I say, you have to work this formula together and see how you get YI out of this and it's a matrix multiplication. That's the claim.
+
+214
+29:21,341 --> 29:29,31
+And the matrix multiplication is you take the matrix A that I've defined in this way. Right? Let's do an example. We can't hurt.
+
+215
+29:30,231 --> 29:30,571
+Okay?
+
+216
+29:32,71 --> 29:33,621
+So everyone sees how this works.
+
+217
+29:34,191 --> 29:41,931
+Example, let's take the map T from F2 to F2. Well, sorry, V to W,
+
+218
+29:42,681 --> 29:56,711
+where each are two dimensional. V has a basis V1 V2 and W has a basis W1 sorry, basis V1 V2, basis W1 W2.
+
+219
+29:57,351 --> 30:9,701
+And suppose that T of V1 is uh 2 W1 and T of V2 is 3 W1 + 4 W2.
+
+220
+30:11,291 --> 30:14,891
+Okay, that could be an example of a linear operator in terms of the basis.
+
+221
+30:15,351 --> 30:20,961
+Then the matrix I would get would be the following 2 by 2 matrix.
+
+222
+30:21,451 --> 30:27,531
+In the first column, I put the coordinates of T V1 in terms of the basis W1 W2.
+
+223
+30:28,451 --> 30:31,271
+So you have to see this is this + 0 W2.
+
+224
+30:32,321 --> 30:34,111
+So the first column would be 20.
+
+225
+30:36,181 --> 30:43,661
+The second column, T of V2 would be 34.
+
+226
+30:45,111 --> 30:55,911
+Now, suppose I had a vector in V which was the vector 7 V1 + 8 V2.
+
+227
+30:56,541 --> 31:0,331
+And I and I wanted to see what the linear operator did to it.
+
+228
+31:0,721 --> 31:4,471
+Now, what I could do is just substitute it in with this formula.
+
+229
+31:5,231 --> 31:6,21
+Right? I could say.
+
+230
+31:6,211 --> 31:20,661
+Well, T of V1 is 2 W1, so T of 7 V1 is 14 W1. T of V2 is this, so T of 8 V2 is 24 W1 + 32 W2, add them all together and reassemble.
+
+231
+31:21,271 --> 31:22,871
+But I could also do the matrix multiplication.
+
+232
+31:23,601 --> 31:35,511
+I could say that T of V is given by the matrix A times the column vector 78. Which is equal to the column vector 14 + 24 38.
+
+233
+31:44,751 --> 31:44,811
+Uh
+
+234
+31:46,851 --> 31:49,81
+0 + 32.
+
+235
+31:49,631 --> 31:57,771
+Which means that T of V is equal to 38 W1 + 32 W2.
+
+236
+31:59,781 --> 32:7,111
+So this is just a way of rewriting the fact that we know a transformation once we know it on the basis.
+
+237
+32:7,611 --> 32:17,661
+And these scalars tell us what the transformation does to the basis. So there must be a way of recovering the linear transformation from all these scalars.
+
+238
+32:18,211 --> 32:20,471
+And the recipe is matrix multiplication.
+
+239
+32:20,871 --> 32:23,251
+That's why matrix multiplication is important.
+
+240
+32:24,661 --> 32:25,191
+Okay?
+
+241
+32:26,21 --> 32:28,751
+Did that help catch up?
+
+242
+32:29,621 --> 32:30,111
+Other questions?
+
+243
+32:30,281 --> 32:31,991
+This is so important, you got to get it.
+
+244
+32:32,521 --> 32:33,541
+All right, now.
+
+245
+32:35,151 --> 32:41,921
+In particular, and we're going to use this a lot, if V is equal to W.
+
+246
+32:45,681 --> 32:48,611
+And we just choose one basis.
+
+247
+32:49,371 --> 32:53,511
+And we have a linear transformation from V to V.
+
+248
+32:54,131 --> 33:2,521
+Then it's it's customary to write the transformation in terms of this one basis where you use it both on the domain and on the range.
+
+249
+33:3,341 --> 33:7,491
+So this is what we would call an endomorphism.
+
+250
+33:7,711 --> 33:13,471
+That means a map from a vector a homomorphism from a vector space to itself.
+
+251
+33:13,891 --> 33:20,591
+Then we get a square matrix, matrix of T
+
+252
+33:20,971 --> 33:27,711
+with respect to the same bases of domain and range. That makes sense because the domain and range are the same space.
+
+253
+33:32,91 --> 33:34,501
+is equal to an n by n matrix.
+
+254
+33:38,301 --> 33:38,581
+Okay.
+
+255
+33:40,771 --> 33:40,971
+And
+
+256
+33:45,571 --> 33:46,1
+this
+
+257
+33:47,421 --> 33:48,841
+is very cool.
+
+258
+33:51,801 --> 34:1,291
+If we have another endomorphism, so if we have T from S T
+
+259
+34:2,331 --> 34:12,521
+And this is given in terms of the basis V by this has matrix A and this has matrix B
+
+260
+34:13,641 --> 34:15,131
+both n by n matrices,
+
+261
+34:15,711 --> 34:25,341
+And we want to know what is the matrix of S composed with T,
+
+262
+34:26,311 --> 34:32,511
+which is a new transformation from V to V.
+
+263
+34:33,11 --> 34:37,721
+The answer is, when you blow it all out and you calculate with coordinates, etc.,
+
+264
+34:38,611 --> 34:41,201
+it is B * A.
+
+265
+34:42,31 --> 34:44,551
+Where this is matrix multiplication.
+
+266
+34:46,631 --> 34:50,721
+That is the correct definition of matrix multiplication. That's where matrix multiplication found itself as the composition of linear operators.
+
+267
+34:50,721 --> 34:56,101
+That's why matrix multiplication is associative. That's the miracle of why matrix multiplication is associative.
+
+268
+34:56,101 --> 35:0,101
+Because composition of operators is associative.
+
+269
+35:0,241 --> 35:4,41
+So again, you must check that from the definition of the matrix and the definition of the composition of operators. It's a horrible computation.
+
+270
+35:4,41 --> 35:5,531
+But this is what comes out.
+
+271
+35:11,101 --> 35:11,411
+So,
+
+272
+35:15,151 --> 35:15,511
+in particular,
+
+273
+35:22,801 --> 35:29,731
+we have the following result, proposition,
+
+274
+35:30,331 --> 35:39,661
+the following are equivalent for a matrix for a transformation T from V to V.
+
+275
+35:40,931 --> 35:45,631
+One, T is an isomorphism.
+
+276
+35:46,821 --> 35:54,501
+Or we might say an automorphism. That means an isomorphism from V to itself of vector spaces.
+
+277
+35:55,511 --> 35:59,301
+Two, the kernel of T is zero.
+
+278
+36:0,701 --> 36:4,911
+Three, the image of T is all of V.
+
+279
+36:5,771 --> 36:12,51
+Four, if T is given if
+
+280
+36:13,601 --> 36:28,421
+the matrix A of T with respect to the basis V1 through Vn is A.
+
+281
+36:30,631 --> 36:39,791
+Then A is invertible as an n by n matrix.
+
+282
+36:44,191 --> 36:52,111
+And finally, five, the determinant of the matrix A is not equal to zero in the field F.
+
+283
+36:55,741 --> 36:59,891
+So again, this is the sort of thing we've been through a couple of times. I'll I'll wave my hands at it.
+
+284
+36:59,891 --> 37:1,701
+So you get the idea.
+
+285
+37:2,211 --> 37:6,311
+If you have an isomorphism, then its kernel is clearly zero and its image is everything.
+
+286
+37:6,311 --> 37:8,781
+So one implies two and three, that's clear.
+
+287
+37:10,671 --> 37:16,801
+If you have two, the kernel has dimension zero, so the image has the dimension of V, so the image has to be all of V.
+
+288
+37:16,801 --> 37:24,461
+Because you can take a a basis for the image and extend it to a basis for V, but they have the same number of elements, so the image is all of V.
+
+289
+37:25,711 --> 37:33,261
+So, uh this implies this, both of them imply this, and they all imply each other by the uh counting formula for dimensions.
+
+290
+37:34,921 --> 37:41,601
+If T is an isomorphism, then we can we can find a linear operator that inverts it back to the identity.
+
+291
+37:41,821 --> 37:52,21
+And since the composition of linear operators is matrix multiplication, the matrix of that inverting operator would have the property that when you multiplied it by A, you'd get the identity. That means A is an invertible matrix.
+
+292
+37:55,331 --> 38:8,781
+Conversely, if A is an invertible matrix, you'll find that the kernel of T which is what's the the nullity of the matrix A is zero and the image of T is everything. That's really what we know about invertible matrices and matrix multiplication on column vectors.
+
+293
+38:9,151 --> 38:15,321
+And finally, we've seen that this is equivalent to the matrix being invertible by the usual matrix of cofactors.
+
+294
+38:17,391 --> 38:34,371
+So all of these conditions are what tells you what an isomorphism is, and the set of T from V to V which are isomorphisms, that's the group which I think Peter called GLV.
+
+295
+38:35,181 --> 38:42,631
+And which is isomorphic to the group GLN of F of n by n matrices with non-zero determinant in F.
+
+296
+38:42,911 --> 38:46,671
+We started off by defining the group GLNR, the first time, right?
+
+297
+38:46,901 --> 38:53,581
+So here we get a group for any field of invertible n by n matrices over that field under multiplication.
+
+298
+38:54,651 --> 39:2,891
+And that's the same as the group, a better way to think of it is invertible linear transformations of an n-dimensional vector space over that field.
+
+299
+39:3,941 --> 39:6,651
+So some of these groups, by the way, are finite groups.
+
+300
+39:7,381 --> 39:18,631
+So you might uh it's an interesting question, what is let's just try one of these finite groups just to warm up and then I'm going to get to another question we're going to get into on Friday.
+
+301
+39:19,291 --> 39:23,541
+So for example, if F is the field of two elements,
+
+302
+39:24,221 --> 39:31,31
+what is the group GL2 of F?
+
+303
+39:33,21 --> 39:37,571
+2 by 2 invertible matrices over the field F.
+
+304
+39:37,731 --> 39:44,961
+Well, if you thought about filling up a matrix, a 2 by 2 matrix with scalars from the field F, how many matrices can you make?
+
+305
+39:46,491 --> 39:50,11
+What's the total number of matrices I can make out of the field of two elements?
+
+306
+39:51,431 --> 39:51,831
+How many?
+
+307
+39:52,441 --> 39:52,881
+16, right.
+
+308
+39:53,231 --> 39:53,891
+So you have
+
+309
+39:54,591 --> 39:55,711
+you have 16 choices.
+
+310
+39:56,71 --> 40:0,761
+Because A can be 0 or 1, B can be 0 or 1, C can be 0 or 1, or D can be 0 or 1.
+
+311
+40:1,171 --> 40:5,511
+16 choices of 2 by 2 matrices.
+
+312
+40:8,531 --> 40:11,571
+Well, they're not all they're not all invertible. Uh, so,
+
+313
+40:13,571 --> 40:16,51
+in fact, the six of them are invertible.
+
+314
+40:21,241 --> 40:24,931
+And uh you'll find so you get a little finite group of order six.
+
+315
+40:24,931 --> 40:37,561
+2 by 2 invertible matrices over the field of two elements under multiplication, you'll find that this group and and GL2 of F is actually isomorphic to the symmetric group on three letters.
+
+316
+40:39,381 --> 40:40,821
+How can I see that?
+
+317
+40:41,211 --> 40:53,901
+Well, think about what this thing really is. Before we actually, you see this is the difference between writing down matrices and calculating determinants and doing all these computations and actually stepping back and seeing what the heck we're doing.
+
+318
+40:54,661 --> 41:1,691
+So, what we're doing is this group operates on the vector space F squared.
+
+319
+41:2,361 --> 41:18,581
+Right? What does the vector space F squared look like when the field has two elements in it? It has the vector 0 0 in it. It has the vector 0 1 in it. It has the vector 1 0 in it, and it has the vector 1 1 in it.
+
+320
+41:18,901 --> 41:19,591
+That's it.
+
+321
+41:19,971 --> 41:24,601
+There are only four vectors in the two-dimensional vector space over the field of two elements.
+
+322
+41:24,951 --> 41:30,941
+So, if I have an element in this group, it's acting on this vector space, it's permuting these vectors around.
+
+323
+41:31,241 --> 41:32,731
+At the very least, correct?
+
+324
+41:33,11 --> 41:40,21
+It has to fix this vector because that's the origin of the vector space. Any linear transformation takes 0 to 0.
+
+325
+41:40,701 --> 41:43,841
+So it's doing a little permutation action on these three vectors.
+
+326
+41:44,811 --> 41:55,421
+Show that you can get any permutation you wish of those three vectors and that of course determines the linear transformation. So that gives you your isomorphism with the symmetric group on three letters.
+
+327
+41:57,111 --> 41:57,611
+Cool, huh?
+
+328
+41:58,531 --> 41:59,191
+Very cool.
+
+329
+42:0,701 --> 42:0,961
+Okay.
+
+330
+42:2,951 --> 42:12,221
+Now, I want to make one more point because Peter touched on it last time. To get a matrix for a transformation, you have to choose a basis. What happens when you change the basis?
+
+331
+42:12,221 --> 42:14,71
+So this is truly horrible computation.
+
+332
+42:20,741 --> 42:36,461
+If A is the matrix of a transformation T from V to V with respect to the basis V1 through Vn.
+
+333
+42:37,591 --> 42:53,631
+What is the matrix with respect to a different basis V1 prime to Vn prime. You get a new matrix, A prime.
+
+334
+42:58,591 --> 43:0,751
+How are A and A prime related?
+
+335
+43:1,211 --> 43:17,391
+Well, the answer is and I'm going to let you look at Artin for the computation here because I've never found this computation to be at all illuminating at the blackboard, that A prime is equal to P A P inverse
+
+336
+43:17,901 --> 43:32,411
+where P is the invertible n by n matrix giving the change of basis.
+
+337
+43:32,871 --> 43:32,961
+Namely,
+
+338
+43:33,341 --> 43:41,591
+if you write the coordinates of one basis in terms of the other basis, that gives you the matrix P. I won't say which basis in terms of which other basis. It's too horrible.
+
+339
+43:42,311 --> 43:46,231
+Um and you take and this is called the conjugate matrix.
+
+340
+43:52,951 --> 43:53,161
+So
+
+341
+43:54,321 --> 44:1,721
+more generally, Artin works out the formula. If you have a transformation from V to W,
+
+342
+44:2,151 --> 44:11,91
+you change your basis on V with the matrix P, you change your basis on W with the matrix Q, then the new matrix is Q A P inverse.
+
+343
+44:12,731 --> 44:13,261
+Okay?
+
+344
+44:13,511 --> 44:16,131
+Peter, did you do did you attempt that computation?
+
+345
+44:16,631 --> 44:17,541
+No, thank God. Okay.
+
+346
+44:18,131 --> 44:20,711
+Look carefully at that computation in Artin. It's important.
+
+347
+44:20,711 --> 44:21,761
+It's critical.
+
+348
+44:22,271 --> 44:25,721
+There has to be a formula for A prime in terms of A, right?
+
+349
+44:26,441 --> 44:30,141
+So when you actually work it out, you get this beautiful conjugation form.
+
+350
+44:30,521 --> 44:39,201
+In other words, if we're only interested in studying elements in one of these groups up to conjugacy, which is going to be very useful to us,
+
+351
+44:39,611 --> 44:44,531
+we can choose our basis carefully and get a particularly nice matrix, maybe.
+
+352
+44:45,951 --> 45:12,301
+So the advantage of this abstract vector space point of view, and it is a tremendous advantage, is that you can render a linear operator more transparent by the choice of an intelligent basis.
+
+353
+45:14,801 --> 45:15,101
+over
+
+354
+45:17,91 --> 45:26,231
+the F to the N A point of view is
+
+355
+45:28,431 --> 45:38,391
+by choosing a convenient basis,
+
+356
+45:40,11 --> 45:46,161
+we can get a simpler form for our operator.
+
+357
+45:46,161 --> 45:50,881
+If you're just fixed on a matrix, you're stuck with that matrix. I mean, you might have some horrible matrix and you don't know what the operator is doing at all.
+
+358
+45:58,861 --> 45:59,211
+But
+
+359
+45:59,901 --> 46:4,311
+since we're only interested in the underlying linear transformation,
+
+360
+46:4,701 --> 46:11,571
+we should feel free to choose a different basis. That'll have the property of conjugating the matrix and possibly turning it into a much simpler form.
+
+361
+46:12,91 --> 46:18,651
+And we're going to be doing that next time when we talk and look at Someone has a call.
+
+362
+46:19,621 --> 46:20,131
+Okay.
+
+363
+46:20,891 --> 46:22,661
+Let me give you an example of that.
+
+364
+46:23,281 --> 46:24,271
+Then we'll stop.
+
+365
+46:28,841 --> 46:37,241
+Example from our first proposition proposition.
+
+366
+46:38,121 --> 46:43,761
+The one where we had the map from T from V to W.
+
+367
+46:44,251 --> 47:15,911
+There exists a basis of V and a basis of W so that the matrix of T is a particularly simple matrix which looks like this. You get the identity matrix, r by r matrix and then the rest of the entries are all zeros, where r is equal to the rank of T.
+
+368
+47:17,671 --> 47:18,861
+The dimension of the image.
+
+369
+47:19,221 --> 47:27,371
+So you get a matrix of all ones and zeros, and you have R1s running down the diagonal, a little block like this of R by R identity matrix.
+
+370
+47:27,371 --> 47:36,671
+So this would be this is written in the book like this. I R 0 0 0.
+
+371
+47:37,261 --> 47:39,611
+Couldn't have a simpler matrix than that.
+
+372
+47:40,191 --> 47:42,101
+Okay, what basis do we take?
+
+373
+47:42,461 --> 47:55,821
+Well, we take our basis of V to start off with those vectors Vk + 1 Vk + n that I called. And then the final ones are V1 through VK.
+
+374
+47:56,461 --> 48:3,31
+Where these things are in the kernel and these things map to the basis of the image.
+
+375
+48:3,31 --> 48:13,121
+And we take our basis of W to be T of Vk + 1 up to T of Vk + n and then we just complete that to be some basis of W that we don't care about the rest of it.
+
+376
+48:14,201 --> 48:17,111
+And then look at look at what happens in the first proposition.
+
+377
+48:17,361 --> 48:32,761
+The image of this vector is this vector. So the first column of the matrix just has a one and all zeros. The image of the next vector is the next vector. So the second column has a one in the second place and all the rest zeros. Same thing happens all the way down here and the image of these vectors is just zero.
+
+378
+48:33,931 --> 48:35,201
+because they're in the kernel.
+
+379
+48:36,101 --> 48:38,41
+So, wasn't that a clever choice of basis?
+
+380
+48:38,631 --> 48:38,861
+Yeah.
+
+381
+48:50,171 --> 48:50,971
+sorry, this is V sub n.
+
+382
+48:51,121 --> 48:53,661
+Thank you very much. So the number of these vectors is R.
+
+383
+48:54,961 --> 48:56,601
+The number of such vectors is R.
+
+384
+48:56,601 --> 48:57,841
+Sorry, this is V sub n. Thank you very much.
+
+385
+48:57,841 --> 48:58,571
+Getting a little ahead of myself.
+
+386
+48:58,571 --> 49:0,201
+Now, this was too easy.
+
+387
+49:0,201 --> 49:4,301
+This was too easy, the basis choice, because we had a choice of basis of V and W.
+
+388
+49:4,301 --> 49:19,851
+A much more interesting question is when we have a map T from V to V. And we're only allowed to choose one basis. We're not allowed to choose the basis on the domain and image independently.
+
+389
+49:20,321 --> 49:24,801
+Can we choose a nice basis of V to render this operator particularly simple?
+
+390
+49:25,391 --> 49:34,541
+Well, the simplest way this would could happen is if we could find a basis of what are called eigen vectors. This brings in the whole subject of eigen vectors.
+
+391
+49:35,791 --> 49:41,681
+An eigen vector would be a vector such that T of V is some scalar times V. It's just scaled.
+
+392
+49:42,141 --> 49:50,521
+If you had a basis of such, the matrix would be a diagonal matrix. Wouldn't have all ones in it, right? But if we found a basis,
+
+393
+49:51,251 --> 50:5,301
+if we found a basis of such, then the matrix would look like this, C1, C2, Cn0.
+
+394
+50:6,11 --> 50:7,681
+That's an easy matrix to manipulate.
+
+395
+50:8,841 --> 50:11,201
+So, that's what we're going to deal with next time.
+
+396
+50:11,951 --> 50:20,751
+Can we always find a basis of eigen vectors? When can we? When can't we? You know, what do we do if we can't?
+
+397
+50:21,331 --> 50:25,981
+That's the next question, to try to find bases that put certain linear operators in nice form.
+
+398
+50:26,561 --> 50:28,151
+And that'll be the topic for Friday.
+
+399
+50:28,751 --> 50:29,441
+Good.

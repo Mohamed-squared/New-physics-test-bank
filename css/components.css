@@ -301,5 +301,34 @@ details > div {
     color: var(--color-gray-500);
 }
 
+/* Active control state for music player buttons (e.g. shuffle, repeat) */
+.active-control {
+    color: var(--color-primary-500) !important; /* Force active color */
+}
+.dark .active-control {
+    color: var(--color-primary-400) !important;
+}
+
+/* Disabled feature button styling */
+.disabled-feature {
+    opacity: 0.6;
+    cursor: not-allowed;
+    position: relative;
+}
+.disabled-feature::after {
+    content: "Soon";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: var(--color-warning-400);
+    color: var(--color-black);
+    font-size: 0.6rem;
+    padding: 0.05rem 0.25rem;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+}
+.dark .disabled-feature::after {
+    background-color: var(--color-warning-500);
+}
 
 /* --- END OF FILE components.css --- */

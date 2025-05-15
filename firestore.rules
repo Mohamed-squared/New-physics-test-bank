@@ -87,13 +87,15 @@ service cloud.firestore {
     function isValidTestGenConfig(config) {
       return config is map &&
              config.keys().hasAll(['textMcqCount', 'textProblemCount', 'lectureMcqCounts', 'lectureProblemCounts', 'timingOption']) &&
+             // Check if customDurationMinutes exists only if timingOption is 'custom'
+             (config.timingOption != 'custom' || (config.timingOption == 'custom' && config.customDurationMinutes is number && config.customDurationMinutes >= 10)) &&
              config.textMcqCount is number && config.textMcqCount >= 0 &&
              config.textProblemCount is number && config.textProblemCount >= 0 &&
              config.lectureMcqCounts is map &&
              config.lectureProblemCounts is map &&
-             config.timingOption is string && (config.timingOption == 'default' || config.timingOption == 'calculated' || config.timingOption == 'custom') &&
-             (config.timingOption != 'custom' || (config.timingOption == 'custom' && config.customDurationMinutes is number && config.customDurationMinutes >= 10)) &&
-             true;
+             config.timingOption is string && (config.timingOption == 'default' || config.timingOption == 'calculated' || config.timingOption == 'custom');
+             // Note: Removed the final 'true;' as it's implicit if all above pass.
+             // Making customDurationMinutes conditional within the main check is more robust.
     }
 
     // --- Usernames Registry ---
@@ -312,7 +314,8 @@ service cloud.firestore {
         allow create: if isLoggedIn() && isOwner(userId) &&
                          request.resource.data.userId == userId &&
                          request.resource.data.examId == examId && // examId is typically generated client-side
-                         request.resource.data.courseId is string &&
+                         (request.resource.data.courseId is string || request.resource.data.courseId == null) &&
+                         
                          request.resource.data.questions is list &&
                          request.resource.data.answers is map &&
                          request.resource.data.markingResults is map &&
@@ -321,22 +324,25 @@ service cloud.firestore {
                          request.resource.data.status is string && (request.resource.data.status == 'started' || request.resource.data.status == 'completed') &&
                          request.resource.data.createdAt == request.time &&
                          request.resource.data.completedAt == (request.resource.data.status == 'completed' ? request.time : null) &&
-                         request.resource.data.durationMinutes is number && request.resource.data.durationMinutes >= 5 &&
+                         request.resource.data.durationMinutes is number && request.resource.data.durationMinutes >= 0 &&
                          request.resource.data.isTestGen is bool &&
                          (
                            ( request.resource.data.isTestGen == false &&
                              (!('testGenConfig' in request.resource.data) || request.resource.data.testGenConfig == null) &&
+                             request.resource.data.courseId is string &&
                              request.resource.data.keys().hasOnly([
                                'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
                                'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
-                               'examType'
-                             ])
+                               'examType' // This field is for non-TestGen exams (e.g., "assignment")
+                             ]) && request.resource.data.examType is string
                            ) ||
                            ( request.resource.data.isTestGen == true &&
+                             request.resource.data.courseId == null &&
                              request.resource.data.testGenConfig is map &&
                              isValidTestGenConfig(request.resource.data.testGenConfig) &&
+                             request.resource.data.subjectId is string &&
                              request.resource.data.keys().hasOnly([
-                               'userId', 'examId', 'courseId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
+                               'userId', 'examId', 'courseId', 'subjectId', 'questions', 'answers', 'markingResults', 'score', 'maxScore',
                                'status', 'createdAt', 'completedAt', 'durationMinutes', 'isTestGen',
                                'testGenConfig'
                              ])

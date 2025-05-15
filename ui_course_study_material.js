@@ -1549,7 +1549,7 @@ export async function fetchVideoDurationsIfNeeded(videoIds) {
 }
 
 
-async function askAboutFullPdf() {
+export async function askAboutFullPdf() {
       if (!pdfDoc || !currentCourseIdInternal || !currentChapterNumber) {
          alert("PDF document or course context is not available to ask about.");
          return;

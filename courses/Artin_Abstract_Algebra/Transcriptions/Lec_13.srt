@@ -1,0 +1,1918 @@
+1
+00:00:12,289 --> 00:00:16,159
+Exam was a difficult exam. It it was a little, I think too long.
+
+2
+00:00:17,279 --> 00:00:24,249
+Uh, the median and mean turned out to be 75% and the grades were distributed as follows.
+
+3
+00:00:25,319 --> 00:00:30,399
+Uh, so I think if you were in the 70s or above, you're doing fine.
+
+4
+00:00:30,399 --> 00:00:34,419
+Down here, I think you need to do a little bit of work just to practice doing these kind of problems.
+
+5
+00:00:34,419 --> 00:00:41,499
+I realize we don't have time pressure on homework, and I may try to design the second hour exam to relieve a little time pressure. We'll see what we can do.
+
+6
+00:00:42,679 --> 00:00:44,699
+Uh, so let me just go over the questions briefly.
+
+7
+00:00:44,699 --> 00:00:50,79
+I think the problem one, number of people had a difficulty with. The definition of a cyclic group
+
+8
+00:00:53,109 --> 00:00:56,269
+uh means there exists G is cyclic
+
+9
+01:00,139 --> 01:09,39
+if there is an element g in G such that any
+
+10
+01:09,39 --> 01:15,159
+or let's call this element A maybe, the generator, such that any
+
+11
+01:17,109 --> 01:19,769
+g in G has the form
+
+12
+01:23,219 --> 01:24,549
+g is equal to A to the N,
+
+13
+01:25,979 --> 01:28,299
+some N in Z.
+
+14
+01:29,529 --> 01:32,69
+So any element is some power of G.
+
+15
+01:32,549 --> 01:33,899
+Such Gs are called generators.
+
+16
+01:33,899 --> 01:40,649
+Do not think, and this is where people made a mistake on the second half of the problem, that any element of the group is a generator.
+
+17
+01:41,79 --> 01:49,119
+That's not true. For a cyclic group of order four, the square of a generator is not a generator because it has order two.
+
+18
+01:49,789 --> 01:54,849
+So, the definition of a cyclic group, there should be some generator of this form.
+
+19
+01:54,849 --> 02:00,139
+And then you're supposed to prove that if H is a subgroup of G, is also cyclic.
+
+20
+02:01,869 --> 02:08,239
+So what we have to find for H is a generator of H, given the fact that A is a generator for G.
+
+21
+02:08,909 --> 02:10,19
+Let's write it like this.
+
+22
+02:11,189 --> 02:12,569
+So there are two possibilities.
+
+23
+02:13,269 --> 02:18,599
+If H is equal to the identity, then it's true.
+
+24
+02:20,79 --> 02:24,869
+Because the identity group is by definition cyclic, you can take the identity element as a generator.
+
+25
+02:25,449 --> 02:25,929
+If not,
+
+26
+02:30,849 --> 02:41,19
+then H contains A to the N for some N bigger than one or equal to one.
+
+27
+02:42,889 --> 02:51,29
+Because if it if it's not just the identity element, then it contains some power of A for some non-zero integer.
+
+28
+02:51,29 --> 02:58,799
+And if it contains some non-zero integer, then by taking the inverse of that element, you can assume that it contains a power of A for some positive integer.
+
+29
+03:00,259 --> 03:03,599
+Taking inverse if necessary.
+
+30
+03:05,819 --> 03:10,269
+And then what you do to find a generator of H is a generator
+
+31
+03:13,869 --> 03:20,29
+B of H is A to the K where K is the minimal such power.
+
+32
+03:23,999 --> 03:24,809
+Such N.
+
+33
+03:25,859 --> 03:33,699
+Namely, for all the positive powers of A in in that lie in H, take the smallest positive power of A that lies in H, call that thing B.
+
+34
+03:34,619 --> 03:36,579
+And I claim that B generates H.
+
+35
+03:36,929 --> 03:38,19
+So now you have to prove that.
+
+36
+03:38,19 --> 03:44,739
+So you say, well, suppose there's something else in H, say A to the M is in H.
+
+37
+03:45,769 --> 03:50,429
+So we write M as some multiple of K
+
+38
+03:50,939 --> 03:56,109
+plus a remainder with zero less than or equal to R less than K.
+
+39
+03:56,869 --> 03:59,179
+We use the Euclidean algorithm to write it that way.
+
+40
+03:59,829 --> 04:07,359
+Since A to the M and A to the K to the Qth power are both in H,
+
+41
+04:10,569 --> 04:12,279
+so is A to the R.
+
+42
+04:14,219 --> 04:16,729
+But R is a positive number less than K.
+
+43
+04:17,849 --> 04:28,39
+And the only positive power of A by by definition of what K is, that lies in H, or non-negative power of A that lies in H, is the zeroth power.
+
+44
+04:30,129 --> 04:31,859
+That implies that R is equal to zero,
+
+45
+04:32,809 --> 04:39,969
+so that M is equal to Q times K and A to the M is equal to B to the Q.
+
+46
+04:41,619 --> 04:48,249
+And that shows that any element in H is a power of the smallest power of A that lies in H.
+
+47
+04:48,569 --> 04:49,809
+So that H is also cyclic.
+
+48
+04:50,399 --> 04:52,819
+It's not true that anything in H will be a generator.
+
+49
+04:53,339 --> 04:55,119
+So that was a mistake that a lot of people made.
+
+50
+04:56,839 --> 04:57,649
+Yeah, Atticus.
+
+51
+04:57,649 --> 05:05,329
+When you say H contains A to the N, do you actually mean H has the element A to the N? Yeah, sorry, like that.
+
+52
+05:05,519 --> 05:06,509
+Yeah, yeah.
+
+53
+05:06,929 --> 05:10,119
+There's some power of A that lies in H if it's not the identity.
+
+54
+05:10,799 --> 05:11,529
+All right, number two.
+
+55
+05:13,469 --> 05:20,699
+So, the first thing is if H is normal, show that GH G is equal to
+
+56
+05:21,389 --> 05:22,779
+Sorry, HGH, sorry.
+
+57
+05:24,959 --> 05:26,339
+Is a is a left coset.
+
+58
+05:30,339 --> 05:31,119
+Well, if H is normal,
+
+59
+05:31,839 --> 05:36,579
+that implies for every G in G that GH is equal to HG as a set.
+
+60
+05:40,999 --> 05:43,439
+That the left coset of G is the right coset of G.
+
+61
+05:43,989 --> 05:49,679
+So you simply replace this HG here by
+
+62
+05:50,179 --> 05:52,659
+it's the same as the set GH times H.
+
+63
+05:53,229 --> 05:59,769
+But GH times H by associativity is the same thing as G times H because anything in H times anything in H lies in H.
+
+64
+06:00,289 --> 06:01,579
+So that shows it's a left coset.
+
+65
+06:04,999 --> 06:07,989
+And the set the third second part of this problem is a little harder.
+
+66
+06:08,569 --> 06:14,119
+You're supposed to say if H is not normal, then this is not equal to GH.
+
+67
+06:14,889 --> 06:16,659
+So, let's let's do it this way.
+
+68
+06:16,659 --> 06:22,749
+If HGH is a left coset,
+
+69
+06:24,289 --> 06:26,319
+we're going to prove that H is a normal subgroup.
+
+70
+06:26,829 --> 06:34,589
+Well, if it is a left coset, it must be the coset GH.
+
+71
+06:35,619 --> 06:36,909
+Because it contains that coset.
+
+72
+06:36,909 --> 06:40,679
+If you take the first element in H to be the identity element,
+
+73
+06:41,609 --> 06:45,929
+and you take the identity, because this is equal to E times GH.
+
+74
+06:46,329 --> 06:47,759
+And E is an element in H.
+
+75
+06:48,689 --> 06:51,209
+So it because it contains because
+
+76
+06:53,359 --> 06:54,449
+it contains
+
+77
+06:57,359 --> 06:58,149
+this set.
+
+78
+06:59,589 --> 07:01,909
+So there's only one possible coset it could be.
+
+79
+07:02,869 --> 07:09,529
+So, on the other hand, if, but then, so HGH has to equal the set GH.
+
+80
+07:11,249 --> 07:15,929
+Now, what this means if you uh
+
+81
+07:19,19 --> 07:21,179
+Mhm.
+
+82
+07:22,909 --> 07:24,319
+So I claim that that means that
+
+83
+07:25,939 --> 07:28,189
+if you take this right coset,
+
+84
+07:28,189 --> 07:34,239
+this implies that H times G is actually contained in GH.
+
+85
+07:34,869 --> 07:39,719
+Because this is a subset of this.
+
+86
+07:40,289 --> 07:43,359
+Namely, this is H times G times the identity.
+
+87
+07:44,659 --> 07:48,699
+So that this right coset is contained in this left coset.
+
+88
+07:50,719 --> 07:58,139
+In particular, conjugating by G, G inverse HG is contained in H.
+
+89
+08:01,519 --> 08:03,209
+Well, that's true for every G.
+
+90
+08:06,59 --> 08:10,859
+Because this is assumed to be a left coset for all G in G.
+
+91
+08:12,259 --> 08:13,699
+But that implies
+
+92
+08:15,609 --> 08:19,509
+in fact that G inverse HG is equal to H
+
+93
+08:19,849 --> 08:21,19
+for all G.
+
+94
+08:22,159 --> 08:33,109
+Because take this identity and multiply it on the left by G and on the right by G inverse, you get H is contained in G H G inverse for all G.
+
+95
+08:35,719 --> 08:39,679
+Conjugate by uh G.
+
+96
+08:40,789 --> 08:50,639
+And if this is contained in this, and this is contained in this for all G, then this is contained in this, which is contained in the same thing for G replaced by G inverse, so they have to be equal.
+
+97
+08:51,289 --> 08:52,689
+And this means that H is normal.
+
+98
+08:56,529 --> 09:04,719
+So if this were a left coset for all G, then we've just proved that H is normal. So if it isn't normal, there has to be some G for which this isn't a left coset.
+
+99
+09:07,599 --> 09:10,569
+Okay. The third problem most people got, it wasn't that hard.
+
+100
+09:10,889 --> 09:15,579
+It's really a definition of what it means to be equal in a quotient group.
+
+101
+09:16,309 --> 09:17,879
+So, the third problem,
+
+102
+09:19,439 --> 09:31,709
+suppose if X bar commutes with Y bar in G mod N, which is G bar,
+
+103
+09:32,529 --> 09:38,629
+that's just a statement that the coset XY is the same as the coset YX.
+
+104
+09:40,809 --> 09:43,69
+So this is an equivalent way of stating it.
+
+105
+09:44,279 --> 09:50,269
+Because this is what X bar times Y bar is as a coset, and this is what Y bar X bar is as a coset.
+
+106
+09:50,849 --> 09:54,779
+But this is the same thing if you multiply, let's see how we do this.
+
+107
+09:54,779 --> 09:57,439
+Let's multiply on the left by X inverse.
+
+108
+09:58,259 --> 10:02,49
+YN is equal to X inverse YXN.
+
+109
+10:02,689 --> 10:10,459
+And then multiply on the left by Y inverse, N is equal to Y inverse X YXN.
+
+110
+10:11,319 --> 10:15,829
+And if the coset of this is the is N, that means that this is an element in N.
+
+111
+10:18,19 --> 10:18,869
+Did I do this right?
+
+112
+10:19,209 --> 10:20,389
+Is that what we were supposed to prove?
+
+113
+10:20,389 --> 10:22,559
+Oh, I think I did it in the other way around. Sorry.
+
+114
+10:23,449 --> 10:24,429
+I apologize.
+
+115
+10:24,829 --> 10:25,829
+Um, let's do it again.
+
+116
+10:26,419 --> 10:32,29
+So, let's instead multiply this by Y inverse.
+
+117
+10:32,529 --> 10:34,149
+So I get exactly the statement that I put up.
+
+118
+10:34,599 --> 10:36,959
+Apologies, I did it the wrong way. Y inverse XYN
+
+119
+10:37,659 --> 10:44,959
+is equal to XN and then that's the same thing as X inverse Y inverse XYN
+
+120
+10:45,479 --> 10:51,879
+is equal to N, which is the same thing as X inverse Y inverse XY is in N.
+
+121
+10:52,649 --> 10:56,209
+And all these steps are reversible, so that's the that's the problem three.
+
+122
+10:56,869 --> 11:01,999
+Now, this element is sometimes called the commutator of X and Y. You'll see it in the literature written that way.
+
+123
+11:04,229 --> 11:05,969
+Okay. That's problem three.
+
+124
+11:06,269 --> 11:11,709
+Problem four, people got the definition of the center right, but then had trouble with the rest of the problem.
+
+125
+11:12,489 --> 11:13,859
+So the definition of the center
+
+126
+11:17,19 --> 11:24,299
+consists of all elements Z such that ZG is equal to GZ for all G in Z.
+
+127
+11:25,159 --> 11:26,889
+The things that commute with every element.
+
+128
+11:26,989 --> 11:29,769
+Now, suppose you have a unique element of order two.
+
+129
+11:29,899 --> 11:30,659
+First of all,
+
+130
+11:30,859 --> 11:33,99
+if Z, let's say A has order two
+
+131
+11:36,449 --> 11:37,149
+in G.
+
+132
+11:37,669 --> 11:42,79
+Then I claim that GAJ inverse has order two.
+
+133
+11:45,559 --> 11:47,829
+The conjugate of any element of order two has order two.
+
+134
+11:47,829 --> 11:51,839
+In particular, in general, the conjugate of an element of order N has order N.
+
+135
+11:51,989 --> 11:55,989
+Conjugation is an automorphism of the group, so it preserves everything, like order.
+
+136
+11:56,479 --> 11:58,909
+Well, you can prove this rather easily. You just square the element.
+
+137
+11:58,909 --> 12:00,849
+And these two things cancel,
+
+138
+12:00,849 --> 12:03,119
+so you get GA squared G inverse,
+
+139
+12:03,119 --> 12:07,759
+which is just G G inverse because A squared is one, which is E.
+
+140
+12:07,759 --> 12:13,559
+Which shows that the square of this element is one, but this element can't be one because you can't conjugate a non-trivial element into the identity.
+
+141
+12:13,559 --> 12:17,719
+So it has order two.
+
+142
+12:17,719 --> 12:21,659
+Well, if it has order two and there's a unique element of order two,
+
+143
+12:21,659 --> 12:24,79
+And this is what most people didn't use in the problem.
+
+144
+12:24,79 --> 12:28,639
+You can't just get it out of the fact that the conjugate has order two. If A is unique,
+
+145
+12:28,639 --> 12:35,729
+that implies that G A G inverse is equal to A for all G.
+
+146
+12:35,729 --> 12:41,219
+Because there's another element of order two.
+
+147
+12:41,219 --> 12:43,869
+Which means that GA
+
+148
+12:43,869 --> 12:46,469
+is equal to AG
+
+149
+12:46,469 --> 12:48,909
+for all G, which implies that A is in the center.
+
+150
+12:48,909 --> 12:52,169
+This argument, by the way, is this the argument
+
+151
+12:52,169 --> 12:56,549
+you can show that use to show that the conjugate of an element of order N has order N.
+
+152
+12:56,549 --> 13:04,579
+Again, you multiply it N times.
+
+153
+13:04,579 --> 13:09,679
+N times.
+
+154
+13:09,679 --> 13:16,669
+And then you all the internal G's and G inverses cancel and you get GA to the N G inverse, which is the identity if A to the N is the identity.
+
+155
+13:16,669 --> 13:24,149
+And then you can do that for all G, so that shows that it has exact order N.
+
+156
+13:24,149 --> 13:26,769
+Okay.
+
+157
+13:26,769 --> 13:32,279
+So this is unique. Can you have a unique element of order three? So almost everyone got that you can't because if you have an element of order three, it generates a cyclic group of order three.
+
+158
+13:32,279 --> 13:41,159
+So you get a little subgroup that looks like E A A squared.
+
+159
+13:41,159 --> 13:44,239
+And you find that this element also has order three.
+
+160
+13:44,239 --> 13:48,549
+In fact, A squared is the same as A inverse. A and A inverse always have the same order.
+
+161
+13:48,549 --> 13:53,999
+So the only way it could possibly be unique is if A is equal to A inverse, which means that A has to have order two.
+
+162
+13:53,999 --> 13:58,429
+If you have an element of order four, it can't be unique. An element of order five can't be unique.
+
+163
+13:59,179 --> 14:01,609
+So that's A is not equal to A squared.
+
+164
+14:02,119 --> 14:04,679
+So you can't have a unique element of order three.
+
+165
+14:05,249 --> 14:06,909
+But these elements frequently come up.
+
+166
+14:06,909 --> 14:09,149
+We're going to see groups which have unique elements of order two.
+
+167
+14:09,149 --> 14:11,419
+So you get an interesting element in the center.
+
+168
+14:11,419 --> 14:24,329
+Okay. Problem four, almost everyone got.
+
+169
+14:24,329 --> 14:28,609
+That was the question on uh the symmetric matrices.
+
+170
+14:28,609 --> 14:34,459
+So I'll just it's it's So if A is equal to
+
+171
+14:34,459 --> 14:37,429
+AIJ where AIJ is
+
+172
+14:37,429 --> 14:41,709
+AJI. This is clearly closed under addition.
+
+173
+14:41,709 --> 14:48,599
+And scalar multiplication.
+
+174
+14:49,609 --> 14:53,999
+And uh contains the zero element, so it's a subspace.
+
+175
+14:54,999 --> 14:57,539
+That was easy.
+
+176
+14:58,199 --> 15:05,969
+And then the dimension isn't hard either because if you think about it, such a matrix is completely determined by the entries on the diagonal and above the diagonal.
+
+177
+15:06,589 --> 15:09,759
+Once you have these entries of the matrix, they determine everything else.
+
+178
+15:10,239 --> 15:14,699
+So you just have to count how many possibilities are there for matrices on the diagonal, et cetera.
+
+179
+15:14,929 --> 15:22,369
+And the number of entries in this diagonal is N, and here we have N - 1 entries, and here we have N - 2 entries, all the way down to one entry.
+
+180
+15:22,849 --> 15:30,119
+So the dimension is 1 + 2 + + N, which is N * N + 1 over 2.
+
+181
+15:30,549 --> 15:31,869
+A little bit more than N squared.
+
+182
+15:33,889 --> 15:34,509
+Okay.
+
+183
+15:35,509 --> 15:37,889
+And uh problem six, most people got.
+
+184
+15:38,599 --> 15:44,119
+Oh, I'm sorry. Then you had to I asked whether it was closed under multiplication. So I got all kinds of abstract arguments here.
+
+185
+15:44,359 --> 15:46,649
+But all you have to do is write down an example.
+
+186
+15:47,109 --> 15:51,779
+So, an example, if you do this, if you multiply this by this matrix,
+
+187
+15:52,939 --> 15:58,919
+These are both symmetric matrices, but when you take the matrix product, you get this, which is not symmetric.
+
+188
+15:58,919 --> 16:00,459
+Some people gave me the general 2x2
+
+189
+16:00,459 --> 16:05,49
+times the general 2x2.
+
+190
+16:05,49 --> 16:08,949
+They got a 2x2 matrix here and they said, well, it doesn't look equal.
+
+191
+16:08,949 --> 16:12,229
+But I don't know that. I mean it's some funny combinations of A's and B's.
+
+192
+16:12,659 --> 16:14,229
+You actually actually have to give me numbers.
+
+193
+16:14,489 --> 16:21,929
+Other people said, well, if it were closed under multiplication, then by taking transpose, I would have AB is equal to BA
+
+194
+16:22,619 --> 16:27,929
+for all elements in the group. And since we know matrix multiplication isn't commutative, then that can't happen.
+
+195
+16:28,309 --> 16:31,959
+Well, we don't know that symmetric matrix multiplication isn't commutative.
+
+196
+16:32,289 --> 16:33,219
+It's a picky point.
+
+197
+16:33,769 --> 16:38,689
+But it's so much easier when you're trying to give a counter example to a statement, just give an example.
+
+198
+16:39,659 --> 16:40,549
+Less theory.
+
+199
+16:40,549 --> 16:42,629
+When you're trying to prove something, that's when you need theory.
+
+200
+16:44,159 --> 16:44,649
+Okay.
+
+201
+16:45,159 --> 16:50,739
+And then finally problem six, which almost everyone realized once you wrote down the bijection, it was pretty clear.
+
+202
+16:51,199 --> 16:54,209
+So we had the vector space F to the N.
+
+203
+16:55,989 --> 17:02,969
+And we want to give a a bijection between the set of bases and uh GLNF.
+
+204
+17:02,969 --> 17:07,39
+So first of all, most people forgot the first part of the problem to actually define this group.
+
+205
+17:07,309 --> 17:08,899
+I didn't take too much off.
+
+206
+17:09,259 --> 17:14,759
+But this is going to be the set of A which are N by N matrices
+
+207
+17:15,939 --> 17:24,49
+with entries in F and determinant of A not equal to zero under multiplication.
+
+208
+17:24,49 --> 17:28,999
+That's the definition of the group.
+
+209
+17:28,999 --> 17:32,19
+GLNF.
+
+210
+17:32,19 --> 17:53,849
+And we want a map between bases and elements in GLNF and the the idea is if you take a basis, an ordered basis V1 VN, and you define F of that basis to be the matrix where the first column is the entries of V1 and the second column is the entries of V2, and the last column is the entries of VN.
+
+211
+17:54,269 --> 17:56,109
+That gives you an N by N matrix.
+
+212
+17:56,619 --> 18:07,649
+Since these elements are linearly independent, because it's a basis, these columns are linearly independent, so that that people could quote, shows that the determinant of the matrix is non-zero.
+
+213
+18:07,909 --> 18:11,219
+So that's a map between bases and elements in GLNF.
+
+214
+18:11,649 --> 18:21,749
+It's clearly a one-to-one map because if if you know what the matrix is, you know all the entries of the basis, so you know the basis. No two bases would go to the same matrix.
+
+215
+18:22,129 --> 18:29,119
+And it's onto because if I take any invertible matrix and I just can take the the first column is my first basis vector in FN.
+
+216
+18:29,669 --> 18:38,689
+And the second column is my second basis vector. The fact that the matrix is invertible says that the elements, these N elements are linearly independent, so give a basis.
+
+217
+18:40,139 --> 18:41,579
+That was all I needed for that.
+
+218
+18:42,109 --> 18:48,859
+Now, for those of you who tried the last one, and there were one or two people who tried it, I'm not sure anyone, one or two people got it.
+
+219
+18:49,929 --> 18:52,629
+You use this problem to do it. That's the best way to do it.
+
+220
+18:52,629 --> 19:03,49
+Namely to to calculate the order of the group GLN of Z mod PZ, you have to calculate
+
+221
+19:03,49 --> 19:10,229
+the number of ordered bases of Z mod PZ to the Nth power.
+
+222
+19:12,119 --> 19:14,689
+Well, why would that be any easier than calculating this?
+
+223
+19:14,689 --> 19:15,829
+Well, let's try to make a basis.
+
+224
+19:15,829 --> 19:18,839
+The first thing we have to do is choose our first basis vector.
+
+225
+19:19,529 --> 19:28,709
+So that can that's got to be a vector in this space and the only thing it has to be is linearly independent from zero. We're going to build a basis by keeping adding linearly independent elements.
+
+226
+19:30,439 --> 19:37,79
+So the first thing is just some non-zero vector in there and there are P to the N minus one choices for that first vector.
+
+227
+19:38,739 --> 19:41,709
+Right? Because there are P to the N vectors here and only one is zero.
+
+228
+19:42,169 --> 19:51,559
+And then if we're going to make the we have to choose a basis vector V2, we want it linearly independent from V1.
+
+229
+19:52,129 --> 19:54,799
+IE not on the line spanned by V1.
+
+230
+19:54,799 --> 20:00,739
+So there are P to the N total vectors in here and there are P vectors on the line spanned by V1.
+
+231
+20:00,739 --> 20:04,229
+So there are P to the N minus P choices for V2.
+
+232
+20:04,789 --> 20:10,679
+And then if we want to choose V3, it better be linearly independent from the plane spanned by V1 and V2.
+
+233
+20:11,289 --> 20:19,49
+And there are P to the N minus P squared choices for the vector V3 because there are P to the N vectors total and these are the number of vectors in the plane spanned by V1 and V2.
+
+234
+20:19,49 --> 20:27,729
+We keep going down and the last best vector is P to the N minus P to the N minus 1.
+
+235
+20:28,279 --> 20:34,249
+So the total number of bases is the product of this number of choices times this number of choices times this times this.
+
+236
+20:34,899 --> 20:45,429
+So it's P to the N minus 1, sorry, P to the N minus 1, P to the N minus P down to P to the N minus P to the N minus 1.
+
+237
+20:45,829 --> 21:00,759
+And if you factor out all the powers of P you get, you get P to the N times N minus 1 over 2 times P to the N minus 1 P to the N minus 1 minus 1 down to P minus 1.
+
+238
+21:01,679 --> 21:14,319
+So, in particular, if you wanted to do the order of the finite group GL2 over Z mod P, 2x2 invertible matrices, it would be P times P squared minus 1 times P minus 1.
+
+239
+21:17,149 --> 21:18,959
+We're going to come back to this finite group later.
+
+240
+21:18,959 --> 21:19,699
+It's an important group to do.
+
+241
+21:19,699 --> 21:31,439
+And the best way to count its order is to use this bijection of sets, namely to forget that it's a group and to think of it as counting the number of ways of assembling a basis of this vector space.
+
+242
+21:32,499 --> 21:37,509
+There was no extra credit given for that, but I thought you might find it amusing if you had time. Nobody had any time.
+
+243
+21:38,349 --> 21:44,369
+So I will try to, as I say, construct the next exam so that it not only tests the material, but gives you enough time to think about it.
+
+244
+21:44,479 --> 21:50,649
+Many many people complain that they just were sort of too frazzled and I know the feeling. I'm very slow myself.
+
+245
+21:50,809 --> 21:53,409
+So, uh I will try to set it up.
+
+246
+21:54,89 --> 21:55,219
+Questions about this?
+
+247
+21:56,379 --> 22:00,699
+Do not get discouraged. I don't think anybody in the course is seriously lost. This is all a process of learning a language.
+
+248
+22:00,699 --> 22:07,769
+If you're, as I say, if you're if you're in this range, you're doing fine. If you're down here, I think you need a little bit more practice.
+
+249
+22:10,519 --> 22:11,429
+Okay.
+
+250
+22:11,429 --> 22:12,539
+Now we're going to get started.
+
+251
+22:12,539 --> 22:26,599
+And we're going to with the linear algebra that we have at our disposal, we're going to go back and construct some very interesting groups and start to study a beautiful relationship that was discovered at the end of the 19th century between group theory and geometry.
+
+252
+22:27,429 --> 22:31,239
+Almost all of geometry is now formulated in terms of group theory.
+
+253
+22:31,759 --> 22:40,599
+Many of you may have been reading in the popular science press, some mathematicians and astronomers have come up with a model for the shape of the universe.
+
+254
+22:40,829 --> 22:42,839
+It's all based on group theory, based on a dodecahedron.
+
+255
+22:43,169 --> 22:46,219
+The universe is a soccer ball.
+
+256
+22:46,569 --> 22:47,739
+Um anyhow, uh
+
+257
+22:48,739 --> 23:02,979
+I don't actually believe their model and I think that when they look at a little bit more data that's come in from the from the um from the various radio uh uh telescopes that are orbiting that they'll contradict it, but it's an interesting uh hypothesis.
+
+258
+23:02,979 --> 23:05,679
+Do you think the universe looks like a dodecahedron?
+
+259
+23:06,9 --> 23:11,679
+Yeah, that it's finite and that you should be able to look out in this direction and see something that you saw back in that direction.
+
+260
+23:11,949 --> 23:12,829
+Yeah, if you look on the
+
+261
+23:13,579 --> 23:14,999
+Do they really believe it? Yeah, it was an article
+
+262
+23:15,289 --> 23:17,209
+There's an article No, no, no, no.
+
+263
+23:17,469 --> 23:22,299
+Kepler had this wonderful model where Yeah, but Kepler also believed for all of his
+
+264
+23:22,299 --> 23:32,159
+for all of his science, he believed that the the solar system was organized by inscribing platonic solids into other platonic solids.
+
+265
+23:32,379 --> 23:34,659
+I mean, there was there was a lot of mysticism back then.
+
+266
+23:34,899 --> 23:42,599
+So mathematicians still believe that there should be some very simple three-dimensional geometric shape that describes a finite universe.
+
+267
+23:42,769 --> 23:46,769
+And the astronomers keep coming up with data that contradict this. But never mind their data.
+
+268
+23:46,769 --> 23:52,929
+Um, so if you look on the cover of, I believe Nature, which in which the article is published this month, there's a description of it.
+
+269
+23:52,929 --> 23:54,859
+I know the guy who wrote the article, Bill Meeks.
+
+270
+23:54,989 --> 23:56,739
+He's been proposing this for some time.
+
+271
+23:57,119 --> 24:03,589
+And they're just getting enough um they're just getting enough data from all these orbiting satellites to actually test it.
+
+272
+24:04,319 --> 24:04,719
+Okay.
+
+273
+24:05,369 --> 24:09,439
+Now, we have this group that I called GLN of F for any field.
+
+274
+24:09,899 --> 24:18,989
+Now we're going to define a very interesting subgroup of it, which I'm going to call ON of F. And then we're going to define a subgroup of that, which I'm going to call SON of F.
+
+275
+24:19,259 --> 24:24,659
+And that works for any field and we're going to show that they have some interesting matrices in it.
+
+276
+24:24,909 --> 24:31,639
+And then we're going to take a look at this when F is equal to R,
+
+277
+24:33,709 --> 24:35,839
+it's related to geometry, in fact, Euclidean geometry.
+
+278
+24:35,839 --> 24:39,579
+This group, by the way,
+
+279
+24:39,579 --> 24:42,219
+this sometimes is called the general linear group.
+
+280
+24:42,219 --> 24:51,609
+These are called the orthogonal groups. That's why the O.
+
+281
+24:52,119 --> 24:54,869
+And this SO stands for special orthogonal group. You'll see what that is.
+
+282
+24:55,289 --> 25:01,759
+That's a normal subgroup of the orthogonal group. And in fact, the index is two, so it's rather simple.
+
+283
+25:02,249 --> 25:04,669
+Okay, so here's the definition of this group.
+
+284
+25:05,79 --> 25:13,19
+The first thing we do is we take our vector space V, which is F to the N. And this group is just the linear maps from V to V which are isomorphisms.
+
+285
+25:13,629 --> 25:21,779
+So we're going to get a subgroup by putting some more structure on V, some more structure, and then just looking at the subgroup that preserves that structure.
+
+286
+25:22,269 --> 25:29,669
+So we put additional structure on V and the structure we're going to put on it is an inner product.
+
+287
+25:29,669 --> 25:38,709
+We're going to take two vectors and give you an a scalar.
+
+288
+25:40,39 --> 25:45,109
+Uh when you take courses in calculus, these things are called inner products. More generally, they're called bilinear forms.
+
+289
+25:45,109 --> 25:51,39
+All right.
+
+290
+25:51,39 --> 25:55,729
+So we're going to define an extra thing then that that takes two vectors and coughs up a scalar.
+
+291
+25:55,889 --> 25:56,689
+And here's the definition.
+
+292
+25:57,79 --> 26:02,469
+The vector itself is an N-tuple of elements in F.
+
+293
+26:03,589 --> 26:06,659
+And the vector W is an N-tuple of elements in F.
+
+294
+26:08,909 --> 26:17,609
+And the definition of this inner product is what you did in calculus. A1 B1 + A2 B2 + + AN BN.
+
+295
+26:17,969 --> 26:21,769
+So it's some weird form of the product.
+
+296
+26:22,179 --> 26:27,129
+You take the product of the first two elements, then you add it to the product of the second two elements, then you add it to the product of the third. If we were just in a one-dimensional vector space, it would be the product.
+
+297
+26:27,479 --> 26:33,609
+It just be A1 times B1. Okay.
+
+298
+26:36,199 --> 26:53,709
+And we define ON to be the elements A in GLNF that preserve the inner product such that when you take the inner product of AV with AW, it's the same as the inner product of V with W.
+
+299
+26:54,399 --> 26:56,579
+That looks like a weird thing to do.
+
+300
+26:57,109 --> 26:58,789
+But I claim that this is a subgroup.
+
+301
+26:58,789 --> 27:03,189
+So everyone AV means you apply the matrix A to the vector V and you get another vector.
+
+302
+27:03,189 --> 27:08,189
+You multiply, right?
+
+303
+27:08,189 --> 27:19,19
+So this would really be A times V transpose if you really wanted to write it that way. I mean, to get a to get a But but I I want everyone understands what I mean by AV.
+
+304
+27:19,19 --> 27:29,249
+This is the vector, you know, A times V transpose transpose, something like that. Right? You line up the vector, you multiply it by may and then you you straighten it out again.
+
+305
+27:29,699 --> 27:30,299
+Okay.
+
+306
+27:30,489 --> 27:31,649
+So, uh why is this a subgroup?
+
+307
+27:31,649 --> 27:38,79
+Well, because if I have if I have it certainly contains the identity element.
+
+308
+27:38,79 --> 27:45,749
+If it contains A and B, is it is it true that AB
+
+309
+27:45,749 --> 27:55,729
+of V AB of W, is that equal to VW?
+
+310
+27:55,729 --> 27:58,539
+Well, let's see.
+
+311
+27:58,539 --> 28:06,909
+This is A of BV A of BW
+
+312
+28:07,629 --> 28:11,639
+because matrix multiplication is composition of operators.
+
+313
+28:12,139 --> 28:25,759
+Now, this is by since A is in the orthogonal group, this is the inner product of B BV with BW because if we apply A to any vectors, we don't change their inner product. And then since B is in the orthogonal group, this is the inner product of V with W.
+
+314
+28:26,719 --> 28:30,639
+So, if A and B are both in the orthogonal group, so is their product.
+
+315
+28:31,79 --> 28:32,789
+And I'll let you check inverse.
+
+316
+28:32,789 --> 28:33,629
+It's no harder.
+
+317
+28:33,629 --> 28:37,39
+Also
+
+318
+28:38,549 --> 28:45,29
+A inverse is in O of O of uh ON of F.
+
+319
+28:47,189 --> 28:51,469
+All right. Now let's figure out what this means in terms of what the matrix looks like.
+
+320
+28:51,469 --> 28:57,139
+Now remember what the matrix looks like is this.
+
+321
+28:57,139 --> 29:01,319
+The matrix A has first column
+
+322
+29:01,319 --> 29:09,149
+what the operator A does to the vector A of the vector 1 0 0.
+
+323
+29:09,879 --> 29:16,129
+And the second column of A is what A does to the vector 0 1 0 0.
+
+324
+29:16,599 --> 29:22,159
+And the last column of it is what A does to the vector 0 0 0 1.
+
+325
+29:22,159 --> 29:30,449
+Because this this vector space has a standard basis and the standard basis we'll call E1
+
+326
+29:31,449 --> 29:42,339
+which looks like 1 0 0 0 0 down to EN equals 0 0 1 in the Nth place. That's the standard basis of this vector space.
+
+327
+29:42,339 --> 29:47,139
+And you get you turn a matrix into an operator by seeing what it does to the standard basis.
+
+328
+29:48,139 --> 29:54,419
+Okay. Now the standard basis has the following property. If you take the inner product of E1 with itself, you get one.
+
+329
+29:54,909 --> 29:58,739
+If you take the inner product of E2 with itself, you get one.
+
+330
+29:58,739 --> 30:03,639
+If you take the inner product of EN with itself, you get one.
+
+331
+30:04,119 --> 30:04,439
+Right?
+
+332
+30:04,919 --> 30:12,629
+Because these only have one one in them and uh if you take if you look at this formula, only one term is non-zero and it's one times one.
+
+333
+30:13,149 --> 30:22,539
+On the other hand, if you take the inner product of EI with EJ and I is not equal to J, you get zero.
+
+334
+30:22,539 --> 30:32,319
+Because EI has a one in the Ith place and EJ has a one in the Jth place and they never you get zeros in all these terms.
+
+335
+30:32,319 --> 30:34,939
+So,
+
+336
+30:36,369 --> 30:42,729
+that has to be true for these column vectors too because they we preserve the inner product. That's the definition of what it means to be in the orthogonal group.
+
+337
+30:42,729 --> 30:49,689
+So if you take the inner product of this column with itself, you have to get one.
+
+338
+30:49,989 --> 30:56,189
+And the inner product of this column with itself, you have to get one because that's the same as the inner product of E2 with E2.
+
+339
+30:57,199 --> 30:57,719
+All right?
+
+340
+30:57,969 --> 31:02,189
+What is the inner product of this column with itself look like? Well, it's this element squared plus this element squared plus this element squared, right?
+
+341
+31:02,189 --> 31:06,149
+The inner product of this column with this column is this element times this element, this element times this element, this element times this element, this element.
+
+342
+31:06,149 --> 31:12,239
+Okay?
+
+343
+31:12,879 --> 31:16,179
+Now, we can rewrite that in the following way.
+
+344
+31:17,159 --> 31:39,629
+This implies that the inner product of A E I A E J equals product of inner product of Ith and Jth columns equals 1 if I is equal to J and 0 if I is not equal to J.
+
+345
+31:40,599 --> 31:42,779
+Okay. Now let's rewrite what this means.
+
+346
+31:42,779 --> 31:47,559
+This is this is N squared different numbers that we know.
+
+347
+31:48,279 --> 31:52,299
+N numbers we know are equal to 1 and a lot of numbers we know are equal to 0.
+
+348
+31:52,829 --> 32:01,199
+I claim that this is the same thing as saying that if you take the transpose of the matrix A and you multiply it by the matrix A, you get the identity matrix.
+
+349
+32:01,199 --> 32:04,659
+Well, let's see why that would be the case.
+
+350
+32:04,659 --> 32:07,139
+Suppose we took the transpose of the matrix A.
+
+351
+32:07,139 --> 32:11,649
+The first row of that is A of 1 0 0 0.
+
+352
+32:11,649 --> 32:17,379
+Right? Because the first row of the transpose is the first column here.
+
+353
+32:17,379 --> 32:18,559
+All right?
+
+354
+32:18,559 --> 32:23,169
+Now let's multiply let's calculate the first entry in A transpose A.
+
+355
+32:23,169 --> 32:25,859
+Let's calculate this entry up here.
+
+356
+32:25,859 --> 32:31,269
+We go across the first row of A transpose, we go down the first column of A, and we add up.
+
+357
+32:31,269 --> 32:33,949
+Well, that's just the inner product of this column with itself.
+
+358
+32:34,339 --> 32:36,509
+And we agreed that was one.
+
+359
+32:36,909 --> 32:39,139
+So the first entry here is a one.
+
+360
+32:39,139 --> 32:44,699
+Let's calculate this entry here. The entry in the first row, second column.
+
+361
+32:44,699 --> 32:49,219
+We'd go across the first row here and we'd go down the second column here.
+
+362
+32:49,599 --> 33:02,689
+Well, that would be the inner product of this column with this column, which we agreed was zero. So we get a zero.
+
+363
+33:03,189 --> 33:06,369
+Etc. You get zeros all here. Then when you did this row, you'd get a one there.
+
+364
+33:06,369 --> 33:09,439
+And you'd see that this matrix product times this is the identity.
+
+365
+33:09,439 --> 33:13,219
+That's just another way of rewriting that the columns have this property.
+
+366
+33:13,219 --> 33:17,329
+So, we see that if we have a matrix in GLN
+
+367
+33:17,329 --> 33:26,289
+which preserves the inner product, then the product of the the transpose of the matrix by A is the identity.
+
+368
+33:26,289 --> 33:32,39
+Which is the same thing as saying that the transpose of A is the inverse of A.
+
+369
+33:32,39 --> 33:40,529
+So it's also true in the other direction. A times A transpose is the identity.
+
+370
+33:40,529 --> 33:42,779
+Okay.
+
+371
+33:42,779 --> 33:52,769
+Conversely, I claim that if we have a matrix such that the product of its transpose times the matrix is the identity or the matrix transpose is its inverse, then it gives a transformation that preserves the inner product.
+
+372
+33:52,769 --> 33:54,859
+Why? Well, this is quite tricky.
+
+373
+33:54,859 --> 33:55,579
+So let's see.
+
+374
+33:56,429 --> 34:00,69
+Well, first of all, I'm going to rewrite the inner product VW as a matrix product.
+
+375
+34:00,509 --> 34:06,179
+It's just the transpose of the vector V times the vector W.
+
+376
+34:06,589 --> 34:08,979
+Where this becomes a column vector and this becomes a row vector.
+
+377
+34:09,479 --> 34:12,359
+I mean, if you think of it, that's exactly what the inner product is. If you tried to multiply
+
+378
+34:13,239 --> 34:14,749
+Whoops. Other way around, huh?
+
+379
+34:16,649 --> 34:22,669
+I want No, I want a row vector and column vector. Sorry. Let's try it this way.
+
+380
+34:22,869 --> 34:25,659
+And hope I don't get totally screwed up here, but we'll see.
+
+381
+34:26,359 --> 34:30,149
+So we write the vector V like this, we write the vector W like this.
+
+382
+34:30,449 --> 34:37,759
+We go across this row and down this column, we multiply the first entry times the first entry, we multiply the second entry times the second entry, the third entry by the third entry.
+
+383
+34:37,999 --> 34:40,549
+That's exactly what we're doing when we're taking the inner product.
+
+384
+34:0,929 --> 34:42,599
+So this is a matrix product.
+
+385
+34:42,599 --> 34:47,949
+Okay.
+
+386
+34:47,949 --> 34:50,929
+Now, on the other hand, let's see if we can compute AV AW.
+
+387
+34:50,929 --> 34:55,59
+Ah.
+
+388
+34:55,59 --> 34:57,139
+Okay, so AV,
+
+389
+34:57,139 --> 35:02,39
+oh God, this is going to be a real nightmare because I've written my vectors as
+
+390
+35:02,39 --> 35:04,629
+Never mind, I'm going to let's go back.
+
+391
+35:04,979 --> 35:09,289
+Let's write our vectors as column vectors so I don't actually kill myself here.
+
+392
+35:09,689 --> 35:13,529
+So this would then be V transpose times W.
+
+393
+35:13,869 --> 35:16,109
+Where I thought of the vectors as column vectors.
+
+394
+35:16,109 --> 35:24,89
+I now know why I want to do that because then AV
+
+395
+35:24,89 --> 35:28,799
+this this vector is just the matrix A times the column vector V.
+
+396
+35:29,129 --> 35:33,619
+And this vector is just the matrix A times the column vector W.
+
+397
+35:34,69 --> 35:50,439
+And consequently the inner product would be you'd calculate this vector, you'd transpose it and then you'd multiply it by this vector.
+
+398
+35:51,159 --> 35:52,799
+As matrix multiplication.
+
+399
+35:52,799 --> 35:58,499
+This is all matrix multiplication. A A times V transpose then.
+
+400
+35:58,499 --> 36:07,119
+Now, if you know about transpose, that reverses the order of matrix multiplication, so this becomes V transpose A transpose A W.
+
+401
+36:07,769 --> 36:12,979
+And if we assume that A has its transpose is equal to its inverse, this is the vector V transpose times the identity matrix
+
+402
+36:13,439 --> 36:18,869
+size N times the vector W. The identity matrix takes any vector to itself.
+
+403
+36:19,229 --> 36:25,59
+So this becomes V transpose times W, which is the same as VW.
+
+404
+36:25,59 --> 36:29,439
+That's why I want to take my vectors to be column vectors.
+
+405
+36:29,439 --> 36:32,249
+Just so I don't have to write transpose eight million times.
+
+406
+36:32,249 --> 36:35,889
+If I take vectors to be column vectors, this is just A times V.
+
+407
+36:35,889 --> 36:41,599
+So, in other words, this can also be written as the set of A in GLNF such that A transpose is equal to A inverse.
+
+408
+36:41,599 --> 36:43,539
+Okay.
+
+409
+36:43,539 --> 36:45,239
+Now,
+
+410
+36:46,299 --> 36:54,539
+I'm going to show you a number of interesting things that happen with these matrices. For example, the first thing is that the determinant is not arbitrary.
+
+411
+36:54,539 --> 36:59,99
+I claim that the determinant of A has to be plus or minus one.
+
+412
+36:59,99 --> 37:05,959
+Because if you take the determinant on this identity, you get the determinant of A transpose times the determinant of A is one.
+
+413
+37:06,539 --> 37:09,529
+The determinant of A transpose is the same as the determinant of A.
+
+414
+37:09,899 --> 37:14,209
+So the determinant of A squared is one, so the determinant of A has to be plus or minus one.
+
+415
+37:14,549 --> 37:17,79
+Of course, these things might be equal in the field.
+
+416
+37:17,79 --> 37:18,969
+I want you to recognize that.
+
+417
+37:19,259 --> 37:22,529
+I mean, if we had the field of two elements, they would be equal, but at least it's a plus or minus one.
+
+418
+37:22,529 --> 37:24,99
+It's square is one.
+
+419
+37:24,99 --> 37:25,879
+Okay.
+
+420
+37:26,429 --> 37:31,509
+So, um you might ask, do we get both determinants in our group?
+
+421
+37:31,509 --> 37:34,79
+Uh and the answer is yes.
+
+422
+37:34,469 --> 37:38,739
+So to do that, you have to actually exhibit elements in this group.
+
+423
+37:39,159 --> 37:43,609
+So I'll show you some elements which happen to preserve the inner product.
+
+424
+37:43,859 --> 37:45,409
+And maybe the only thing in the group is one.
+
+425
+37:45,909 --> 37:54,49
+But if you take this matrix, for example, any matrix that looks like plus or minus ones on the diagonal and zeros elsewhere, that's an element in ON of F.
+
+426
+37:54,49 --> 38:01,489
+Because if you calculate its inverse, it's it's equal to its its inverse and it's also equal to its transpose.
+
+427
+38:01,489 --> 38:02,179
+Yeah.
+
+428
+38:02,179 --> 38:06,819
+So is every matrix in um in GLN also in ON? No.
+
+429
+38:06,819 --> 38:11,249
+No, no, because if the sum Okay. It this is just a necessary condition.
+
+430
+38:11,569 --> 38:16,299
+It's not that every matrix with determinant one is in ON, but any matrix in ON has determinant plus or minus one.
+
+431
+38:16,669 --> 38:22,99
+So these are examples of matrices in ON of F. They're rather stupid because not only is the inverse equal to the transpose, but they're equal to the original matrix.
+
+432
+38:22,449 --> 38:28,169
+And in particular, if you took the matrix that looked like this, -1 +1 +1 down the diagonal,
+
+433
+38:28,889 --> 38:32,149
+you'd find the determinant of this is equal to -1.
+
+434
+38:32,469 --> 38:35,119
+So you can have both determinants plus one and minus one.
+
+435
+38:35,649 --> 38:40,89
+In particular, you get a subgroup where the determinant is plus one. That's this group.
+
+436
+38:40,89 --> 38:40,379
+A in ONF
+
+437
+38:40,379 --> 38:40,669
+such that the determinant of A
+
+438
+38:40,669 --> 38:43,119
+is equal to +1.
+
+439
+38:43,119 --> 38:51,719
+And that's a group of index two because if you think of the determinant as a homomorphism, you get a homomorphism, the determinant to the group of order two, plus or minus one, which is onto because you have things of both determinant one and plus or minus one.
+
+440
+38:51,719 --> 38:56,129
+It's a homomorphism because the determinant of AB is the determinant of A
+
+441
+38:56,129 --> 38:58,989
+times the determinant of B.
+
+442
+38:58,989 --> 39:00,519
+And this group is just its kernel.
+
+443
+39:00,519 --> 39:04,979
+And the kernel, we know by the isomorphism theorem,
+
+444
+39:04,979 --> 39:09,819
+the index of the kernel, the quotient group is the image. The image is plus or minus one.
+
+445
+39:10,109 --> 39:17,859
+So there are exactly two cosets of this group in this group, and uh the kernel is a normal subgroup.
+
+446
+39:18,299 --> 39:22,829
+And the cosets are the elements of determinant one, that's this, and the non-trivial coset, namely this times SON.
+
+447
+39:22,829 --> 39:24,489
+What other elements are in ONS?
+
+448
+39:24,489 --> 39:26,459
+Well, I claim
+
+449
+39:26,459 --> 39:31,309
+the permutation matrices
+
+450
+39:33,559 --> 39:36,959
+are in ON of F.
+
+451
+39:37,899 --> 40:04,679
+And this gives injective uh homomorphism F from the symmetric group on N letters into ON of F, no kernel, and that takes the subgroup which is the alternating group on N letters into SON of F.
+
+452
+40:04,679 --> 40:06,879
+I better assume that um
+
+453
+40:06,879 --> 40:17,779
+two is not equal to one is not equal to minus one in F.
+
+454
+40:18,329 --> 40:22,559
+Um for this. I I should have said that. This subgroup
+
+455
+40:23,79 --> 40:32,759
+if if one is equal to minus one in F, I if F is equal to Z mod 2, 1 is equal to -1.
+
+456
+40:32,979 --> 40:42,899
+Then there then this homomorphism is not surjective. It only maps to um +1.
+
+457
+40:43,139 --> 40:46,709
+And so ON and SON are the same group. So if I really want to get a different group,
+
+458
+40:47,79 --> 40:50,489
+the index of two, that's if one is not equal to -1.
+
+459
+40:51,719 --> 40:55,419
+So the permutation matrices I claim are orthogonal matrices.
+
+460
+40:55,419 --> 41:00,549
+Why? They have exactly one one in each column and the rest are zeros.
+
+461
+41:00,759 --> 41:13,339
+Therefore, if you think of it in terms of uh this thing, they preserve the inner product on the basis elements, namely the the columns are of of inner product with themselves one and inner product with the other column zero.
+
+462
+41:14,479 --> 41:15,509
+Yeah.
+
+463
+41:15,969 --> 41:20,359
+Um would you mind just explaining the connection with the isomorphism theorem Sure, sure, sure, sure, sure.
+
+464
+41:20,359 --> 41:24,859
+We have a homomorphism if let's assume that one is not minus one.
+
+465
+41:24,859 --> 41:33,89
+So we have two elements plus or minus one. This is a subgroup of of the of the multiplicative group of F.
+
+466
+41:33,319 --> 41:35,739
+The determinant maps these matrices into this group.
+
+467
+41:36,129 --> 41:40,819
+It's a homomorphism because the determinant of a product of a matrices is the product of the determinants.
+
+468
+41:41,249 --> 41:45,189
+It's onto because we've exhibited a specific element in the orthogonal group whose determinant is minus one.
+
+469
+41:45,189 --> 41:48,959
+Okay, so you have to show that there. Here's an element of determinant minus one and the determinant of the identity is one.
+
+470
+41:49,419 --> 42:00,59
+So, our isomorphism theorem says that the quotient group by the kernel is isomorphic to the image of the homomorphism.
+
+471
+42:00,489 --> 42:04,659
+The kernel is by definition this group.
+
+472
+42:04,899 --> 42:08,829
+That's the definition of it. The things that Those are just things that The the one, the identity element in this group.
+
+473
+42:09,119 --> 42:13,999
+And therefore the quotient group has order two, and therefore they're two cosets, so the index is two.
+
+474
+42:13,999 --> 42:14,439
+Okay.
+
+475
+42:15,619 --> 42:26,799
+So we're going to pick up on Monday all the geometry we get by looking at Euclidean geometry from the point of view of this group, and it's going to be a completely different point of view.
+
+476
+42:26,799 --> 42:29,739
+Here's a problem for you to just think about.
+
+477
+42:30,469 --> 42:34,329
+We saw that these elements, these elements were in the orthogonal group.
+
+478
+42:34,729 --> 42:43,869
+Prove that if you have an element in the orthogonal group and it's an and it has an eigen vector, then the eigen value is plus or minus one.
+
+479
+42:43,869 --> 42:48,769
+Namely, the only things that could be on the diagonal are plus or minus one.
+
+480
+42:48,769 --> 42:49,169

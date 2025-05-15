@@ -11,7 +11,7 @@ export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Keep
 // !!! YouTube Data API v3 Key !!!
 // WARNING: Embedding this directly in frontend code is INSECURE for production.
 // Use a backend proxy or Cloud Function in a real application.
-export const YOUTUBE_API_KEY = "AIzaSyB8v1IX_H3USSmBCJjee6kQBONAdTjmSuA"; // User provided key
+export const YOUTUBE_API_KEY = "AIzaSyAqnMhLT7e1pQJo3RpZJs1Tkz8yZji1vdc"; // User provided key
 
 // --- File Path Configuration ---
 export const COURSE_BASE_PATH = "./courses"; // Base directory for all course content
@@ -199,4 +199,54 @@ export const DEFAULT_FALLBACK_AI_MODEL = "gemini-2.5-flash-preview-04-17"; // Fa
 export const MAX_BONUS_FROM_TESTGEN = 2; // Max raw bonus points *per TestGen exam*
 export const MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE = 10; // Max total bonus points from all TestGen exams *for a single course*
 // --- END MODIFICATION ---
+
+// --- NEW: Music & Sounds Configuration ---
+export const DEFAULT_UI_SOUNDS_ENABLED = true;
+export const DEFAULT_AMBIENT_SOUND_VOLUME = 0.3; // 0.0 to 1.0
+
+export const DEFAULT_MUSIC_VOLUME = 0.5; // 0.0 to 1.0
+
+export const UI_SOUND_EFFECTS = {
+    // Relative paths to your sound effect files
+    exam_finish_success: './assets/sounds/ui/success_chime.mp3',
+    exam_finish_fail: './assets/sounds/ui/fail_buzz.mp3',
+    chapter_complete: './assets/sounds/ui/level_up.mp3',
+    button_click: './assets/sounds/ui/click_soft.mp3',
+    notification: './assets/sounds/ui/notification_simple.mp3',
+    error: './assets/sounds/ui/error_short.mp3',
+};
+
+export const AMBIENT_SOUNDS_LIBRARY = [
+    { id: 'forest_day', name: 'Forest Day', url: './assets/sounds/ambient/forest_day_loop.mp3', icon: '🌲' },
+    { id: 'rain_gentle', name: 'Gentle Rain', url: './assets/sounds/ambient/rain_gentle_loop.mp3', icon: '🌧️' },
+    { id: 'ocean_waves', name: 'Ocean Waves', url: './assets/sounds/ambient/ocean_waves_loop.mp3', icon: '🌊' },
+    { id: 'campfire', name: 'Crackling Campfire', url: './assets/sounds/ambient/campfire_loop.mp3', icon: '🔥' },
+    { id: 'cafe_ambience', name: 'Coffee Shop Ambience', url: './assets/sounds/ambient/cafe_ambience_loop.mp3', icon: '☕' },
+];
+
+export const STUDY_MUSIC_LIBRARY = [
+    // Example: Using YouTube video IDs for Lo-fi streams.
+    // For actual playback, you'd use the YouTube IFrame API.
+    { id: 'lofi_stream_1', name: 'Lofi Radio 📚 - Beats to Relax/Study to', type: 'youtube', videoId: 'jfKfPfyJRdk', icon: '🎧' },
+    { id: 'lofi_stream_2', name: 'Chillhop Radio - Lofi Hiphop Beats', type: 'youtube', videoId: '5yx6BWlEVcY', icon: '🎶' },
+    { id: 'classical_study', name: 'Classical Music for Studying', type: 'youtube', videoId: 'y6TZHLAzg5o', icon: '🎻' }
+    // You can also add direct MP3/stream URLs here if you have them
+    // { id: 'your_lofi_track', name: 'My Lo-fi Track', type: 'stream', url: './assets/music/lofi/my_track.mp3', icon: '🎵' }
+];
+
+export const BINAURAL_BEATS_LIBRARY = [
+    // Frequencies are illustrative. You'd need actual audio files.
+    { id: 'focus_alpha', name: 'Focus (Alpha Waves)', description: 'Alpha waves (8-12 Hz) for relaxed focus and learning.', type: 'stream', url: './assets/sounds/binaural/focus_alpha_8hz_loop.mp3', icon: '🧠' },
+    { id: 'deep_study_theta', name: 'Deep Study (Theta Waves)', description: 'Theta waves (4-7 Hz) for deep meditation and problem-solving.', type: 'stream', url: './assets/sounds/binaural/deep_study_theta_6hz_loop.mp3', icon: '💡' },
+    { id: 'creativity_gamma', name: 'Creativity (Gamma Waves)', description: 'Gamma waves (30-100 Hz) for high-level information processing and creativity.', type: 'stream', url: './assets/sounds/binaural/creativity_gamma_40hz_loop.ogg', icon: '✨' },
+    { id: 'relaxation_delta', name: 'Relaxation (Delta Waves)', description: 'Delta waves (0.5-4 Hz) for deep sleep and relaxation.', type: 'stream', url: './assets/sounds/binaural/relaxation_delta_2hz_loop.ogg', icon: '😴' }
+];
+
+// Placeholder API keys for music services (SHOULD NOT BE HARDCODED IN PRODUCTION)
+export const SPOTIFY_CLIENT_ID_PLACEHOLDER = "YOUR_SPOTIFY_CLIENT_ID";
+export const DEEZER_APP_ID_PLACEHOLDER = "YOUR_DEEZER_APP_ID";
+// SoundCloud and Anghami might require different approaches or API keys.
+// --- END NEW Music & Sounds Configuration ---
+
+
 // --- END OF FILE config.js ---

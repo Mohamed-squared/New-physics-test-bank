@@ -20,40 +20,107 @@ export async function storeExamResult(courseId, examState, examType) {
     }
 
     showLoading("Finalizing and Storing Exam...");
-    let examRecord;
+    let savedExamRecordForUI;
 
     try {
         console.log(`[StoreExam] Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
         const markingResults = await markFullExam(examState);
         console.log(`[StoreExam] Marking complete for Exam ID: ${examState.examId}`);
 
-        examRecord = {
-            id: examState.examId,
-            examId: examState.examId,
+        const isTestGenExam = !courseId; // True if courseId is null/undefined
+        const actualExamId = examState.examId;
+
+        // Base structure common to both exam types for Firestore
+        let examRecordForFirestore = {
+            userId: currentUser.uid,
+            examId: actualExamId,
+            questions: examState.questions,
+            answers: examState.userAnswers, // Rule expects 'answers'
+            markingResults: markingResults,
+            score: markingResults.totalScore,
+            maxScore: markingResults.maxPossibleScore,
+            status: 'completed', // Rule allows 'started' or 'completed', we send 'completed'
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            completedAt: firebase.firestore.FieldValue.serverTimestamp(), // Assuming completion at submission
+            durationMinutes: Math.max(0, Math.round((Date.now() - examState.startTime) / 60000)), // Ensure >=0
+            isTestGen: isTestGenExam,
+        };
+
+        if (isTestGenExam) {
+            // Fields specific to TestGen exams
+            examRecordForFirestore.subjectId = examState.subjectId || null; // Can be null if not tied to a specific subject concept
+            examRecordForFirestore.courseId = null; // TestGen exams typically don't have a courseId unless it's context
+            examRecordForFirestore.testGenConfig = examState.testGenConfig || {
+                textMcqCount: 0,
+                textProblemCount: 0,
+                lectureMcqCounts: {},
+                lectureProblemCounts: {},
+                timingOption: 'default',
+                // customDurationMinutes will be absent if not 'custom'
+            };
+            if (examRecordForFirestore.testGenConfig.timingOption === 'custom' && examState.testGenConfig?.customDurationMinutes) {
+                examRecordForFirestore.testGenConfig.customDurationMinutes = examState.testGenConfig.customDurationMinutes;
+            } else {
+                delete examRecordForFirestore.testGenConfig.customDurationMinutes; // Remove if not custom timing
+            }
+
+            // Ensure no 'examType' field for TestGen
+            delete examRecordForFirestore.examType;
+        } else {
+            // Fields specific to non-TestGen (course activity) exams
+            if (!courseId || typeof courseId !== 'string') {
+                throw new Error("Invalid courseId for a non-TestGen exam. Must be a string.");
+            }
+            examRecordForFirestore.courseId = courseId;
+            examRecordForFirestore.examType = examType; // e.g., "assignment", "weekly_exam"
+
+            // Ensure no 'subjectId' or 'testGenConfig' for non-TestGen
+            delete examRecordForFirestore.subjectId;
+            delete examRecordForFirestore.testGenConfig;
+        }
+
+        // Log the object being sent to Firestore
+        console.log("[StoreExam Debug] examRecordForFirestore (final for Firestore):", JSON.stringify(examRecordForFirestore, null, 2));
+        console.log("[StoreExam Debug] Keys for Firestore object:", Object.keys(examRecordForFirestore).sort().join(', '));
+        console.log("[StoreExam Debug] isTestGenExam value:", isTestGenExam);
+
+
+        // Prepare the record for UI functions (this can have extra fields not sent to Firestore)
+        savedExamRecordForUI = {
+            id: actualExamId,
+            examId: actualExamId,
             userId: currentUser.uid,
             courseId: courseId || null,
             subjectId: examState.subjectId || null,
             type: examType,
-            timestamp: examState.startTime,
-            durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
+            timestamp: examState.startTime, // JS timestamp for UI
+            durationMinutes: examRecordForFirestore.durationMinutes,
             questions: examState.questions,
             userAnswers: examState.userAnswers,
             markingResults: markingResults,
             status: 'completed',
-            courseContext: examState.courseContext || null
+            courseContext: examState.courseContext || null,
+            testGenConfig: examState.testGenConfig // Include if it was a TestGen exam for UI logic
         };
 
         const examDocRef = db.collection('userExams').doc(currentUser.uid)
-                           .collection('exams').doc(examState.examId);
+                           .collection('exams').doc(actualExamId);
 
         try {
             console.log("[StoreExam] Attempting to write exam record to Firestore path:", examDocRef.path);
-            const cleanExamRecord = JSON.parse(JSON.stringify(examRecord));
-            await examDocRef.set(cleanExamRecord);
-            console.log(`[StoreExam] Exam record ${examState.examId} saved successfully to userExams subcollection.`);
+            console.log("FINAL CHECK - Firestore Data Object:", JSON.stringify(examRecordForFirestore, (key, value) => {
+                if (value && typeof value === 'object' && typeof value._methodName === 'FieldValue.serverTimestamp') {
+                    return "{SERVER_TIMESTAMP}"; // Make timestamps readable in log
+                }
+                return value;
+            }, 2));
+            console.log("FINAL CHECK - Keys:", Object.keys(examRecordForFirestore).sort().join(', '));
+            console.log("FINAL CHECK - isTestGen:", examRecordForFirestore.isTestGen);
+            await examDocRef.set(examRecordForFirestore); // This is the critical write
+            console.log(`[StoreExam] Exam record ${actualExamId} saved successfully to userExams subcollection.`);
         } catch (writeError) {
-            console.error(`[StoreExam] Firestore write error for exam ${examState.examId}:`, writeError);
-            try { console.error("[StoreExam] Data that failed to save:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Data that failed to save (could not stringify):", examRecord); }
+            console.error(`[StoreExam] Firestore write error for exam ${actualExamId}:`, writeError);
+            // Already logged the object above. No need to log again here.
             throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
         }
 
@@ -62,19 +129,19 @@ export async function storeExamResult(courseId, examState, examType) {
         switch (examType) {
             case 'assignment':
                 creditsAwarded = 5;
-                creditReason = `Completed Course Assignment: ${examState.courseContext?.assignmentId || examState.examId}`;
+                creditReason = `Completed Course Assignment: ${examState.courseContext?.activityId || actualExamId}`;
                 break;
             case 'weekly_exam':
                 creditsAwarded = 10;
-                creditReason = `Completed Weekly Exam: ${examState.courseContext?.weekNum || examState.examId}`;
+                creditReason = `Completed Weekly Exam: ${examState.courseContext?.activityId || actualExamId}`;
                 break;
-            case 'midcourse_exam':
+            case 'midcourse':
                 creditsAwarded = 25;
-                creditReason = `Completed Midcourse Exam: ${examState.courseContext?.midcourseNum || examState.examId}`;
+                creditReason = `Completed Midcourse Exam: ${examState.courseContext?.activityId || actualExamId}`;
                 break;
-            case 'final_exam':
+            case 'final':
                 creditsAwarded = 50;
-                creditReason = `Completed Final Exam: ${examState.courseContext?.finalNum || examState.examId}`;
+                creditReason = `Completed Final Exam: ${examState.courseContext?.activityId || actualExamId}`;
                 break;
             case 'skip_exam':
                 creditsAwarded = 2;
@@ -83,11 +150,11 @@ export async function storeExamResult(courseId, examState, examType) {
             case 'testgen':
             case 'practice':
                 creditsAwarded = 3;
-                creditReason = `Completed Practice Test: ${examState.subjectId || examState.examId}`;
+                creditReason = `Completed Practice Test: ${examState.subjectId || actualExamId}`;
                 break;
             default:
                 creditsAwarded = 1;
-                creditReason = `Completed Exam: ${examType} - ${examState.examId}`;
+                creditReason = `Completed Exam: ${examType} - ${actualExamId}`;
         }
 
         if (creditsAwarded > 0) {
@@ -95,18 +162,20 @@ export async function storeExamResult(courseId, examState, examType) {
         }
 
         hideLoading();
-        return examRecord;
+        return savedExamRecordForUI;
 
     } catch (error) {
         hideLoading();
         console.error(`[StoreExam] Error storing exam result ${examState.examId}:`, error);
-        if (examRecord) {
-             try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(examRecord, null, 2)); } catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", examRecord);}
+        if (savedExamRecordForUI) {
+             try { console.error("[StoreExam] UI Exam record state just before error:", JSON.stringify(savedExamRecordForUI, null, 2)); }
+             catch { console.error("[StoreExam] UI Exam record state just before error (could not stringify):", savedExamRecordForUI);}
         }
+        // Specific error messages based on common causes
         if (error.message.includes("Failed to save exam data to Firestore")) {
-             alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
+             alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data structure mismatch with security rules or permissions issue).`);
         } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
-             alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
+             alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'. The data being sent might not match the allowed structure.`);
         } else {
              alert(`Error storing exam results: ${error.message || String(error)}`);
         }
@@ -124,7 +193,8 @@ export async function getExamDetails(userId, examId) {
         const docSnap = await examDocRef.get();
         if (docSnap.exists) {
             console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
-            return docSnap.data();
+            const data = docSnap.data();
+            return { id: docSnap.id, ...data };
         } else {
             console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
             return null;
@@ -134,6 +204,7 @@ export async function getExamDetails(userId, examId) {
         return null;
     }
 }
+
 
 export async function getExamHistory(userId, filterId = null, filterType = 'all') {
     if (!db || !userId) {

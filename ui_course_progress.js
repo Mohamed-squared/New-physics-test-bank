@@ -227,7 +227,7 @@ export function showCourseProgressDetails(courseId = activeCourseId) {
 }
 
 // Function to regenerate and display certificate preview
-async function regenerateCertificatePreview(courseId) {
+export async function regenerateCertificatePreview(courseId) {
      const canvas = document.getElementById('certificate-preview-canvas');
      const progress = userCourseProgressMap.get(courseId);
      const courseDef = globalCourseDataMap.get(courseId);
@@ -304,14 +304,14 @@ async function regenerateCertificatePreview(courseId) {
 }
 
 // Functions to trigger download
-function downloadCertImage(courseId) {
+export function downloadCertImage(courseId) {
      const canvas = document.getElementById('certificate-preview-canvas');
      const courseDef = globalCourseDataMap.get(courseId);
      const filename = `Lyceum_Certificate_${courseDef?.name?.replace(/\s+/g, '_') || courseId}`;
      downloadCertificateImage(canvas, filename);
 }
 
-function downloadCertPdf(courseId) {
+export function downloadCertPdf(courseId) {
      const canvas = document.getElementById('certificate-preview-canvas');
      const courseDef = globalCourseDataMap.get(courseId);
      const filename = `Lyceum_Certificate_${courseDef?.name?.replace(/\s+/g, '_') || courseId}`;

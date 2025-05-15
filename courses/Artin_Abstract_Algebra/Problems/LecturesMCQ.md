@@ -3316,3 +3316,1090 @@
     E.  Are always trivial or one-dimensional.
     ans: B
 
+
+### Chapter 4
+
+1.  A map $T: V \to W$ between two vector spaces $V$ and $W$ over the same field $F$ is a linear operator (or linear transformation) if it satisfies which two conditions for all $v_1, v_2 \in V$ and $c \in F$?
+    A.  $T(v_1 v_2) = T(v_1)T(v_2)$ and $T(cv) = cT(v)$
+    B.  $T(v_1 + v_2) = T(v_1) + T(v_2)$ and $T(cv) = T(v) + c$
+    C.  $T(v_1 + v_2) = T(v_1) + T(v_2)$ and $T(cv) = cT(v)$
+    D.  $T(v_1 + v_2) = T(v_1)T(v_2)$ and $T(c+v) = cT(v)$
+    E.  $T$ is bijective.
+    ans: C
+
+2.  The differentiation operator $D = \frac{d}{dx}$ maps the vector space $V$ of polynomials of degree $\le n$ with real coefficients to the vector space $W$ of polynomials of degree $\le n-1$. Which property demonstrates its linearity?
+    A.  $D(f(x)g(x)) = D(f(x))g(x) + f(x)D(g(x))$ (Product Rule)
+    B.  $D(c \cdot f(x)) = c \cdot D(f(x))$ and $D(f(x)+g(x)) = D(f(x))+D(g(x))$
+    C.  The derivative of a constant is zero.
+    D.  Integration is the inverse operation.
+    E.  Every polynomial has a unique derivative.
+    ans: B
+
+3.  The kernel of a linear operator $T: V \to W$, denoted $\text{Ker}(T)$, is defined as:
+    A.  $\{w \in W \mid w = T(v) \text{ for some } v \in V\}$
+    B.  $\{v \in V \mid T(v) = 0_W\}$
+    C.  $\{v \in V \mid T(v) = v\}$
+    D.  $\{w \in W \mid T(0_V) = w\}$
+    E.  The set of all basis vectors of $V$.
+    ans: B
+
+4.  The image of a linear operator $T: V \to W$, denoted $\text{Im}(T)$, is defined as:
+    A.  $\{w \in W \mid T(v) = w \text{ for some } v \in V\}$
+    B.  $\{v \in V \mid T(v) = 0_W\}$
+    C.  $\{v \in V \mid T(v) \neq 0_W\}$
+    D.  $\{w \in W \mid T(w) = w\}$
+    E.  The set of all basis vectors of $W$.
+    ans: A
+
+5.  For any linear operator $T: V \to W$, the kernel $\text{Ker}(T)$ is a subspace of:
+    A.  $W$
+    B.  $V$
+    C.  $V \times W$
+    D.  $F$ (the underlying field)
+    E.  $\text{Im}(T)$
+    ans: B
+
+6.  For any linear operator $T: V \to W$, the image $\text{Im}(T)$ is a subspace of:
+    A.  $V$
+    B.  $W$
+    C.  $V \cap W$
+    D.  $F$ (the underlying field)
+    E.  $\text{Ker}(T)$
+    ans: B
+
+7.  The Dimension Formula (or Rank-Nullity Theorem) for a linear operator $T: V \to W$, where $V$ is finite-dimensional, states:
+    A.  $\dim(V) = \dim(\text{Ker}(T)) \cdot \dim(\text{Im}(T))$
+    B.  $\dim(V) = \dim(\text{Ker}(T)) - \dim(\text{Im}(T))$
+    C.  $\dim(W) = \dim(\text{Ker}(T)) + \dim(\text{Im}(T))$
+    D.  $\dim(V) = \dim(\text{Ker}(T)) + \dim(\text{Im}(T))$
+    E.  $\dim(V) + \dim(W) = \dim(\text{Ker}(T)) + \dim(\text{Im}(T))$
+    ans: D
+
+8.  In the proof of the Dimension Formula, if $\{v_1, \dots, v_k\}$ is a basis for $\text{Ker}(T)$ and is extended to a basis $\{v_1, \dots, v_k, v_{k+1}, \dots, v_n\}$ for $V$, then a basis for $\text{Im}(T)$ is given by:
+    A.  $\{T(v_1), \dots, T(v_k)\}$
+    B.  $\{T(v_1), \dots, T(v_n)\}$
+    C.  $\{T(v_{k+1}), \dots, T(v_n)\}$
+    D.  $\{v_{k+1}, \dots, v_n\}$
+    E.  Any basis of $W$.
+    ans: C
+
+9.  To prove that $\{T(v_{k+1}), \dots, T(v_n)\}$ (from the previous question's context) is linearly independent, one assumes $\sum_{i=k+1}^n c_i T(v_i) = 0_W$. What is the next step in the argument?
+    A.  Conclude that all $c_i=0$ because $T$ is injective.
+    B.  Use linearity to write $T(\sum_{i=k+1}^n c_i v_i) = 0_W$.
+    C.  Argue that since $\{v_{k+1}, \dots, v_n\}$ is linearly independent, all $c_i=0$.
+    D.  Show that each $T(v_i)$ is a non-zero vector.
+    E.  Express each $T(v_i)$ in terms of a basis for $W$.
+    ans: B
+
+10. After establishing $T(\sum_{i=k+1}^n c_i v_i) = 0_W$, it implies that $\sum_{i=k+1}^n c_i v_i \in \text{Ker}(T)$. What does this allow us to conclude?
+    A.  $\sum_{i=k+1}^n c_i v_i$ must be the zero vector immediately.
+    B.  $\sum_{i=k+1}^n c_i v_i$ can be written as a linear combination of $\{v_1, \dots, v_k\}$.
+    C.  $\text{Im}(T)$ must be the zero subspace.
+    D.  $T$ must be the zero operator.
+    E.  Each $v_i$ for $i > k$ must be in $\text{Ker}(T)$.
+    ans: B
+
+11. The final step in proving the linear independence of $\{T(v_{k+1}), \dots, T(v_n)\}$ (in the proof of Rank-Nullity) involves using the linear independence of which set of vectors?
+    A.  The basis $\{w_1, \dots, w_m\}$ of $W$.
+    B.  The basis $\{v_1, \dots, v_k\}$ of $\text{Ker}(T)$.
+    C.  The extended basis $\{v_1, \dots, v_n\}$ of $V$.
+    D.  The set $\{T(v_1), \dots, T(v_k)\}$, which are all $0_W$.
+    E.  Any spanning set for $\text{Im}(T)$.
+    ans: C
+
+12. For a linear operator $T: V \to V$ on a finite-dimensional vector space $V$, which statement is a consequence of the Rank-Nullity Theorem?
+    A.  $T$ is injective if and only if $T$ is surjective.
+    B.  $T$ is always injective.
+    C.  $T$ is always surjective.
+    D.  $\dim(\text{Ker}(T)) = \dim(\text{Im}(T))$.
+    E.  $T$ is injective if and only if $\text{Im}(T) = \{0_V\}$.
+    ans: A
+
+13. A linear operator $T: V \to W$ is an isomorphism if it is:
+    A.  Only injective ($\text{Ker}(T) = \{0_V\}$).
+    B.  Only surjective ($\text{Im}(T) = W$).
+    C.  Both injective and surjective (bijective).
+    D.  Such that $V$ and $W$ have the same dimension.
+    E.  The identity map.
+    ans: C
+
+14. An automorphism of a vector space $V$ is:
+    A.  Any linear operator $T: V \to V$.
+    B.  An isomorphism from $V$ to $F^n$.
+    C.  An isomorphism from $V$ to itself.
+    D.  A linear operator $T: V \to V$ such that $\text{Ker}(T) = V$.
+    E.  A linear operator $T: V \to V$ such that $\text{Im}(T) = \{0_V\}$.
+    ans: C
+
+15. The "rank" of a linear operator $T: V \to W$ is defined as:
+    A.  $\dim(V)$
+    B.  $\dim(W)$
+    C.  $\dim(\text{Ker}(T))$
+    D.  $\dim(\text{Im}(T))$
+    E.  $\dim(V) - \dim(W)$
+    ans: D
+
+16. The "nullity" of a linear operator $T: V \to W$ is defined as:
+    A.  $\dim(V)$
+    B.  $\dim(W)$
+    C.  $\dim(\text{Ker}(T))$
+    D.  $\dim(\text{Im}(T))$
+    E.  The number of zero rows in its matrix representation.
+    ans: C
+
+17. Consider the differentiation operator $D: P_n(F) \to P_{n-1}(F)$ where $P_k(F)$ is the space of polynomials of degree $\le k$ over field $F$. If $F = \mathbb{R}$, the kernel of $D$ is the space of constant polynomials. What is its dimension?
+    A.  0
+    B.  1
+    C.  $n-1$
+    D.  $n$
+    E.  $n+1$
+    ans: B
+
+18. For $D: P_n(\mathbb{R}) \to P_{n-1}(\mathbb{R})$, given $\dim(\text{Ker}(D))=1$ and $\dim(P_n(\mathbb{R}))=n+1$, what is $\dim(\text{Im}(D))$?
+    A.  1
+    B.  $n-1$
+    C.  $n$
+    D.  $n+1$
+    E.  $n+2$
+    ans: C
+
+19. Is the differentiation operator $D: P_n(\mathbb{R}) \to P_{n-1}(\mathbb{R})$ surjective? (Note: $\dim(P_{n-1}(\mathbb{R})) = n$)
+    A.  Yes, because its image has dimension $n$, which is the dimension of the codomain.
+    B.  No, because some polynomials in $P_{n-1}(\mathbb{R})$ have no antiderivative in $P_n(\mathbb{R})$.
+    C.  Yes, because its kernel is non-trivial.
+    D.  No, because differentiation always reduces the degree.
+    E.  Only if $n=1$.
+    ans: A
+
+20. Consider the differentiation operator $D: P_p(F_p) \to P_{p-1}(F_p)$ where $F_p = \mathbb{Z}/p\mathbb{Z}$ (field with $p$ elements, $p$ prime). We know $D(x^p) = p x^{p-1} = 0 \pmod p$. What does this imply about the kernel of $D$ in this case?
+    A.  The kernel still only contains constant polynomials.
+    B.  The kernel contains at least constant polynomials and $x^p$.
+    C.  The kernel is trivial ($\{0\}$).
+    D.  The operator $D$ is an isomorphism.
+    E.  $P_p(F_p)$ is not a vector space.
+    ans: B
+
+21. If the kernel of $D: P_p(F_p) \to P_{p-1}(F_p)$ has dimension greater than 1 (e.g., contains constants and $x^p$), what can be said about the surjectivity of $D$?
+    A.  $D$ must still be surjective.
+    B.  $D$ cannot be surjective if $\dim(\text{Ker}(D)) > \dim(P_p(F_p)) - \dim(P_{p-1}(F_p))$.
+    C.  $D$ is surjective if and only if $F_p$ is characteristic $p$.
+    D.  Surjectivity is guaranteed by the linearity of $D$.
+    E.  $D$ is surjective if its image contains all monomials up to degree $p-1$.
+    ans: B
+
+22. The lecture showed that for $D: P_p(F_p) \to P_{p-1}(F_p)$, the polynomial $x^{p-1} \in P_{p-1}(F_p)$ is not in the image of $D$. This is because if $D(f(x)) = x^{p-1}$, $f(x)$ would need to have a term $c \cdot x^p$, but $D(c \cdot x^p) = 0$. This demonstrates:
+    A.  $D$ is always surjective over $F_p$.
+    B.  $D$ can fail to be surjective over $F_p$.
+    C.  Polynomials over $F_p$ are not differentiable.
+    D.  The Rank-Nullity theorem does not hold over $F_p$.
+    E.  $x^{p-1}$ is the zero polynomial in $P_{p-1}(F_p)$.
+    ans: B
+
+23. A linear operator $T: V \to W$ is represented by an $m \times n$ matrix $A$ when bases for $V$ (dimension $n$) and $W$ (dimension $m$) are chosen. The $j$-th column of $A$ consists of:
+    A.  The coordinates of the $j$-th basis vector of $V$ with respect to the basis of $W$.
+    B.  The image $T(v_j)$ of the $j$-th basis vector $v_j$ of $V$.
+    C.  The coordinates of $T(v_j)$ with respect to the chosen basis for $W$.
+    D.  The $j$-th basis vector of $W$.
+    E.  The scalar coefficients of $v_j$ itself.
+    ans: C
+
+24. If $T: V \to V$ is a linear operator, and $A_1$ is its matrix representation with respect to basis $B_1$, and $A_2$ is its matrix representation with respect to basis $B_2$. If $P$ is the change of basis matrix that converts coordinates with respect to $B_2$ to coordinates with respect to $B_1$, how are $A_1$ and $A_2$ related?
+    A.  $A_2 = P A_1 P^{-1}$
+    B.  $A_2 = P^{-1} A_1 P$
+    C.  $A_2 = P A_1$
+    D.  $A_2 = A_1 P^{-1}$
+    E.  $A_2 = P^T A_1 P$
+    ans: B
+
+25. The relationship $A_2 = P^{-1} A_1 P$ is known as:
+    A.  Orthogonal transformation
+    B.  Similarity transformation or Conjugation
+    C.  Matrix transposition
+    D.  Gaussian elimination
+    E.  Direct sum decomposition
+    ans: B
+
+26. The primary goal of choosing a "good" basis when representing a linear operator $T: V \to V$ as a matrix is to:
+    A.  Make the matrix have as many non-zero entries as possible.
+    B.  Make the matrix representation simpler or reveal structural properties of $T$.
+    C.  Ensure the matrix is symmetric.
+    D.  Make the determinant of the matrix equal to 1.
+    E.  Ensure all entries of the matrix are integers.
+    ans: B
+
+27. If a linear operator $T: V \to V$ has a basis consisting of its eigenvectors, its matrix representation with respect to this basis will be:
+    A.  The identity matrix.
+    B.  A diagonal matrix (with eigenvalues on the diagonal).
+    C.  A zero matrix.
+    D.  An upper triangular matrix with 1s on the diagonal.
+    E.  A permutation matrix.
+    ans: B
+
+28. According to a proposition from Artin (recalled in the lecture), for any linear transformation $T: V \to W$ between finite-dimensional vector spaces, one can choose bases for $V$ and $W$ such that the matrix of $T$ has the block form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$. What does $r$ represent?
+    A.  $\dim(V)$
+    B.  $\dim(W)$
+    C.  $\dim(\text{Ker}(T))$
+    D.  $\text{rank}(T) = \dim(\text{Im}(T))$
+    E.  The number of zero rows.
+    ans: D
+
+29. In the construction of bases for $V$ and $W$ to achieve the matrix form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ for $T: V \to W$:
+    A.  The first $r$ basis vectors of $V$ form a basis for $\text{Ker}(T)$.
+    B.  The basis vectors for $V$ are chosen such that the first $r$ vectors $\{v_1, \dots, v_r\}$ have $\{T(v_1), \dots, T(v_r)\}$ forming a basis for $\text{Im}(T)$, and the remaining vectors $\{v_{r+1}, \dots, v_n\}$ form a basis for $\text{Ker}(T)$.
+    C.  The basis vectors for $W$ are chosen such that the first $r$ vectors form a basis for $\text{Ker}(T^*)$ (adjoint).
+    D.  All basis vectors of $V$ must be eigenvectors of $T$.
+    E.  The matrix $I_r$ is always $1 \times 1$.
+    ans: B
+
+30. The matrix form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ for $T: V \to W$ means that $T$ maps the first $r$ basis vectors of $V$ to:
+    A.  The zero vector in $W$.
+    B.  The first $r$ basis vectors of $W$, respectively.
+    C.  Linear combinations of all basis vectors of $W$.
+    D.  Vectors that span $\text{Ker}(T)$.
+    E.  Scalar multiples of themselves.
+    ans: B
+
+31. The matrix form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ for $T: V \to W$ means that $T$ maps the remaining $n-r$ basis vectors of $V$ (beyond the first $r$) to:
+    A.  The zero vector in $W$.
+    B.  The last $m-r$ basis vectors of $W$.
+    C.  Themselves (if $V=W$).
+    D.  Vectors that are linearly independent of the first $r$ images.
+    E.  Scalar multiples of the first $r$ basis vectors of $V$.
+    ans: A
+
+32. The simplification of a linear operator's matrix to the form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ is possible because:
+    A.  We can choose different bases for the domain $V$ and the codomain $W$.
+    B.  All linear operators are inherently diagonal.
+    C.  The Rank-Nullity theorem forces this structure.
+    D.  The underlying field $F$ must be $\mathbb{R}$.
+    E.  This form is only achievable if $T$ is an isomorphism.
+    ans: A
+
+33. If $T: V \to V$ is an operator, and we are restricted to using the *same* basis for $V$ as both the domain and codomain, can we always achieve the matrix form $\begin{pmatrix} I_r & 0 \\ 0 & 0 \end{pmatrix}$ (unless $r=n$ or $r=0$)?
+    A.  Yes, this form is always achievable.
+    B.  No, this form is generally not achievable under this restriction; achieving simpler forms like diagonal or Jordan form is the goal.
+    C.  Yes, if $T$ is invertible.
+    D.  No, unless $V$ is 1-dimensional.
+    E.  Yes, if the field is algebraically closed.
+    ans: B
+
+34. The concept of linear operators and their matrix representations being dependent on the choice of basis highlights the idea that:
+    A.  Matrices are more fundamental than linear operators.
+    B.  A linear operator is an intrinsic object, while its matrix representation is coordinate-dependent.
+    C.  All bases for a vector space are equivalent for representing operators.
+    D.  The dimension formula only holds for specific matrix representations.
+    E.  Changing basis always results in a diagonal matrix.
+    ans: B
+
+35. Historically, the theory of linear algebra and linear operators largely originated from the study of:
+    A.  Abstract group theory.
+    B.  Number theory and congruences.
+    C.  Calculus, particularly systems of differential equations and transformations in geometry.
+    D.  Logic and set theory.
+    E.  Combinatorics and graph theory.
+    ans: C
+
+36. The formalization of linear algebra as a rigorous axiomatic theory, including abstract vector spaces and linear operators, largely occurred in:
+    A.  Ancient Greece (Euclid, Archimedes).
+    B.  The 17th century (Newton, Leibniz).
+    C.  The early 19th century (Gauss, Cauchy).
+    D.  The late 19th and early 20th centuries.
+    E.  The mid-20th century (Bourbaki).
+    ans: D
+
+37. If $T:V \to V$ is a linear operator on a finite-dimensional vector space $V$, and $\dim(\text{Ker}(T)) > 0$, then $T$ cannot be:
+    A.  Surjective.
+    B.  The zero map.
+    C.  Represented by a matrix.
+    D.  Linear.
+    E.  An endomorphism.
+    ans: A
+
+38. If $T:V \to V$ is a linear operator on an $n$-dimensional vector space $V$, and the rank of $T$ is $n$, then:
+    A.  $\text{Ker}(T)$ must be $V$.
+    B.  $T$ is an isomorphism.
+    C.  $T$ must be the zero map.
+    D.  The nullity of $T$ is also $n$.
+    E.  $T$ cannot be represented by an $n \times n$ matrix.
+    ans: B
+
+39. Consider $V=F[x]$, the space of polynomials over $F$. Let $T:V \to V$ be $T(f(x)) = x f(x)$ (multiplication by $x$). What is the kernel of $T$?
+    A.  All constant polynomials.
+    B.  The zero polynomial only.
+    C.  All polynomials of degree 1.
+    D.  $V$ itself.
+    E.  The empty set.
+    ans: B
+
+40. For $T(f(x)) = x f(x)$ on $V=F[x]$, is $T$ surjective?
+    A.  Yes, every polynomial is $x$ times some other polynomial.
+    B.  No, for example, constant polynomials (other than 0) are not in the image.
+    C.  Yes, because its kernel is trivial.
+    D.  No, because $V$ is infinite-dimensional.
+    E.  Only if $F$ is a finite field.
+    ans: B
+
+41. The fact that for $T:V \to V$ on an infinite-dimensional space, injectivity does not imply surjectivity (and vice-versa) is illustrated by operators like $T(f(x))=xf(x)$ or differentiation on $F[x]$. This contrasts with the finite-dimensional case due to:
+    A.  The failure of the Rank-Nullity theorem for infinite dimensions.
+    B.  The definition of dimension being different.
+    C.  The Rank-Nullity theorem still holds, but $\dim(V)$ being infinite means $\dim(\text{Ker}(T))=0$ doesn't force $\dim(\text{Im}(T)) = \dim(V)$ if $\dim(V)$ is infinite.
+    D.  Linear operators not being well-defined on infinite-dimensional spaces.
+    E.  Fields $F$ behaving differently.
+    ans: C
+
+42. The lecture implies that the properties of the differentiation operator, such as its kernel and image, can change significantly when moving from a field of characteristic 0 (like $\mathbb{R}$) to a field of prime characteristic $p$ (like $\mathbb{Z}/p\mathbb{Z}$). This illustrates that:
+    A.  Linear algebra concepts are only valid over $\mathbb{R}$ or $\mathbb{C}$.
+    B.  The choice of underlying field is crucial for the specific behavior of linear operators.
+    C.  Differentiation is not a linear operator over finite fields.
+    D.  The Rank-Nullity theorem is false over finite fields.
+    E.  Polynomials cannot be defined over finite fields.
+    ans: B
+
+43. The term "endomorphism" is used in the lecture to refer to:
+    A.  Any linear transformation $T: V \to W$.
+    B.  A linear transformation $T: V \to V$ from a vector space to itself.
+    C.  An injective linear transformation.
+    D.  A surjective linear transformation.
+    E.  A linear transformation whose matrix representation is diagonal.
+    ans: B
+
+44. When discussing the change of basis for a linear operator $T: V \to V$, the formula $A' = P^{-1}AP$ involves a matrix $P$. This matrix $P$ represents:
+    A.  The operator $T$ itself in a standard basis.
+    B.  The transformation from the new basis coordinates to the old basis coordinates.
+    C.  The transformation from the old basis coordinates to the new basis coordinates. (The lecture defined $P = \rho_{B_1}^{-1} \rho_{B_2}$ as $B_2$ coords to $B_1$ coords. If $A$ is wrt $B_1$ and $A'$ wrt $B_2$, then coordinates $x_{B_2}$ become $x_{B_1}=Px_{B_2}$. $A'x_{B_2}$ (in $B_2$ coords) should be $P^{-1}(A (Px_{B_2}))$ (in $B_2$ coords). So $A' = P^{-1}AP$.)
+    D.  The identity matrix if no change of basis occurs.
+    E.  The inverse of the operator $T$.
+    ans: C
+
+45. The study of how the matrix representation of a linear operator $T: V \to V$ changes under a change of basis (conjugation) is fundamental for understanding:
+    A.  Only how to compute matrix products.
+    B.  Intrinsic properties of the operator $T$ that are independent of the choice of basis (e.g., eigenvalues, determinant, trace).
+    C.  The dimension of the vector space $V$.
+    D.  Whether $V$ is a subspace of another vector space.
+    E.  The specific entries of the matrix $P$.
+    ans: B
+
+46.  An announcement was made regarding the first hour exam. What topics will it cover?
+    A.  Only vector spaces.
+    B.  Only groups.
+    C.  Groups and vector spaces.
+    D.  Characteristic polynomials only.
+    E.  The Cayley-Hamilton theorem.
+    ans: C
+
+47.  A subspace $W$ of a vector space $V$ is called an invariant subspace under a linear operator $T: V \to V$ if:
+    A.  $T(w) = w$ for all $w \in W$.
+    B.  $T(w) = 0$ for all $w \in W$.
+    C.  For every $w \in W$, $T(w)$ is also in $W$ (i.e., $T(W) \subseteq W$).
+    D.  $W$ is the kernel of $T$.
+    E.  $W$ is the image of $T$.
+    ans: C
+
+48.  If $W$ is an invariant subspace under $T$, and a basis for $V$ is chosen by first taking a basis for $W$ and then extending it to $V$, the matrix of $T$ with respect to this basis will have what form?
+    A.  Diagonal
+    B.  Lower triangular
+    C.  Block upper triangular, like $\begin{pmatrix} A & B \\ 0 & D \end{pmatrix}$
+    D.  Block lower triangular, like $\begin{pmatrix} A & 0 \\ C & D \end{pmatrix}$
+    E.  Symmetric
+    ans: C
+
+49.  If $V = W \oplus W'$ where both $W$ and $W'$ are invariant subspaces under $T$ (an invariant complement $W'$ exists for $W$), the matrix of $T$ with respect to a basis formed by concatenating bases of $W$ and $W'$ will be:
+    A.  Strictly upper triangular.
+    B.  The identity matrix.
+    C.  Block diagonal, like $\begin{pmatrix} A & 0 \\ 0 & D \end{pmatrix}$.
+    D.  A permutation matrix.
+    E.  The zero matrix.
+    ans: C
+
+50.  A non-zero vector $w \in V$ is an eigenvector of a linear operator $T: V \to V$ if:
+    A.  $T(w) = 0$.
+    B.  $T(w) = w$.
+    C.  $T(w) = cw$ for some scalar $c$.
+    D.  $T(w)$ is linearly independent of $w$.
+    E.  $w$ is in the kernel of $T^2$.
+    ans: C
+
+51.  In the definition of an eigenvector $w$ such that $T(w) = cw$, the scalar $c$ is called:
+    A.  An eigenbasis.
+    B.  An eigenoperator.
+    C.  An eigenvalue.
+    D.  A characteristic vector.
+    E.  A nullity scalar.
+    ans: C
+
+52.  The term "eigen" in eigenvector and eigenvalue comes from which language?
+    A.  Latin
+    B.  Greek
+    C.  French
+    D.  German
+    E.  English
+    ans: D
+
+53.  If a linear operator $T$ has a basis of eigenvectors $\{V_1, \dots, V_n\}$ with corresponding eigenvalues $C_1, \dots, C_n$, what is the matrix representation of $T$ with respect to this basis?
+    A.  The identity matrix.
+    B.  A diagonal matrix with $C_1, \dots, C_n$ on the diagonal.
+    C.  A matrix with $C_1, \dots, C_n$ as its first row.
+    D.  A Jordan block.
+    E.  A strictly upper triangular matrix.
+    ans: B
+
+54.  Consider the rotation operator in $\mathbb{R}^2$ by an angle $\theta \neq 0, \pi$. Over the real numbers, this operator generally has:
+    A.  Two distinct real eigenvectors.
+    B.  One real eigenvector.
+    C.  No real eigenvectors.
+    D.  Infinitely many real eigenvectors.
+    E.  Eigenvectors $( \cos\theta, \sin\theta)$ and $(-\sin\theta, \cos\theta)$.
+    ans: C
+
+55.  The matrix for a rotation in $\mathbb{R}^2$ by an angle $\theta$ is $A = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$. Its characteristic polynomial is:
+    A.  $t^2 - 1 = 0$
+    B.  $t^2 + 1 = 0$
+    C.  $t^2 - 2t\cos\theta + 1 = 0$
+    D.  $(t-\cos\theta)^2 = 0$
+    E.  $t^2 - (\cos\theta + \sin\theta)t + \cos\theta\sin\theta = 0$
+    ans: C
+
+56.  Consider the linear operator $T$ on $F^2$ given by $T(e_1) = e_1$ and $T(e_2) = e_1 + e_2$. The matrix of $T$ with respect to the standard basis is:
+    A.  $\begin{pmatrix} 1 & 0 \\ 1 & 1 \end{pmatrix}$
+    B.  $\begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$
+    C.  $\begin{pmatrix} 1 & 0 \\ 0 & 1 \end{pmatrix}$
+    D.  $\begin{pmatrix} 0 & 1 \\ 1 & 1 \end{pmatrix}$
+    E.  $\begin{pmatrix} 1 & 1 \\ 1 & 0 \end{pmatrix}$
+    ans: B
+
+57.  For the operator $T(e_1)=e_1, T(e_2)=e_1+e_2$ on $F^2$, which of the following is true regarding its eigenvectors?
+    A.  It has a basis of eigenvectors.
+    B.  It has no eigenvectors.
+    C.  All non-zero vectors are eigenvectors.
+    D.  The only eigenvectors are multiples of $e_1$.
+    E.  The only eigenvectors are multiples of $e_2$.
+    ans: D
+
+58.  The characteristic polynomial of the matrix $A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ is:
+    A.  $t^2 - 1$
+    B.  $(t-1)^2$
+    C.  $t(t-2)$
+    D.  $t^2+1$
+    E.  $t^2-t$
+    ans: B
+
+59.  A scalar $c$ is an eigenvalue of an operator $T$ if and only if the operator $T - cI$ (where $I$ is the identity operator) is:
+    A.  Invertible.
+    B.  The zero operator.
+    C.  Not invertible (singular).
+    D.  The identity operator.
+    E.  Diagonalizable.
+    ans: C
+
+60.  An operator (or matrix) $M$ is not invertible if and only if its determinant is:
+    A.  Equal to 1.
+    B.  Non-zero.
+    C.  Equal to 0.
+    D.  A negative number.
+    E.  Equal to its trace.
+    ans: C
+
+61.  The characteristic polynomial $f_A(t)$ of an $n \times n$ matrix $A$ is defined as:
+    A.  $\det(A + tI)$
+    B.  $\det(tA - I)$
+    C.  $\det(tI - A)$
+    D.  $\text{trace}(tI - A)$
+    E.  The minimal polynomial for which $f_A(A) = 0$.
+    ans: C
+
+62.  The roots of the characteristic polynomial $f_A(t)=0$ are precisely the:
+    A.  Eigenvectors of A.
+    B.  Entries of the matrix A.
+    C.  Eigenvalues of A.
+    D.  Singular values of A.
+    E.  Diagonal entries of A if A is diagonalizable.
+    ans: C
+
+63.  For an $n \times n$ matrix $A$, the degree of its characteristic polynomial $f_A(t)$ is:
+    A.  $n^2$
+    B.  $n-1$
+    C.  $n$
+    D.  $2n$
+    E.  Dependent on the number of non-zero entries in $A$.
+    ans: C
+
+64.  If $f_A(t) = t^n + c_{n-1}t^{n-1} + \dots + c_1t + c_0$ is the characteristic polynomial of $A$, then the coefficient $c_{n-1}$ is equal to:
+    A.  $\det(A)$
+    B.  $-\det(A)$
+    C.  $\text{trace}(A)$
+    D.  $-\text{trace}(A)$
+    E.  $0$
+    ans: D
+
+65.  If $f_A(t) = t^n + c_{n-1}t^{n-1} + \dots + c_1t + c_0$ is the characteristic polynomial of $A$, then the constant term $c_0$ is equal to:
+    A.  $\det(A)$
+    B.  $(-1)^n \det(A)$
+    C.  $\text{trace}(A)$
+    D.  $0$
+    E.  $1$
+    ans: B
+
+66.  If $B = P^{-1}AP$ (i.e., $A$ and $B$ are similar matrices representing the same operator under different bases), how are their characteristic polynomials $f_A(t)$ and $f_B(t)$ related?
+    A.  $f_B(t) = \det(P) f_A(t)$
+    B.  $f_B(t) = f_A(t - \text{trace}(P))$
+    C.  $f_A(t) = f_B(t)$
+    D.  $f_B(t) = (f_A(t))^{-1}$
+    E.  There is no general relationship.
+    ans: C
+
+67.  The fact that $\det(P^{-1}MP) = \det(M)$ is used to prove that:
+    A.  Similar matrices have the same trace.
+    B.  The characteristic polynomial is independent of the choice of basis.
+    C.  All matrices are diagonalizable.
+    D.  The determinant is a linear operator.
+    E.  Eigenvalues are always real.
+    ans: B
+
+68.  A polynomial of degree $n$ with coefficients in a field $F$ can have at most how many distinct roots in $F$?
+    A.  $n-1$
+    B.  $n$
+    C.  $n+1$
+    D.  $n^2$
+    E.  Infinitely many if $F$ is infinite.
+    ans: B
+
+69.  The proof that a polynomial of degree $n$ has at most $n$ roots often uses the Factor Theorem, which states that if $c$ is a root of $f(t)$, then:
+    A.  $f(t) = (t+c)g(t)$ for some polynomial $g(t)$.
+    B.  $f(t) = (t-c)g(t)$ for some polynomial $g(t)$ of degree $n-1$.
+    C.  $f(c) = 1$.
+    D.  $g(t) = f(t)/(t-c)$ must have $c$ as a root too.
+    E.  The derivative $f'(c)$ must be non-zero.
+    ans: B
+
+70.  An $n$-dimensional vector space $V$ over a field $F$ can have at most how many distinct eigenvalues for any linear operator $T: V \to V$?
+    A.  $n-1$
+    B.  $n$
+    C.  $n+1$
+    D.  $n^2$
+    E.  Infinitely many if $F$ is infinite.
+    ans: B
+
+71.  The Cayley-Hamilton Theorem states that:
+    A.  Every matrix is diagonalizable.
+    B.  Every operator $T$ satisfies the polynomial $p(t)=t$. That is, $T=T$.
+    C.  If $f_T(t)$ is the characteristic polynomial of $T$, then $f_T(T) = 0$ (the zero operator).
+    D.  The eigenvalues of $T$ are the roots of any polynomial $p(t)$ such that $p(T)=0$.
+    E.  $\det(T) = \prod \lambda_i$ where $\lambda_i$ are eigenvalues.
+    ans: C
+
+72.  For a general $2 \times 2$ matrix $A = \begin{pmatrix} a & b \\ c & d \end{pmatrix}$, its characteristic polynomial is $f_A(t) = t^2 - (a+d)t + (ad-bc)$. The Cayley-Hamilton theorem implies:
+    A.  $A^2 - (a+d)A + (ad-bc)I = 0$ (where $0$ is the zero matrix, $I$ is identity).
+    B.  $A^2 - (a+d)A + (ad-bc)A = 0$.
+    C.  $t^2 - (a+d)t + (ad-bc) = 0$ for all $t$. (This is the definition, not the theorem applied to A).
+    D.  The eigenvalues are $a$ and $d$.
+    E.  $A$ must be diagonalizable.
+    ans: A
+
+73.  The mathematicians associated with the theorem stating an operator satisfies its own characteristic polynomial are:
+    A.  Gauss and Euler
+    B.  Abel and Galois
+    C.  Cayley and Hamilton
+    D.  Jordan and Frobenius
+    E.  Artin and Noether
+    ans: C
+
+74.  The proof of the Cayley-Hamilton theorem for a diagonalizable operator $T$ (with a basis of eigenvectors $V_i$ and eigenvalues $C_i$) relies on showing that $f_T(T)(V_i) = 0$ for each basis eigenvector $V_i$. This is true because:
+    A.  $f_T(T)(V_i) = T(f_T(C_i))V_i$ and $f_T(C_i)=0$.
+    B.  $f_T(T)(V_i) = f_T(C_i)V_i$ and $f_T(C_i)=0$ since $C_i$ are roots of $f_T(t)$.
+    C.  $f_T(T)$ is always the zero operator by definition.
+    D.  $V_i$ must be the zero vector if $C_i$ is a root.
+    E.  Diagonalizable operators are always zero.
+    ans: B
+
+75.  The space of all linear operators from an $n$-dimensional vector space $V$ to itself, $\text{Hom}(V,V)$ (or $L(V,V)$), is a vector space. What is its dimension?
+    A.  $n$
+    B.  $2n$
+    C.  $n^2$
+    D.  $n!$
+    E.  $n^n$
+    ans: C
+
+76.  Consider the set of operators $\{I, T, T^2, \dots, T^{n^2}\}$ where $T \in L(V,V)$ and $\dim(V)=n$. This set contains $n^2+1$ operators. Since $\dim(L(V,V)) = n^2$, this set must be:
+    A.  Linearly independent.
+    B.  A basis for $L(V,V)$.
+    C.  Linearly dependent.
+    D.  Composed entirely of invertible operators.
+    E.  Composed entirely of the zero operator.
+    ans: C
+
+77.  The linear dependence of $\{I, T, T^2, \dots, T^{n^2}\}$ implies that $T$ satisfies some polynomial equation $p(T)=0$ where the degree of $p(t)$ is:
+    A.  Exactly $n$.
+    B.  Less than $n$.
+    C.  Greater than $n^2$.
+    D.  Less than or equal to $n^2$.
+    E.  Exactly $n^2+1$.
+    ans: D
+
+78.  The Cayley-Hamilton theorem provides a stronger result than the general linear dependence argument by stating that $T$ satisfies a specific polynomial of degree:
+    A.  $n^2$.
+    B.  $n-1$.
+    C.  $n$.
+    D.  $1$.
+    E.  $2n$.
+    ans: C
+
+79.  In the characteristic polynomial $f_A(t) = t^n - \text{trace}(A)t^{n-1} + \dots + (-1)^n \det(A)$, the trace of matrix $A$, $\text{trace}(A)$, is defined as:
+    A.  The product of its diagonal entries.
+    B.  The sum of its diagonal entries.
+    C.  The sum of all its entries.
+    D.  Its determinant.
+    E.  The largest eigenvalue.
+    ans: B
+
+80.  The constant term of the characteristic polynomial $f_A(t)$ is $f_A(0) = \det(0 \cdot I - A) = \det(-A)$. How does $\det(-A)$ relate to $\det(A)$ for an $n \times n$ matrix $A$?
+    A.  $\det(-A) = -\det(A)$
+    B.  $\det(-A) = \det(A)$
+    C.  $\det(-A) = (-1)^n \det(A)$
+    D.  $\det(-A) = 0$
+    E.  $\det(-A) = (-1)^{n-1} \det(A)$
+    ans: C
+
+81.  Which of the following conditions is NOT sufficient to guarantee that an $n \times n$ matrix $A$ over $\mathbb{R}$ is diagonalizable over $\mathbb{R}$?
+    A.  $A$ has $n$ distinct real eigenvalues.
+    B.  $A$ is symmetric.
+    C.  The characteristic polynomial of $A$ has $n$ real roots (counting multiplicity) and for each eigenvalue, the dimension of its eigenspace equals its algebraic multiplicity.
+    D.  The characteristic polynomial of $A$ is $(t-c)^n$ for some real $c$.
+    E.  $A$ is a diagonal matrix.
+    ans: D
+
+82.  If the characteristic polynomial of an operator $T$ factors into distinct linear factors over the field $F$, i.e., $f_T(t) = (t-C_1)(t-C_2)\dots(t-C_n)$ with $C_i \in F$ all distinct, then $T$ is:
+    A.  The zero operator.
+    B.  The identity operator.
+    C.  Not invertible.
+    D.  Diagonalizable over $F$.
+    E.  Has no eigenvectors.
+    ans: D
+
+83.  The "minimal polynomial" $m_T(t)$ of an operator $T$ is the monic polynomial of least positive degree such that $m_T(T) = 0$. A key property (mentioned briefly as related to Cayley-Hamilton) is that $m_T(t)$:
+    A.  Is always equal to the characteristic polynomial $f_T(t)$.
+    B.  Divides the characteristic polynomial $f_T(t)$.
+    C.  Has degree $n^2$.
+    D.  Is always $(t-c)$ for some eigenvalue $c$.
+    E.  Has roots that are not eigenvalues of $T$.
+    ans: B
+
+84.  For the rotation matrix $A = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}$ with $\theta \neq k\pi$, the characteristic polynomial $t^2 - 2t\cos\theta + 1$ has no real roots. This implies:
+    A.  $A$ is not invertible.
+    B.  $A$ has no complex eigenvalues.
+    C.  $A$ is not diagonalizable over $\mathbb{R}$.
+    D.  The Cayley-Hamilton theorem does not apply.
+    E.  $\text{trace}(A)=0$.
+    ans: C
+
+85.  The operator $T$ with matrix $A = \begin{pmatrix} 1 & 1 \\ 0 & 1 \end{pmatrix}$ has characteristic polynomial $(t-1)^2$. Since it's not diagonalizable, this means for its eigenvalue $\lambda=1$:
+    A.  The geometric multiplicity of $\lambda=1$ is 2.
+    B.  The geometric multiplicity of $\lambda=1$ is 0.
+    C.  The geometric multiplicity of $\lambda=1$ is 1 (which is less than its algebraic multiplicity of 2).
+    D.  The eigenvalue $\lambda=1$ is not a root of the characteristic polynomial.
+    E.  $A-I$ is invertible.
+    ans: C
+
+86.  The fact that eigenvectors corresponding to distinct eigenvalues are linearly independent is crucial for proving:
+    A.  The Cayley-Hamilton Theorem.
+    B.  That if an $n \times n$ matrix has $n$ distinct eigenvalues, it is diagonalizable.
+    C.  That the trace of a matrix is the sum of its eigenvalues.
+    D.  That the determinant of a matrix is the product of its eigenvalues.
+    E.  That all symmetric matrices are diagonalizable.
+    ans: B
+
+87.  Sir William Rowan Hamilton is famous for the Cayley-Hamilton theorem and also for discovering:
+    A.  Complex numbers.
+    B.  Quaternions.
+    C.  Group theory.
+    D.  Vector calculus.
+    E.  The principle of least action.
+    ans: B
+
+88.  Arthur Cayley, the other mathematician associated with the Cayley-Hamilton theorem, is known for extensive work in:
+    A.  Number theory.
+    B.  Topology.
+    C.  Matrix algebra and invariant theory.
+    D.  Differential geometry.
+    E.  Mathematical logic.
+    ans: C
+
+89.  If an operator $T$ has $n$ distinct eigenvalues $C_1, \dots, C_n$ in an $n$-dimensional space, and $V_1, \dots, V_n$ are corresponding eigenvectors, the set $\{V_1, \dots, V_n\}$:
+    A.  Is linearly dependent.
+    B.  Forms a basis for the vector space.
+    C.  Spans a proper subspace.
+    D.  Consists of only the zero vector.
+    E.  Cannot be determined without knowing the matrix.
+    ans: B
+
+90.  The definition of a cyclic group $G$ states that there exists an element $a \in G$ (called a generator) such that:
+    A.  For every $g \in G$, $g = a^n$ for some positive integer $n$.
+    B.  For every $g \in G$, $g = a^n$ for some integer $n \in \mathbb{Z}$.
+    C.  $G$ is finite and $a^{|G|} = e$.
+    D.  Every element in $G$ is a generator.
+    E.  $a \cdot g = g \cdot a$ for all $g \in G$.
+    ans: B
+
+91.  If $G$ is a cyclic group and $H$ is a subgroup of $G$, then $H$ is:
+    A.  Always trivial.
+    B.  Also cyclic.
+    C.  Necessarily equal to $G$.
+    D.  Non-abelian.
+    E.  Isomorphic to $G/H$.
+    ans: B
+
+92.  To prove that any subgroup $H$ of a cyclic group $G = \langle a \rangle$ is cyclic, one typically considers $k$ to be:
+    A.  The order of $a$.
+    B.  The largest integer such that $a^k \in H$.
+    C.  The smallest positive integer such that $a^k \in H$ (if $H \neq \{e\}$).
+    D.  Any integer such that $a^k \in H$.
+    E.  The order of $H$.
+    ans: C
+
+93.  In the proof that a subgroup $H$ of $\langle a \rangle$ is generated by $a^k$ (where $k$ is minimal positive), if $a^m \in H$, we write $m = qk + r$ with $0 \le r < k$. Why must $r=0$?
+    A.  Because $a^m = (a^k)^q a^r$ implies $a^r$ must be $e$.
+    B.  Because $a^r = a^m (a^k)^{-q} \in H$, and if $r>0$, this contradicts the minimality of $k$.
+    C.  Because $m$ must be a multiple of $k$ by definition of a subgroup.
+    D.  Because $H$ cannot contain elements of the form $a^r$ where $r<k$.
+    E.  The Euclidean algorithm only works if the remainder is zero.
+    ans: B
+
+94.  Which of the following statements about generators of a cyclic group of order $n > 2$ is true?
+    A.  Every element is a generator.
+    B.  Only the identity element is not a generator.
+    C.  If $a$ is a generator, $a^2$ is never a generator.
+    D.  If $a$ is a generator of a cyclic group of order 4, $a^2$ is not a generator.
+    E.  All non-identity elements are generators.
+    ans: D
+
+95.  In the context of a group $G$ and a normal subgroup $H$, the product of two cosets $(g_1 H)(g_2 H)$ is equal to:
+    A.  $g_1 g_2 H$
+    B.  $g_2 g_1 H$
+    C.  $H g_1 g_2$
+    D.  $g_1 H \cap g_2 H$
+    E.  The set $\{ h_1 g_1 h_2 g_2 \mid h_1, h_2 \in H \}$
+    ans: A
+
+96.  The problem discussed in the lecture regarding $HGH$ being a left coset if $H$ is normal. If $H$ is normal in $G$, then $HGH$ simplifies to:
+    A.  $H$
+    B.  $gH$
+    C.  $Hg$
+    D.  $g^2H$
+    E.  $H_gH_g$ (This form is not standard)
+    ans: C
+    _Note: The lecture actually states $HGH = HHg = Hg$. This implies $GH=Hg$. If $GH=gH$ (normality), then $HGH = HgH = H(gH) = (Hg)H = (gH)H = gHH = gH$. The lecturer's simplification $HHg=Hg$ is correct, but $HGH=HHg$ requires $GH=Hg$. The solution given in lecture for $gHgH$ being $ggH$ is actually for $(gH)(gH)$. The question as stated about $HGH$ being $Hg$ relies on $GH=Hg$, which is true if $H$ is normal._
+
+97.  A more precise problem solved in the lecture was showing that if $H$ is normal, then $gHgH$ is a left coset. This was shown to be equal to:
+    A.  $gH$
+    B.  $H g$
+    C.  $g^2 H$
+    D.  $H g^2$
+    E.  $H$
+    ans: C
+
+98.  If $HGH$ (where $H$ is a subgroup of $G$) is always a left coset for any $g \in G$, then the lecture argued that $H$ must be:
+    A.  Abelian
+    B.  Cyclic
+    C.  Normal in $G$
+    D.  The trivial subgroup
+    E.  Finite
+    ans: C
+
+99.  In the quotient group $G/N$, if $\bar{x}\bar{y} = \bar{y}\bar{x}$, this is equivalent to $(xy)N = (yx)N$. This, in turn, means:
+    A.  $xy = yx$ in $G$.
+    B.  $x^{-1}y^{-1}xy \in N$ (the commutator $[x^{-1},y^{-1}]$ is in $N$).
+    C.  $N$ is the trivial subgroup.
+    D.  $G$ is abelian.
+    E.  $x \in N$ or $y \in N$.
+    ans: B
+    _Note: $(yx)^{-1}(xy) = x^{-1}y^{-1}xy \in N$. The commutator $[x,y] = xyx^{-1}y^{-1}$. If $[x^{-1},y^{-1}] \in N$, this is equivalent to $xyx^{-1}y^{-1} \in N$._
+
+100. The element $xyx^{-1}y^{-1}$ is known as the:
+    A.  Inverse of $xy$.
+    B.  Conjugate of $xy$.
+    C.  Commutator of $x$ and $y$, denoted $[x,y]$.
+    D.  Order of $xy$.
+    E.  Center of $x$ and $y$.
+    ans: C
+
+101. The center of a group $G$, denoted $Z(G)$, is defined as:
+    A.  $\{g \in G \mid g^2 = e \}$
+    B.  $\{g \in G \mid ga = ag \text{ for all } a \in G \}$
+    C.  $\{g \in G \mid \text{order}(g) \text{ is prime} \}$
+    D.  The set of all generators of $G$.
+    E.  The largest abelian subgroup of $G$.
+    ans: B
+
+102. If a group $G$ has a unique element $a$ of order 2, then:
+    A.  $G$ must be cyclic of order 2.
+    B.  $a$ must be the identity element.
+    C.  $a$ is in the center of $G$, $Z(G)$.
+    D.  $G$ must be abelian.
+    E.  No such group exists.
+    ans: C
+
+103. The proof that a unique element $a$ of order 2 is in $Z(G)$ uses the fact that for any $g \in G$, the element $gag^{-1}$:
+    A.  Has order 1.
+    B.  Has order 2.
+    C.  Has order 4.
+    D.  Is equal to $g$.
+    E.  Is not necessarily in $G$.
+    ans: B
+
+104. If an element $x$ in a group $G$ has order $n$, what is the order of $gxg^{-1}$ for any $g \in G$?
+    A.  $n$
+    B.  $n/2$ if $n$ is even, $n$ if $n$ is odd.
+    C.  $2n$
+    D.  Divides $n$.
+    E.  Cannot be determined without knowing $G$.
+    ans: A
+
+105. Can a non-trivial group have a unique element of order 3?
+    A.  Yes, if the group is $S_3$.
+    B.  Yes, if the group is $\mathbb{Z}/3\mathbb{Z}$.
+    C.  No, because if $a$ has order 3, then $a^2$ also has order 3 and $a^2 \neq a$ (if $a \neq e$).
+    D.  No, because order 3 elements only exist in abelian groups.
+    E.  Yes, any group of order 3 has this property.
+    ans: C
+
+106. The set of all $n \times n$ symmetric matrices (where $A=A^T$) with real entries forms:
+    A.  A group under matrix multiplication.
+    B.  A field.
+    C.  A vector subspace of $M_n(\mathbb{R})$.
+    D.  A non-abelian group under matrix addition.
+    E.  A ring but not a vector space.
+    ans: C
+
+107. The dimension of the vector space of $n \times n$ symmetric real matrices is:
+    A.  $n^2$
+    B.  $n(n-1)/2$
+    C.  $n(n+1)/2$
+    D.  $n$
+    E.  $n!-1$
+    ans: C
+
+108. Is the set of $n \times n$ symmetric matrices closed under matrix multiplication?
+    A.  Yes, always.
+    B.  No, not generally (e.g., if $AB \neq BA$ for symmetric $A,B$).
+    C.  Yes, if the matrices are diagonal.
+    D.  Only if $n=1$.
+    E.  Yes, if the matrices are invertible.
+    ans: B
+
+109. The General Linear Group $GL_n(F)$ is the set of:
+    A.  All $n \times n$ matrices with entries in field $F$.
+    B.  All $n \times n$ matrices $A$ with $\det(A) = 1$.
+    C.  All $n \times n$ matrices $A$ with $\det(A) \neq 0$.
+    D.  All symmetric $n \times n$ matrices with entries in $F$.
+    E.  All $n$-dimensional vectors over $F$.
+    ans: C
+
+110. There is a bijection between the set of ordered bases of an $n$-dimensional vector space $F^n$ and the elements of:
+    A.  $M_n(F)$
+    B.  $SL_n(F)$
+    C.  $GL_n(F)$
+    D.  $O_n(F)$
+    E.  $S_n$
+    ans: C
+
+111. How is a matrix in $GL_n(F)$ constructed from an ordered basis $\{v_1, \dots, v_n\}$ of $F^n$?
+    A.  The rows of the matrix are the vectors $v_i$.
+    B.  The columns of the matrix are the vectors $v_i$.
+    C.  The matrix entries are the inner products $(v_i, v_j)$.
+    D.  The matrix is diagonal with $v_i$ on the diagonal (if $v_i$ are scalars).
+    E.  The determinant of the matrix is the sum of $v_i$.
+    ans: B
+
+112. The order of the group $GL_n(\mathbb{F}_p)$ (where $\mathbb{F}_p = \mathbb{Z}/p\mathbb{Z}$) is equal to the number of:
+    A.  Subspaces of $\mathbb{F}_p^n$.
+    B.  Ordered bases of $\mathbb{F}_p^n$.
+    C.  Unordered bases of $\mathbb{F}_p^n$.
+    D.  Elements in $\mathbb{F}_p^n$, which is $p^n$.
+    E.  Symmetric $n \times n$ matrices over $\mathbb{F}_p$.
+    ans: B
+
+113. To count the number of ordered bases in $\mathbb{F}_p^n$, for the first basis vector $v_1$, there are how many choices?
+    A.  $p^n$
+    B.  $p^n - 1$
+    C.  $p$
+    D.  $n$
+    E.  $p^n - p$
+    ans: B
+
+114. For the second basis vector $v_2$ in $\mathbb{F}_p^n$, given $v_1$, how many choices are there?
+    A.  $p^n - 1$
+    B.  $p^n - p$ (all vectors minus those in $\text{span}(v_1)$)
+    C.  $p^n - 2$
+    D.  $p^n - p - 1$
+    E.  $p^{n-1}$
+    ans: B
+
+115. The order of $GL_n(\mathbb{F}_p)$ is given by the product:
+    A.  $\prod_{k=0}^{n-1} (p^n - k)$
+    B.  $\prod_{k=0}^{n-1} (p^n - p^k)$
+    C.  $(p^n)!$
+    D.  $p^{n^2}$
+    E.  $(p^n - 1)^n$
+    ans: B
+
+116. The formula for $|GL_n(\mathbb{F}_p)|$ can also be written as $p^{n(n-1)/2} \prod_{j=1}^{n} (p^j-1)$. What does the term $p^{n(n-1)/2}$ represent?
+    A.  The number of ways to choose the diagonal elements.
+    B.  The product of $p^k$ terms factored out from $(p^n-p^k)$.
+    C.  The number of non-singular diagonal matrices.
+    D.  The order of the center of $GL_n(\mathbb{F}_p)$.
+    E.  The number of upper triangular matrices with 1s on the diagonal.
+    ans: B
+
+117. The Orthogonal Group $O_n(F)$ is defined as the set of matrices $A \in GL_n(F)$ such that:
+    A.  $A = A^T$ (symmetric)
+    B.  $A^T A = I$ (transpose is the inverse)
+    C.  $\det(A) = 1$
+    D.  $A^2 = I$
+    E.  All entries of $A$ are 0 or 1.
+    ans: B
+
+118. If a matrix $A$ is in $O_n(F)$, what can be said about its determinant, $\det(A)$?
+    A.  $\det(A) = 0$
+    B.  $\det(A) = 1$
+    C.  $\det(A) = -1$
+    D.  $(\det(A))^2 = 1$, so $\det(A) = \pm 1$
+    E.  $\det(A)$ can be any non-zero scalar in $F$.
+    ans: D
+
+119. The Special Orthogonal Group $SO_n(F)$ is defined as the set of matrices $A \in O_n(F)$ such that:
+    A.  $A = A^T$
+    B.  $A^T A = I$ and $\det(A) = 0$
+    C.  $\det(A) = 1$
+    D.  $\det(A) = -1$
+    E.  $A$ is upper triangular.
+    ans: C
+
+120. If $1 \neq -1$ in the field $F$, then $SO_n(F)$ is a subgroup of $O_n(F)$ of index:
+    A.  1 (i.e., $SO_n(F) = O_n(F)$)
+    B.  2
+    C.  $n$
+    D.  $n!$
+    E.  Infinite
+    ans: B
+
+121. Matrices in $O_n(F)$ preserve the standard inner product, meaning $(Av) \cdot (Aw) = v \cdot w$. This is equivalent to the condition:
+    A.  $A^T = A$
+    B.  $A^T A = I$
+    C.  $A^2 = I$
+    D.  $\det(A) = 1$
+    E.  $A$ is a diagonal matrix.
+    ans: B
+
+122. Permutation matrices are matrices obtained by permuting the columns (or rows) of the identity matrix. Are permutation matrices always in $O_n(F)$?
+    A.  Yes, because their columns are orthonormal.
+    B.  No, only if the permutation is an even permutation.
+    C.  No, only if the permutation is the identity.
+    D.  Yes, but only if $F = \mathbb{R}$.
+    E.  No, their determinant can be other than $\pm 1$.
+    ans: A
+
+123. The symmetric group $S_n$ can be embedded as a subgroup into which matrix group?
+    A.  $GL_n(F)$ only
+    B.  $SL_n(F)$ only (matrices with determinant 1)
+    C.  $O_n(F)$
+    D.  Diagonal matrices in $GL_n(F)$
+    E.  Scalar matrices $cI$ in $GL_n(F)$
+    ans: C
+
+124. The alternating group $A_n$ (even permutations) can be embedded as a subgroup into which matrix group?
+    A.  $O_n(F)$ but not necessarily $SO_n(F)$.
+    B.  $SO_n(F)$ (since determinant of permutation matrix is sign of permutation).
+    C.  Only $GL_n(F)$.
+    D.  Matrices $A$ such that $A^T A = -I$.
+    E.  Symmetric matrices.
+    ans: B
+
+125. Over the field of real numbers $F=\mathbb{R}$, the group $O_n(\mathbb{R})$ preserves Euclidean geometry, meaning it preserves:
+    A.  Only the origin.
+    B.  Only the direction of vectors.
+    C.  Lengths of vectors and angles between vectors.
+    D.  Only volumes.
+    E.  The linear ordering of $\mathbb{R}$.
+    ans: C
+
+126. The length (or norm) of a vector $v \in \mathbb{R}^n$ is defined as $\sqrt{v \cdot v}$. If $A \in O_n(\mathbb{R})$, then the length of $Av$ is:
+    A.  Greater than the length of $v$.
+    B.  Less than the length of $v$.
+    C.  Equal to the length of $v$.
+    D.  $(\det A) \times \text{length of } v$.
+    E.  Zero.
+    ans: C
+
+127. The cosine of the angle $\theta$ between two non-zero vectors $v, w \in \mathbb{R}^n$ is given by $\cos\theta = \frac{v \cdot w}{|v||w|}$. This formula relies on the:
+    A.  Pythagorean Theorem
+    B.  Cauchy-Schwarz Inequality (which ensures $|\cos\theta| \le 1$)
+    C.  Triangle Inequality
+    D.  Law of Sines
+    E.  Fundamental Theorem of Algebra
+    ans: B
+
+128. The idea that the universe might have the shape of a dodecahedron, as mentioned in the lecture, connects to which area of mathematics for its description?
+    A.  Calculus of variations
+    B.  Differential equations
+    C.  Group theory and geometry
+    D.  Probability theory
+    E.  Number theory
+    ans: C
+
+129. Johannes Kepler, in his model of the solar system, famously tried to relate planetary orbits to:
+    A.  Permutation groups
+    B.  Matrix algebra
+    C.  Conic sections (which he did, but the specific reference was to...)
+    D.  Inscribed Platonic solids
+    E.  Fourier series
+    ans: D
+
+130. Which historical mathematician, known for work on number theory and modular arithmetic, wrote "Disquisitiones Arithmeticae"?
+    A.  Leonhard Euler
+    B.  Pierre de Fermat
+    C.  Carl Friedrich Gauss
+    D.  Evariste Galois
+    E.  Niels Abel
+    ans: C
+
+131. If a matrix $A \in GL_n(\mathbb{R})$ has an eigenvector $v$ with eigenvalue $\lambda$, and $A \in O_n(\mathbb{R})$, then what must be true about $\lambda$ (if $v$ is a real eigenvector)?
+    A.  $\lambda = 0$
+    B.  $\lambda > 0$
+    C.  $|\lambda| = 1$ (i.e., $\lambda = \pm 1$ if real)
+    D.  $\lambda$ must be an integer.
+    E.  $\lambda$ can be any real number.
+    ans: C
+    _Self-correction: The lecture question was about a *diagonal* orthogonal matrix. For a general orthogonal matrix, real eigenvalues must be $\pm 1$. If it's diagonal and orthogonal, then $A^T A = A^2 = I$, so diagonal entries $\lambda_i$ satisfy $\lambda_i^2 = 1$, so $\lambda_i = \pm 1$. The question in the lecture was "the only things that could be on the diagonal are plus or minus one" for a diagonal matrix in $O_n(R)$. This question is about eigenvalues. If $Av = \lambda v$, then $|Av|=|\lambda||v|$. Since $A$ is orthogonal, $|Av|=|v|$. So $|\lambda||v|=|v|$, which means $|\lambda|=1$. For real $\lambda$, this means $\lambda = \pm 1$._
+
+132. The group $O_n(\mathbb{R})$ consists of transformations that are geometrically interpreted as:
+    A.  Only translations.
+    B.  Only scalings (dilations).
+    C.  Rotations and reflections (preserving the origin).
+    D.  Shears.
+    E.  Projections.
+    ans: C
+
+133. The inner product $v \cdot w = \sum a_i b_i$ for $v=(a_1, ..., a_n)$ and $w=(b_1, ..., b_n)$ in $\mathbb{R}^n$ can be written in matrix form (if $v,w$ are column vectors) as:
+    A.  $vw^T$
+    B.  $v^T w$
+    C.  $wv^T$
+    D.  $(vw)^T$
+    E.  $v+w^T$
+    ans: B
+
+134. The condition for $A \in O_n(F)$ is $A^T A = I$. If $A$ is diagonal, $A = \text{diag}(\lambda_1, ..., \lambda_n)$, then $A^T A = A^2 = \text{diag}(\lambda_1^2, ..., \lambda_n^2)$. For $A^2 = I$, this means:
+    A.  $\lambda_i = 1$ for all $i$.
+    B.  $\lambda_i = \pm 1$ for all $i$.
+    C.  $\lambda_i = 0$ for all $i$.
+    D.  $\sum \lambda_i^2 = 1$.
+    E.  All $\lambda_i$ are positive.
+    ans: B
+
+135. The lecture implies that the study of groups often involves identifying a set with some structure and then considering the group of bijections that:
+    A.  Destroy that structure.
+    B.  Preserve that structure.
+    C.  Map that structure to a different one.
+    D.  Ignore that structure.
+    E.  Simplify that structure.
+    ans: B
+
+    

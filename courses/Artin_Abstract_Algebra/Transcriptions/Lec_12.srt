@@ -1,0 +1,1883 @@
+1
+00:00:12,259 --> 00:00:14,669
+Alright, so just an announcement before we get started.
+
+2
+00:00:15,469 --> 00:00:17,79
+Uh, there's no class Monday.
+
+3
+00:00:18,29 --> 00:00:19,409
+So let me put that up again.
+
+4
+00:00:24,369 --> 00:00:30,819
+The next class is on Wednesday, but we won't have a lecture because we're going to have our first hour exam on Wednesday in class.
+
+5
+00:00:30,999 --> 00:00:34,199
+It'll cover all the material on groups and what we've done on vector spaces.
+
+6
+00:00:34,679 --> 00:00:38,789
+The homework due Wednesday are these problems from section 4.3 and 4.4.
+
+7
+00:00:38,789 --> 00:00:48,469
+And if you wait until a little later today, Peter and I are going to post a practice exam on the website in the same place as the homework due Wednesday.
+
+8
+00:00:48,649 --> 00:00:51,569
+It'll be clearly delineated what's homework and what's a practice exam.
+
+9
+00:00:51,819 --> 00:00:53,799
+You don't have to hand in the practice exam.
+
+10
+00:00:54,79 --> 00:00:55,439
+It's just for your own benefit.
+
+11
+00:00:55,439 --> 01:00,659
+If we're really ambitious, on Monday we might even post solutions to the practice exam.
+
+12
+01:01,649 --> 01:02,809
+So you see whether you did it well.
+
+13
+01:02,809 --> 01:05,709
+And on Tuesday, there are two review sessions.
+
+14
+01:06,239 --> 01:06,629
+Is that right?
+
+15
+01:07,339 --> 01:12,349
+So Liz, you're having your regular section on Tuesday, and Peter is having a section Tuesday night at Mather.
+
+16
+01:14,359 --> 01:14,909
+Office hours.
+
+17
+01:14,909 --> 01:21,19
+But in any case, if people have questions at the last minute about the exam, those would be two good places to check up.
+
+18
+01:21,869 --> 01:22,319
+Good.
+
+19
+01:22,689 --> 01:27,439
+All right, now, the last time we were talking about choosing good bases for a given linear operator.
+
+20
+01:27,439 --> 01:50,29
+So we start off with a linear operator from V to V and can we find a good basis so that the matrix of T of T is in simple form.
+
+21
+01:54,849 --> 01:56,169
+So, let's think about that a little bit.
+
+22
+01:56,509 --> 02:03,229
+First of all, you have a notion when you have a linear operator on a vector space, you have a notion of an invariant subspace.
+
+23
+02:11,129 --> 02:20,809
+If you have an invariant subspace is a subspace of V which is preserved under T, such that T of W is contained in W.
+
+24
+02:22,749 --> 02:25,569
+So if you apply T to any vector in W, you stay in W.
+
+25
+02:25,759 --> 02:27,659
+That's what it means invariant under T.
+
+26
+02:29,259 --> 02:43,509
+Now, if you have an invariant subspace, already you get some and you choose your basis so that you start off with basis elements of W and then you complete them to basis elements of V, then the matrix of T has a special form.
+
+27
+02:43,509 --> 02:55,449
+Namely, if you start off with your basis vectors in W, say the first four basis vectors in W, the coordinates when you transform them under T lie in W, so only involve the first four terms.
+
+28
+02:55,659 --> 02:57,489
+So you get a little square matrix here.
+
+29
+02:59,619 --> 03:02,229
+Call that that matrix A maybe.
+
+30
+03:02,619 --> 03:10,939
+And then down here you get all zeros because the when you apply it to a vector in W, it doesn't involve any of the basis vectors that are beyond W.
+
+31
+03:11,339 --> 03:17,799
+And then when you apply the to the other basis vectors, you don't know anything about it at all, so you might get a B here and a and a D here.
+
+32
+03:17,909 --> 03:25,339
+But you get a lot of zeros in the matrix if you have an invariant subspace and you choose your basis, so the first basis vectors are in W.
+
+33
+03:30,459 --> 03:31,289
+in W.
+
+34
+03:32,109 --> 03:37,509
+Now, even better than an invariant subspace is an invariant subspace with an invariant complement.
+
+35
+03:39,139 --> 04:03,339
+If have an invariant complement W prime, which means another subspace of V such that any vector in V is uniquely of the form a vector in W plus a vector in W prime, and we write that V is the direct sum of W plus W prime.
+
+36
+04:03,639 --> 04:12,409
+So you get two subspaces and any vector is uniquely of the form a vector in W plus a vector in W prime.
+
+37
+04:16,539 --> 04:42,129
+So, and T of W prime is contained in W prime, namely it's another invariant subspace, then the matrix looks even simpler than the matrix A of the transformation, if we choose a basis of W and adjoin it to a basis of W prime to get a full basis of V, then our matrix A looks like this.
+
+38
+04:42,649 --> 04:49,19
+A square matrix on W, a square matrix on W prime, and zeros elsewhere.
+
+39
+04:50,249 --> 04:54,679
+Namely, the matrix starts to look more and more a diagonal sum of matrices.
+
+40
+04:55,9 --> 04:58,449
+So this is on W and this on W prime.
+
+41
+05:00,109 --> 05:06,339
+But that's with respect to a basis that's intelligently chosen, namely the union of a basis of W and a basis of W prime.
+
+42
+05:07,639 --> 05:38,859
+Now, an extreme case of this is if we had W one-dimensional is one-dimensional, so it's spanned, so it consists of all multiples of some fixed vector W and is invariant, then T of W has to be a constant times W because that's the only other thing in this subspace.
+
+43
+05:40,349 --> 05:40,739
+Correct?
+
+44
+05:41,269 --> 05:50,429
+So then we'd say W is an eigen vector and C is an eigen value.
+
+45
+05:52,219 --> 05:54,139
+Comes from the German, eigen, same.
+
+46
+05:54,739 --> 06:00,619
+Sometimes in English, people have tried to introduce the terminology a proper vector or a proper value, it's never caught on.
+
+47
+06:01,369 --> 06:02,679
+I mean, it just comes from the German.
+
+48
+06:02,679 --> 06:03,9
+Yeah.
+
+49
+06:07,39 --> 06:16,149
+V, it means that it consists, it's a one-dimensional vector space with basis little W, namely it consists of all things of the form CW with C in the field.
+
+50
+06:16,539 --> 06:18,389
+That's what a one-dimensional vector space looks like.
+
+51
+06:18,579 --> 06:21,9
+You have one vector in it and you have all multiples of it.
+
+52
+06:22,329 --> 06:22,719
+Right?
+
+53
+06:23,139 --> 06:33,549
+So if that one-dimensional subspace is invariant, then what it means is that when you apply T to W, you must get another element of the space CW, and that's called an eigen vector and C is an eigen value.
+
+54
+06:33,729 --> 06:38,369
+But you might not have any one-dimensional spaces invariant, you might have two-dimensional spaces invariant.
+
+55
+06:38,829 --> 07:15,669
+If you can find, if there is a a basis V1 Vn of V consisting of eigen vectors, that's the best possible situation, with eigen values T of VI equals CI VI, different eigen values, then the matrix of T is a diagonal matrix, C1, C2, Cn, 0, 0.
+
+56
+07:16,449 --> 07:27,349
+That's a real extreme case of this, where you break up into blocks because you have invariant subspaces, and the blocks are each one by one matrices because the invariant subspaces have dimension one.
+
+57
+07:30,289 --> 07:37,809
+So, if you can have a basis of eigen vectors, is that like saying the entire space that we decide that can be broken up?
+
+58
+07:38,139 --> 07:53,469
+Yeah, it it gives a decomposition of the space into lines, one-dimensional vector spaces, each stable under T, and such that the vector space is the direct sum of those lines, and T is just rendered very simply in this picture.
+
+59
+07:54,819 --> 07:56,409
+Okay, if there is such a basis.
+
+60
+07:56,919 --> 08:03,739
+So we might want to know when is there such a basis, how do we find what the eigen values are, questions of that nature, just given the operator T.
+
+61
+08:04,659 --> 08:09,629
+Now, the first thing to note is there, so can I erase this information? Has everyone got the
+
+62
+08:10,559 --> 08:15,819
+No class Monday, homework, Wednesday hour exam, practice exam will be posted.
+
+63
+08:16,769 --> 08:20,639
+Now, you shouldn't always think there's going to be a basis of eigen vectors.
+
+64
+08:20,799 --> 08:21,599
+That's too simple.
+
+65
+08:23,9 --> 08:23,799
+That's too simple.
+
+66
+08:24,189 --> 08:39,119
+For example, a very simple simple transformation of R2, which we're going to study, is the transformation that takes a vector V and it rotates it through an angle theta.
+
+67
+08:42,239 --> 08:45,779
+So it has the property of just rotating the plane through an angle of theta.
+
+68
+08:46,549 --> 09:06,299
+That turns out to be a linear transformation, and if you if you take its basis with respect to the standard basis of R2 and you take the matrix of T, it's this matrix that looks like cosine theta, sin theta, whatever it is, uh minus sin theta, cosine theta.
+
+69
+09:07,9 --> 09:10,849
+That's the matrix of this rotation through an angle of theta.
+
+70
+09:18,239 --> 09:24,589
+See, it takes the this E1 is the vector 1 0, and that's taken to the vector whose coordinates are cosine theta and sin theta.
+
+71
+09:25,369 --> 09:25,759
+Right?
+
+72
+09:27,209 --> 09:29,539
+Now, this clearly has no eigen vectors.
+
+73
+09:30,459 --> 09:37,869
+has no eigen vectors V not equal to zero in R2.
+
+74
+09:38,499 --> 09:43,149
+Because any eigen vector would be a line taken into itself and no line is taken into itself.
+
+75
+09:43,479 --> 09:45,729
+It's rotated to another line, theta distance away.
+
+76
+09:46,549 --> 09:47,469
+So that's hopeless.
+
+77
+09:48,99 --> 09:50,529
+So we're not going to find a basis of eigen vectors there.
+
+78
+09:51,369 --> 09:52,229
+Another example.
+
+79
+09:53,389 --> 09:58,719
+You can have one eigen vector, so you have an invariant subspace like this, but you may not be able to get rid of the B.
+
+80
+09:59,149 --> 10:01,619
+You may never be able to get to a matrix like this.
+
+81
+10:02,829 --> 10:06,269
+So you can have an invariant subspace without an invariant complement.
+
+82
+10:07,539 --> 10:08,729
+So, another example.
+
+83
+10:09,569 --> 10:10,809
+Another problem.
+
+84
+10:14,359 --> 10:22,629
+Consider the linear operator of from R2 to R2, in fact, from why why do R?
+
+85
+10:22,949 --> 10:24,559
+This works over any field F.
+
+86
+10:26,149 --> 10:41,589
+F2 to F2 that takes T of E1 to E1, that's a perfectly nice eigen vector with eigen value 1, and takes T of E2, the second basis vector, to the to E1 + E2.
+
+87
+10:43,469 --> 10:44,29
+Okay?
+
+88
+10:45,459 --> 10:48,959
+Now, if you take the matrix of that T, it looks like this.
+
+89
+10:49,789 --> 10:51,839
+1 0 1 1.
+
+90
+10:52,309 --> 10:56,329
+That's a matrix of this form where the blocks each are 1 by 1 matrices.
+
+91
+10:56,649 --> 11:01,819
+Here's the T of E1 is E1 + 0 E2, here's the T of E2 is E1 + E2.
+
+92
+11:02,749 --> 11:05,849
+I claim there is no basis of eigen vectors.
+
+93
+11:14,9 --> 11:14,909
+Even though there's one of them.
+
+94
+11:15,209 --> 11:16,719
+Here there were no eigen vectors.
+
+95
+11:17,9 --> 11:22,449
+Here there's an eigen vector here where C is equal to 1, but there's no basis of eigen vectors.
+
+96
+11:22,779 --> 11:23,769
+You can't find another one.
+
+97
+11:23,919 --> 11:28,559
+You can't find here we have an invariant subspace without an invariant complement.
+
+98
+11:28,819 --> 11:37,619
+Or in other words, there is no complement W prime which is T invariant.
+
+99
+11:41,429 --> 11:45,439
+where W is the subspace FE1.
+
+100
+11:51,9 --> 11:52,199
+Okay, let's convince ourselves of that.
+
+101
+11:52,499 --> 11:54,9
+Well, let's see what it would mean to be an eigen vector.
+
+102
+11:54,439 --> 12:02,669
+Suppose V, which was AE1 + BE2, and we apply T to it.
+
+103
+12:03,509 --> 12:10,639
+Well, T of E1 is E1, so we get AE1 here plus B times E1 + E2.
+
+104
+12:11,459 --> 12:17,549
+So it's equal to A + B times E1 + B times E2.
+
+105
+12:19,29 --> 12:22,219
+We can work out what T does to anything once we know what it does to a
+
+106
+12:22,659 --> 12:27,99
+Now, suppose that were equal to, could that be equal to C times V?
+
+107
+12:28,249 --> 12:35,639
+Well, C times V is CA E1 + CB E2.
+
+108
+12:37,869 --> 12:38,819
+Right? Because here's V.
+
+109
+12:41,179 --> 12:41,629
+Okay.
+
+110
+12:42,99 --> 13:03,609
+So if that's equal, then I have to have, so that implies that C uh CA is equal to A, the coefficient of E1s have to be the same, and CB is equal to sorry, CA is A + B, sorry, and CB is equal to B.
+
+111
+13:05,179 --> 13:05,659
+Okay?
+
+112
+13:06,529 --> 13:18,149
+Now, if B is not equal to zero, you can multiply this by B inverse and get C has to be equal to 1.
+
+113
+13:18,499 --> 13:19,779
+That's true in any field.
+
+114
+13:21,49 --> 13:33,209
+If C is equal to 1, then reading this, we get that A is equal to A + B, so, subtracting A from both sides, B is equal to zero.
+
+115
+13:34,189 --> 13:35,199
+Contradiction.
+
+116
+13:36,869 --> 13:42,119
+So the only way that this can be an eigen vector is if B is equal to zero.
+
+117
+13:46,209 --> 13:48,509
+In which case, C is equal to 1.
+
+118
+13:50,189 --> 14:01,629
+Well, but that says that the only eigen vectors lie on the line, so if B is equal to zero, our eigen vector V is a multiple of E1.
+
+119
+14:02,449 --> 14:06,609
+So it lies in the subspace W already that we knew was invariant.
+
+120
+14:06,829 --> 14:13,449
+We already knew that any multiple of E1 is an eigen vector, and this argument here, this simple argument shows there are no more.
+
+121
+14:14,219 --> 14:19,259
+So there's impossible to find a space that isn't this subspace which is complementary to it.
+
+122
+14:19,709 --> 14:22,759
+So you'll never diagonalize this operator with eigen vectors.
+
+123
+14:24,609 --> 14:25,259
+Okay?
+
+124
+14:27,19 --> 14:41,529
+Now, before we get into the answer of when an eigen when a when we have a basis of eigen vectors, we might ask ourselves, a priori, given the the transformation T, before we go find any eigen vectors, can we limit what are the possible eigen values?
+
+125
+14:47,159 --> 14:47,869
+Because that may help us.
+
+126
+14:48,229 --> 14:52,189
+You see, in this case, we're going to be able to see that there are no possible eigen values.
+
+127
+14:52,579 --> 14:55,149
+Here we're going to see there's a possible eigen value of 1.
+
+128
+14:55,569 --> 14:56,79
+That's it.
+
+129
+14:57,359 --> 14:57,749
+Okay.
+
+130
+14:58,519 --> 15:03,609
+So, um, the way you think of this is if, oh, I hate this kind of choice.
+
+131
+15:04,489 --> 15:04,919
+Sorry.
+
+132
+15:05,449 --> 15:23,99
+If T of W is equal to C * W, and you consider the new operator, T minus the identity operator.
+
+133
+15:24,159 --> 15:26,529
+The identity operator takes every vector to itself.
+
+134
+15:27,249 --> 15:35,409
+And you multiply the identity by the constant C, so that takes any vector to C times itself, and you apply that to the vector W, you get zero.
+
+135
+15:36,789 --> 15:55,869
+In other words, W is in the kernel of the operator, the linear operator T minus the eigen value times the identity operator.
+
+136
+15:57,59 --> 16:01,259
+And in particular, this operator is not invertible.
+
+137
+16:04,719 --> 16:11,409
+So, P - CI is not invertible.
+
+138
+16:13,339 --> 16:20,259
+Because it has a kernel, and it's a map from a space to itself, so it's invertible if and only if its kernel is zero or its image is everything.
+
+139
+16:20,549 --> 16:22,169
+But here we'd have a kernel.
+
+140
+16:23,139 --> 16:29,229
+Conversely, if this operator had a kernel, I better keep some of this up because I want to go back to this.
+
+141
+16:38,249 --> 16:59,329
+Conversely, if T - CI has a kernel or just is not invertible, then T then C is an eigen value.
+
+142
+17:04,9 --> 17:04,839
+for T.
+
+143
+17:05,899 --> 17:16,569
+Because to say this operator has a kernel means there's some vector W that it takes to zero, which means that there's some vector W such that T of W is the constant times W, which means it's an eigen vector.
+
+144
+17:18,469 --> 17:22,919
+So we just have to determine for which value C does this operator have a kernel.
+
+145
+17:23,979 --> 17:48,779
+So, the set of eigen values is contained in the set of constants C and F such that T - CI is not invertible.
+
+146
+17:53,299 --> 17:59,209
+We go and see if we can find which constants this operator is not invertible, that'll in fact, it's equal to the set.
+
+147
+18:00,19 --> 18:00,769
+I just I just proved that.
+
+148
+18:00,949 --> 18:01,429
+Thank you.
+
+149
+18:02,279 --> 18:03,419
+Let's be strong here.
+
+150
+18:10,349 --> 18:10,829
+Good.
+
+151
+18:11,319 --> 18:13,529
+Now, how do I tell if an operator is not invertible?
+
+152
+18:14,49 --> 18:18,649
+Well, I I choose some basis for V and take its matrix.
+
+153
+18:19,149 --> 18:22,769
+And I take the determinant of that matrix with respect to some basis of V.
+
+154
+18:23,209 --> 18:26,99
+And if that determinant is zero, the operator is not invertible.
+
+155
+18:27,169 --> 18:51,199
+So this is equivalent to the determinant of A minus C times I is equal to zero where A is the matrix of T with respect to some basis.
+
+156
+18:52,159 --> 18:54,129
+The basis matrix of the identity matrix is the same.
+
+157
+18:54,399 --> 18:59,109
+It's the identity the identity operator always has the identity matrix, no matter what basis you choose.
+
+158
+18:59,319 --> 19:01,179
+Same thing for a constant times the identity.
+
+159
+19:01,759 --> 19:08,439
+So you choose some basis, you take the matrix of your operator, and then you calculate the matrix of this operator, which is a little different.
+
+160
+19:08,839 --> 19:15,469
+You take its determinant, and if its determinant is zero, then this operator is not invertible, and consequently C is an eigen value.
+
+161
+19:16,129 --> 19:17,679
+Now, that looks like, well, what does that help?
+
+162
+19:18,339 --> 19:20,149
+But it helps in the following way.
+
+163
+19:25,439 --> 19:26,839
+We'll come back to this case.
+
+164
+19:29,549 --> 19:44,169
+So that case remember was the matrix 1 0 1 1 has no basis of of eigen vectors.
+
+165
+19:47,559 --> 19:48,99
+Okay.
+
+166
+19:49,309 --> 19:51,929
+So, from this we get the wonderful thing.
+
+167
+19:52,399 --> 20:07,489
+Consider the determinant of the matrix P times the identity minus A.
+
+168
+20:09,39 --> 20:26,199
+Now, the determinant here is zero, it's the same thing as if you took the negative of that matrix, the determinant of CI - A = 0 because here I've just multiplied the matrix by -1, which multiplies its determinant by a power of -1, depending on what the n by n matrix is.
+
+169
+20:27,9 --> 20:29,649
+So, this determinant vanishes if and only if this one.
+
+170
+20:30,199 --> 20:31,339
+So consider this determinant.
+
+171
+20:31,579 --> 20:32,419
+Now, what does that mean?
+
+172
+20:32,799 --> 20:37,189
+That means this would be the determinant of the matrix that looked like this.
+
+173
+20:38,9 --> 20:48,429
+T - A11 A12 A1n uh A21 Sorry, with minus signs.
+
+174
+20:49,399 --> 20:50,329
+Thank you.
+
+175
+20:50,629 --> 20:51,9
+Thank you.
+
+176
+20:51,579 --> 21:02,199
+T - A22 T - A N N and this would be - A N1.
+
+177
+21:02,799 --> 21:16,309
+So it it would be of entries where the entries were the entries of minus A except along the diagonal, you would add to that T times the identity matrix, because T times the identity matrix looks like T T T 0 0, and this looks like A.
+
+178
+21:17,409 --> 21:22,369
+So you have an n by n matrix where the entries are not scalars, but T you think of as a variable.
+
+179
+21:23,79 --> 21:28,749
+Now, you can calculate this determinant by the usual determinant formula, and it turns out to be a polynomial in T.
+
+180
+21:32,399 --> 21:41,209
+The next terms turns out to be A11 + A22 + + AN T to the n - 1.
+
+181
+21:42,169 --> 21:48,749
+And then you have terms, and then the last term and it turns out to be plus or minus -1 to the N determinant of A.
+
+182
+21:50,509 --> 22:05,599
+is a it's a polynomial in T of degree N with coefficients in the field F.
+
+183
+22:07,409 --> 22:07,909
+Okay?
+
+184
+22:10,399 --> 22:22,279
+And uh that we get by choosing any basis we wish for our vector space, calculating the matrix of T with respect to that basis and calculating this polynomial.
+
+185
+22:22,899 --> 22:26,539
+So this polynomial is called the characteristic polynomial of T.
+
+186
+22:35,139 --> 22:40,99
+Now, you may say to me, is the characteristic polynomial well-defined?
+
+187
+22:40,599 --> 22:48,229
+Because to tell me how to calculate it, you chose a basis for V, wrote the matrix of T with respect to the basis and took some determinant.
+
+188
+22:48,689 --> 22:54,179
+And I have to check that that's independent of the choice of basis that I choose for T.
+
+189
+22:55,429 --> 23:03,449
+So, I'm going to next observe that this depends only on T, even though we needed to choose a matrix to to calculate it.
+
+190
+23:08,259 --> 23:16,19
+The characteristic polynomial, which we'll call f of T, here it is.
+
+191
+23:16,649 --> 23:18,599
+I've just gone beyond the quadrant.
+
+192
+23:19,459 --> 23:24,309
+I feel like, you know, some it's it's I'm I'm back in Newton Ninja Turtles or something.
+
+193
+23:24,689 --> 23:27,109
+I've gone beyond the I've gone beyond the quadrant.
+
+194
+23:27,329 --> 23:29,499
+I'm I'm now being sent into dimension X.
+
+195
+23:30,9 --> 23:31,799
+How many of you watched Mutant Ninja Turtles when you were young?
+
+196
+23:32,129 --> 23:34,299
+How many of you bought all Mutant Ninja Turtle action figures?
+
+197
+23:34,759 --> 23:35,709
+Yes, so did my son.
+
+198
+23:36,129 --> 23:37,719
+Rather, I had to go get them.
+
+199
+23:38,169 --> 23:40,179
+I thought there was one good thing about Mutant Ninja Turtle.
+
+200
+23:40,369 --> 23:41,509
+Actually, there were two good things.
+
+201
+23:41,769 --> 23:45,149
+First of all, it taught him the names of four important Renaissance artists.
+
+202
+23:47,439 --> 23:50,259
+Secondly, I like the song very much.
+
+203
+23:50,959 --> 23:58,139
+Um, but we could never figure out in the song, um, I think one of the guys was supposed to be a piece of bad news.
+
+204
+23:58,889 --> 23:59,979
+He's a piece of bad news.
+
+205
+24:00,459 --> 24:02,349
+I I forget whether it was Michelangelo or whatever.
+
+206
+24:02,689 --> 24:05,889
+And my son used to call him a pizza bad dude.
+
+207
+24:06,489 --> 24:08,339
+So that was slight transcription of the song.
+
+208
+24:08,569 --> 24:08,959
+Is there's a new one?
+
+209
+24:09,449 --> 24:09,969
+Oh no.
+
+210
+24:10,509 --> 24:12,579
+Yeah.
+
+211
+24:13,449 --> 24:17,159
+I mean, it I mean, you have to admit that it was a brilliant idea.
+
+212
+24:17,679 --> 24:21,559
+That that that someone could make a billion dollars out of something this stupid.
+
+213
+24:21,999 --> 24:26,809
+And and you guys don't appreciate it, but you know, your parents were all in the stores with me buying this crap.
+
+214
+24:27,699 --> 24:28,389
+All right.
+
+215
+24:28,609 --> 24:30,519
+So I've gone I I've gone beyond the quadrant here.
+
+216
+24:30,819 --> 24:35,569
+I'm supposed to stay within various quadrants, so there's been an extension to dimension X of that quadrant.
+
+217
+24:36,99 --> 24:43,339
+Okay, the characteristic polynomial f of T depends only on T, not on the basis of V used to obtain the matrix A to calculate it.
+
+218
+24:44,439 --> 24:51,599
+And that's encouraging. And the reason is this.
+
+219
+24:51,959 --> 25:02,99
+If we used a different basis, then we get the matrix A prime which is a conjugate of A.
+
+220
+25:04,909 --> 25:08,239
+So let's calculate what we get with A prime.
+
+221
+25:08,529 --> 25:12,239
+We get that we'd have to calculate the determinant of TI - A prime.
+
+222
+25:12,909 --> 25:15,669
+That would be our new characteristic polynomial F prime of T.
+
+223
+25:16,319 --> 25:17,239
+Oops, better not use prime.
+
+224
+25:17,639 --> 25:18,629
+Well, whatever, F star of T.
+
+225
+25:19,9 --> 25:20,939
+Let's call this A star.
+
+226
+25:24,309 --> 25:25,379
+new new new different basis.
+
+227
+25:26,569 --> 25:28,209
+F star of T would be this.
+
+228
+25:28,959 --> 25:58,369
+But on the other hand, we use this formula and we see that it's the determinant of TI - p p inverse.
+
+229
+25:59,399 --> 26:09,239
+And then we note that if you conjugate the identity matrix or any multiple of it by P, you get the identity matrix because the identity matrix commutes with any matrix.
+
+230
+26:09,629 --> 26:18,309
+So this could be written rewritten as the determinant of P times TI - A P inverse.
+
+231
+26:19,849 --> 26:33,679
+And then we use the fact that the determinant of a product of matrices is the product of the determinants, so we get the determinant of P times the determinant of this matrix is what we called f of T times the determinant of P inverse.
+
+232
+26:34,239 --> 26:42,109
+But the determinant of P inverse is the determinant of P inverse in our field, and multiplication in our field is commutative.
+
+233
+26:42,739 --> 26:46,389
+So we can cancel this and this and we just get f of T.
+
+234
+26:47,259 --> 27:00,159
+So the miracle of the characteristic polynomial is that even to to to calculate it, you have to choose a matrix and take its determinant, but the end the end product is independent of the matrix you choose, the basis you choose to calculate it.
+
+235
+27:00,159 --> 27:06,559
+And and here's the key thing, the eigen values are the roots of the characteristic polynomial.
+
+236
+27:08,159 --> 27:18,689
+Its roots C are the eigen values of T.
+
+237
+27:19,399 --> 27:35,179
+Namely, if you find a value C such that when you substitute it into this polynomial and you find that f of C is equal to 0, that's what a root means of a polynomial, then that meant that the determinant of CI - A was zero, which is exactly what we need to get an eigen value.
+
+238
+27:36,579 --> 27:41,249
+So the possible eigen values occur among the roots of T of f of T.
+
+239
+27:43,169 --> 27:43,639
+And
+
+240
+27:44,619 --> 27:53,839
+here's a key point, a polynomial of degree n over a field has at most n distinct roots in the field.
+
+241
+27:54,429 --> 27:57,629
+So there's a finite possibility for the set of eigen values.
+
+242
+28:00,449 --> 28:02,449
+Let's put a little lemma up.
+
+243
+28:07,429 --> 28:32,299
+Lemma, if f of T has degree n over a field F, then it has at most n distinct roots C in F.
+
+244
+28:33,289 --> 28:35,519
+Roots means points where f of C is equal to zero.
+
+245
+28:36,969 --> 28:43,9
+So there's a that you can't have for a transformation of a two-dimensional space, you can have at most two different eigen values.
+
+246
+28:44,189 --> 28:45,19
+May have none.
+
+247
+28:45,809 --> 28:55,629
+But uh, so the proof of this, which is is fundamental and you've seen it for the reals, etc, is that there's a Euclidean algorithm in polynomials.
+
+248
+28:56,519 --> 29:09,599
+So you can always write a polynomial f of T as x - c times another polynomial plus a constant.
+
+249
+29:13,349 --> 29:23,329
+You can always do a division with degree of g of T equal n - 1.
+
+250
+29:24,599 --> 29:30,199
+So for any C and F, you can make a division of the polynomial f of T by the polynomial T - C.
+
+251
+29:30,489 --> 29:34,409
+The quotient is a polynomial of degree n - 1, which you work out and the remainder is a constant.
+
+252
+29:35,259 --> 29:37,519
+And D in F.
+
+253
+29:38,319 --> 29:47,449
+If um f of T if f of C is equal to 0, then D is equal to zero.
+
+254
+29:48,269 --> 29:55,549
+Because you just substitute C into this expression, f of C is 0, C - C is certainly zero, so you're left with zero.
+
+255
+29:56,789 --> 30:03,109
+So f of T is equal to T - c times g of T.
+
+256
+30:03,729 --> 30:05,969
+And then if you had a different root, it's not a root here.
+
+257
+30:06,929 --> 30:22,129
+If C prime is another root with C prime not equal to C, then I claim that g of C prime is equal to zero.
+
+258
+30:23,9 --> 30:32,119
+And the reason is that if you substituted in here, this is zero, but C - C prime is non zero, so you can multiply by its inverse to see that g of C prime has to be zero.
+
+259
+30:33,209 --> 30:34,969
+And then you do the same argument with G.
+
+260
+30:35,139 --> 30:36,839
+Then you'd by induction on D.
+
+261
+30:36,839 --> 30:38,489
+Then use induction on the degree of G.
+
+262
+30:41,489 --> 30:44,129
+So a polynomial of degree N has at most N distinct roots.
+
+263
+30:47,769 --> 30:56,69
+We found one root, C, and then we're left with a polynomial of degree n - 1, that has at most n - 1 roots, so there is at most n roots for F.
+
+264
+30:56,429 --> 30:56,779
+Yeah.
+
+265
+30:56,899 --> 30:57,719
+Does that work for all fields though?
+
+266
+30:57,939 --> 30:58,539
+Every field.
+
+267
+30:58,939 --> 31:03,189
+There's nothing I've used here that that is not doesn't work for a field.
+
+268
+31:03,879 --> 31:05,499
+So if it's not like a principal ideal domain?
+
+269
+31:05,809 --> 31:06,619
+No, that's not a field.
+
+270
+31:07,9 --> 31:07,639
+That's not a field, okay.
+
+271
+31:08,129 --> 31:08,809
+It's not a field.
+
+272
+31:09,209 --> 31:09,549
+Okay.
+
+273
+31:09,859 --> 31:10,829
+I needed an inverse.
+
+274
+31:11,519 --> 31:12,759
+There are things that work for domains too.
+
+275
+31:12,939 --> 31:14,209
+We'll we'll get there too, okay?
+
+276
+31:14,549 --> 31:16,459
+But but it doesn't work for a general ring.
+
+277
+31:17,529 --> 31:17,939
+Okay?
+
+278
+31:18,349 --> 31:22,269
+For example, if you take the ring, this is a very nice ring, Z mod 8Z.
+
+279
+31:23,929 --> 31:25,559
+Okay, the integers mod 8.
+
+280
+31:26,39 --> 31:29,769
+And you take the polynomial f of T is T squared - 1.
+
+281
+31:31,59 --> 31:33,239
+You'll find that it has four distinct roots in that field.
+
+282
+31:34,199 --> 31:35,879
+Four distinct roots in that ring.
+
+283
+31:37,689 --> 31:41,89
+Namely 1, 3, 5, and 7.
+
+284
+31:42,369 --> 31:44,779
+So, there's something that goes wrong in this case.
+
+285
+31:45,239 --> 31:46,19
+We'll have to figure it out.
+
+286
+31:46,199 --> 31:47,709
+It's basically this cancellation law.
+
+287
+31:49,789 --> 31:52,459
+But over a field, this principle works brilliantly.
+
+288
+31:53,289 --> 31:54,629
+And we're over a field here.
+
+289
+31:55,329 --> 32:00,9
+So consequently, the characteristic polynomial depends only on the transformation.
+
+290
+32:00,689 --> 32:09,149
+Its roots are the eigen values, and therefore we have for a transformation of an n-dimensional vector space at most n distinct eigen values.
+
+291
+32:11,249 --> 32:12,209
+Let's write that down.
+
+292
+32:18,929 --> 32:22,179
+Roots are eigen values.
+
+293
+32:24,969 --> 32:36,379
+So, at most N distinct eigen values where N is the dimension of V.
+
+294
+32:37,319 --> 32:39,839
+Now, let's take a look at these cases and see what happens.
+
+295
+32:40,729 --> 32:44,879
+In this case, the characteristic polynomial looks like this.
+
+296
+32:45,459 --> 32:53,579
+f of T is equal to T squared - 2 cosine theta times T + 1.
+
+297
+32:54,469 --> 32:58,979
+Because we have to calculate the determinant of t - A.
+
+298
+32:59,569 --> 33:11,439
+So t - A looks like the matrix t - cosine theta sin theta - sin theta t - cosine theta.
+
+299
+33:12,489 --> 33:15,359
+If you take the determinant of this, you get this.
+
+300
+33:16,9 --> 33:17,489
+You got to just believe me.
+
+301
+33:18,319 --> 33:18,799
+Okay?
+
+302
+33:19,929 --> 33:23,139
+Now, I claim that that has no real roots.
+
+303
+33:24,379 --> 33:49,609
+Because this number here, whatever it is, so write this as, yeah, that the absolute value of 2 cosine theta is uh well, if theta is not equal to 0 or um pi, wait a minute, theta not equal to 0.
+
+304
+33:51,749 --> 33:53,519
+The absolute value of this is less than 2.
+
+305
+33:55,349 --> 33:56,789
+I'm a little puzzled by theta equal.
+
+306
+33:57,579 --> 33:59,779
+Is this correct and I really rotate? Yeah, I'm really rotate.
+
+307
+34:02,329 --> 34:05,749
+Ah. If theta, theta not equal to 0 or pi.
+
+308
+34:06,429 --> 34:12,39
+If theta is zero, obviously everything's an eigen value because uh the the it's the identity matrix.
+
+309
+34:12,589 --> 34:18,49
+If theta is pi, then you're rotating around 180 degrees, you're getting minus the identity matrix.
+
+310
+34:18,629 --> 34:20,129
+So there are some eigen values there.
+
+311
+34:20,589 --> 34:29,529
+But if theta is not equal to 0 or pi, 2 cosine theta is less than 2, and consequently, if you calculate the discriminant of this polynomial, you find it's negative.
+
+312
+34:30,249 --> 34:39,509
+B squared - 4ac is negative for that quadratic polynomial, and consequently its roots are complex, not real.
+
+313
+34:40,239 --> 34:42,709
+So this polynomial has no real roots.
+
+314
+34:44,19 --> 34:49,959
+And consequently, no eigen values over the reals.
+
+315
+34:50,409 --> 34:56,559
+In this case, the characteristic polynomial f of T just turns out to be x - t - 1 squared.
+
+316
+34:57,469 --> 35:04,429
+So you only get one distinct root and we got that we got an eigen value, an eigen vector for that root, but we don't get any other eigen vectors.
+
+317
+35:06,209 --> 35:06,759
+Okay.
+
+318
+35:08,229 --> 35:12,559
+So, uh, now the at this point the situation becomes much more difficult.
+
+319
+35:12,799 --> 35:13,309
+Um,
+
+320
+35:15,469 --> 35:19,629
+and uh I'll just give you a simple version of it.
+
+321
+35:19,979 --> 35:24,879
+Oh, let's do one more calculation so that we can be confident that we know how to calculate a characteristic polynomial.
+
+322
+35:25,399 --> 35:28,929
+Let's do a general 2x2 matrix of its characteristic polynomial.
+
+323
+35:32,859 --> 35:47,559
+I claim that f of T is T squared - a + d * T + AD - BC.
+
+324
+35:49,189 --> 35:53,869
+So that's a good exercise for you guys to do to make sure you can calculate a characteristic polynomial.
+
+325
+35:54,209 --> 35:57,859
+This, by the way, the two terms in the characteristic polynomial that are quite famous.
+
+326
+35:58,359 --> 36:03,489
+This term is called the trace of T, the sum of the diagonal entries of the matrix.
+
+327
+36:04,129 --> 36:06,969
+And this is of course the determinant of T.
+
+328
+36:07,579 --> 36:11,269
+And those two term all the coefficients depend only on T, not on the matrix A.
+
+329
+36:12,449 --> 36:22,749
+So, uh, so here I could see that the term was this because that's the trace of this matrix, and the determinant of this matrix here is 1, cosine squared plus sin squared.
+
+330
+36:23,919 --> 36:25,839
+So in general, you get this formula.
+
+331
+36:26,99 --> 36:30,419
+So for example, if I gave you this matrix and I asked you what its eigen values are,
+
+332
+36:36,599 --> 36:45,659
+you would say, well, look, f of T is T squared - 7T plus, so we have to do the determinant, 12 - 2, 10.
+
+333
+36:46,489 --> 36:48,119
+And then we'd say, well, can I factor that?
+
+334
+36:48,749 --> 36:53,519
+So it looks like uh T - 5 * T - 2.
+
+335
+36:55,829 --> 36:58,179
+So, uh 5 and 2 are eigen values.
+
+336
+37:00,239 --> 37:01,79
+Good.
+
+337
+37:05,239 --> 37:15,749
+Namely, we have a vector V1 such that T of V1 is 5V1, and we have a vector V2 such that T of V2 is 2V2.
+
+338
+37:17,329 --> 37:18,199
+Looks good, huh?
+
+339
+37:18,769 --> 37:21,469
+Looks like we might have a basis of eigen vectors.
+
+340
+37:22,269 --> 37:22,679
+Right?
+
+341
+37:23,149 --> 37:23,769
+We have two of them.
+
+342
+37:24,319 --> 37:26,89
+Are they linearly independent?
+
+343
+37:27,539 --> 37:30,9
+Are these two vectors linearly independent?
+
+344
+37:32,489 --> 37:33,19
+Why?
+
+345
+37:34,309 --> 37:36,199
+Why are they linearly independent?
+
+346
+37:37,419 --> 37:38,709
+Because if you multiply if you apply t to one of them and you multiply it by two, but if you multiply if you apply t to the other, it multiplies by five.
+
+347
+37:46,169 --> 37:51,739
+And so 5v1 can't equal 2v1 unless uh unless v1 is zero.
+
+348
+37:52,549 --> 37:54,259
+So, unless 5 is equal to 2.
+
+349
+37:54,949 --> 37:56,939
+Yeah, or either 5 is equal to 2 or if you want to zero.
+
+350
+37:56,939 --> 37:57,769
+Can 5 be equal to 2?
+
+351
+37:59,359 --> 38:00,439
+Can 5 be equal to 2?
+
+352
+38:02,239 --> 38:03,269
+5 can't be equal to 2.
+
+353
+38:03,829 --> 38:04,259
+Ah.
+
+354
+38:04,989 --> 38:06,249
+Ah, so okay, good.
+
+355
+38:06,739 --> 38:14,859
+If 2 is not equal to 5 in our field F, then we get a basis.
+
+356
+38:16,679 --> 38:24,109
+of eigen vectors because in those case in the case where 2 is not equal to 5, these two vectors cannot lie on the same line.
+
+357
+38:30,339 --> 38:39,149
+Because anything on the line of V1, when you apply T to it is multiplied by 5, whereas V2 is not multiplied by 5.
+
+358
+38:39,399 --> 38:41,539
+It's multiplied by 2, and 2 is not equal to 5.
+
+359
+38:43,969 --> 38:55,409
+So, if these two eigen values are distinct in our field, which is not necessarily true, because our field might have been the field of three elements where 5 happens to be equal to 2.
+
+360
+38:56,209 --> 39:08,539
+But if we were in, say, the real numbers or the field of 11 elements, and these two numbers were distinct, we get a basis of eigen vectors from V1 and V2.
+
+361
+39:09,119 --> 39:11,719
+And in general, that's true, and then I'll take the question.
+
+362
+39:12,239 --> 39:32,529
+In general, if you are so lucky that your characteristic polynomial factors completely into distinct roots, T - C1, T - C2, T - Cn in F with the CI distinct, then that's not so unreasonable thing to ask, although it fails in these two cases.
+
+363
+39:42,669 --> 39:46,79
+In this case, we had no roots, and in this case, we had a multiple root.
+
+364
+39:47,169 --> 40:01,599
+But suppose it factors into distinct roots, then I claim you can get a basis of eigen vectors by taking for each one of these eigen values an eigen vector, and then the claim is, which is a generalization of this, that those form a linearly independent set.
+
+365
+40:02,139 --> 40:04,219
+That's a little bit more work than it is for two, but it works.
+
+366
+40:06,669 --> 40:19,329
+However, these two cases show you that if you have no roots or you have multiple roots, that may not be true, and then it becomes a more complicated analysis of what actually goes on here, which we're not going to do.
+
+367
+40:19,919 --> 40:38,59
+But I want you to remember at least the simple principle that if you calculate the characteristic polynomial of an operator like this, and you find two distinct roots, then you can find a basis of eigen vectors, but in this case we would be able to say, as long as we had this inequality in F, we'd have a basis of eigen vectors.
+
+368
+40:38,359 --> 40:41,879
+We don't know what they are yet. That's another problem, how to find the eigen vectors.
+
+369
+40:42,139 --> 40:43,659
+But at least we know they exist.
+
+370
+40:44,229 --> 40:45,969
+Now, there was a question back there that I No.
+
+371
+40:46,809 --> 40:47,879
+I I answered it.
+
+372
+40:48,399 --> 40:49,139
+God, you guys are late.
+
+373
+40:49,319 --> 40:50,679
+You've missed the fabulous lecture.
+
+374
+40:51,919 --> 40:52,459
+Okay.
+
+375
+40:52,629 --> 40:53,579
+You'll look at it on the video.
+
+376
+40:53,579 --> 40:53,879
+Okay.
+
+377
+40:54,199 --> 40:56,689
+But I I warn you, I went beyond the barrier here.
+
+378
+40:56,849 --> 40:57,729
+So that may be lost.
+
+379
+40:58,319 --> 40:58,739
+Okay?
+
+380
+41:00,379 --> 41:01,79
+Okay.
+
+381
+41:01,399 --> 41:02,779
+We also discussed Mutant Ninja Turtles.
+
+382
+41:03,59 --> 41:04,429
+You'll want to catch up on that.
+
+383
+41:04,819 --> 41:05,229
+Okay.
+
+384
+41:06,189 --> 41:06,699
+Now,
+
+385
+41:08,109 --> 41:12,649
+this is in some sense just the beginning of the fun with the characteristic polynomial.
+
+386
+41:12,649 --> 41:21,499
+And if I had sufficient time, I would go back and tell you a little bit more about the characteristic polynomial and what you do when it has multiple roots, etc.
+
+387
+41:21,679 --> 41:22,719
+But we're going to leave this for the moment.
+
+388
+41:23,109 --> 41:31,419
+Many of you may have done this in in in in in 55, done Jordan canonical form or things things you do when it when it doesn't diagonalize.
+
+389
+41:32,249 --> 41:33,689
+There's all kinds of interesting stuff.
+
+390
+41:34,299 --> 41:41,639
+But I just want to tell you one more amazing thing about the characteristic polynomial, which is in in some sense my favorite theorem of linear algebra.
+
+391
+41:42,319 --> 41:43,909
+Which again, we're not going to prove.
+
+392
+41:45,309 --> 41:45,619
+Okay.
+
+393
+41:51,109 --> 41:52,129
+Okay.
+
+394
+41:52,569 --> 41:53,759
+So, let's backtrack a little bit.
+
+395
+41:54,209 --> 41:57,139
+So now this is not required, but it's my favorite theorem.
+
+396
+42:03,89 --> 42:08,539
+So you can see that there's a subject ahead here, we haven't exhausted the joys of linear algebra.
+
+397
+42:09,419 --> 42:21,59
+So take a linear operator on a finite dimensional vector space T and take its matrix, uh, well, yeah, that's all I need, I guess.
+
+398
+42:21,729 --> 42:42,449
+And consider it as an element, uh, in the vector space, a vector in the vector space of all maps from V to V, all linear maps from V to V, which is a vector space over F of dimension n squared.
+
+399
+42:44,819 --> 42:46,219
+Okay, where V has dimension n.
+
+400
+42:46,739 --> 42:49,749
+You just think of it as a matrix and you can add n by n matrices.
+
+401
+42:50,329 --> 42:52,259
+So that's a vector space of dimension n squared.
+
+402
+42:53,149 --> 42:54,459
+Okay, so here are some new elements.
+
+403
+42:54,669 --> 42:58,179
+So, so you get a following elements in this vector space of dimension n squared.
+
+404
+42:58,799 --> 43:04,669
+You have the identity matrix, you have T, you have T squared, you have T cubed, you have T to the 4th.
+
+405
+43:05,139 --> 43:09,569
+You can keep it you can take you can compose the operator with itself as many times as you want.
+
+406
+43:09,829 --> 43:12,549
+Eventually you get to, let's go all the way up T to the n squared.
+
+407
+43:15,769 --> 43:18,349
+So they all lie in this vector space.
+
+408
+43:19,599 --> 43:21,989
+And there are n squared + 1 of them.
+
+409
+43:23,449 --> 43:28,409
+So, they must be linearly dependent, exactly.
+
+410
+43:29,549 --> 43:55,579
+A linear relation means something of the form A0 * I + A1 * T + A2 * T squared + + an squared * T to the n squared equals 0 in this vector space, V.
+
+411
+43:56,729 --> 44:15,699
+In other words, I T satisfies a polynomial of degree less than or equal to n squared with coefficients in the field F.
+
+412
+44:17,129 --> 44:32,89
+Namely, if you took this polynomial, a0t + a1 a0 + a1t + + an squared t to the n squared and you called that polynomial capital F of T, and you plugged in the operator capital T, that would be it would give you the zero operator.
+
+413
+44:33,299 --> 44:34,109
+This is the zero operator.
+
+414
+44:37,639 --> 44:39,29
+The whole matrix becomes zero.
+
+415
+44:40,379 --> 44:50,339
+And that's just because we can construct from powers of T a linear relation, and that linear relation gives a polynomial satisfied by T.
+
+416
+44:51,9 --> 44:55,379
+So there has to be some polynomial of degree less than or equal to n squared satisfied by T.
+
+417
+44:56,359 --> 44:56,789
+Okay.
+
+418
+44:57,379 --> 44:59,979
+So you can ask, is this the best possible degree?
+
+419
+45:00,379 --> 45:04,479
+Maybe there's a polynomial of some smaller degree satisfied by T.
+
+420
+45:05,469 --> 45:06,939
+So, that's my favorite theorem.
+
+421
+45:08,9 --> 45:09,949
+That's called the Cayley-Hamilton theorem.
+
+422
+45:11,559 --> 45:12,909
+And it say it says
+
+423
+45:14,769 --> 45:25,339
+Hamilton was the greatest Irish mathematician ever to live.
+
+424
+45:25,789 --> 45:31,599
+He uh lived in the middle of then did most of his work in the middle of the uh 19th century.
+
+425
+45:32,139 --> 45:40,419
+He discovered uh a new system of numbers called the Quaternions, which you can find etched on a bridge in Dublin, which he etched on the bridge after he discovered it.
+
+426
+45:41,19 --> 45:48,899
+was an English mathematician who enlarged on Hamilton's work, uh did a great deal of work in linear algebra at the end of the 19th century.
+
+427
+45:49,909 --> 46:07,109
+It says T always satisfies its own characteristic polynomial.
+
+428
+46:08,29 --> 46:11,299
+And that's a polynomial of degree N.
+
+429
+46:13,149 --> 46:13,899
+Ain't that cool?
+
+430
+46:14,639 --> 46:24,349
+So that uh in this case, it would say that if you took this matrix and you plugged it in to this polynomial, you would get the zero matrix.
+
+431
+46:25,229 --> 46:25,819
+Let's see it.
+
+432
+46:26,679 --> 46:31,509
+Let's see if we can actually do it.
+
+433
+46:38,619 --> 46:40,509
+Well, we have to calculate A squared first.
+
+434
+46:40,949 --> 46:49,539
+So, A squared, I'll put the matrix ABCD here so I can actually do the multiplication, is a2 + bc.
+
+435
+46:50,439 --> 46:54,649
+And then the next term is ab + bd, right?
+
+436
+46:55,569 --> 46:58,119
+And then it's uh AC + DC.
+
+437
+46:59,569 --> 47:04,629
+And then it's BC + D squared.
+
+438
+47:05,259 --> 47:08,749
+Then we have to subtract from that a + d times that matrix.
+
+439
+47:09,209 --> 47:11,629
+So that becomes a 2 + AD.
+
+440
+47:12,449 --> 47:15,619
+And then AB + BD.
+
+441
+47:16,389 --> 47:20,759
+And then a + d * c, AC + DC.
+
+442
+47:21,379 --> 47:25,539
+And then AD uh + D squared.
+
+443
+47:26,449 --> 47:29,569
+And then we have to add to it this times the identity matrix.
+
+444
+47:30,219 --> 47:35,889
+So, AD - BC, 0, 0, AD - BC.
+
+445
+47:37,219 --> 47:41,929
+And if you add that all up, the question is, do you get the matrix that looks like 0 0 0 0?
+
+446
+47:42,309 --> 47:45,439
+That would be satisfying its own characteristic polynomial.
+
+447
+47:45,989 --> 47:46,849
+And indeed it works.
+
+448
+47:47,189 --> 47:54,259
+Here we have a squared - a squared, BC - AD, and then we add to that AD - BC.
+
+449
+47:54,469 --> 47:55,189
+So that entry is zero.
+
+450
+47:55,599 --> 48:00,439
+Here we have AB + BD and we subtract AB + BD.
+
+451
+48:00,619 --> 48:00,999
+So that goes to zero.
+
+452
+48:01,159 --> 48:01,669
+Likewise.
+
+453
+48:02,409 --> 48:03,429
+So, isn't that a miracle?
+
+454
+48:03,999 --> 48:06,439
+Okay, now why should this be true?
+
+455
+48:07,529 --> 48:22,509
+Well, in the case, proof when f of T is equal to T - c1 T - c2 T - cn all CI distinct.
+
+456
+48:25,9 --> 48:35,409
+So, if the characteristic polynomial happened to factor completely and all the all the roots were distinct, I'll prove to you that an operator satisfies its own characteristic polynomial.
+
+457
+48:36,379 --> 48:45,699
+Because then we can choose a matrix so that A looks like the matrix C1 Cn 0, namely you can find a basis of eigen vectors.
+
+458
+48:47,49 --> 49:07,289
+Now, consider what happens when you put this matrix into this characteristic polynomial, then f of T is the same as calculating the matrix f of A, which looks like A - c1 times the identity times A - c2 times the identity, right?
+
+459
+49:08,199 --> 49:17,639
+And when you calculate A - c1 * the identity, you get a matrix that looks like this, 0, c2 - c1, cn - c1.
+
+460
+49:18,489 --> 49:25,759
+And we and these are all diagonal matrices, so when you multiply them, we just multiply the elements on the diagonal, so the top diagonal entry will always be zero.
+
+461
+49:26,229 --> 49:29,719
+And this matrix will have a a diagonal entry of zero in the second place.
+
+462
+49:30,249 --> 49:32,919
+And this matrix will have a diagonal entry of zero in the nth place.
+
+463
+49:33,869 --> 49:39,269
+So as long as you multiply those matrices, you're going to get a zero everywhere on the diagonal, and that's the zero matrix.
+
+464
+49:41,999 --> 49:51,149
+So if we were so lucky that we got to a characteristic polynomial where the eigen values were were all in the field and they were all distinct, we could prove the Cayley Hamilton theorem.
+
+465
+49:51,559 --> 49:57,149
+And the general proof is somehow a reduction to that case even though you can't always get that case.
+
+466
+49:58,369 --> 50:03,399
+It's a big theorem in linear algebra, it's the beginning of a really interesting part of the subject.
+
+467
+50:04,149 --> 50:08,509
+Uh we won't cover it now, but that'll induce you to uh take more courses in the subject.
+
+468
+50:08,739 --> 50:17,419
+So, uh after the exam, so the the exam will only cover the definition of the characteristic polynomial and the fact that its roots are eigen vectors, eigen values.
+
+469
+50:18,109 --> 50:19,289
+Okay, none of this fancy stuff.
+
+470
+50:19,799 --> 50:30,409
+And then after the exam, we're going to return and do some uh deeper material on the theory of uh groups and in particular the groups that come from special types of linear transformations called orthogonal groups.
+
+471
+50:31,149 --> 50:32,379
+So have a nice vacation.
