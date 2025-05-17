@@ -15,7 +15,8 @@ export let globalSubjectDefinitionsMap = new Map();
 
 import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG,
          // --- START MODIFIED ---
-         DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
+         DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME,
+         DEFAULT_EXPERIMENTAL_FEATURES // NEW IMPORT
          // --- END MODIFIED ---
        } from './config.js';
 import {DEFAULT_AI_SYSTEM_PROMPTS} from './ai_prompts.js'
@@ -72,6 +73,7 @@ export function setData(newData) {
     data = newData;
 }
 
+// --- START MODIFIED: setCurrentUser to include userSettings ---
 export function setCurrentUser(newUser) {
     if (newUser) {
         if (!newUser.uid) {
@@ -84,6 +86,13 @@ export function setCurrentUser(newUser) {
         } else {
             determinedIsAdmin = (newUser.uid === ADMIN_UID);
         }
+
+        // Initialize or merge experimental feature settings
+        const defaultExpFeatures = { ...DEFAULT_EXPERIMENTAL_FEATURES };
+        const userExpFeatures = (newUser.userSettings && typeof newUser.userSettings.experimentalFeatures === 'object')
+            ? { ...defaultExpFeatures, ...newUser.userSettings.experimentalFeatures }
+            : defaultExpFeatures;
+
         currentUser = {
             ...newUser,
             isAdmin: determinedIsAdmin,
@@ -91,13 +100,19 @@ export function setCurrentUser(newUser) {
             displayName: newUser.displayName || newUser.email?.split('@')[0] || 'User',
             photoURL: newUser.photoURL || null,
             credits: newUser.credits !== undefined ? Number(newUser.credits) : 0,
+            userSettings: { // Ensure userSettings structure exists
+                ...(newUser.userSettings || {}), // Preserve other potential userSettings
+                experimentalFeatures: userExpFeatures
+            }
         };
-        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin, credits: currentUser.credits });
+        console.log("[State] Current user set:", { uid: currentUser.uid, email: currentUser.email, displayName: currentUser.displayName, username: currentUser.username, photoURL: currentUser.photoURL, isAdmin: currentUser.isAdmin, credits: currentUser.credits, experimentalFeatures: currentUser.userSettings.experimentalFeatures });
     } else {
         currentUser = null;
         console.log("[State] Current user cleared (logged out).");
     }
 }
+// --- END MODIFIED ---
+
 export function setCurrentSubject(newSubject) {
     currentSubject = newSubject;
 }
@@ -234,6 +249,7 @@ export function setMusicPlayerState(newState) {
 }
 // --- END MODIFIED ---
 
+// --- START MODIFIED: clearUserSession to reset userSettings ---
 export function clearUserSession() {
     setCurrentSubject(null);
     setData({ subjects: {} });
@@ -247,6 +263,12 @@ export function clearUserSession() {
         fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
         customSystemPrompts: {}
     });
+    if (currentUser) { // Reset for current user structure if it exists
+        currentUser.userSettings = {
+            experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES }
+        };
+    }
+
     // --- START MODIFIED: Enhanced music state clearing ---
     const persistentVolume = musicPlayerState.volume;
     const persistentAmbientVolume = musicPlayerState.ambientVolume;
@@ -294,5 +316,6 @@ export function clearUserSession() {
     document.getElementById('course-dashboard-area')?.classList.add('hidden');
     console.log("[State] User session data cleared.");
 }
+// --- END MODIFIED ---
 
 // --- END OF FILE state.js ---

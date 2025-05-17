@@ -1,5 +1,3 @@
-// --- START OF FILE firebase_auth.js ---
-
 // firebase_auth.js
 import { auth, db, setCurrentUser, clearUserSession, userCourseProgressMap } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
@@ -38,16 +36,8 @@ export async function signUpUser(username, email, password) {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         console.log('[signUpUser] Firebase user created:', user.uid);
-
-        // initializeUserData will handle setting user doc and reserving username.
-        // Pass the 'user' object from userCredential for fallbacks.
         await initializeUserData(user.uid, user.email, username, user.displayName, user.photoURL, false, user);
         console.log("[signUpUser] initializeUserData completed for " + user.uid);
-
-        // REMOVED Redundant Username Reservation:
-        // console.log("[signUpUser] Attempting to reserve username '" + usernameLower + "' for user " + user.uid);
-        // await db.collection('usernames').doc(usernameLower).set({ userId: user.uid }); // This is now done in initializeUserData
-        // console.log("[signUpUser] Username '" + usernameLower + "' successfully reserved.");
 
         if (user && user.uid) {
             console.log("New user signed up. Sending welcome guide message.");
@@ -55,9 +45,6 @@ export async function signUpUser(username, email, password) {
                 console.error("Error sending welcome guide message on signup:", err);
             });
         }
-        // onAuthStateChanged will handle UI updates and loading data.
-        // hideLoading() will be handled by onAuthStateChanged or error cases.
-
     } catch (error) {
         console.error("Sign up error:", error);
         if (error.code === 'auth/email-already-in-use') {
@@ -65,7 +52,6 @@ export async function signUpUser(username, email, password) {
         } else if (error.code === 'auth/weak-password') {
             alert("Sign up failed: Password is too weak.");
         } else if (error.message && error.message.includes("A valid Firebase Auth user object is required")) {
-            // This specific error message comes from our modified initializeUserData
             alert("Sign up process failed: There was an issue setting up your user profile. Please try again or contact support if the problem persists.");
         }
          else {
@@ -74,8 +60,6 @@ export async function signUpUser(username, email, password) {
         hideLoading();
     }
 }
-
-// ... (rest of firebase_auth.js: signInUser, signInWithGoogle, signOutUser, sendPasswordReset, setupAuthListener) ...
 export async function signInUser(identifier, password) {
     if (!auth || !db) { console.error("Firebase not initialized"); return; }
     if (!identifier || !password) {
@@ -172,7 +156,7 @@ export function signInWithGoogle() {
             }
             console.log(`[signInWithGoogle] Final username determined: ${finalUsername}`);
 
-            await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL, false, user); // Pass user object
+            await initializeUserData(user.uid, user.email, finalUsername, user.displayName, user.photoURL, false, user);
             console.log("[signInWithGoogle] initializeUserData completed for " + user.uid);
             
             if (isNewUser && user && user.uid) {
@@ -200,10 +184,12 @@ export function signOutUser() {
     showLoading("Signing out...");
     auth.signOut().then(() => {
         console.log('Sign out successful');
+        window.playUiSound?.('button_click'); // Play sound on successful sign out
     }).catch((error) => {
         console.error("Sign out error:", error);
         alert("Sign out failed: " + error.message);
         hideLoading();
+        window.playUiSound?.('error');
     });
 }
 
@@ -224,6 +210,7 @@ export async function sendPasswordReset(email) {
         hideLoading();
         alert(`Password reset email sent to ${email}. Please check your inbox (and spam folder). Follow the instructions in the email to reset your password.`);
         console.log("Password reset email sent successfully to:", email);
+        window.playUiSound?.('save_success');
     } catch (error) {
         hideLoading();
         console.error("Error sending password reset email:", error);
@@ -234,8 +221,93 @@ export async function sendPasswordReset(email) {
             message = "Failed to send password reset email: The email address provided is not valid.";
         }
         alert(message);
+        window.playUiSound?.('error');
     }
 }
+
+// --- NEW: Change User Email ---
+export async function changeUserEmail(newEmail, currentPassword) {
+    if (!auth || !auth.currentUser) {
+        throw new Error("User not authenticated or Auth service unavailable.");
+    }
+    const user = auth.currentUser;
+
+    // 1. Re-authenticate the user
+    console.log("[ChangeEmail] Re-authenticating user...");
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    try {
+        await user.reauthenticateWithCredential(credential);
+        console.log("[ChangeEmail] Re-authentication successful.");
+    } catch (reauthError) {
+        console.error("[ChangeEmail] Re-authentication failed:", reauthError);
+        if (reauthError.code === 'auth/wrong-password') {
+            throw new Error("Incorrect current password. Email not changed.");
+        }
+        throw new Error(`Re-authentication failed: ${reauthError.message}`);
+    }
+
+    // 2. Attempt to update the email in Firebase Auth
+    console.log(`[ChangeEmail] Attempting to update email in Firebase Auth to: ${newEmail}`);
+    try {
+        await user.updateEmail(newEmail);
+        console.log("[ChangeEmail] Firebase Auth updateEmail call successful. Verification likely sent to new email.");
+        // Firebase Auth typically handles sending its own verification email when updateEmail is called
+        // and the project is configured to require email verification.
+        // Explicitly calling sendEmailVerification might be redundant or for specific scenarios.
+        // Let's keep it for now to be sure, but test without it if issues persist.
+        // await user.sendEmailVerification(); // This sends to the *new* email
+        // console.log("[ChangeEmail] Verification email explicitly requested for new email.");
+
+    } catch (updateEmailError) {
+        console.error("[ChangeEmail] Firebase Auth updateEmail call FAILED:", updateEmailError);
+        // The error "auth/operation-not-allowed" with "Please verify the new email"
+        // usually means the process has started but needs the new email to be clicked.
+        // However, if updateEmail *itself* throws this, it's an immediate block.
+        if (updateEmailError.code === 'auth/email-already-in-use') {
+            throw new Error("The new email address is already in use by another account.");
+        } else if (updateEmailError.code === 'auth/requires-recent-login') {
+             throw new Error("This operation is sensitive and requires a recent login. Please sign out and sign back in.");
+        } else if (updateEmailError.code === 'auth/operation-not-allowed' && updateEmailError.message.includes('verify the new email')) {
+            // This implies the user *must* click the link sent to the new email.
+            // The updateEmail call might have succeeded in *initiating* the change.
+            console.warn("[ChangeEmail] Firebase Auth requires verification of the new email. The updateEmail call might have initiated this.");
+            // We will still try to update Firestore, but the Auth email won't change until verification.
+        } else {
+            throw new Error(`Failed to update email in Firebase Auth: ${updateEmailError.message}`);
+        }
+    }
+
+    // 3. Update email in Firestore (if you store it there and want to reflect the *intended* new email)
+    //    Be aware that the user.email in Auth might not update until verification.
+    if (db) {
+        try {
+            console.log(`[ChangeEmail] Attempting to update email in Firestore users/${user.uid} to: ${newEmail}`);
+            await db.collection('users').doc(user.uid).update({ email: newEmail });
+            console.log("[ChangeEmail] User email updated in Firestore to reflect the new intended email.");
+        } catch (firestoreError) {
+            console.error("[ChangeEmail] Error updating email in Firestore, but Auth email change process may have been initiated:", firestoreError);
+            // This is not necessarily a critical failure if the Auth email change is pending verification.
+            // throw new Error(`Failed to update email in database: ${firestoreError.message}`); // Optional: re-throw if this is critical
+        }
+    }
+    // The user will need to check their NEW email inbox and click the verification link.
+    // After they do, their Firebase Auth email will be updated.
+    // You might want to log them out and ask them to log back in with the new email AFTER they've verified it.
+}
+
+// --- NEW: Change User Password ---
+export async function changeUserPassword(currentPassword, newPassword) {
+    if (!auth || !auth.currentUser) {
+        throw new Error("User not authenticated or Auth service unavailable.");
+    }
+    const user = auth.currentUser;
+    // Re-authenticate
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
+    await user.reauthenticateWithCredential(credential);
+    // Update password
+    await user.updatePassword(newPassword);
+}
+
 
 export function setupAuthListener() {
     if (!auth) {
@@ -264,6 +336,9 @@ export function setupAuthListener() {
             try {
                 await loadUserData(userAuthObj.uid, userAuthObj); 
                 console.log("loadUserData (including onboarding check) finished.");
+                // --- MODIFIED: Update sidebar visibility based on experimental features ---
+                window.updateExperimentalFeaturesSidebarVisibility?.(); // Ensure this is called
+                // --- END MODIFIED ---
 
                 if (!document.getElementById('onboarding-container')) {
                     hideLoginUI(); 

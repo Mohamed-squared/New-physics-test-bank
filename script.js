@@ -4,12 +4,11 @@ import {
     setAuth, setDb, auth, db, currentUser,
     currentSubject, activeCourseId, userCourseProgressMap,
     setGlobalAiSystemPrompts, courseExamDefaults, 
-    // --- START MODIFIED ---
     musicPlayerState, setMusicPlayerState 
-    // --- END MODIFIED ---
 } from './state.js';
 import { ADMIN_UID, FOP_COURSE_ID,
-    DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
+    DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME,
+    DEFAULT_EXPERIMENTAL_FEATURES // NEW IMPORT
 } from './config.js';
 
 
@@ -43,7 +42,7 @@ import {
 import { showManageStudiedChapters, toggleStudiedChapter } from './ui_studied_chapters.js';
 import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubject, confirmDeleteSubject, deleteSubject, handleSubjectApproval } from './ui_subjects.js';
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
-import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
+import { showUserProfileDashboard, updateUserProfile, confirmSelfDeleteAccount } from './ui_user_profile.js'; // Added confirmSelfDeleteAccount
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
 import { showAdminDashboard, promptAdminReply as promptAdminModerationReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js'; 
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
@@ -77,11 +76,15 @@ import { displayCourseContentMenu } from './ui_course_content_menu.js';
 import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, previewLatexNote, extractAndConvertImageNoteToLatexWrapper, downloadNoteAsPdfWrapper } from './ui_notes_documents.js'; 
 import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection, askAIFollowUp, deleteCompletedExamV2 as deleteCompletedTestgenExam } from './exam_storage.js'; 
 import { calculateChapterCombinedProgress } from './course_logic.js';
-import { showBackgroundManagement, loadAndApplyBackgroundPreference, loadAndApplyCardOpacityPreference} from './ui_background_management.js';
+// import { showBackgroundManagement } from './ui_background_management.js'; // REMOVED - functionality moved to ui_settings_panel
+import { loadAndApplyBackgroundPreference, loadAndApplyCardOpacityPreference } from './ui_background_management.js'; // KEEP these
+// --- NEW: Import Settings Panel ---
+import { showSettingsPanel } from './ui_settings_panel.js';
+
 
 // --- START MODIFIED: Music Player UI and Audio Service Imports ---
 import { showMusicPlayerDashboard } from './ui_music_player.js';
-import { playUiSound, initAudioPlayers as initGlobalAudioPlayers, destroyYouTubePlayers as destroyGlobalYouTubePlayers } from './audio_service.js'; // Added initGlobalAudioPlayers and destroyGlobalYouTubePlayers
+import { playUiSound, initAudioPlayers as initGlobalAudioPlayers, destroyYouTubePlayers as destroyGlobalYouTubePlayers } from './audio_service.js'; 
 // --- END MODIFIED ---
 
 // --- Initialization ---
@@ -93,20 +96,17 @@ async function initializeApp() {
     loadAndApplyBackgroundPreference();
     loadAndApplyCardOpacityPreference();
 
-    // --- START MODIFIED: Initialize Music Player State and Global Audio Players ---
-    setMusicPlayerState({ // Set initial state structure
+    setMusicPlayerState({ 
         volume: parseFloat(localStorage.getItem('lyceumMusicVolume')) || DEFAULT_MUSIC_VOLUME,
         ambientVolume: parseFloat(localStorage.getItem('lyceumAmbientVolume')) || DEFAULT_AMBIENT_SOUND_VOLUME,
         uiSoundsEnabled: localStorage.getItem('lyceumUiSoundsEnabled') === 'false' ? false : DEFAULT_UI_SOUNDS_ENABLED,
-        showMiniPlayer: localStorage.getItem('lyceumShowMiniPlayer') === 'true', // Load mini player visibility preference
-        // Other states like currentTrack, playlist will be transient or loaded later from saved playlists
-        userSavedPlaylists: JSON.parse(localStorage.getItem('lyceumUserSavedPlaylists') || '[]'), // Load saved playlists
+        showMiniPlayer: localStorage.getItem('lyceumShowMiniPlayer') === 'true', 
+        userSavedPlaylists: JSON.parse(localStorage.getItem('lyceumUserSavedPlaylists') || '[]'), 
         miniPlayerYouTubeInstance: null,
         miniPlayerVideoActive: false,
     });
-    initGlobalAudioPlayers(); // Initialize HTML5 audio elements from audio_service
+    initGlobalAudioPlayers(); 
     console.log("Initializing with music player state:", musicPlayerState);
-    // --- END MODIFIED ---
 
     const publicHomepageContainer = document.getElementById('public-homepage-container');
     if (publicHomepageContainer) {
@@ -141,6 +141,7 @@ async function initializeApp() {
 
     if (themeToggle && !themeToggle.dataset.listenerAttached) {
         themeToggle.addEventListener('click', () => {
+            window.playUiSound?.('toggle_on'); // Play sound on theme toggle
             const isDark = document.documentElement.classList.toggle('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
 
@@ -203,11 +204,13 @@ async function initializeApp() {
              sidebar.classList.toggle('is-open');
              sidebar.classList.toggle('hidden');
              overlay.classList.toggle('is-visible');
+             window.playUiSound?.('button_click');
          });
          overlay.addEventListener('click', () => {
              sidebar.classList.remove('is-open');
              sidebar.classList.add('hidden');
              overlay.classList.remove('is-visible');
+             window.playUiSound?.('button_click');
          });
          sidebar.querySelectorAll('.sidebar-link, .sidebar-dropdown-toggle').forEach(link => {
              link.addEventListener('click', (e) => {
@@ -216,6 +219,7 @@ async function initializeApp() {
                      sidebar.classList.add('hidden');
                      overlay.classList.remove('is-visible');
                  }
+                 // window.playUiSound?.('navigation'); // Removed for individual link functions
             });
          });
           menuButton.dataset.listenerAttached = 'true';
@@ -270,11 +274,6 @@ async function initializeApp() {
          console.warn("Mermaid not loaded yet. Will initialize later if needed.");
      }
 
-    // --- START MODIFIED: YouTube API is loaded by ui_music_player.js when needed, or ui_course_study_material.js ---
-    // loadYouTubeAPI(); // Removed from here, individual modules will handle their needs.
-    // The global onYouTubeIframeAPIReady in ui_music_player.js will become the central handler.
-    // --- END MODIFIED ---
-
     console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
 
@@ -318,7 +317,7 @@ window.showNextLesson = showNextLesson;
 window.showFullStudyMaterial = showFullStudyMaterial;
 window.showCurrentAssignmentsExams = showCurrentAssignmentsExams;
 window.showCurrentCourseProgress = showCurrentCourseProgress;
-window.showCurrentNotesDocuments = showCurrentNotesDocuments;
+// window.showCurrentNotesDocuments = showCurrentNotesDocuments; // Defined in ui_notes_documents.js
 
 window.showCourseStudyMaterial = showCourseStudyMaterial;
 window.displayFormulaSheet = displayFormulaSheet;
@@ -411,7 +410,8 @@ window.deleteSubject = deleteSubject;
 window.handleSubjectApproval = handleSubjectApproval;
 
 window.updateUserProfile = updateUserProfile;
-window.signOutUserWrapper = signOutUser;
+window.signOutUserWrapper = signOutUser; // Moved from ui_user_profile to be called from settings
+window.confirmSelfDeleteAccount = confirmSelfDeleteAccount; // Moved from ui_user_profile
 window.handleProfilePictureSelect = handleProfilePictureSelect;
 window.showInbox = showInbox;
 window.handleMarkRead = handleMarkRead;
@@ -443,13 +443,12 @@ window.promptAddBadge = promptAddBadge;
 window.confirmRemoveBadge = confirmRemoveBadge;
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
-window.showBackgroundManagement = showBackgroundManagement;
+// window.showBackgroundManagement = showBackgroundManagement; // REMOVED - use showSettingsPanel
 window.renderMathIn = renderMathIn; 
+window.showSettingsPanel = showSettingsPanel; // NEW
 
-// --- START MODIFIED: Global Music Player UI and Audio Service Functions ---
 window.showMusicPlayerDashboard = showMusicPlayerDashboard; 
 window.playUiSound = playUiSound; 
-// --- END MODIFIED ---
 
 window.toggleSidebarDropdown = function(contentId, arrowId) {
     const content = document.getElementById(contentId);
@@ -478,6 +477,29 @@ export function updateAdminPanelVisibility() {
          adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
 }
+
+// --- START MODIFIED: updateExperimentalFeaturesSidebarVisibility ---
+export function updateExperimentalFeaturesSidebarVisibility() {
+    if (!currentUser || !currentUser.userSettings) {
+        console.warn("Cannot update experimental feature visibility: currentUser or userSettings missing.");
+        // Hide all by default if no user settings
+        document.querySelectorAll('.experimental-feature-link').forEach(el => el.style.display = 'none');
+        return;
+    }
+
+    const features = currentUser.userSettings.experimentalFeatures || { ...DEFAULT_EXPERIMENTAL_FEATURES };
+
+    const chatLink = document.getElementById('sidebar-chat-link');
+    if (chatLink) chatLink.style.display = features.globalChat ? 'flex' : 'none';
+
+    const marketplaceLink = document.getElementById('sidebar-marketplace-link');
+    if (marketplaceLink) marketplaceLink.style.display = features.marketplace ? 'flex' : 'none';
+
+    const musicLink = document.getElementById('sidebar-music-link');
+    if (musicLink) musicLink.style.display = features.musicAndSounds ? 'flex' : 'none';
+}
+window.updateExperimentalFeaturesSidebarVisibility = updateExperimentalFeaturesSidebarVisibility; // Make it globally callable
+// --- END MODIFIED ---
 
 
 function attachAuthListeners() {

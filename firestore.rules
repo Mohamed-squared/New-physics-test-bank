@@ -40,7 +40,7 @@ service cloud.firestore {
       return [
         'displayName', 'photoURL', 'onboardingComplete', 'lastSelectedSubjectId',
         'appData', 'userNotes', 'userAiChatSettings', 'completedCourseBadges',
-        'lastAppDataUpdate'
+        'lastAppDataUpdate', 'userSettings', 'username', 'email'
       ];
     }
 
@@ -146,9 +146,10 @@ service cloud.firestore {
       allow delete: if isOwner(userId) || isPrimaryAdmin(); // This is for the main user document
       allow update: if isLoggedIn() && (
                        ( isOwner(userId) &&
-                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits', 'email', 'createdAt', 'username']) &&
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFieldsOwner()) &&
-                         isValidString(request.resource.data.displayName, 1, 50) &&
+                         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['isAdmin', 'credits', 'createdAt']) &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(allowedUserUpdateFieldsOwner().concat(['username', 'email'])) && 
+                        (request.resource.data.username == null || isValidString(request.resource.data.username, 3, 20)) &&
+                        (request.resource.data.email == null || (request.resource.data.email is string && request.resource.data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"))) && 
                          (request.resource.data.photoURL == null || request.resource.data.photoURL is string) &&
                          (request.resource.data.appData == null || request.resource.data.appData is map) &&
                          (request.resource.data.userNotes == null || request.resource.data.userNotes is map) &&
@@ -158,7 +159,12 @@ service cloud.firestore {
                             isValidString(request.resource.data.userAiChatSettings.primaryModel, 1, 100) &&
                             isValidString(request.resource.data.userAiChatSettings.fallbackModel, 1, 100) &&
                             request.resource.data.userAiChatSettings.customSystemPrompts is map
-                         ))
+                         )) &&
+                        (request.resource.data.userSettings == null || 
+                         (request.resource.data.userSettings is map &&
+                          (request.resource.data.userSettings.experimentalFeatures == null || request.resource.data.userSettings.experimentalFeatures is map)
+                         )
+                        )
                        ) ||
                        ( isAdmin() && userId != request.auth.uid &&
                          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['email', 'createdAt']) &&

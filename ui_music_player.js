@@ -9,7 +9,7 @@ import {
 import {
     playAmbientSound, stopAmbientSound, setAmbientVolume,
     playStreamableMusicTrack, pauseStreamableMusic, resumeStreamableMusic, stopStreamableMusic, setStreamableMusicVolume, seekStreamableMusic,
-    playUiSound, stopCurrentMusic, getMusicAudioElement, destroyYouTubePlayers
+    playUiSound, stopCurrentMusic, getMusicAudioElement, destroyYouTubePlayers, initAudioPlayers, musicAudioPlayer, ambientAudioPlayer 
 } from './audio_service.js';
 
 // YouTube IFrame API related variables for this module (MAIN PLAYER IN THIS TAB)

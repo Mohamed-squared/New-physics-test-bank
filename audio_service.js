@@ -4,12 +4,12 @@ import { musicPlayerState, setMusicPlayerState } from './state.js';
 import { UI_SOUND_EFFECTS } from './config.js';
 
 // HTML Audio elements for different sound types
-let ambientAudioPlayer = null;
-let musicAudioPlayer = null; // For direct streams (Lo-fi, Binaural)
-let uiSoundPlayer = null;
-let testSoundPlayer = null; // For one-off test plays in admin
+export let ambientAudioPlayer = null;
+export let musicAudioPlayer = null; // For direct streams (Lo-fi, Binaural)
+export let uiSoundPlayer = null;
+export let testSoundPlayer = null; // For one-off test plays in admin
 // --- START MODIFIED: Renamed currentTestingSoundButton to avoid conflicts with other modules if this were global ---
-let currentTestingSoundButtonAudioService = null;
+export let currentTestingSoundButtonAudioService = null;
 // --- END MODIFIED ---
 
 // --- Initialization ---

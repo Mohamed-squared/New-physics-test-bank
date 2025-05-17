@@ -331,4 +331,127 @@ details > div {
     background-color: var(--color-warning-500);
 }
 
+/* Toggle Switch for Experimental Features */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px; /* Slightly smaller */
+  height: 24px; /* Slightly smaller */
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-gray-300);
+  transition: .3s;
+}
+.dark .slider {
+    background-color: var(--color-gray-600);
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; /* Smaller knob */
+  width: 18px; /* Smaller knob */
+  left: 3px; /* Adjusted position */
+  bottom: 3px; /* Adjusted position */
+  background-color: white;
+  transition: .3s;
+}
+input:checked + .slider {
+  background-color: var(--color-primary-500);
+}
+.dark input:checked + .slider {
+  background-color: var(--color-primary-400);
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--color-primary-500);
+}
+.dark input:focus + .slider {
+  box-shadow: 0 0 1px var(--color-primary-400);
+}
+input:checked + .slider:before {
+  transform: translateX(20px); /* Adjusted travel distance */
+}
+.slider.round {
+  border-radius: 24px; /* Keep it pill-shaped */
+}
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* === components.css (or wherever these animations are defined) === */
+
+/* Define theme-specific animation colors as CSS variables */
+:root {
+    /* Light Theme Animation Colors */
+    --flash-success-bg-start: var(--color-success-100);
+    --flash-success-border-start: var(--color-success-400);
+    --flash-success-bg-mid: var(--color-success-200);
+    --flash-success-border-mid: var(--color-success-500);
+
+    --flash-info-bg-start: var(--color-info-100);
+    --flash-info-border-start: var(--color-info-400);
+    --flash-info-bg-mid: var(--color-info-200);
+    --flash-info-border-mid: var(--color-info-500);
+
+    --flash-success-intense-bg-start: var(--color-success-500);
+    --flash-success-intense-bg-mid: var(--color-success-400);
+}
+
+.dark {
+    /* Dark Theme Animation Colors */
+    --flash-success-bg-start: var(--color-success-800);
+    --flash-success-border-start: var(--color-success-600);
+    --flash-success-bg-mid: var(--color-success-700);
+    --flash-success-border-mid: var(--color-success-500);
+
+    --flash-info-bg-start: var(--color-info-800);
+    --flash-info-border-start: var(--color-info-600);
+    --flash-info-bg-mid: var(--color-info-700);
+    --flash-info-border-mid: var(--color-info-500);
+
+    --flash-success-intense-bg-start: var(--color-success-400);
+    --flash-success-intense-bg-mid: var(--color-success-300);
+}
+
+/* Define a single set of keyframes using the variables */
+@keyframes flash-bg-success {
+    0%   { background-color: var(--flash-success-bg-start); border-color: var(--flash-success-border-start); }
+    50%  { background-color: var(--flash-success-bg-mid); border-color: var(--flash-success-border-mid); }
+    100% { background-color: initial; border-color: initial; } /* Revert to original/parent styles */
+}
+
+.flash-success {
+    animation: flash-bg-success 1.5s ease-out;
+}
+
+@keyframes flash-bg-info {
+    0%   { background-color: var(--flash-info-bg-start); border-color: var(--flash-info-border-start); }
+    50%  { background-color: var(--flash-info-bg-mid); border-color: var(--flash-info-border-mid); }
+    100% { background-color: initial; border-color: initial; }
+}
+
+.flash-info {
+    animation: flash-bg-info 1.5s ease-out;
+}
+
+@keyframes flash-bg-success-intense { /* For buttons */
+    0%   { background-color: var(--flash-success-intense-bg-start); }
+    50%  { background-color: var(--flash-success-intense-bg-mid); }
+    100% { background-color: initial; } /* Will revert to the button's base background */
+}
+
+.flash-success-intense {
+    animation: flash-bg-success-intense 2s ease-out;
+}
+
 /* --- END OF FILE components.css --- */

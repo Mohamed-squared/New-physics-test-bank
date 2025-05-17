@@ -1,453 +1,1167 @@
-// --- START OF FILE exam_storage.js ---
+// --- START OF FILE firebase_firestore.js ---
 
-import { db, currentUser, globalCourseDataMap, currentSubject, data, setData, setCurrentSubject } from './state.js';
-import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js';
-import { markFullExam, generateExplanation } from './ai_exam_marking.js';
-import { renderMathIn } from './utils.js';
-import { displayContent, setActiveSidebarLink} from './ui_core.js';
-import { showProgressDashboard } from './ui_progress_dashboard.js';
-import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
-import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+// firebase_firestore.js
 
-// --- Exam Storage and Retrieval Functions ---
+import {
+    db, auth as firebaseAuth, data, setData, currentSubject, setCurrentSubject,
+    userCourseProgressMap, setUserCourseProgressMap, updateGlobalCourseData, globalCourseDataMap,
+    activeCourseId, setActiveCourseId, updateUserCourseProgress, currentUser, setCurrentUser,
+    setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap,
+    courseExamDefaults, setCourseExamDefaults,
+    globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition,
+    
+} from './state.js';
+import { showLoading, hideLoading, getFormattedDate } from './utils.js';
+import { updateChaptersFromMarkdown, parseChaptersFromMarkdown  } from './markdown_parser.js';
+import {
+    globalSubjectBootstrapData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID,
+    FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT,
+    SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG,
+    DEFAULT_EXPERIMENTAL_FEATURES // NEW IMPORT
+} from './config.js';
+import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
+import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
+import { showOnboardingUI } from './ui_onboarding.js';
+import { determineTodaysObjective, calculateTotalMark, getLetterGrade } from './course_logic.js';
+import { cleanTextForFilename } from './filename_utils.js';
+import { fetchVideoDurationsIfNeeded, getYouTubeVideoId } from './ui_course_study_material.js';
 
-export async function storeExamResult(courseId, examState, examType) {
-    if (!db || !currentUser) {
-        console.error("Cannot store exam: DB or user not available.");
-        return null;
-    }
-    if (!examState || !examState.examId) {
-        console.error("Cannot store exam: Invalid examState or missing examId.");
-        return null;
-    }
+// --- Constants ---
+const userFormulaSheetSubCollection = "userFormulaSheets";
+const userSummarySubCollection = "userChapterSummaries";
+const sharedNotesCollection = "sharedCourseNotes";
+const adminTasksCollection = "adminTasks";
+const userCreditLogSubCollection = "creditLog";
+const aiChatSessionsSubCollection = "aiChatSessions";
+const globalSettingsCollection = "settings";
+const aiPromptsDocId = "aiPrompts";
+const settingsCollection = "settings";
+const courseExamDefaultsDocId = "courseExamDefaults";
 
-    showLoading("Finalizing and Storing Exam...");
-    let savedExamRecordForUI; // To store the structure that UI functions expect
-
-    try {
-        console.log(`[StoreExam] Calling markFullExam for Exam ID: ${examState.examId}, Type: ${examType}`);
-        const markingResults = await markFullExam(examState); // Assumes this function is correctly implemented
-        console.log(`[StoreExam] Marking complete for Exam ID: ${examState.examId}`);
-
-        const isTestGenExam = !courseId; // True if courseId is null/undefined, meaning it's a TestGen exam
-        const actualExamId = examState.examId;
-
-        // Construct the record for Firestore, adhering strictly to security rules
-        let examRecordForFirestore = {
-            userId: currentUser.uid,
-            examId: actualExamId,
-            questions: examState.questions,
-            answers: examState.userAnswers, // Rule expects 'answers'
-            markingResults: markingResults,
-            score: markingResults.totalScore,
-            maxScore: markingResults.maxPossibleScore,
-            status: 'completed',
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            completedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            durationMinutes: Math.round((Date.now() - examState.startTime) / 60000),
-            isTestGen: isTestGenExam,
-        };
-
-        if (isTestGenExam) {
-            examRecordForFirestore.subjectId = examState.subjectId || null;
-            examRecordForFirestore.courseId = null; // Explicitly null for pure TestGen
-            examRecordForFirestore.testGenConfig = examState.testGenConfig || { // Ensure testGenConfig exists
-                textMcqCount: 0, textProblemCount: 0, lectureMcqCounts: {}, lectureProblemCounts: {}, timingOption: 'default'
-            };
-        } else {
-            examRecordForFirestore.courseId = courseId; // Must be a string for course exams
-            examRecordForFirestore.examType = examType; // e.g., 'assignment', 'weekly_exam'
-            // 'testGenConfig' should not be present for non-TestGen exams
-        }
-
-        // Prepare the record for UI functions (this can have extra fields not sent to Firestore)
-        savedExamRecordForUI = {
-            id: actualExamId, // Keep 'id' for UI consistency if needed elsewhere
-            examId: actualExamId,
-            userId: currentUser.uid,
-            courseId: courseId || null,
-            subjectId: examState.subjectId || null,
-            type: examType, // This is the high-level type ('assignment', 'testgen', etc.)
-            timestamp: examState.startTime, // UI might expect this as a JS timestamp
-            durationMinutes: examRecordForFirestore.durationMinutes,
-            questions: examState.questions,
-            userAnswers: examState.userAnswers,
-            markingResults: markingResults,
-            status: 'completed',
-            courseContext: examState.courseContext || null, // For UI to know details
-            testGenConfig: examState.testGenConfig // Include if it was a TestGen exam
-        };
-
-
-        const examDocRef = db.collection('userExams').doc(currentUser.uid)
-                           .collection('exams').doc(actualExamId);
-
-        try {
-            console.log("[StoreExam] Attempting to write exam record to Firestore path:", examDocRef.path);
-            // Firestore will convert serverTimestamp() before writing
-            await examDocRef.set(examRecordForFirestore);
-            console.log(`[StoreExam] Exam record ${actualExamId} saved successfully to userExams subcollection.`);
-        } catch (writeError) {
-            console.error(`[StoreExam] Firestore write error for exam ${actualExamId}:`, writeError);
-            try { console.error("[StoreExam] Data that failed Firestore save (examRecordForFirestore):", JSON.stringify(examRecordForFirestore, null, 2)); }
-            catch { console.error("[StoreExam] Data that failed Firestore save (could not stringify):", examRecordForFirestore); }
-            throw new Error(`Failed to save exam data to Firestore: ${writeError.message}`);
-        }
-
-        let creditsAwarded = 0;
-        let creditReason = "";
-        switch (examType) {
-            case 'assignment':
-                creditsAwarded = 5;
-                creditReason = `Completed Course Assignment: ${examState.courseContext?.activityId || actualExamId}`;
-                break;
-            case 'weekly_exam':
-                creditsAwarded = 10;
-                creditReason = `Completed Weekly Exam: ${examState.courseContext?.activityId || actualExamId}`;
-                break;
-            case 'midcourse': // Assuming midcourse exam type is 'midcourse'
-                creditsAwarded = 25;
-                creditReason = `Completed Midcourse Exam: ${examState.courseContext?.activityId || actualExamId}`;
-                break;
-            case 'final': // Assuming final exam type is 'final'
-                creditsAwarded = 50;
-                creditReason = `Completed Final Exam: ${examState.courseContext?.activityId || actualExamId}`;
-                break;
-            case 'skip_exam':
-                creditsAwarded = 2;
-                creditReason = `Completed Skip Exam: Ch ${examState.courseContext?.chapterNum || 'Unknown'}`;
-                break;
-            case 'testgen': // This is the general TestGen type
-            case 'practice': // If you differentiate practice TestGen
-                creditsAwarded = 3;
-                creditReason = `Completed Practice Test: ${examState.subjectId || actualExamId}`;
-                break;
-            default:
-                creditsAwarded = 1;
-                creditReason = `Completed Exam: ${examType} - ${actualExamId}`;
-        }
-
-        if (creditsAwarded > 0) {
-            await updateUserCredits(currentUser.uid, creditsAwarded, creditReason);
-        }
-
-        hideLoading();
-        return savedExamRecordForUI; // Return the UI-consistent record
-
-    } catch (error) {
-        hideLoading();
-        console.error(`[StoreExam] Error storing exam result ${examState.examId}:`, error);
-        if (savedExamRecordForUI) { // If marking succeeded but subsequent steps failed
-             try { console.error("[StoreExam] Exam record state just before error:", JSON.stringify(savedExamRecordForUI, null, 2)); }
-             catch { console.error("[StoreExam] Exam record state just before error (could not stringify):", savedExamRecordForUI);}
-        }
-        if (error.message.includes("Failed to save exam data to Firestore")) {
-             alert(`Error storing exam results: ${error.message}. Please check console logs for details (possible data issue or permissions).`);
-        } else if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
-             alert(`Error storing exam results: Permission Denied. Please check Firestore rules for 'userExams/{userId}/exams/{examId}'.`);
-        } else {
-             alert(`Error storing exam results: ${error.message || String(error)}`);
-        }
-        return null;
-    }
-}
-
-export async function getExamDetails(userId, examId) {
-    if (!db || !userId || !examId) {
-        console.error("[GetExamDetails] Cannot get exam details: Missing DB, userId, or examId.");
-        return null;
-    }
-    try {
-        const examDocRef = db.collection('userExams').doc(userId).collection('exams').doc(examId);
-        const docSnap = await examDocRef.get();
-        if (docSnap.exists) {
-            console.log(`[GetExamDetails] Exam details retrieved for ${examId}`);
-            const data = docSnap.data();
-            // Add the 'id' field back for UI consistency if needed, as it's not in the stored doc typically
-            return { id: docSnap.id, ...data };
-        } else {
-            console.warn(`[GetExamDetails] Exam document not found at path: userExams/${userId}/exams/${examId}`);
-            return null;
-        }
-    } catch (error) {
-        console.error(`[GetExamDetails] Error retrieving exam details for ${examId}:`, error);
-        return null;
-    }
-}
-
-export async function getExamHistory(userId, filterId = null, filterType = 'all') {
-    if (!db || !userId) {
-        console.error("[GetExamHistory] Cannot get exam history: Missing DB or userId.");
-        return [];
-    }
-    try {
-        let query = db.collection('userExams').doc(userId).collection('exams');
-
-        if (filterType === 'course' && filterId) {
-            query = query.where('courseId', '==', filterId).where('isTestGen', '==', false);
-            console.log(`[GetExamHistory] Filtering exam history by courseId: ${filterId}`);
-        } else if (filterType === 'subject' && filterId) {
-            // For TestGen subject exams, courseId might be null or the linked course.
-            // We should ensure isTestGen is true and subjectId matches.
-            query = query.where('subjectId', '==', filterId).where('isTestGen', '==', true);
-            console.log(`[GetExamHistory] Filtering exam history by subjectId: ${filterId} (and isTestGen == true)`);
-        } else if (filterType === 'all') {
-            console.log(`[GetExamHistory] Fetching all exam history for user ${userId}`);
-        }
-
-        query = query.orderBy('createdAt', 'desc').limit(50); // Use createdAt for ordering (timestamp from server)
-
-        const snapshot = await query.get();
-        const history = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            const isCourseExam = data.courseId && !data.isTestGen; // More precise check
-            const subjectName = data.subjectId ? (window.data?.subjects?.[data.subjectId]?.name ?? data.subjectId) : null;
-            const courseName = data.courseId ? (globalCourseDataMap?.get(data.courseId)?.name ?? data.courseId) : null;
-
-            let maxScore = data.markingResults?.maxPossibleScore;
-            if (!maxScore || maxScore <= 0) {
-                 maxScore = (data.questions || []).reduce((sum, q) => {
-                      const isProblem = q.isProblem || !q.options || q.options.length === 0;
-                      return sum + (isProblem ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ);
-                 }, 0);
-            }
-
-            history.push({
-                id: doc.id, // Use Firestore doc ID as the primary ID
-                examId: data.examId, // Keep original examId if needed for other references
-                type: data.examType || (data.isTestGen ? 'testgen' : 'unknown'), // Use examType for course, or 'testgen'
-                timestamp: data.createdAt?.toMillis() || data.timestamp || Date.now(), // Prefer server-set createdAt
-                score: data.markingResults?.totalScore ?? 0,
-                maxScore: maxScore || 0,
-                name: courseName || subjectName || 'Unknown Context',
-                courseId: data.courseId,
-                subjectId: data.subjectId,
-                status: data.status || 'completed'
-            });
-        });
-        console.log(`[GetExamHistory] Retrieved ${history.length} exam history entries for user ${userId} (Filter: ${filterType}, ID: ${filterId || 'None'})`);
-        return history;
-    } catch (error) {
-        console.error(`[GetExamHistory] Error retrieving exam history for user ${userId}:`, error);
-        if (error.code === 'failed-precondition' && error.message.includes('index')) {
-            console.error("Firestore Index Required: The query requires an index. Check the Firestore console for index creation suggestions. Likely culprit: a composite index on (isTestGen, subjectId, createdAt desc) or (isTestGen, courseId, createdAt desc) within the 'exams' subcollection.");
-            alert("Error fetching history: Database index required. Please check the developer console for details on the required index.");
-        } else if (error.code === 'permission-denied') {
-             alert("Error fetching history: Permission denied. Check Firestore rules for userExams collection.");
-        } else {
-             alert(`Error fetching history: ${error.message}`);
-        }
-        return [];
-    }
-}
-
-if (!window.currentExplanationHistories) {
-     window.currentExplanationHistories = {};
-}
-
-export async function showExamReviewUI(userId, examId) {
-    console.log(`[showExamReviewUI] Starting review for User ID: ${userId}, Exam ID: ${examId}`);
-    console.log(`[showExamReviewUI] Current timestamp: ${new Date().toISOString()}`);
-
-    if (!userId || !examId) {
-        console.error("[showExamReviewUI] Cannot show exam review: Missing userId or examId");
-        displayContent('<p class="text-red-500 p-4">Error: Invalid exam identifier.</p>', 'content');
+export async function loadCourseExamDefaults() {
+    if (!db) {
+        console.error("[loadCourseExamDefaults] Firestore DB not initialized.");
+        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG }); // Use a deep copy of fallback
         return;
     }
-    // Decide sidebar link based on context. If exam has courseId and !isTestGen, it's a course exam.
-    // For now, defaulting to TestGen dashboard link from where this is usually called for TestGen exams.
-    // Course exam reviews might be initiated from course-specific UIs in future.
-    setActiveSidebarLink('showExamsDashboard', 'testgen-dropdown-content');
-    showLoading("Loading Exam Review...");
-    window.currentExplanationHistories = {};
-
+    const docRef = db.collection(settingsCollection).doc(courseExamDefaultsDocId);
     try {
-        const examDetails = await getExamDetails(userId, examId);
-
-        if (!examDetails) {
-            hideLoading();
-            console.error(`[showExamReviewUI] No exam details found for exam ${examId}`);
-            displayContent(`<p class="text-red-500 p-4">Error: Could not find details for exam ID: ${examId}. It might have been deleted or the ID is incorrect.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
-            return;
+        const docSnap = await docRef.get();
+        if (docSnap.exists) {
+            const defaultsFromDb = docSnap.data();
+            const mergedDefaults = {};
+            for (const examType in FALLBACK_EXAM_CONFIG) {
+                mergedDefaults[examType] = {
+                    ...FALLBACK_EXAM_CONFIG[examType],
+                    ...(defaultsFromDb[examType] || {})
+                };
+                mergedDefaults[examType].questions = parseInt(mergedDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions;
+                mergedDefaults[examType].durationMinutes = parseInt(mergedDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes;
+                mergedDefaults[examType].mcqRatio = parseFloat(mergedDefaults[examType].mcqRatio) || FALLBACK_EXAM_CONFIG[examType].mcqRatio;
+                mergedDefaults[examType].textSourceRatio = parseFloat(mergedDefaults[examType].textSourceRatio) || FALLBACK_EXAM_CONFIG[examType].textSourceRatio;
+            }
+            setCourseExamDefaults(mergedDefaults);
+            console.log("Course exam defaults loaded from Firestore and merged with fallbacks.");
+        } else {
+            console.warn(`Course exam defaults document (${settingsCollection}/${courseExamDefaultsDocId}) not found. Using fallback values and attempting to create the document.`);
+            setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG });
+            try {
+                await docRef.set(FALLBACK_EXAM_CONFIG);
+                console.log(`Created ${courseExamDefaultsDocId} document in Firestore with fallback values.`);
+            } catch (e) {
+                console.error(`Failed to create ${courseExamDefaultsDocId} document with fallbacks:`, e);
+            }
         }
-
-        console.log(`[showExamReviewUI] Successfully fetched exam details for ${examId}, rendering review UI.`);
-
-        const { markingResults, courseContext, timestamp, examType, isTestGen, subjectId, courseId, questions, userAnswers } = examDetails;
-        const score = markingResults?.totalScore ?? 0;
-        const maxScore = markingResults?.maxPossibleScore ?? 0;
-        const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
-        const actualTimestamp = examDetails.createdAt?.toMillis() || timestamp || Date.now();
-        const date = new Date(actualTimestamp).toLocaleString();
-
-        const durationMinutes = examDetails.durationMinutes;
-        const typeForDisplay = examType || (isTestGen ? 'TestGen Practice' : 'Unknown Type');
-
-        const passThreshold = typeForDisplay.toLowerCase().includes('skip') ? SKIP_EXAM_PASSING_PERCENT : PASSING_GRADE_PERCENT;
-        const isPassing = parseFloat(percentage) >= passThreshold;
-
-        const contextName = courseId ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
-                           : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
-                           : 'General Test';
-        const contextTypeDisplay = courseId ? 'Course' : subjectId ? 'Subject' : '';
-
-        let questionsHtml = '<p class="text-center text-muted italic">No question data found in this record.</p>';
-        if (questions && questions.length > 0 && markingResults?.questionResults) {
-            questionsHtml = '<div class="space-y-4">';
-            questions.forEach((q, index) => {
-                 const questionId = q.id || `q-${index+1}`; // Fallback ID
-                 const result = markingResults.questionResults.find(r => r.questionId === questionId);
-                 const qScore = result?.score ?? 0;
-                 const isProblemType = q.isProblem || !q.options || q.options.length === 0;
-                 const qMaxScore = isProblemType ? MAX_MARKS_PER_PROBLEM : MAX_MARKS_PER_MCQ;
-                 const qFeedback = result?.feedback || "No specific feedback.";
-                 const keyPoints = result?.key_points || [];
-                 const improvements = result?.improvement_suggestions || [];
-                 const userAnswerForDisplay = userAnswers?.[questionId] || "<i>Not Answered</i>";
-
-                 let statusClass = 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800';
-                 if (qMaxScore > 0) {
-                     if (qScore === qMaxScore) statusClass = 'border-green-500 bg-green-50 dark:bg-green-900/30';
-                     else if (qScore > 0) statusClass = 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30';
-                     else statusClass = 'border-red-500 bg-red-50 dark:bg-red-900/30';
-                 }
-
-                 const imageHtml = q.image ? `<div class="my-3 flex justify-center"><img src="${q.image}" alt="Question Image" class="max-w-md h-auto border dark:border-gray-600 rounded" crossorigin="anonymous"></div>` : '';
-
-                 let optionsOrAnswerHtml = '';
-                 if (isProblemType) {
-                     optionsOrAnswerHtml = `<div class="mt-2"><p class="text-xs font-semibold mb-1">Your Answer:</p><div class="prose prose-sm dark:prose-invert max-w-none bg-gray-50 dark:bg-gray-700 p-2 rounded border dark:border-gray-600 whitespace-pre-wrap">${escapeHtml(userAnswerForDisplay)}</div></div>`;
-                 } else { // MCQ
-                     optionsOrAnswerHtml = '<ol class="list-none pl-0 space-y-1 my-3">';
-                     optionsOrAnswerHtml += (q.options || []).map(opt => {
-                         const isSelected = userAnswerForDisplay === opt.letter;
-                         const isCorrectAnswer = q.correctAnswer === opt.letter;
-                         let optionClass = 'text-gray-700 dark:text-gray-300';
-                         if (isCorrectAnswer) optionClass = 'font-semibold text-green-700 dark:text-green-300';
-                         if (isSelected && !isCorrectAnswer) optionClass = 'text-red-700 dark:text-red-400 line-through';
-
-                         return `<li class="flex items-baseline text-sm ${isSelected ? 'ring-1 ring-offset-1 dark:ring-offset-gray-800 ring-blue-400 rounded px-1' : ''}"><span class="font-mono w-5 text-right mr-1.5 shrink-0">${opt.letter}.</span><span class="${optionClass} option-text-container">${opt.text}</span></li>`;
-                     }).join('');
-                     optionsOrAnswerHtml += '</ol>';
-                     optionsOrAnswerHtml += `<p class="text-xs text-gray-600 dark:text-gray-400 mt-1">Your Answer: ${userAnswerForDisplay} | Correct: ${q.correctAnswer || 'N/A'}</p>`;
-                 }
-
-                 questionsHtml += `
-                    <div class="question-review-item border rounded-md p-4 ${statusClass}">
-                        <div class="flex justify-between items-start mb-2">
-                             <p class="font-medium text-gray-800 dark:text-gray-200">Question ${index + 1} ${q.chapter ? `(Ch ${q.chapter})` : ''}</p>
-                             <span class="font-semibold text-sm ${qMaxScore > 0 && qScore === qMaxScore ? 'text-green-600' : qScore > 0 ? 'text-yellow-600' : 'text-red-600'}">${qScore.toFixed(1)} / ${qMaxScore.toFixed(1)} pts</span>
-                        </div>
-                        <div class="prose prose-sm dark:prose-invert max-w-none question-text-container mb-2">${q.text || '[Question text missing]'}</div>
-                        ${imageHtml}
-                        ${optionsOrAnswerHtml}
-
-                        <!-- AI Marking Feedback -->
-                        <div class="mt-3 pt-3 border-t border-dashed dark:border-gray-600">
-                             <p class="text-xs font-semibold text-purple-700 dark:text-purple-300 mb-1">AI Feedback:</p>
-                             <div class="text-xs text-gray-700 dark:text-gray-300 mb-2 prose prose-xs dark:prose-invert max-w-none">${qFeedback.includes('<p>') || qFeedback.includes('<li>') ? qFeedback : escapeHtml(qFeedback).replace(/\n/g, '<br>')}</div>
-                             ${keyPoints.length > 0 ? `<p class="text-xs font-medium mt-1">Key Points:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${keyPoints.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>` : ''}
-                             ${improvements.length > 0 ? `<p class="text-xs font-medium mt-1">Suggestions:</p><ul class="list-disc list-inside text-xs pl-4 text-gray-600 dark:text-gray-400">${improvements.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
-                        </div>
-
-                        <!-- AI Explanation Section (Hidden initially) -->
-                        <div id="ai-explanation-${index}" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
-                            <div class="ai-explanation-content-area bg-purple-50 dark:bg-purple-900/20 p-3 rounded border border-purple-200 dark:border-purple-700 space-y-3 max-h-80 overflow-y-auto">
-                                <p class="text-sm italic text-muted">Loading explanation...</p>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="mt-3 text-right space-x-2">
-                            <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                                Explain (AI)
-                             </button>
-                            <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
-                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                Report Issue
-                            </button>
-                        </div>
-                    </div>
-                 `;
-            });
-            questionsHtml += '</div>';
-        }
-
-        let overallFeedbackHtml = '<p class="text-muted italic text-center my-4">No overall feedback available for this exam.</p>';
-        if (markingResults.overallFeedback) {
-            const fb = markingResults.overallFeedback;
-            overallFeedbackHtml = `
-                <div class="bg-blue-50 dark:bg-blue-900/30 p-6 rounded-lg shadow-md border border-blue-200 dark:border-blue-700 overall-feedback-area">
-                    <h3 class="text-lg font-semibold mb-4 text-blue-800 dark:text-blue-300">Overall AI Feedback</h3>
-                    <div class="space-y-4 text-sm">
-                         <div class="prose prose-sm dark:prose-invert max-w-none">${fb.overall_feedback || 'N/A'}</div>
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div><h4 class="font-medium text-green-600 mb-2">Strengths</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.strengths?.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
-                              <div><h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.weaknesses?.map(w => `<li>${escapeHtml(w)}</li>`).join('') || '<li>N/A</li>'}</ul></div>
-                         </div>
-                         ${fb.study_recommendations ? `
-                         <div class="mt-4"><h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4><ul class="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400">${fb.study_recommendations.map(r => `<li>${escapeHtml(r)}</li>`).join('') || '<li>N/A</li>'}</ul></div>` : '' }
-                    </div>
-                </div>`;
-        }
-
-        const reviewHtml = `
-            <div class="space-y-6 animate-fade-in max-w-4xl mx-auto">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
-                    <div class="flex justify-between items-start mb-4">
-                         <div>
-                              <h2 class="text-2xl font-bold mb-1">Exam Review: ${escapeHtml(typeForDisplay)}</h2>
-                              <p class="text-sm text-gray-500 dark:text-gray-400">Context: ${escapeHtml(contextName)} ${contextTypeDisplay ? `(${contextTypeDisplay})` : ''}</p>
-                              <p class="text-sm text-gray-500 dark:text-gray-400">Exam ID: ${escapeHtml(examId)}</p>
-                              <p class="text-sm text-gray-500 dark:text-gray-400">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
-                         </div>
-                         <button onclick="window.showExamsDashboard()" class="btn-secondary-small flex-shrink-0">Back to Exams List</button>
-                    </div>
-                    <div class="text-center border-t dark:border-gray-600 pt-4">
-                         <p class="text-lg text-gray-600 dark:text-gray-400 mb-1">Overall Score</p>
-                         <p class="text-5xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'} mb-1">${percentage}%</p>
-                         <p class="text-lg text-gray-700 dark:text-gray-300 mb-2">${score.toFixed(1)} / ${maxScore.toFixed(1)} points</p>
-                         <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passThreshold}%)</p>
-                    </div>
-                </div>
-
-                ${overallFeedbackHtml}
-
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700">
-                    <h3 class="text-lg font-semibold mb-4">Question Breakdown</h3>
-                    <div id="review-questions-container" class="max-h-[70vh] overflow-y-auto pr-2">
-                        ${questionsHtml}
-                    </div>
-                </div>
-
-                <div class="text-center mt-6">
-                    <button onclick="window.showExamsDashboard()" class="btn-secondary">Back to Exams List</button>
-                </div>
-            </div>
-        `;
-
-        displayContent(reviewHtml, 'content');
-        const questionsContainer = document.getElementById('review-questions-container');
-        if (questionsContainer) await renderMathIn(questionsContainer);
-        const overallFeedbackContainer = document.querySelector('.overall-feedback-area');
-        if (overallFeedbackContainer) await renderMathIn(overallFeedbackContainer);
-
-        hideLoading();
-
     } catch (error) {
-        hideLoading();
-        console.error(`[showExamReviewUI] Error showing exam review for ${examId}:`, error);
-        displayContent(`<p class="text-red-500 p-4">An error occurred while loading the exam review: ${error.message}. Please try again later.</p><button onclick="window.showExamsDashboard()" class="btn-secondary mt-2">Back to Exams</button>`, 'content');
+        console.error("Error loading course exam defaults from Firestore:", error);
+        setCourseExamDefaults({ ...FALLBACK_EXAM_CONFIG });
     }
 }
 
-// Assign to window scope
-window.showExamReviewUI = showExamReviewUI;
-window.showIssueReportingModal = showIssueReportingModal;
-window.submitIssueReport = submitIssueReport;
-window.deleteCompletedExamV2 = deleteCompletedExamV2; // Global for completed exam deletion
+export async function saveCourseExamDefaults(newDefaults) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) {
+        alert("Primary Admin privileges required to save exam defaults.");
+        return false;
+    }
+    if (!newDefaults || typeof newDefaults !== 'object') {
+        alert("Invalid data format for exam defaults.");
+        return false;
+    }
+    const docRef = db.collection(settingsCollection).doc(courseExamDefaultsDocId);
+    try {
+        const defaultsToSave = {};
+        for (const examType in FALLBACK_EXAM_CONFIG) {
+            if (newDefaults[examType]) {
+                defaultsToSave[examType] = {
+                    questions: parseInt(newDefaults[examType].questions) || FALLBACK_EXAM_CONFIG[examType].questions,
+                    durationMinutes: parseInt(newDefaults[examType].durationMinutes) || FALLBACK_EXAM_CONFIG[examType].durationMinutes,
+                    mcqRatio: Math.max(0, Math.min(1, parseFloat(newDefaults[examType].mcqRatio))) || FALLBACK_EXAM_CONFIG[examType].mcqRatio,
+                    textSourceRatio: Math.max(0, Math.min(1, parseFloat(newDefaults[examType].textSourceRatio))) || FALLBACK_EXAM_CONFIG[examType].textSourceRatio,
+                };
+            } else {
+                defaultsToSave[examType] = { ...FALLBACK_EXAM_CONFIG[examType] };
+            }
+        }
+        console.log("[saveCourseExamDefaults DEBUG] Data being sent to Firestore:", JSON.stringify(defaultsToSave, null, 2));
+        await docRef.set(defaultsToSave);
+        setCourseExamDefaults(defaultsToSave);
+        console.log("Course exam defaults saved to Firestore.");
+        return true;
+    } catch (error) {
+        console.error("Error saving course exam defaults:", error);
+        alert(`Failed to save exam defaults: ${error.message}`);
+        return false;
+    }
+}
+
+function getDefaultSubjectProgressStats() {
+    return {
+        chapters: {}, // Will be populated by MD parse relative to global total_questions
+        studied_chapters: [],
+        pending_exams: [],
+        // Note: total_attempted, total_wrong etc. are per-chapter within `chapters` object
+    };
+}
+
+export async function fetchMarkdownForGlobalSubject(subjectDef) {
+    if (!subjectDef) return null;
+
+    const courseDir = subjectDef.courseDirName
+        ? cleanTextForFilename(subjectDef.courseDirName)
+        : cleanTextForFilename(subjectDef.name || `subject_${subjectDef.id}`);
+
+    if (!courseDir) {
+        console.warn(`fetchMarkdownForGlobalSubject: Could not determine courseDir for subject ${subjectDef.id} ('${subjectDef.name}').`);
+        return null;
+    }
+    const safeMcqFileName = subjectDef.mcqFileName
+        ? cleanTextForFilename(subjectDef.mcqFileName)
+        : 'default_mcqs.md'; 
+
+    const url = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/${safeMcqFileName}?t=${new Date().getTime()}`;
+
+    console.log(`Fetching Markdown for Global Subject (for MD Parse): ${url}`);
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            if (response.status === 404) {
+                console.warn(`MD file not found: ${url}. Subject: ${subjectDef.name} (ID: ${subjectDef.id})`);
+                return null;
+            }
+            throw new Error(`HTTP error fetching MD! status: ${response.status} for ${url}`);
+        }
+        const mdContent = await response.text();
+        return mdContent;
+    } catch (error) {
+        console.error(`Error fetching MD for subject ${subjectDef.name} (ID: ${subjectDef.id}) (${url}):`, error);
+        return null;
+    }
+}
+
+export async function loadGlobalSubjectDefinitionsFromFirestore() {
+    if (!db) { console.error("Firestore DB not initialized"); return; }
+    console.log("Loading global subject definitions...");
+    const subjectsRef = db.collection('subjects');
+    const newDefMap = new Map();
+    let bootstrapNeeded = false;
+
+    try {
+        const snapshot = await subjectsRef.get();
+        if (snapshot.empty && currentUser?.uid === ADMIN_UID) { 
+            console.warn("Global '/subjects' collection is empty. Attempting bootstrap by admin.");
+            bootstrapNeeded = true;
+        } else {
+            snapshot.forEach(doc => {
+                const subjectDef = { id: doc.id, ...doc.data() };
+                subjectDef.chapters = {}; 
+                newDefMap.set(doc.id, subjectDef);
+            });
+        }
+
+        if (bootstrapNeeded) {
+            showLoading("Bootstrapping global subjects...");
+            const batch = db.batch();
+            for (const subjectId in globalSubjectBootstrapData) {
+                const subjectDef = globalSubjectBootstrapData[subjectId];
+                const { chapters, studied_chapters, pending_exams, ...definitionToSave } = subjectDef;
+                const docRef = db.collection('subjects').doc(subjectId);
+                batch.set(docRef, definitionToSave);
+                newDefMap.set(subjectId, { id: subjectId, ...definitionToSave, chapters: {} }); 
+                console.log(`Bootstrapped global subject: ${subjectDef.name}`);
+            }
+            await batch.commit();
+            hideLoading();
+            alert("Global subjects bootstrapped by admin.");
+        }
+        setGlobalSubjectDefinitionsMap(newDefMap);
+        console.log(`Global subject definitions loaded. Count: ${newDefMap.size}`);
+    } catch (error) {
+        console.error("Error loading global subject definitions:", error);
+    }
+}
+
+export async function loadUserSubjectProgress(uid) {
+    if (!db || !uid) {
+        console.warn("loadUserSubjectProgress: DB or UID missing.");
+        return {};
+    }
+    const userRef = db.collection('users').doc(uid);
+    try {
+        const doc = await userRef.get();
+        if (doc.exists) {
+            const userData = doc.data();
+            return userData.appData?.subjectProgress || {};
+        }
+        return {};
+    } catch (error) {
+        console.error(`Error loading subject progress for user ${uid}:`, error);
+        return {};
+    }
+}
+
+export async function saveUserData(uid, appDataToSave = data) {
+    if (!db) { console.error("Firestore DB not initialized"); return; }
+    if (!uid || !appDataToSave) {
+        console.warn("Attempted to save user appData without UID or data object.");
+        return;
+    }
+    const userRef = db.collection('users').doc(uid);
+
+    const subjectProgressToSave = {};
+    if (appDataToSave.subjects) {
+        for (const subjectId in appDataToSave.subjects) {
+            const mergedSubject = appDataToSave.subjects[subjectId];
+            subjectProgressToSave[subjectId] = {
+                total_attempted: mergedSubject.total_attempted || 0,
+                total_wrong: mergedSubject.total_wrong || 0,
+                available_questions: Array.isArray(mergedSubject.available_questions) ? mergedSubject.available_questions : [],
+                mistake_history: Array.isArray(mergedSubject.mistake_history) ? mergedSubject.mistake_history : [],
+                consecutive_mastery: mergedSubject.consecutive_mastery || 0,
+                studied_chapters: Array.isArray(mergedSubject.studied_chapters) ? mergedSubject.studied_chapters : [],
+                pending_exams: Array.isArray(mergedSubject.pending_exams) ? mergedSubject.pending_exams : [],
+                chapters: mergedSubject.chapters ? JSON.parse(JSON.stringify(mergedSubject.chapters)) : {}
+            };
+            if (subjectProgressToSave[subjectId].chapters) {
+                for (const chapNum in subjectProgressToSave[subjectId].chapters) {
+                    const chapProgress = subjectProgressToSave[subjectId].chapters[chapNum];
+                    subjectProgressToSave[subjectId].chapters[chapNum] = {
+                        total_attempted: chapProgress.total_attempted || 0,
+                        total_wrong: chapProgress.total_wrong || 0,
+                        available_questions: Array.isArray(chapProgress.available_questions) ? chapProgress.available_questions : [],
+                        mistake_history: Array.isArray(chapProgress.mistake_history) ? chapProgress.mistake_history : [],
+                        consecutive_mastery: chapProgress.consecutive_mastery || 0,
+                    };
+                }
+            }
+        }
+    }
+
+    const finalAppDataForFirestore = {
+        subjectProgress: subjectProgressToSave
+        // Note: We are NOT saving userSettings.experimentalFeatures here.
+        // That is handled by saveUserExperimentalFeatureSettings.
+    };
+
+    try {
+        console.log(`[saveUserData] Saving appData (subjectProgress only) for UID: ${uid}.`);
+        await userRef.update({
+            appData: finalAppDataForFirestore,
+            lastAppDataUpdate: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log("User appData (subjectProgress) saved successfully.");
+    } catch (error) {
+        console.error("Error saving user appData (subjectProgress) to Firestore. UID:", uid, "Error:", error);
+        alert("Error saving progress: " + error.message);
+    }
+}
 
 
-// --- END OF FILE exam_storage.js ---
+export async function saveUserCourseProgress(uid, courseId, progressData) {
+    if (!db) { console.error("Firestore DB not initialized"); return false; }
+    if (!uid || !courseId || !progressData) {
+        console.warn("Attempted to save course progress without UID, courseId, or data.");
+        return false;
+    }
+    const progressRef = db.collection('userCourseProgress').doc(uid).collection('courses').doc(courseId);
+    try {
+        let dataToSave = { ...progressData }; 
+
+        if (progressData.enrollmentDate && typeof progressData.enrollmentDate === 'object' &&
+            typeof progressData.enrollmentDate.isEqual === 'function' && 
+            progressData.enrollmentDate._methodName === 'FieldValue.serverTimestamp') {
+            dataToSave.enrollmentDate = firebase.firestore.FieldValue.serverTimestamp();
+        } else if (progressData.enrollmentDate instanceof Date) {
+            dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(progressData.enrollmentDate);
+        } else if (progressData.enrollmentDate) { 
+            try {
+                const dateObj = new Date(progressData.enrollmentDate);
+                if (!isNaN(dateObj)) {
+                    dataToSave.enrollmentDate = firebase.firestore.Timestamp.fromDate(dateObj);
+                } else {
+                    dataToSave.enrollmentDate = null;
+                }
+            } catch (e) {
+                dataToSave.enrollmentDate = null;
+            }
+        }
+        dataToSave.lastActivityDate = firebase.firestore.FieldValue.serverTimestamp();
+
+        if (dataToSave.completionDate) {
+            if (dataToSave.completionDate instanceof Date) {
+                dataToSave.completionDate = firebase.firestore.Timestamp.fromDate(dataToSave.completionDate);
+            } else if (typeof dataToSave.completionDate === 'object' && dataToSave.completionDate !== null && typeof dataToSave.completionDate.toDate === 'function') {
+            } else if (typeof dataToSave.completionDate === 'string' || typeof dataToSave.completionDate === 'number') {
+                try {
+                    const dateObj = new Date(dataToSave.completionDate);
+                    dataToSave.completionDate = !isNaN(dateObj) ? firebase.firestore.Timestamp.fromDate(dateObj) : null;
+                } catch { dataToSave.completionDate = null; }
+            } else { 
+                dataToSave.completionDate = null;
+            }
+        } else {
+            dataToSave.completionDate = null; 
+        }
+
+        dataToSave.courseId = dataToSave.courseId || courseId; 
+        dataToSave.status = dataToSave.status || 'enrolled';
+        dataToSave.enrollmentMode = dataToSave.enrollmentMode || 'full';
+        dataToSave.selectedPace = dataToSave.selectedPace || 'mediocre';
+        dataToSave.customPaceDays = dataToSave.customPaceDays === undefined ? null : dataToSave.customPaceDays;
+        dataToSave.baseMediocrePace = dataToSave.baseMediocrePace === undefined ? null : dataToSave.baseMediocrePace;
+        dataToSave.currentPace = dataToSave.currentPace === undefined ? null : dataToSave.currentPace;
+        dataToSave.currentChapterTarget = dataToSave.currentChapterTarget || 1;
+        dataToSave.currentDayObjective = dataToSave.currentDayObjective || "Review Chapter 1 Study Material";
+        dataToSave.courseStudiedChapters = Array.isArray(dataToSave.courseStudiedChapters) ? dataToSave.courseStudiedChapters : [];
+        dataToSave.dailyProgress = typeof dataToSave.dailyProgress === 'object' && dataToSave.dailyProgress !== null ? dataToSave.dailyProgress : {};
+        dataToSave.watchedVideoUrls = typeof dataToSave.watchedVideoUrls === 'object' && dataToSave.watchedVideoUrls !== null ? dataToSave.watchedVideoUrls : {};
+        dataToSave.watchedVideoDurations = typeof dataToSave.watchedVideoDurations === 'object' && dataToSave.watchedVideoDurations !== null ? dataToSave.watchedVideoDurations : {};
+        dataToSave.pdfProgress = typeof dataToSave.pdfProgress === 'object' && dataToSave.pdfProgress !== null ? dataToSave.pdfProgress : {};
+        dataToSave.skipExamAttempts = typeof dataToSave.skipExamAttempts === 'object' && dataToSave.skipExamAttempts !== null ? dataToSave.skipExamAttempts : {};
+        dataToSave.lastSkipExamScore = typeof dataToSave.lastSkipExamScore === 'object' && dataToSave.lastSkipExamScore !== null ? dataToSave.lastSkipExamScore : {};
+        dataToSave.assignmentScores = typeof dataToSave.assignmentScores === 'object' && dataToSave.assignmentScores !== null ? dataToSave.assignmentScores : {};
+        dataToSave.weeklyExamScores = typeof dataToSave.weeklyExamScores === 'object' && dataToSave.weeklyExamScores !== null ? dataToSave.weeklyExamScores : {};
+        dataToSave.midcourseExamScores = typeof dataToSave.midcourseExamScores === 'object' && dataToSave.midcourseExamScores !== null ? dataToSave.midcourseExamScores : {};
+        if (dataToSave.finalExamScores === undefined) { dataToSave.finalExamScores = null; }
+        dataToSave.attendanceScore = dataToSave.attendanceScore !== undefined ? dataToSave.attendanceScore : 100;
+        dataToSave.extraPracticeBonus = dataToSave.extraPracticeBonus !== undefined ? dataToSave.extraPracticeBonus : 0;
+        dataToSave.totalMark = dataToSave.totalMark === undefined ? null : dataToSave.totalMark;
+        dataToSave.grade = dataToSave.grade === undefined ? null : dataToSave.grade;
+        dataToSave.testGenBonus = dataToSave.testGenBonus !== undefined ? dataToSave.testGenBonus : 0; // Ensure testGenBonus is present
+
+        const docSnapshot = await progressRef.get();
+        if (!docSnapshot.exists) {
+            if (!dataToSave.enrollmentDate || !(typeof dataToSave.enrollmentDate === 'object' && typeof dataToSave.enrollmentDate.isEqual === 'function')) {
+                dataToSave.enrollmentDate = firebase.firestore.FieldValue.serverTimestamp();
+            }
+            await progressRef.set(dataToSave);
+        } else {
+            await progressRef.set(dataToSave, { merge: true });
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error saving course progress for course ${courseId}:`, error);
+        let alertMessage = `Error saving course progress: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Error saving course progress: Permission Denied. Check Firestore rules. ${error.message}`;
+        }
+        alert(alertMessage);
+        return false;
+    }
+}
+
+export async function loadAllUserCourseProgress(uid) {
+    if (!db) { console.error("Firestore DB not initialized"); return; }
+    if (!uid) { console.error("loadAllUserCourseProgress called without UID."); return; }
+    console.log(`Loading ALL course progress for user: ${uid}`);
+    const progressCollectionRef = db.collection('userCourseProgress').doc(uid).collection('courses');
+    const newProgressMap = new Map();
+    try {
+        const snapshot = await progressCollectionRef.get();
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                const progressData = doc.data();
+                progressData.enrollmentMode = progressData.enrollmentMode || 'full'; 
+                progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
+                progressData.dailyProgress = progressData.dailyProgress || {};
+                progressData.assignmentScores = progressData.assignmentScores || {};
+                progressData.weeklyExamScores = progressData.weeklyExamScores || {};
+                progressData.midcourseExamScores = progressData.midcourseExamScores || {};
+                progressData.finalExamScores = progressData.finalExamScores === undefined ? null : progressData.finalExamScores; 
+                progressData.watchedVideoUrls = progressData.watchedVideoUrls || {};
+                progressData.watchedVideoDurations = progressData.watchedVideoDurations || {};
+                progressData.pdfProgress = progressData.pdfProgress || {};
+                progressData.skipExamAttempts = progressData.skipExamAttempts || {};
+                progressData.lastSkipExamScore = progressData.lastSkipExamScore || {};
+                progressData.status = progressData.status || 'enrolled';
+                progressData.testGenBonus = progressData.testGenBonus || 0; // Ensure testGenBonus is present
+                Object.keys(progressData.dailyProgress).forEach(dateStr => {
+                    progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {}; 
+                    progressData.dailyProgress[dateStr].chaptersStudied = progressData.dailyProgress[dateStr].chaptersStudied || [];
+                    progressData.dailyProgress[dateStr].skipExamsPassed = progressData.dailyProgress[dateStr].skipExamsPassed || [];
+                    progressData.dailyProgress[dateStr].assignmentCompleted = progressData.dailyProgress[dateStr].assignmentCompleted ?? false;
+                    progressData.dailyProgress[dateStr].assignmentScore = progressData.dailyProgress[dateStr].assignmentScore ?? null;
+                });
+
+                if (progressData.enrollmentDate?.toDate) {
+                    progressData.enrollmentDate = progressData.enrollmentDate.toDate();
+                } else if (progressData.enrollmentDate) { 
+                     try { progressData.enrollmentDate = new Date(progressData.enrollmentDate); } catch(e){ console.warn(`Could not parse enrollmentDate for course ${doc.id}`); progressData.enrollmentDate = new Date(); }
+                } else {
+                     progressData.enrollmentDate = new Date(); 
+                }
+
+                 if (progressData.completionDate?.toDate) {
+                    progressData.completionDate = progressData.completionDate.toDate();
+                }
+                 if (progressData.lastActivityDate?.toDate) {
+                    progressData.lastActivityDate = progressData.lastActivityDate.toDate();
+                } else {
+                     progressData.lastActivityDate = new Date(); 
+                }
+
+                const courseDef = globalCourseDataMap.get(doc.id);
+                if (courseDef) {
+                     progressData.currentDayObjective = determineTodaysObjective(progressData, courseDef);
+                } else {
+                     console.warn(`Course definition missing for course ${doc.id} when calculating objective.`);
+                     progressData.currentDayObjective = "Course definition unavailable.";
+                }
+                newProgressMap.set(doc.id, progressData);
+            });
+        }
+        setUserCourseProgressMap(newProgressMap); 
+    } catch (error) {
+        console.error("Error loading user course progress:", error);
+        throw error; 
+    }
+}
+
+export async function unenrollFromCourse(uid, courseId) {
+    if (!db) { console.error("Firestore DB not initialized"); return false; }
+    if (!uid || !courseId) { console.warn("Unenroll failed: Missing UID or Course ID."); return false; }
+    const progressRef = db.collection('userCourseProgress').doc(uid).collection('courses').doc(courseId);
+    try {
+        await progressRef.delete();
+        return true;
+    } catch (error) {
+        console.error(`Error unenrolling from course ${courseId}:`, error);
+        let alertMessage = `Failed to unenroll: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            alertMessage = `Failed to unenroll: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        alert(alertMessage);
+        return false;
+    }
+}
+
+async function fetchChapterDefinitionMarkdown(courseDef) {
+    if (!courseDef || !courseDef.courseDirName) {
+        console.warn(`[fetchChapterDefinitionMarkdown] Course definition or courseDirName missing for ${courseDef?.id}.`);
+        return null;
+    }
+    const chapterDefFilename = "TextMCQ.md"; 
+    const safeDirName = cleanTextForFilename(courseDef.courseDirName);
+    const url = `${COURSE_BASE_PATH}/${safeDirName}/${SUBJECT_RESOURCE_FOLDER}/${chapterDefFilename}?t=${new Date().getTime()}`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) { if (response.status === 404) return null; throw new Error(`HTTP error! status: ${response.status}`); }
+        return await response.text();
+    } catch (error) {
+        console.error(`Error fetching chapter MD for course "${courseDef.name}" (${url}):`, error);
+        return null;
+    }
+}
+
+export async function loadGlobalCourseDefinitions() {
+    if (!db) { console.error("Firestore DB not initialized"); return; }
+    const coursesRef = db.collection('courses');
+    let fopFoundInFirestore = false;
+    const coursesToProcess = [];
+    try {
+        const snapshot = await coursesRef.get();
+        snapshot.forEach(doc => { coursesToProcess.push({ id: doc.id, firestoreData: doc.data() }); if (doc.id === FOP_COURSE_ID) fopFoundInFirestore = true; });
+        if (!fopFoundInFirestore) coursesToProcess.push({ id: FOP_COURSE_ID, firestoreData: null, isPlaceholderFoP: true });
+        for (const courseEntry of coursesToProcess) {
+            const courseId = courseEntry.id;
+            let baseData = courseEntry.firestoreData;
+            let isNewFoPInstance = false;
+            if (courseId === FOP_COURSE_ID) {
+                if (!baseData) {
+                    baseData = { ...FOP_COURSE_DEFINITION }; baseData.status = 'approved'; baseData.creatorUid = ADMIN_UID; baseData.creatorName = 'System (Config)';
+                    if (typeof firebase !== 'undefined' && firebase.firestore && firebase.firestore.FieldValue) baseData.createdAt = firebase.firestore.FieldValue.serverTimestamp(); else baseData.createdAt = new Date();
+                    isNewFoPInstance = true;
+                } else {
+                    baseData.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : (baseData.chapters || []);
+                    baseData.totalChapters = baseData.chapters.length; baseData.name = FOP_COURSE_DEFINITION.name || baseData.name;
+                    baseData.description = FOP_COURSE_DEFINITION.description || baseData.description;
+                    baseData.youtubePlaylistUrls = FOP_COURSE_DEFINITION.youtubePlaylistUrls || baseData.youtubePlaylistUrls || [];
+                }
+            }
+            if (!baseData) continue;
+            let finalCourseData = { ...baseData, id: courseId };
+            finalCourseData.name = finalCourseData.name || `Course ${courseId}`; finalCourseData.status = finalCourseData.status || 'approved';
+            finalCourseData.courseDirName = finalCourseData.courseDirName || cleanTextForFilename(finalCourseData.name) || courseId;
+            finalCourseData.totalChapters = Number(finalCourseData.totalChapters) || 0;
+            finalCourseData.chapters = Array.isArray(finalCourseData.chapters) ? finalCourseData.chapters : [];
+            finalCourseData.chapterResources = typeof finalCourseData.chapterResources === 'object' ? finalCourseData.chapterResources : {};
+            finalCourseData.youtubePlaylistUrls = Array.isArray(finalCourseData.youtubePlaylistUrls) ? finalCourseData.youtubePlaylistUrls : (finalCourseData.youtubePlaylistUrl ? [finalCourseData.youtubePlaylistUrl] : []);
+            finalCourseData.midcourseChapters = Array.isArray(finalCourseData.midcourseChapters) ? finalCourseData.midcourseChapters : [];
+            finalCourseData.imageUrl = finalCourseData.imageUrl || null; finalCourseData.coverUrl = finalCourseData.coverUrl || null;
+            finalCourseData.prerequisites = Array.isArray(finalCourseData.prerequisites) ? finalCourseData.prerequisites.filter(item => typeof item === 'string') : [];
+            finalCourseData.corequisites = Array.isArray(finalCourseData.corequisites) ? finalCourseData.corequisites.filter(item => typeof item === 'string') : [];
+            finalCourseData.creatorUid = finalCourseData.creatorUid || ADMIN_UID; finalCourseData.creatorName = finalCourseData.creatorName || 'System';
+            if (!finalCourseData.createdAt) finalCourseData.createdAt = (typeof firebase !== 'undefined' && firebase.firestore && baseData.createdAt !== firebase.firestore.FieldValue.serverTimestamp()) ? firebase.firestore.FieldValue.serverTimestamp() : new Date();
+            if (courseId !== FOP_COURSE_ID) {
+                let titlesFromMd = []; let mdDerivedChapterCount = 0;
+                if (finalCourseData.courseDirName) { const chapterDefMdContent = await fetchChapterDefinitionMarkdown(finalCourseData); if (chapterDefMdContent) { const parsedMdDetails = parseChaptersFromMarkdown(chapterDefMdContent); const mdChapterNumbers = Object.keys(parsedMdDetails).map(Number).filter(n => n > 0); if (mdChapterNumbers.length > 0) { mdDerivedChapterCount = Math.max(...mdChapterNumbers); for (let i = 1; i <= mdDerivedChapterCount; i++) titlesFromMd.push(parsedMdDetails[String(i)]?.title || `Chapter ${i}`); } } }
+                let effectiveTotalChapters = finalCourseData.totalChapters; if (effectiveTotalChapters <= 0 && mdDerivedChapterCount > 0) effectiveTotalChapters = mdDerivedChapterCount; finalCourseData.totalChapters = effectiveTotalChapters;
+                if (finalCourseData.totalChapters > 0) { if (titlesFromMd.length >= finalCourseData.totalChapters) finalCourseData.chapters = titlesFromMd.slice(0, finalCourseData.totalChapters); else finalCourseData.chapters = Array.from({ length: finalCourseData.totalChapters }, (_, i) => titlesFromMd[i] || `Chapter ${i + 1}`); } else finalCourseData.chapters = [];
+            } else { if (isNewFoPInstance || finalCourseData.chapters.length === 0) { finalCourseData.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : []; finalCourseData.totalChapters = finalCourseData.chapters.length; } }
+            if (isNewFoPInstance) { try { await db.collection('courses').doc(FOP_COURSE_ID).set(finalCourseData, { merge: true }); const savedFoPDoc = await db.collection('courses').doc(FOP_COURSE_ID).get(); if (savedFoPDoc.exists) updateGlobalCourseData(FOP_COURSE_ID, { id: FOP_COURSE_ID, ...savedFoPDoc.data() }); else updateGlobalCourseData(FOP_COURSE_ID, finalCourseData); } catch (creationError) { if (!(finalCourseData.createdAt instanceof Date) && typeof finalCourseData.createdAt.toDate !== 'function') finalCourseData.createdAt = new Date(); updateGlobalCourseData(FOP_COURSE_ID, finalCourseData); } }
+            else updateGlobalCourseData(courseId, finalCourseData);
+        }
+    } catch (error) {
+        console.error("CRITICAL Error during initial Firestore course fetch or main processing loop:", error);
+        if (!globalCourseDataMap.has(FOP_COURSE_ID)) {
+            const fopDef = { ...FOP_COURSE_DEFINITION, id: FOP_COURSE_ID, status: 'approved' }; fopDef.courseDirName = fopDef.courseDirName || cleanTextForFilename(fopDef.name) || FOP_COURSE_ID; fopDef.totalChapters = Number(fopDef.totalChapters) || (Array.isArray(fopDef.chapters) ? fopDef.chapters.length : 0); fopDef.chapters = Array.isArray(FOP_COURSE_DEFINITION.chapters) ? [...FOP_COURSE_DEFINITION.chapters] : Array.from({ length: fopDef.totalChapters }, (_, i) => `Chapter ${i + 1}`); fopDef.chapterResources = typeof fopDef.chapterResources === 'object' ? fopDef.chapterResources : {}; fopDef.youtubePlaylistUrls = Array.isArray(fopDef.youtubePlaylistUrls) ? fopDef.youtubePlaylistUrls : (fopDef.youtubePlaylistUrl ? [fopDef.youtubePlaylistUrl] : []); fopDef.midcourseChapters = Array.isArray(fopDef.midcourseChapters) ? fopDef.midcourseChapters : []; fopDef.imageUrl = fopDef.imageUrl || null; fopDef.coverUrl = fopDef.coverUrl || null; fopDef.prerequisites = Array.isArray(fopDef.prerequisites) ? fopDef.prerequisites.filter(item => typeof item === 'string') : []; fopDef.corequisites = Array.isArray(fopDef.corequisites) ? fopDef.corequisites.filter(item => typeof item === 'string') : []; updateGlobalCourseData(FOP_COURSE_ID, fopDef);
+        }
+    }
+}
+export async function loadUserAiSettings(userId) {
+    if (!db) return getDefaultAiSettings(); if (!userId) return getDefaultAiSettings();
+    const userRef = db.collection('users').doc(userId);
+    try {
+        const doc = await userRef.get(); if (doc.exists) { const userData = doc.data(); const storedSettings = userData.userAiChatSettings; if (storedSettings && typeof storedSettings === 'object') { const finalSettings = { primaryModel: (typeof storedSettings.primaryModel === 'string' && storedSettings.primaryModel) ? storedSettings.primaryModel : DEFAULT_PRIMARY_AI_MODEL, fallbackModel: (typeof storedSettings.fallbackModel === 'string' && storedSettings.fallbackModel) ? storedSettings.fallbackModel : DEFAULT_FALLBACK_AI_MODEL, customSystemPrompts: (typeof storedSettings.customSystemPrompts === 'object' && storedSettings.customSystemPrompts !== null) ? { ...storedSettings.customSystemPrompts } : {} }; return finalSettings; } }
+        return getDefaultAiSettings();
+    } catch (error) { console.error(`[loadUserAiSettings] Error loading AI settings for user ${userId}:`, error); return getDefaultAiSettings(); }
+}
+export async function saveUserAiSettings(userId, settings) {
+    if (!db) return false; if (!userId) return false;
+    if (!settings || typeof settings.primaryModel !== 'string' || typeof settings.fallbackModel !== 'string' || typeof settings.customSystemPrompts !== 'object' || settings.customSystemPrompts === null) { console.warn("[saveUserAiSettings] Attempted to save invalid AI settings structure. Aborting.", settings); return false; }
+    const userRef = db.collection('users').doc(userId);
+    try { await userRef.update({ userAiChatSettings: settings }); return true; }
+    catch (error) { console.error(`[saveUserAiSettings] Error saving User AI Chat Settings for user ${userId}:`, error); let alertMessage = "Error saving AI settings: " + error.message; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = "Error saving AI settings: Permission Denied. Check Firestore rules. " + error.message; } alert(alertMessage); return false; }
+}
+export async function loadGlobalAiPrompts() {
+    if (!db) return {}; const promptsRef = db.collection(globalSettingsCollection).doc(aiPromptsDocId);
+    try {
+        const docSnap = await promptsRef.get(); if (docSnap.exists) { const loadedPrompts = docSnap.data(); if (typeof loadedPrompts === 'object' && loadedPrompts !== null) { const finalPrompts = {}; AI_FUNCTION_KEYS.forEach(key => { if (loadedPrompts.hasOwnProperty(key) && typeof loadedPrompts[key] === 'string') finalPrompts[key] = loadedPrompts[key]; }); return finalPrompts; } return {}; } return {};
+    } catch (error) { console.error("[loadGlobalAiPrompts] Error loading global AI prompts:", error); return {}; }
+}
+export async function saveGlobalAiPrompts(promptsObject) {
+    if (!db) { alert("Database error."); return false; } if (!currentUser || currentUser.uid !== ADMIN_UID) { alert("Permission Denied."); return false; } if (!promptsObject || typeof promptsObject !== 'object') { alert("Internal error: Invalid data."); return false; }
+    const strictlyValidPrompts = {}; let hasInvalidData = false;
+    for (const key in promptsObject) { if (AI_FUNCTION_KEYS.includes(key) && typeof promptsObject[key] === 'string') strictlyValidPrompts[key] = promptsObject[key]; else if (AI_FUNCTION_KEYS.includes(key) && typeof promptsObject[key] !== 'string') { strictlyValidPrompts[key] = ""; hasInvalidData = true; } else if (!AI_FUNCTION_KEYS.includes(key)) console.warn(`[saveGlobalAiPrompts] Prompt key '${key}' not recognized.`); }
+    if (hasInvalidData) console.warn("[saveGlobalAiPrompts] Some invalid prompt values were skipped or defaulted.");
+    const promptsRef = db.collection(globalSettingsCollection).doc(aiPromptsDocId);
+    try { await promptsRef.set(strictlyValidPrompts); return true; }
+    catch (error) { console.error("[saveGlobalAiPrompts] Error saving global AI prompts:", error); let alertMessage = "Error saving AI prompts: " + error.message; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = "Error saving AI prompts: Permission Denied. Check Firestore rules. " + error.message; } alert(alertMessage); return false; }
+}
+export async function loadUserData(uid, authUserFromEvent = null) {
+    if (!db) { console.error("Firestore DB not initialized"); return; } if (!uid) { console.error("loadUserData called without UID."); return; }
+    const userRef = db.collection('users').doc(uid);
+    try {
+        if (globalSubjectDefinitionsMap.size === 0) await loadGlobalSubjectDefinitionsFromFirestore();
+        const userDoc = await userRef.get(); let appDataWasModifiedBySyncOrRepairOrMigration = false;
+        if (userDoc.exists) {
+            const userDataFromFirestore = userDoc.data();
+            const defaultExpFeatures = { ...DEFAULT_EXPERIMENTAL_FEATURES };
+            const userExpFeatures = (userDataFromFirestore.userSettings && typeof userDataFromFirestore.userSettings.experimentalFeatures === 'object') ? { ...defaultExpFeatures, ...userDataFromFirestore.userSettings.experimentalFeatures } : defaultExpFeatures;
+            const userProfileForState = { uid: uid, email: userDataFromFirestore.email || authUserFromEvent?.email, displayName: userDataFromFirestore.displayName || authUserFromEvent?.displayName, photoURL: userDataFromFirestore.photoURL || authUserFromEvent?.photoURL, username: userDataFromFirestore.username || null, isAdmin: userDataFromFirestore.isAdmin !== undefined ? (uid === ADMIN_UID || userDataFromFirestore.isAdmin) : (uid === ADMIN_UID), credits: userDataFromFirestore.credits !== undefined ? Number(userDataFromFirestore.credits) : 0, onboardingComplete: userDataFromFirestore.onboardingComplete !== undefined ? userDataFromFirestore.onboardingComplete : false, userSettings: { ...(userDataFromFirestore.userSettings || {}), experimentalFeatures: userExpFeatures } };
+            setCurrentUser(userProfileForState);
+            try { const aiSettings = await loadUserAiSettings(uid); setUserAiChatSettings(aiSettings); } catch (error) { setUserAiChatSettings(getDefaultAiSettings()); }
+            let userSubjectProgressData = userDataFromFirestore.appData?.subjectProgress || {};
+            const oldUserSubjectsData = userDataFromFirestore.appData?.subjects;
+            if (typeof oldUserSubjectsData === 'object' && Object.keys(oldUserSubjectsData).length > 0 && (!userDataFromFirestore.appData.subjectProgress || Object.keys(userDataFromFirestore.appData.subjectProgress).length === 0)) {
+                userSubjectProgressData = {};
+                for (const oldSubjectId in oldUserSubjectsData) {
+                    const oldSubject = oldUserSubjectsData[oldSubjectId]; let correspondingGlobalId = oldSubjectId;
+                    if (!globalSubjectDefinitionsMap.has(oldSubjectId)) { const foundByName = Array.from(globalSubjectDefinitionsMap.values()).find(gDef => gDef.name === oldSubject.name); if (foundByName) correspondingGlobalId = foundByName.id; else continue; }
+                    userSubjectProgressData[correspondingGlobalId] = { studied_chapters: oldSubject.studied_chapters || [], pending_exams: oldSubject.pending_exams || [], chapters: {} };
+                    if (oldSubject.chapters) { for (const chapNum in oldSubject.chapters) { const oldChap = oldSubject.chapters[chapNum]; userSubjectProgressData[correspondingGlobalId].chapters[chapNum] = { total_attempted: oldChap.total_attempted || 0, total_wrong: oldChap.total_wrong || 0, available_questions: oldChap.available_questions || [], mistake_history: oldChap.mistake_history || [], consecutive_mastery: oldChap.consecutive_mastery || 0 }; } }
+                }
+                appDataWasModifiedBySyncOrRepairOrMigration = true;
+            }
+            const mergedSubjects = {};
+            for (const [subjectId, globalDef] of globalSubjectDefinitionsMap.entries()) {
+                 const userProgressForThisSubject = userSubjectProgressData[subjectId] || getDefaultSubjectProgressStats();
+                 let currentMergedSubject = { ...globalDef, ...userProgressForThisSubject, chapters: {} };
+                 currentMergedSubject.studied_chapters = Array.isArray(currentMergedSubject.studied_chapters) ? currentMergedSubject.studied_chapters : [];
+                 currentMergedSubject.pending_exams = Array.isArray(currentMergedSubject.pending_exams) ? currentMergedSubject.pending_exams.map(exam => ({ ...exam, id: exam.id || `pending_${Date.now()}` })) : [];
+                if (currentUser && (currentUser.isAdmin || globalDef.status === 'approved')) {
+                    const subjectMarkdown = await fetchMarkdownForGlobalSubject(globalDef);
+                    if (subjectMarkdown !== null) {
+                        const parsedMdChapters = parseChaptersFromMarkdown(subjectMarkdown);
+                        for (const chapNumStr in parsedMdChapters) {
+                            const mdChapData = parsedMdChapters[chapNumStr]; const userChapProgress = userProgressForThisSubject.chapters?.[chapNumStr] || {}; const totalMcqsFromMd = mdChapData.total_questions || 0; let finalAvailableQuestions;
+                            if (Array.isArray(userChapProgress.available_questions)) { finalAvailableQuestions = userChapProgress.available_questions.filter(qN => typeof qN === 'number' && qN > 0 && qN <= totalMcqsFromMd).sort((a, b) => a - b); if (JSON.stringify(userChapProgress.available_questions.slice().sort((a,b)=>a-b)) !== JSON.stringify(finalAvailableQuestions)) appDataWasModifiedBySyncOrRepairOrMigration = true; }
+                            else { finalAvailableQuestions = Array.from({ length: totalMcqsFromMd }, (_, j) => j + 1); if (totalMcqsFromMd > 0) appDataWasModifiedBySyncOrRepairOrMigration = true; }
+                            currentMergedSubject.chapters[chapNumStr] = { title: mdChapData.title || `Chapter ${chapNumStr}`, total_questions: totalMcqsFromMd, total_attempted: userChapProgress.total_attempted || 0, total_wrong: userChapProgress.total_wrong || 0, mistake_history: Array.isArray(userChapProgress.mistake_history) ? userChapProgress.mistake_history : [], consecutive_mastery: userChapProgress.consecutive_mastery || 0, available_questions: finalAvailableQuestions };
+                        }
+                    } else currentMergedSubject.chapters = userProgressForThisSubject.chapters || {};
+                } else currentMergedSubject.chapters = userProgressForThisSubject.chapters || {};
+                for(const chapNumStr in currentMergedSubject.chapters) { const chap = currentMergedSubject.chapters[chapNumStr]; chap.title = chap.title || `Chapter ${chapNumStr}`; chap.total_questions = chap.total_questions || 0; chap.total_attempted = chap.total_attempted || 0; chap.total_wrong = chap.total_wrong || 0; chap.mistake_history = Array.isArray(chap.mistake_history) ? chap.mistake_history : []; chap.consecutive_mastery = chap.consecutive_mastery || 0; chap.available_questions = Array.isArray(chap.available_questions) ? chap.available_questions : Array.from({ length: chap.total_questions }, (_, j) => j + 1); }
+                mergedSubjects[subjectId] = currentMergedSubject;
+            }
+            setData({ subjects: mergedSubjects });
+            if (appDataWasModifiedBySyncOrRepairOrMigration) {
+                const appDataToSaveToFirestore = { subjectProgress: {} };
+                for (const subjId in mergedSubjects) {
+                    const mergedSubj = mergedSubjects[subjId]; appDataToSaveToFirestore.subjectProgress[subjId] = { studied_chapters: mergedSubj.studied_chapters, pending_exams: mergedSubj.pending_exams, chapters: {} };
+                    for (const chapNum in mergedSubj.chapters) { const mergedChap = mergedSubj.chapters[chapNum]; appDataToSaveToFirestore.subjectProgress[subjId].chapters[chapNum] = { total_attempted: mergedChap.total_attempted, total_wrong: mergedChap.total_wrong, available_questions: mergedChap.available_questions, mistake_history: mergedChap.mistake_history, consecutive_mastery: mergedChap.consecutive_mastery }; }
+                }
+                await userRef.update({ appData: appDataToSaveToFirestore, lastAppDataUpdate: firebase.firestore.FieldValue.serverTimestamp() });
+            }
+            if (data && data.subjects) {
+                const subjectKeys = Object.keys(data.subjects); let subjectToSelectId = null;
+                if (currentSubject && data.subjects[currentSubject.id] && data.subjects[currentSubject.id].status === 'approved') subjectToSelectId = currentSubject.id;
+                else if (userDataFromFirestore.lastSelectedSubjectId && data.subjects[userDataFromFirestore.lastSelectedSubjectId] && data.subjects[userDataFromFirestore.lastSelectedSubjectId].status === 'approved') subjectToSelectId = userDataFromFirestore.lastSelectedSubjectId;
+                else subjectToSelectId = subjectKeys.find(key => data.subjects[key].status === 'approved') || null;
+                setCurrentSubject(subjectToSelectId ? data.subjects[subjectToSelectId] : null); updateSubjectInfo();
+                if (subjectToSelectId && subjectToSelectId !== userDataFromFirestore.lastSelectedSubjectId) await userRef.update({ lastSelectedSubjectId: subjectToSelectId }).catch(e => console.error("Error saving lastSelectedSubjectId:", e));
+            } else { setCurrentSubject(null); updateSubjectInfo(); }
+            await loadAllUserCourseProgress(uid); await checkOnboarding(uid);
+        } else {
+            const authUserToUseForInit = authUserFromEvent || firebaseAuth?.currentUser;
+            if (!authUserToUseForInit) throw new Error("Authentication session invalid. Cannot initialize new user data.");
+            await initializeUserData( uid, authUserToUseForInit.email, (authUserToUseForInit.displayName || authUserToUseForInit.email?.split('@')[0] || `user_${uid.substring(0,6)}`), authUserToUseForInit.displayName, authUserToUseForInit.photoURL, false, authUserToUseForInit );
+            await loadUserData(uid, authUserToUseForInit); return;
+        }
+    } catch (error) { console.error("Error in loadUserData (vGlobalSubjects_MIGRATION_AWARE):", error); throw error; }
+}
+export async function reloadUserDataAfterChange(uid) {
+    if (!db) { console.error("Firestore DB not initialized"); return; } if (!uid) { console.error("reloadUserDataAfterChange called without UID."); return; }
+    try {
+        await loadUserData(uid); const aiSettings = await loadUserAiSettings(uid); setUserAiChatSettings(aiSettings);
+        if (currentUser && currentUser.uid === uid) {
+            const userRef = db.collection('users').doc(uid); const doc = await userRef.get();
+            if (doc.exists) {
+                const userData = doc.data();
+                const defaultExpFeatures = { ...DEFAULT_EXPERIMENTAL_FEATURES };
+                const userExpFeatures = (userData.userSettings && typeof userData.userSettings.experimentalFeatures === 'object') ? { ...defaultExpFeatures, ...userData.userSettings.experimentalFeatures } : defaultExpFeatures;
+                const updatedUser = { ...currentUser, email: userData.email || currentUser.email, displayName: userData.displayName || currentUser.displayName, photoURL: userData.photoURL || currentUser.photoURL, username: userData.username || currentUser.username, isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : currentUser.isAdmin, credits: userData.credits !== undefined ? Number(userData.credits) : currentUser.credits, onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : currentUser.onboardingComplete, userSettings: { ...(userData.userSettings || {}), experimentalFeatures: userExpFeatures } };
+                setCurrentUser(updatedUser);
+            }
+        }
+        await loadAllUserCourseProgress(uid); await fetchAndUpdateUserInfo();
+        window.updateExperimentalFeaturesSidebarVisibility?.();
+    } catch (error) { console.error(`[reloadUserDataAfterChange] Error reloading user data for UID: ${uid}:`, error); alert(`Failed to reload user data: ${error.message}`); }
+}
+export async function initializeUserData(uid, emailParam, usernameParam, displayNameParam = null, photoURLParam = null, forceReset = false, authUserObjectForFallback = null) {
+    if (!db || !firebaseAuth) throw new Error("Firestore DB or Auth not initialized.");
+    if (!uid || typeof uid !== 'string' || uid.trim() === '') throw new Error("User ID is invalid.");
+    if (!emailParam || typeof emailParam !== 'string' || !emailParam.includes('@')) throw new Error("A valid email is required.");
+    if (!usernameParam || typeof usernameParam !== 'string' || usernameParam.trim().length < 3) throw new Error("A valid username (min 3 chars) is required.");
+    const userRef = db.collection('users').doc(uid); let docExists = false; let existingUserData = null;
+    if (!forceReset) { try { const doc = await userRef.get(); docExists = doc.exists; if (docExists) existingUserData = doc.data(); } catch (e) {} }
+    const usernameLower = usernameParam.toLowerCase(); const initialIsAdmin = (uid === ADMIN_UID);
+    const finalDisplayName = (forceReset && existingUserData?.displayName) ? existingUserData.displayName : (displayNameParam || authUserObjectForFallback?.displayName || (emailParam ? emailParam.split('@')[0] : `User ${uid.substring(0,4)}`));
+    const finalPhotoURL = (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL : (photoURLParam || authUserObjectForFallback?.photoURL || DEFAULT_PROFILE_PIC_URL);
+    const finalEmail = emailParam;
+    if (docExists && !forceReset) {
+        let updatesNeeded = {};
+        if (existingUserData.username === undefined && usernameLower) updatesNeeded.username = usernameLower;
+        if (existingUserData.displayName === undefined) updatesNeeded.displayName = finalDisplayName;
+        if (existingUserData.onboardingComplete === undefined) updatesNeeded.onboardingComplete = false;
+        if (existingUserData.photoURL === undefined) updatesNeeded.photoURL = finalPhotoURL;
+        if (existingUserData.completedCourseBadges === undefined) updatesNeeded.completedCourseBadges = [];
+        if (existingUserData.userNotes === undefined) updatesNeeded.userNotes = {};
+        if (existingUserData.isAdmin === undefined) updatesNeeded.isAdmin = initialIsAdmin;
+        if (existingUserData.credits === undefined) updatesNeeded.credits = 0;
+        if (existingUserData.userSettings === undefined) { updatesNeeded.userSettings = { experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES } }; }
+        else if (existingUserData.userSettings.experimentalFeatures === undefined) { updatesNeeded['userSettings.experimentalFeatures'] = { ...DEFAULT_EXPERIMENTAL_FEATURES }; }
+        else { const currentExp = existingUserData.userSettings.experimentalFeatures; const mergedExp = { ...DEFAULT_EXPERIMENTAL_FEATURES, ...currentExp }; if (JSON.stringify(currentExp) !== JSON.stringify(mergedExp)) updatesNeeded['userSettings.experimentalFeatures'] = mergedExp; }
+        if (existingUserData.userAiChatSettings === undefined) updatesNeeded.userAiChatSettings = getDefaultAiSettings();
+        if (existingUserData.email === undefined && finalEmail) updatesNeeded.email = finalEmail;
+        if (!existingUserData.appData) updatesNeeded.appData = { subjectProgress: {} };
+        else if (existingUserData.appData.subjectProgress === undefined) updatesNeeded['appData.subjectProgress'] = {};
+        if (Object.keys(updatesNeeded).length > 0) {
+            try {
+                await userRef.update(updatesNeeded);
+                if (updatesNeeded.username) { const usernameToReserve = updatesNeeded.username; const usernameResRef = db.collection('usernames').doc(usernameToReserve); const usernameResDoc = await usernameResRef.get(); if (!usernameResDoc.exists) await usernameResRef.set({ userId: uid, username: usernameToReserve }); else if (usernameResDoc.data().userId !== uid) console.warn(`Username ${usernameToReserve} taken during update for ${uid}.`); }
+            } catch (updateError) { console.error("[initializeUserData] Error updating existing user's missing fields:", updateError); }
+        }
+        return;
+    }
+    const defaultAppDataForNewUser = { subjectProgress: {} };
+    const dataToSet = {
+        email: finalEmail, username: usernameLower, displayName: finalDisplayName, photoURL: finalPhotoURL, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        onboardingComplete: (forceReset && existingUserData?.onboardingComplete !== undefined) ? existingUserData.onboardingComplete : false,
+        appData: defaultAppDataForNewUser, completedCourseBadges: (forceReset && existingUserData?.completedCourseBadges) ? existingUserData.completedCourseBadges : [],
+        userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
+        isAdmin: (forceReset && typeof existingUserData?.isAdmin === 'boolean') ? existingUserData.isAdmin : initialIsAdmin,
+        credits: (forceReset && typeof existingUserData?.credits === 'number') ? existingUserData.credits : 0,
+        userAiChatSettings: (forceReset && existingUserData?.userAiChatSettings) ? existingUserData.userAiChatSettings : getDefaultAiSettings(),
+        userSettings: (forceReset && existingUserData?.userSettings) ? { ...existingUserData.userSettings, experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES, ...(existingUserData.userSettings.experimentalFeatures || {}) } } : { experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES } }
+    };
+    try {
+        await userRef.set(dataToSet); setData({ subjects: {} }); setUserAiChatSettings(dataToSet.userAiChatSettings);
+        if (forceReset) { setUserCourseProgressMap(new Map()); setCurrentSubject(null); updateSubjectInfo(); }
+        if (usernameLower) { const usernameRef = db.collection('usernames').doc(usernameLower); await usernameRef.set({ userId: uid, username: usernameLower }); }
+    } catch (error) { console.error(`[initializeUserData] Error setting user data for ${uid} (Create/Force Reset):`, error); throw error; }
+}
+
+// --- NEW: Save User Experimental Feature Settings ---
+export async function saveUserExperimentalFeatureSettings(userId, experimentalFeatureSettings) {
+    if (!db) { console.error("Firestore DB not initialized"); return false; }
+    if (!userId || !experimentalFeatureSettings) {
+        console.warn("saveUserExperimentalFeatureSettings: Missing userId or settings.");
+        return false;
+    }
+    const userRef = db.collection('users').doc(userId);
+    try {
+        // Firestore dot notation to update a nested map field
+        await userRef.update({
+            'userSettings.experimentalFeatures': experimentalFeatureSettings
+        });
+        console.log(`User experimental feature settings saved successfully for user ${userId}.`);
+        // Update local currentUser state
+        if (currentUser && currentUser.uid === userId) {
+            currentUser.userSettings = {
+                ...(currentUser.userSettings || {}),
+                experimentalFeatures: {
+                    ...(currentUser.userSettings?.experimentalFeatures || DEFAULT_EXPERIMENTAL_FEATURES),
+                    ...experimentalFeatureSettings
+                }
+            };
+            console.log("Local currentUser experimental features updated:", currentUser.userSettings.experimentalFeatures);
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error saving user experimental feature settings for user ${userId}:`, error);
+        alert("Error saving feature settings: " + error.message);
+        return false;
+    }
+}
+
+export async function checkOnboarding(uid) {
+    if (!db) { console.error("Firestore DB not initialized"); return; } if (!uid) return;
+    const userRef = db.collection('users').doc(uid);
+    try { const doc = await userRef.get(); if (doc.exists && doc.data().onboardingComplete === false) showOnboardingUI(); }
+    catch (error) { console.error("Error checking onboarding status:", error); let alertMessage = "Error checking user setup: " + error.message; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = "Error checking user setup: Permission Denied. Check Firestore rules. " + error.message; } alert(alertMessage); }
+}
+export async function submitFeedback(feedbackData, user) {
+    if (!db || !user) { alert("Error: User not identified."); return false; } if (!feedbackData.feedbackText) { alert("Error: Feedback text cannot be empty."); return false; }
+    const collectionName = feedbackData.context?.toLowerCase().includes('exam issue report') ? 'examIssues' : 'feedback';
+    const feedbackRef = db.collection(collectionName).doc();
+    try { await feedbackRef.set({ subjectId: feedbackData.subjectId || 'N/A', questionId: feedbackData.questionId || 'N/A', feedbackText: feedbackData.feedbackText, context: feedbackData.context || null, userId: user.uid, username: user.displayName || user.email, timestamp: firebase.firestore.FieldValue.serverTimestamp(), status: 'new' }); return true; }
+    catch (error) { let alertMessage = `Failed to submit: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to submit: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function sendAdminReply(recipientUid, subject, body, adminUser) {
+     if (!db || !adminUser || !adminUser.isAdmin) { alert("Error: Admin privileges required."); return false; } if (!recipientUid || !subject || !body) { alert("Error: Missing info for reply."); return false; }
+     const messageRef = db.collection('users').doc(recipientUid).collection('inbox').doc();
+     try { await messageRef.set({ senderId: adminUser.uid, senderName: "Admin", timestamp: firebase.firestore.FieldValue.serverTimestamp(), subject: subject, body: body, isRead: false }); return true; }
+     catch (error) { let alertMessage = "Failed to send reply: " + error.message; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = "Failed to send reply: Permission Denied. Check Firestore rules. " + error.message; } alert(alertMessage); return false; }
+}
+export async function markMessageAsRead(messageId, user) {
+      if (!db || !user || !messageId) return false; const messageRef = db.collection('users').doc(user.uid).collection('inbox').doc(messageId);
+      try { await messageRef.update({ isRead: true }); return true; }
+      catch (error) { console.error(`Error marking message ${messageId} read:`, error); return false; }
+}
+export async function sendWelcomeGuideMessage(userId) {
+    if (!db) return false; if (!userId) return false;
+    const guideUrl = `${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/'))}/assets/documents/guide.pdf`;
+    const subject = "Welcome to Lyceum! Quick Start Guide";
+    const body = `<p>Hello and welcome to Lyceum!</p><p>We're excited to have you on board. To help you get started and make the most out of our platform, please check out our Quick Start Guide:</p><p><a href="${guideUrl}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; text-decoration: underline;">View Lyceum Quick Start Guide (PDF)</a></p><p>This guide covers:</p><ul><li>Navigating the dashboard</li><li>Setting up your subjects</li><li>Generating your first test</li><li>Exploring courses and AI tools</li><li>And much more!</li></ul><p>If you have any questions, don't hesitate to reach out to support or ask in the Global Chat.</p><p>Happy learning!</p><p>The Lyceum Team</p>`;
+    const messageData = { senderId: 'system', senderName: 'Lyceum Guide', timestamp: firebase.firestore.FieldValue.serverTimestamp(), subject: subject, body: body, isRead: false };
+    try { await db.collection('users').doc(userId).collection('inbox').add(messageData); return true; }
+    catch (error) { console.error(`Error sending welcome guide message to user ${userId}:`, error); return false; }
+}
+export async function updateCourseDefinition(courseId, updates) {
+     if (!db || !currentUser || !currentUser.isAdmin) { alert("Permission denied. Admin required."); return false; }
+      if (!courseId || !updates || typeof updates !== 'object' || Object.keys(updates).length === 0) { alert("Internal Error: Invalid data for course update."); return false; }
+     const courseRef = db.collection('courses').doc(courseId);
+     try {
+         if (updates.prerequisites !== undefined) { if (!Array.isArray(updates.prerequisites)) updates.prerequisites = []; else updates.prerequisites = updates.prerequisites.filter(tag => typeof tag === 'string').map(tag => tag.trim()).filter(tag => tag); }
+         if (updates.corequisites !== undefined) { if (!Array.isArray(updates.corequisites)) updates.corequisites = []; else updates.corequisites = updates.corequisites.filter(tag => typeof tag === 'string').map(tag => tag.trim()).filter(tag => tag); }
+         await courseRef.set(updates, { merge: true });
+         const updatedDoc = await courseRef.get();
+         if (updatedDoc.exists) {
+             const currentData = globalCourseDataMap.get(courseId) || {}; const updatedDataFromFS = { id: courseId, ...updatedDoc.data() }; const mergedData = { ...currentData, ...updatedDataFromFS }; 
+             if (updatedDataFromFS.chapterResources && updates.chapterResources) { mergedData.chapterResources = { ...(currentData.chapterResources || {}) }; for (const chapNum in updates.chapterResources) mergedData.chapterResources[chapNum] = { ...(currentData.chapterResources?.[chapNum] || {}), ...(updates.chapterResources[chapNum]) }; }
+             else if (updatedDataFromFS.chapterResources) mergedData.chapterResources = updatedDataFromFS.chapterResources; else if (updates.chapterResources) mergedData.chapterResources = updates.chapterResources;
+             mergedData.youtubePlaylistUrls = Array.isArray(updatedDataFromFS.youtubePlaylistUrls) ? updatedDataFromFS.youtubePlaylistUrls : []; mergedData.chapters = Array.isArray(updatedDataFromFS.chapters) ? updatedDataFromFS.chapters : []; mergedData.midcourseChapters = Array.isArray(updatedDataFromFS.midcourseChapters) ? updatedDataFromFS.midcourseChapters : []; mergedData.totalChapters = Number(updatedDataFromFS.totalChapters) || (Array.isArray(mergedData.chapters) ? mergedData.chapters.length : 0); mergedData.imageUrl = updatedDataFromFS.imageUrl || null; mergedData.coverUrl = updatedDataFromFS.coverUrl || null; mergedData.prerequisites = Array.isArray(updatedDataFromFS.prerequisites) ? updatedDataFromFS.prerequisites.filter(item => typeof item === 'string') : []; mergedData.corequisites = Array.isArray(updatedDataFromFS.corequisites) ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string') : [];
+             updateGlobalCourseData(courseId, mergedData); 
+         } else globalCourseDataMap.delete(courseId); 
+         return true;
+     } catch (error) { console.error(`Error updating/setting course definition for ${courseId}:`, error); let alertMessage = `Failed to update course: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to update course: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function addCourseToFirestore(courseData) {
+    if (!currentUser) return { success: false, message: "User not logged in." };
+    const isAdminUser = currentUser.isAdmin; const finalStatus = isAdminUser ? 'approved' : 'pending';
+    let courseDirName = courseData.courseDirName ? cleanTextForFilename(courseData.courseDirName) : cleanTextForFilename(courseData.name); if (!courseDirName) courseDirName = `course_${Date.now()}`;
+    let dataToSet = { name: courseData.name || 'Untitled Course', description: courseData.description || null, majorTag: courseData.majorTag || null, subjectTag: courseData.subjectTag || null, youtubePlaylistUrls: courseData.youtubePlaylistUrls || [], creatorUid: currentUser.uid, creatorName: currentUser.displayName || currentUser.email, createdAt: firebase.firestore.FieldValue.serverTimestamp(), status: finalStatus, reportedBy: [], reportReason: null, chapterResources: {}, imageUrl: courseData.imageUrl || null, coverUrl: courseData.coverUrl || null, courseDirName: courseDirName, prerequisites: Array.isArray(courseData.prerequisites) ? courseData.prerequisites.filter(item => typeof item === 'string' && item.trim()) : [], corequisites: Array.isArray(courseData.corequisites) ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) : [], };
+    let finalTotalChapters = 0; let finalChapters = []; let finalRelatedSubjectId = null;
+    if (isAdminUser) { finalTotalChapters = parseInt(courseData.totalChapters) || 0; if (isNaN(finalTotalChapters) || finalTotalChapters < 0) finalTotalChapters = 0; finalChapters = finalTotalChapters > 0 ? Array.from({ length: finalTotalChapters }, (_, i) => `Chapter ${i + 1}`) : []; finalRelatedSubjectId = courseData.relatedSubjectId || null; }
+    else { finalTotalChapters = 0; finalChapters = []; finalRelatedSubjectId = null; }
+    dataToSet.totalChapters = finalTotalChapters; dataToSet.chapters = finalChapters; dataToSet.relatedSubjectId = finalRelatedSubjectId;
+    try {
+        const docRef = await db.collection('courses').add(dataToSet); const savedData = { ...dataToSet, id: docRef.id }; delete savedData.createdAt; savedData.createdAt = new Date(); 
+        savedData.prerequisites = Array.isArray(savedData.prerequisites) ? savedData.prerequisites : []; savedData.corequisites = Array.isArray(savedData.corequisites) ? savedData.corequisites : [];
+        updateGlobalCourseData(docRef.id, savedData);
+        if (finalStatus === 'pending' && !isAdminUser) await updateUserCredits(currentUser.uid, 50, `Suggested Course: ${savedData.name.substring(0, 50)}`);
+        return { success: true, id: docRef.id, status: finalStatus };
+    } catch (error) { console.error("Error adding course:", error); let message = error.message; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { message = `Failed to add course: Permission Denied. Check Firestore rules. ${error.message}`; } return { success: false, message: message }; }
+}
+export async function markChapterStudiedInCourse(uid, courseId, chapterNum, method = "unknown") {
+    if (!uid || !courseId || !chapterNum) return false;
+    const progress = userCourseProgressMap.get(courseId); if (!progress) return false;
+    const chapterNumInt = parseInt(chapterNum); progress.courseStudiedChapters = progress.courseStudiedChapters || []; let changed = false;
+    if (!progress.courseStudiedChapters.includes(chapterNumInt)) { progress.courseStudiedChapters.push(chapterNumInt); progress.courseStudiedChapters.sort((a, b) => a - b); changed = true; }
+    const todayStr = getFormattedDate(); progress.dailyProgress = progress.dailyProgress || {}; progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
+    if (method === "skip_exam_pass" || method === "skip_exam_passed") { if (!progress.dailyProgress[todayStr].skipExamsPassed.includes(chapterNumInt)) { progress.dailyProgress[todayStr].skipExamsPassed.push(chapterNumInt); progress.dailyProgress[todayStr].skipExamsPassed.sort((a, b) => a - b); changed = true; } }
+    else { if (!progress.dailyProgress[todayStr].chaptersStudied.includes(chapterNumInt)) { progress.dailyProgress[todayStr].chaptersStudied.push(chapterNumInt); progress.dailyProgress[todayStr].chaptersStudied.sort((a, b) => a - b); changed = true; } }
+    if (changed) { updateUserCourseProgress(courseId, progress); return await saveUserCourseProgress(uid, courseId, progress); } else return true; 
+}
+export async function updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus) {
+    if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return false; } if (!db) return false; if (!targetUserId || !courseId || !newStatus) { alert("Internal Error: Missing data."); return false; }
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId); const userRef = db.collection('users').doc(targetUserId);
+    try {
+        await db.runTransaction(async (transaction) => {
+            const progressDoc = await transaction.get(progressRef); const userDoc = await transaction.get(userRef);
+            if (!progressDoc.exists) throw new Error(`Progress doc for user ${targetUserId}, course ${courseId} not found.`); if (!userDoc.exists) throw new Error(`User doc for ${targetUserId} not found.`);
+            const progressData = progressDoc.data(); const userData = userDoc.data(); const courseDef = globalCourseDataMap.get(courseId);
+            const progressUpdates = { status: newStatus, lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() }; let finalGrade = null;
+            if (finalMark !== null && finalMark !== undefined) { progressUpdates.totalMark = Number(finalMark); finalGrade = getLetterGrade(progressUpdates.totalMark); progressUpdates.grade = finalGrade; }
+            else if (newStatus !== 'enrolled') { const calculatedMark = calculateTotalMark(progressData); const calculatedGrade = getLetterGrade(calculatedMark); progressUpdates.totalMark = calculatedMark; progressUpdates.grade = calculatedGrade; finalGrade = calculatedGrade; }
+            if ((newStatus === 'completed' || newStatus === 'failed') && progressData.status !== newStatus) progressUpdates.completionDate = firebase.firestore.FieldValue.serverTimestamp(); else if (newStatus === 'enrolled') progressUpdates.completionDate = null; else progressUpdates.completionDate = progressData.completionDate || null;
+            let badges = userData.completedCourseBadges || []; badges = badges.filter(b => b.courseId !== courseId);
+            if (newStatus === 'completed' && finalGrade && finalGrade !== 'F' && courseDef) badges.push({ courseId: courseId, courseName: courseDef.name || 'Unknown Course', grade: finalGrade, completionDate: firebase.firestore.Timestamp.now() });
+            transaction.update(progressRef, progressUpdates); transaction.update(userRef, { completedCourseBadges: badges });
+        });
+        if (currentUser && userCourseProgressMap.has(courseId) && targetUserId === currentUser.uid) {
+             const updatedProgressDoc = await progressRef.get(); 
+             if (updatedProgressDoc.exists) {
+                 const updatedProgressData = updatedProgressDoc.data();
+                 if (updatedProgressData.enrollmentDate?.toDate) updatedProgressData.enrollmentDate = updatedProgressData.enrollmentDate.toDate();
+                 if (updatedProgressData.completionDate?.toDate) updatedProgressData.completionDate = updatedProgressData.completionDate.toDate();
+                 if (updatedProgressData.lastActivityDate?.toDate) updatedProgressData.lastActivityDate = updatedProgressData.lastActivityDate.toDate();
+                 const courseDef = globalCourseDataMap.get(courseId); if (courseDef) updatedProgressData.currentDayObjective = determineTodaysObjective(updatedProgressData, courseDef);
+                 updateUserCourseProgress(courseId, updatedProgressData);
+             }
+        }
+        return true;
+    } catch (error) { console.error(`Error updating course status/grade:`, error); let alertMessage = `Failed to update status: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to update status: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function handleAddBadgeForUser(userId, courseId, courseName, grade, completionDate) {
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } showLoading("Adding badge..."); const userRef = db.collection('users').doc(userId);
+     try {
+         const newBadge = { courseId: courseId.trim(), courseName: courseName.trim(), grade: grade.trim().toUpperCase(), completionDate: completionDate ? firebase.firestore.Timestamp.fromDate(completionDate) : firebase.firestore.Timestamp.now() };
+         const userDoc = await userRef.get(); if (userDoc.exists) { const badges = userDoc.data().completedCourseBadges || []; if (badges.some(b => b.courseId === newBadge.courseId)) { alert(`User already has badge for course ID ${newBadge.courseId}.`); hideLoading(); return; } }
+         await userRef.update({ completedCourseBadges: firebase.firestore.FieldValue.arrayUnion(newBadge) }); hideLoading(); alert("Badge added!");
+         const searchInput = document.getElementById('admin-user-search-badges'); if (searchInput && (searchInput.value === userId || searchInput.value.toLowerCase() === userDoc.data()?.email?.toLowerCase())) { window.loadUserBadgesForAdmin(); }
+     } catch (error) { hideLoading(); console.error("Error adding badge:", error); let alertMessage = `Failed to add badge: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to add badge: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); }
+}
+export async function handleRemoveBadgeForUser(userId, courseId) {
+     if (!currentUser || !currentUser.isAdmin) { alert("Admin privileges required."); return; } showLoading("Removing badge..."); const userRef = db.collection('users').doc(userId);
+     try {
+         const userDoc = await userRef.get(); if (!userDoc.exists) throw new Error("User not found.");
+         const badges = userDoc.data().completedCourseBadges || []; const badgeToRemove = badges.find(badge => badge.courseId === courseId); if (!badgeToRemove) { hideLoading(); alert("Badge not found."); return; }
+         await userRef.update({ completedCourseBadges: firebase.firestore.FieldValue.arrayRemove(badgeToRemove) }); hideLoading(); alert("Badge removed!");
+         const searchInput = document.getElementById('admin-user-search-badges'); if (searchInput && (searchInput.value === userId || searchInput.value.toLowerCase() === userDoc.data()?.email?.toLowerCase())) { window.loadUserBadgesForAdmin(); }
+     } catch (error) { hideLoading(); console.error("Error removing badge:", error); let alertMessage = `Failed to remove badge: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to remove badge: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); }
+}
+export async function adminUpdateUsername(userId, oldUsername, newUsername) {
+    if (!db || !currentUser || !currentUser.isAdmin) throw new Error("Permission denied: Admin privileges required."); if (!userId || !newUsername) throw new Error("Internal Error: Missing required user or username data.");
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/; if (!usernameRegex.test(newUsername)) throw new Error("Invalid username format.");
+    const newUsernameLower = newUsername.toLowerCase(); const oldUsernameLower = oldUsername ? oldUsername.toLowerCase() : null;
+    if (oldUsernameLower === newUsernameLower) return true; 
+    const usersRef = db.collection('users'); const usernamesRef = db.collection('usernames'); const userDocRef = usersRef.doc(userId); const newUsernameDocRef = usernamesRef.doc(newUsernameLower); const oldUsernameDocRef = oldUsernameLower ? usernamesRef.doc(oldUsernameLower) : null;
+    try {
+        const newUsernameDoc = await newUsernameDocRef.get(); if (newUsernameDoc.exists) throw new Error(`Username "${newUsername}" is already taken.`);
+        const batch = db.batch(); batch.update(userDocRef, { username: newUsernameLower });
+        if (oldUsernameDocRef) batch.delete(oldUsernameDocRef);
+        batch.set(newUsernameDocRef, { userId: userId }); await batch.commit();
+        return true;
+    } catch (error) { console.error(`Error updating username for user ${userId} to "${newUsernameLower}":`, error); if (error.message.includes("already taken")) throw error; let errorMessage = `Failed to update username: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { errorMessage = `Failed to update username: Permission Denied. Check Firestore rules. ${error.message}`; } throw new Error(errorMessage); }
+}
+export async function saveUserFormulaSheet(userId, courseId, chapterNum, htmlContent) {
+    if (!db || !userId) return false; const docId = `${courseId}_ch${chapterNum}`; const sheetRef = db.collection('users').doc(userId).collection(userFormulaSheetSubCollection).doc(docId);
+    try { await sheetRef.set({ content: htmlContent, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }); return true; }
+    catch (error) { console.error(`Error saving formula sheet for ${docId}:`, error); return false; }
+}
+export async function loadUserFormulaSheet(userId, courseId, chapterNum) {
+    if (!db || !userId) return null; const docId = `${courseId}_ch${chapterNum}`; const sheetRef = db.collection('users').doc(userId).collection(userFormulaSheetSubCollection).doc(docId);
+    try { const docSnap = await sheetRef.get(); if (docSnap.exists) { const data = docSnap.data(); if (!data.content) return null; return data.content; } return null; }
+    catch (error) { console.error(`Error loading formula sheet for ${docId}:`, error); return null; }
+}
+export async function saveUserChapterSummary(userId, courseId, chapterNum, htmlContent) {
+    if (!db || !userId) return false; const docId = `${courseId}_ch${chapterNum}`; const summaryRef = db.collection('users').doc(userId).collection(userSummarySubCollection).doc(docId);
+    try { await summaryRef.set({ content: htmlContent, lastUpdated: firebase.firestore.FieldValue.serverTimestamp() }); return true; }
+    catch (error) { console.error(`Error saving chapter summary for ${docId}:`, error); return false; }
+}
+export async function loadUserChapterSummary(userId, courseId, chapterNum) {
+    if (!db || !userId) return null; const docId = `${courseId}_ch${chapterNum}`; const summaryRef = db.collection('users').doc(userId).collection(userSummarySubCollection).doc(docId);
+    try { const docSnap = await summaryRef.get(); if (docSnap.exists) { const data = docSnap.data(); if (!data.content) return null; return data.content; } return null; }
+    catch (error) { console.error(`Error loading chapter summary for ${docId}:`, error); return null; }
+}
+export async function saveUserNotes(userId, courseId, chapterNum, notesArray) {
+     if (!db || !userId) return false; const userRef = db.collection('users').doc(userId); const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; 
+     try { const notesToSave = JSON.parse(JSON.stringify(notesArray)); await userRef.update({ [fieldPath]: notesToSave }); return true; }
+     catch (error) { console.error(`Error saving user notes for ${courseId} Ch ${chapterNum}:`, error); try { await userRef.set({ userNotes: { [fieldPath]: notesArray } }, { merge: true }); return true; } catch (setError) { let alertMessage = "Failed to save notes: " + setError.message; if (setError.code === 'permission-denied' || (setError.message && setError.message.toLowerCase().includes('permission'))) { alertMessage = "Failed to save notes: Permission Denied. Check Firestore rules. " + setError.message; } alert(alertMessage); return false; } }
+}
+export async function loadUserNotes(userId, courseId, chapterNum) {
+     if (!db || !userId) return []; const userRef = db.collection('users').doc(userId); const fieldPath = `userNotes.${courseId}_ch${chapterNum}`; 
+     try { const docSnap = await userRef.get(); if (docSnap.exists) { const notes = docSnap.data()?.userNotes?.[fieldPath] || []; return notes.map(n => ({ ...n, timestamp: Number(n.timestamp) || Date.now() })); } return []; }
+     catch (error) { console.error(`Error loading user notes for ${courseId} Ch ${chapterNum}:`, error); return []; }
+}
+export async function saveSharedNote(courseId, chapterNum, noteData, user) {
+     if (!db || !user) return false; const docId = `shared_${courseId}_ch${chapterNum}_${Date.now()}`;
+     try { await db.collection(sharedNotesCollection).doc(docId).set({ courseId: courseId, chapterNum: Number(chapterNum), originalNoteId: noteData.id, title: noteData.title, content: noteData.content, type: noteData.type, filename: noteData.filename || null, filetype: noteData.filetype || null, userId: user.uid, userName: user.displayName || 'Anonymous', timestamp: firebase.firestore.FieldValue.serverTimestamp() }); return true; }
+     catch (error) { console.error(`Error saving shared note ${docId}:`, error); let alertMessage = `Failed to share note: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to share note: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function loadSharedNotes(courseId, chapterNum) {
+    if (!db) return [];
+    try { const snapshot = await db.collection(sharedNotesCollection).where('courseId', '==', courseId).where('chapterNum', '==', Number(chapterNum)).orderBy('timestamp', 'desc').limit(50).get(); const notes = []; snapshot.forEach(doc => { const data = doc.data(); notes.push({ id: doc.id, ...data, timestamp: data.timestamp?.toDate ? data.timestamp.toDate().getTime() : Date.now() }); }); return notes; }
+    catch (error) { console.error(`Error loading shared notes for ${courseId} Ch ${chapterNum}:`, error); return []; }
+}
+export async function deleteUserFormulaSheet(userId, courseId, chapterNum) {
+    if (!db || !currentUser || !currentUser.isAdmin) return false; if (!userId || !courseId || !chapterNum) return false;
+    const docId = `${courseId}_ch${chapterNum}`; const sheetRef = db.collection('users').doc(userId).collection(userFormulaSheetSubCollection).doc(docId);
+    try { await sheetRef.delete(); return true; } catch (error) { console.error(`Error deleting formula sheet ${docId} for user ${userId}:`, error); return false; }
+}
+export async function deleteUserChapterSummary(userId, courseId, chapterNum) {
+    if (!db || !currentUser || !currentUser.isAdmin) return false; if (!userId || !courseId || !chapterNum) return false;
+    const docId = `${courseId}_ch${chapterNum}`; const summaryRef = db.collection('users').doc(userId).collection(userSummarySubCollection).doc(docId);
+    try { await summaryRef.delete(); return true; } catch (error) { console.error(`Error deleting chapter summary ${docId} for user ${userId}:`, error); return false; }
+}
+export async function deleteAllFeedbackMessages() {
+    if (!db || !currentUser || !currentUser.isAdmin) throw new Error("Permission denied: Admin privileges required.");
+    try { const snapshot = await db.collection('feedback').limit(500).get(); if (snapshot.empty) return 0; 
+          const batch = db.batch(); snapshot.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); return snapshot.size; }
+    catch (error) { console.error("Error deleting all feedback messages:", error); throw error; }
+}
+export async function deleteAllExamIssues() {
+    if (!db || !currentUser || !currentUser.isAdmin) throw new Error("Permission denied: Admin privileges required.");
+    try { const snapshot = await db.collection('examIssues').limit(500).get(); if (snapshot.empty) return 0; 
+          const batch = db.batch(); snapshot.docs.forEach(doc => batch.delete(doc.ref)); await batch.commit(); return snapshot.size; }
+    catch (error) { console.error("Error deleting all exam issues:", error); throw error; }
+}
+export async function deleteInboxMessage(userId, messageId) {
+    if (!db || !userId || !messageId || !currentUser) return false;
+    const currentUid = currentUser.uid; const isAdminUser = currentUser.isAdmin; const isOwner = currentUid === userId;
+    if (!isAdminUser && !isOwner) { alert("Permission denied."); return false; }
+    const messageRef = db.collection('users').doc(userId).collection('inbox').doc(messageId);
+    try { await messageRef.delete(); return true; }
+    catch (error) { console.error(`Error deleting inbox message ${messageId} for user ${userId}:`, error); return false; }
+}
+export async function deleteCourseActivityProgress(userId, courseId, activityType, activityId) {
+    if (!db || !currentUser || !currentUser.isAdmin) { alert("Permission denied."); return false; } if (!userId || !courseId || !activityType || !activityId) return false;
+    const progressRef = db.collection('userCourseProgress').doc(userId).collection('courses').doc(courseId);
+    try {
+        await db.runTransaction(async (transaction) => {
+            const progressDoc = await transaction.get(progressRef); if (!progressDoc.exists) throw new Error(`Progress doc for user ${userId}, course ${courseId} not found.`);
+            const progressData = progressDoc.data(); const updates = {}; let scoreMap = null; let mapKey = null; let valueToDelete = null; 
+            switch (activityType) {
+                case 'assignment': scoreMap = progressData.assignmentScores || {}; mapKey = 'assignmentScores'; valueToDelete = activityId; break;
+                case 'weekly_exam': scoreMap = progressData.weeklyExamScores || {}; mapKey = 'weeklyExamScores'; valueToDelete = activityId; break;
+                case 'midcourse': scoreMap = progressData.midcourseExamScores || {}; mapKey = 'midcourseExamScores'; valueToDelete = activityId; break;
+                case 'final': let finalScores = progressData.finalExamScores || []; const finalIndex = parseInt(activityId.replace('final', '')) - 1; if (Array.isArray(finalScores) && finalIndex >= 0 && finalIndex < finalScores.length) { finalScores[finalIndex] = null; updates.finalExamScores = finalScores; } mapKey = null; break;
+                case 'skip_exam': mapKey = 'skipExamAttempts'; valueToDelete = activityId; const attemptsMap = progressData.skipExamAttempts || {}; const scoresMap = progressData.lastSkipExamScore || {}; if (attemptsMap.hasOwnProperty(valueToDelete)) delete attemptsMap[valueToDelete]; if (scoresMap.hasOwnProperty(valueToDelete)) delete scoresMap[valueToDelete]; updates.skipExamAttempts = attemptsMap; updates.lastSkipExamScore = scoresMap; mapKey = null; break;
+                case 'video': mapKey = 'watchedVideoUrls'; valueToDelete = activityId; const urlsMap = progressData.watchedVideoUrls || {}; const durationsMap = progressData.watchedVideoDurations || {}; if (urlsMap.hasOwnProperty(valueToDelete)) delete urlsMap[valueToDelete]; if (durationsMap.hasOwnProperty(valueToDelete)) delete durationsMap[valueToDelete]; updates.watchedVideoUrls = urlsMap; updates.watchedVideoDurations = durationsMap; mapKey = null; break;
+                case 'pdf': mapKey = 'pdfProgress'; valueToDelete = activityId; const pdfMap = progressData.pdfProgress || {}; if (pdfMap.hasOwnProperty(valueToDelete)) delete pdfMap[valueToDelete]; updates.pdfProgress = pdfMap; mapKey = null; break;
+                case 'daily': mapKey = 'dailyProgress'; valueToDelete = activityId; const dailyMap = progressData.dailyProgress || {}; if (dailyMap.hasOwnProperty(valueToDelete)) delete dailyMap[valueToDelete]; updates.dailyProgress = dailyMap; mapKey = null; break;
+                default: throw new Error(`Invalid activity type for deletion: ${activityType}`);
+            }
+            if (mapKey && valueToDelete !== null) { if (progressData[mapKey] && progressData[mapKey].hasOwnProperty(valueToDelete)) { delete progressData[mapKey][valueToDelete]; updates[mapKey] = progressData[mapKey]; } }
+            if (Object.keys(updates).length > 0) transaction.update(progressRef, updates);
+        });
+        return true;
+    } catch (error) { console.error(`Error deleting course activity progress:`, error); let alertMessage = `Error deleting progress: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Error deleting progress: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function fetchAdminTasks() {
+    if (!db) return [];
+    try { const snapshot = await db.collection(adminTasksCollection).orderBy('createdAt', 'desc').get(); const tasks = []; snapshot.forEach(doc => { const data = doc.data(); tasks.push({ id: doc.id, text: data.text, status: data.status, createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : null }); }); return tasks; }
+    catch (error) { console.error("Error fetching admin tasks:", error); return []; }
+}
+export async function addAdminTask(taskText) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { alert("Permission denied."); return null; } if (!taskText || typeof taskText !== 'string' || taskText.trim().length === 0) { alert("Task text cannot be empty."); return null; }
+    try { const docRef = await db.collection(adminTasksCollection).add({ text: taskText.trim(), status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() }); return docRef.id; }
+    catch (error) { console.error("Error adding admin task:", error); let alertMessage = `Failed to add task: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to add task: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return null; }
+}
+export async function updateAdminTaskStatus(taskId, newStatus) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { alert("Permission denied."); return false; } if (!taskId || !newStatus || (newStatus !== 'pending' && newStatus !== 'done')) { alert("Internal Error: Invalid data."); return false; }
+    const taskRef = db.collection(adminTasksCollection).doc(taskId);
+    try { await taskRef.update({ status: newStatus }); return true; }
+    catch (error) { console.error(`Error updating status for admin task ${taskId}:`, error); let alertMessage = `Failed to update task status: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to update task status: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function deleteAdminTask(taskId) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) { alert("Permission denied."); return false; } if (!taskId) { alert("Internal Error: Task ID missing."); return false; }
+    const taskRef = db.collection(adminTasksCollection).doc(taskId);
+    try { const docSnap = await taskRef.get(); if (!docSnap.exists) { alert("Task not found."); return false; } const taskData = docSnap.data(); if (taskData.status !== 'done') { alert("Task must be 'done' first."); return false; } await taskRef.delete(); return true; }
+    catch (error) { console.error(`Error deleting admin task ${taskId}:`, error); let alertMessage = `Failed to delete task: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to delete task: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function toggleUserAdminStatus(targetUserId, currentIsAdmin) {
+    if (!db || !currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Permission denied: Only primary admin can toggle status."); if (!targetUserId) throw new Error("Internal Error: Target user ID missing."); if (targetUserId === ADMIN_UID) throw new Error("Primary admin's status cannot be changed.");
+    const newIsAdminStatus = !currentIsAdmin; const userRef = db.collection('users').doc(targetUserId);
+    try { await userRef.update({ isAdmin: newIsAdminStatus }); return true; }
+    catch (error) { console.error(`Error toggling admin status for user ${targetUserId}:`, error); let errorMessage = `Failed to toggle admin status: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { errorMessage = `Failed to toggle admin status: Permission Denied. Check Firestore rules. ${error.message}`; } throw new Error(errorMessage); }
+}
+export async function adminUpdateUserSubjectStatus(adminUid, targetUserId, subjectId, newStatus) {
+    if (!db || !currentUser || !currentUser.isAdmin) { alert("Permission denied."); return false; } if (!targetUserId || !subjectId || !newStatus) { alert("Internal Error: Missing data."); return false; } if (!['pending', 'approved', 'rejected'].includes(newStatus)) { alert("Invalid status."); return false; }
+    const targetUserRef = db.collection('users').doc(targetUserId);
+    try {
+        const userDoc = await targetUserRef.get(); if (!userDoc.exists) { alert("Target user not found."); return false; }
+        const userData = userDoc.data(); if (!userData.appData || !userData.appData.subjects || !userData.appData.subjects[subjectId]) { alert("Subject not found for target user."); return false; }
+        const newAppData = JSON.parse(JSON.stringify(userData.appData)); newAppData.subjects[subjectId].status = newStatus;
+        await targetUserRef.update({ appData: newAppData }); return true;
+    } catch (error) { console.error(`Error updating subject status for user ${targetUserId}:`, error); let alertMessage = `Failed to update subject status: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to update subject status: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function updateUserCredits(userId, creditChange, reason) {
+    if (!db || !userId || typeof creditChange !== 'number' || !reason) return false; if (creditChange === 0) return true; 
+    const userRef = db.collection('users').doc(userId); const creditLogRef = userRef.collection(userCreditLogSubCollection).doc(); 
+    try {
+        await db.runTransaction(async (transaction) => {
+            const userDoc = await transaction.get(userRef); if (!userDoc.exists) throw new Error(`User doc ${userId} not found.`);
+            const currentCredits = userDoc.data().credits || 0; const newCredits = currentCredits + creditChange;
+            transaction.update(userRef, { credits: firebase.firestore.FieldValue.increment(creditChange) });
+            transaction.set(creditLogRef, { timestamp: firebase.firestore.FieldValue.serverTimestamp(), change: creditChange, newBalance: newCredits, reason: reason, performedBy: currentUser ? currentUser.uid : 'system' });
+        });
+        if (currentUser && currentUser.uid === userId) { const oldCredits = currentUser.credits || 0; const newLocalCredits = oldCredits + creditChange; const updatedCurrentUser = { ...currentUser, credits: newLocalCredits }; setCurrentUser(updatedCurrentUser); const creditsDisplay = document.getElementById('user-profile-credits'); if (creditsDisplay) creditsDisplay.textContent = newLocalCredits.toLocaleString(); const marketplaceCreditsDisplay = document.getElementById('marketplace-credit-balance'); if (marketplaceCreditsDisplay) marketplaceCreditsDisplay.textContent = newLocalCredits.toLocaleString(); }
+        return true;
+    } catch (error) { console.error(`Error updating credits for user ${userId}:`, error); let alertMessage = `Failed to update credits: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to update credits: Permission Denied. Check Firestore rules. ${error.message}`; } alert(alertMessage); return false; }
+}
+export async function saveChatSession(userId, sessionId, sessionData) {
+    if (!db || !userId || !sessionId || !sessionData) throw new Error("Missing required parameters for saving chat session.");
+    const sessionRef = db.collection('users').doc(userId).collection(aiChatSessionsSubCollection).doc(sessionId);
+    const dataToSave = { ...sessionData }; 
+    if (typeof dataToSave.createdAt === 'number') dataToSave.createdAt = firebase.firestore.Timestamp.fromMillis(dataToSave.createdAt); else if (!dataToSave.createdAt || (typeof dataToSave.createdAt === 'object' && !dataToSave.createdAt.toDate)) dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    dataToSave.lastModified = firebase.firestore.FieldValue.serverTimestamp();
+    dataToSave.history = Array.isArray(dataToSave.history) ? dataToSave.history : [];
+    dataToSave.history.forEach(msg => { if (typeof msg.timestamp === 'object' && msg.timestamp && typeof msg.timestamp.toDate === 'function') msg.timestamp = msg.timestamp.toMillis(); else if (typeof msg.timestamp !== 'number') msg.timestamp = Date.now(); });
+    try { await sessionRef.set(dataToSave, { merge: true }); }
+    catch (error) { console.error(`Error saving AI Chat session ${sessionId} for user ${userId}:`, error); throw error; }
+}
+export async function loadUserChatSessionsFromFirestore(userId) {
+    if (!db || !userId) return []; const sessionsRef = db.collection('users').doc(userId).collection(aiChatSessionsSubCollection);
+    try { const snapshot = await sessionsRef.orderBy('lastModified', 'desc').get(); const sessions = []; snapshot.forEach(doc => sessions.push({ id: doc.id, ...doc.data() })); return sessions; }
+    catch (error) { console.error(`Error loading AI chat sessions from Firestore for user ${userId}:`, error); throw error; }
+}
+export async function deleteChatSessionFromFirestore(userId, sessionId) {
+    if (!db || !userId || !sessionId) throw new Error("Missing required parameters for deleting chat session.");
+    const sessionRef = db.collection('users').doc(userId).collection(aiChatSessionsSubCollection).doc(sessionId);
+    try { await sessionRef.delete(); }
+    catch (error) { console.error(`Error deleting AI Chat session ${sessionId} for user ${userId}:`, error); throw error; }
+}
+export async function adminMarkTestGenChaptersStudied(targetUserId, subjectId) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const userRef = db.collection('users').doc(targetUserId); const userDoc = await userRef.get(); if (!userDoc.exists) throw new Error("Target user not found.");
+    const userData = userDoc.data(); const appData = userData.appData || { subjects: {} }; const subject = appData.subjects?.[subjectId]; if (!subject || !subject.chapters) throw new Error("Subject or chapters not found for user.");
+    Object.keys(subject.chapters).forEach(chapNum => { if (!subject.studied_chapters.includes(chapNum)) subject.studied_chapters.push(chapNum); });
+    subject.studied_chapters.sort((a, b) => parseInt(a) - parseInt(b)); await userRef.update({ appData: appData });
+}
+export async function adminResetTestGenSubjectProgress(targetUserId, subjectId) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const userRef = db.collection('users').doc(targetUserId); const userDoc = await userRef.get(); if (!userDoc.exists) throw new Error("Target user not found.");
+    const userData = userDoc.data(); const appData = userData.appData || { subjects: {} }; const subject = appData.subjects?.[subjectId]; if (!subject || !subject.chapters) throw new Error("Subject or chapters not found for user.");
+    for (const chapNum in subject.chapters) { const chap = subject.chapters[chapNum]; chap.total_attempted = 0; chap.total_wrong = 0; chap.mistake_history = []; chap.consecutive_mastery = 0; chap.available_questions = Array.from({ length: chap.total_questions || 0 }, (_, j) => j + 1); }
+    await userRef.update({ appData: appData });
+}
+export async function adminMarkCourseChapterStudied(targetUserId, courseId, chapterToMark) {
+    if (!currentUser || !currentUser.isAdmin) throw new Error("Admin privileges required.");
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId); const progressDoc = await progressRef.get(); if (!progressDoc.exists) throw new Error("User course progress not found.");
+    const progressData = progressDoc.data(); progressData.courseStudiedChapters = progressData.courseStudiedChapters || [];
+    const courseDef = globalCourseDataMap.get(courseId); if (!courseDef) throw new Error("Course definition not found.");
+    const chaptersToUpdate = [];
+    if (chapterToMark === 'all') { for (let i = 1; i <= (courseDef.totalChapters || 0); i++) chaptersToUpdate.push(i); }
+    else { const chapNum = parseInt(chapterToMark); if (isNaN(chapNum) || chapNum < 1 || chapNum > (courseDef.totalChapters || 0)) throw new Error("Invalid chapter number."); chaptersToUpdate.push(chapNum); }
+    let changed = false; const videoIdsToFetch = [];
+    chaptersToUpdate.forEach(cn => { const lectures = courseDef.chapterResources?.[cn]?.lectureUrls || []; lectures.forEach(lec => { const videoId = getYouTubeVideoId(lec.url); if (videoId && videoDurationMap[videoId] === undefined) videoIdsToFetch.push(videoId); }); });
+    if (videoIdsToFetch.length > 0) await fetchVideoDurationsIfNeeded(videoIdsToFetch);
+    chaptersToUpdate.forEach(cn => {
+        if (!progressData.courseStudiedChapters.includes(cn)) { progressData.courseStudiedChapters.push(cn); changed = true; }
+        progressData.pdfProgress = progressData.pdfProgress || {}; const chapterPdfInfo = courseDef.chapterResources?.[cn]?.pdfInfo; progressData.pdfProgress[cn] = { currentPage: chapterPdfInfo?.totalPages || 1, totalPages: chapterPdfInfo?.totalPages || 1 }; changed = true;
+        progressData.watchedVideoDurations = progressData.watchedVideoDurations || {}; progressData.watchedVideoDurations[cn] = progressData.watchedVideoDurations[cn] || {};
+        const lectures = courseDef.chapterResources?.[cn]?.lectureUrls || []; lectures.forEach(lec => { const videoId = getYouTubeVideoId(lec.url); if (videoId) { const duration = videoDurationMap[videoId]; if (typeof duration === 'number' && duration > 0) progressData.watchedVideoDurations[cn][videoId] = duration; else progressData.watchedVideoDurations[cn][videoId] = 99999; } });
+        changed = true; 
+    });
+    if (changed) { progressData.courseStudiedChapters.sort((a, b) => a - b); await progressRef.update({ courseStudiedChapters: progressData.courseStudiedChapters, pdfProgress: progressData.pdfProgress, watchedVideoDurations: progressData.watchedVideoDurations, lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() }); }
+}
+export async function adminCompleteCourseActivity(targetUserId, courseId, activityType, activityId, score) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required.");
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId); const progressDoc = await progressRef.get(); if (!progressDoc.exists) throw new Error("User course progress not found.");
+    const progressData = progressDoc.data(); const updates = { lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() };
+    switch (activityType) {
+        case 'assignment': progressData.assignmentScores = progressData.assignmentScores || {}; progressData.assignmentScores[activityId] = score; updates.assignmentScores = progressData.assignmentScores; const dayNumMatch = activityId.match(/day(\d+)/); if (dayNumMatch && progressData.enrollmentDate) { const dayNum = parseInt(dayNumMatch[1]); const activityDate = new Date(progressData.enrollmentDate.toDate()); activityDate.setDate(activityDate.getDate() + dayNum - 1); const dateStr = getFormattedDate(activityDate); progressData.dailyProgress = progressData.dailyProgress || {}; progressData.dailyProgress[dateStr] = progressData.dailyProgress[dateStr] || {}; progressData.dailyProgress[dateStr].assignmentCompleted = true; progressData.dailyProgress[dateStr].assignmentScore = score; updates.dailyProgress = progressData.dailyProgress; } break;
+        case 'weekly_exam': progressData.weeklyExamScores = progressData.weeklyExamScores || {}; progressData.weeklyExamScores[activityId] = score; updates.weeklyExamScores = progressData.weeklyExamScores; break;
+        case 'midcourse': progressData.midcourseExamScores = progressData.midcourseExamScores || {}; progressData.midcourseExamScores[activityId] = score; updates.midcourseExamScores = progressData.midcourseExamScores; break;
+        case 'final': progressData.finalExamScores = progressData.finalExamScores || []; const finalIndexMatch = activityId.match(/final(\d+)/); if (finalIndexMatch) { const attemptIndex = parseInt(finalIndexMatch[1]) - 1; if (attemptIndex >= 0) { while (progressData.finalExamScores.length <= attemptIndex) progressData.finalExamScores.push(null); progressData.finalExamScores[attemptIndex] = score; updates.finalExamScores = progressData.finalExamScores; } } else throw new Error("Invalid final exam ID format."); break;
+        case 'skip_exam': const chapterNumMatch = activityId.match(/chapter(\d+)/); if (!chapterNumMatch) throw new Error("Invalid skip exam ID format."); const chapterNum = parseInt(chapterNumMatch[1]); progressData.lastSkipExamScore = progressData.lastSkipExamScore || {}; progressData.lastSkipExamScore[chapterNum] = score; progressData.skipExamAttempts = progressData.skipExamAttempts || {}; progressData.skipExamAttempts[chapterNum] = (progressData.skipExamAttempts[chapterNum] || 0) + 1; updates.lastSkipExamScore = progressData.lastSkipExamScore; updates.skipExamAttempts = progressData.skipExamAttempts; const courseDef = globalCourseDataMap.get(courseId); const skipThreshold = courseDef?.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT; if (score >= skipThreshold) { progressData.courseStudiedChapters = progressData.courseStudiedChapters || []; if (!progressData.courseStudiedChapters.includes(chapterNum)) { progressData.courseStudiedChapters.push(chapterNum); progressData.courseStudiedChapters.sort((a,b) => a-b); updates.courseStudiedChapters = progressData.courseStudiedChapters; } } break;
+        default: throw new Error("Invalid activity type for admin completion.");
+    }
+    await progressRef.update(updates);
+}
+export async function adminSetCourseStatusAndGrade(targetUserId, courseId, finalMark, newStatus) { await updateCourseStatusForUser(targetUserId, courseId, finalMark, newStatus); }
+export async function adminAdjustUserCredits(targetUserId, amount, reason, adminPerformingActionUid) {
+    if (!currentUser || currentUser.uid !== ADMIN_UID) throw new Error("Admin privileges required."); if (typeof amount !== 'number' || !reason) throw new Error("Amount and reason required.");
+    const userRef = db.collection('users').doc(targetUserId); const creditLogRef = userRef.collection("creditLog").doc();
+    await db.runTransaction(async (transaction) => {
+        const userDoc = await transaction.get(userRef); if (!userDoc.exists) throw new Error("Target user not found.");
+        const currentCredits = userDoc.data().credits || 0; const newCredits = currentCredits + amount;
+        transaction.update(userRef, { credits: newCredits });
+        transaction.set(creditLogRef, { timestamp: firebase.firestore.FieldValue.serverTimestamp(), change: amount, newBalance: newCredits, reason: `Admin Action: ${reason}`, performedBy: adminPerformingActionUid });
+    });
+}
+export async function getAdminOverviewStats() {
+    if (!db) throw new Error("Database not available.");
+    try {
+        const usersSnapshot = await db.collection('users').get(); const totalUsers = usersSnapshot.size;
+        const pendingCoursesSnapshot = await db.collection('courses').where('status', '==', 'pending').get(); const pendingCourses = pendingCoursesSnapshot.size;
+        const approvedCoursesSnapshot = await db.collection('courses').where('status', '==', 'approved').get(); const approvedCourses = approvedCoursesSnapshot.size;
+        const reportedCoursesSnapshot = await db.collection('courses').where('status', '==', 'reported').get(); const reportedCourses = reportedCoursesSnapshot.size;
+        const globalSubjectsSnapshot = await db.collection('subjects').get(); const totalGlobalSubjects = globalSubjectsSnapshot.size;
+        const totalExamsTaken = 'N/A (Needs Counter)';
+        const feedbackSnapshot = await db.collection('feedback').where('status', '==', 'new').get(); const issuesSnapshot = await db.collection('examIssues').where('status', '==', 'new').get(); const pendingFeedback = feedbackSnapshot.size + issuesSnapshot.size;
+        const adminSnapshot = await db.collection('users').where('isAdmin', '==', true).get(); const adminCount = adminSnapshot.size;
+        return { totalUsers, pendingCourses, approvedCourses, reportedCourses, totalSubjects: totalGlobalSubjects, totalExamsTaken, pendingFeedback, adminCount };
+    } catch (error) { console.error("Error fetching admin overview stats:", error); throw error; }
+}
+export async function adminSimulateDaysPassed(targetUserId, courseId, daysToSimulate) {
+    if (!currentUser || !currentUser.isAdmin) throw new Error("Admin privileges required."); if (!db) throw new Error("Database not available."); if (!targetUserId || !courseId || typeof daysToSimulate !== 'number' || daysToSimulate < 0) throw new Error("Invalid user, course, or days specified.");
+    const progressRef = db.collection('userCourseProgress').doc(targetUserId).collection('courses').doc(courseId);
+    try {
+        const today = new Date(); today.setHours(0, 0, 0, 0); const newEnrollmentDate = new Date(today); newEnrollmentDate.setDate(today.getDate() - daysToSimulate);
+        const newEnrollmentTimestamp = firebase.firestore.Timestamp.fromDate(newEnrollmentDate);
+        await progressRef.update({ enrollmentDate: newEnrollmentTimestamp, baseMediocrePace: null, lastActivityDate: firebase.firestore.FieldValue.serverTimestamp() });
+        return true;
+    } catch (error) { console.error(`Error in adminSimulateDaysPassed:`, error); let alertMessage = `Failed to simulate days: ${error.message}`; if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) { alertMessage = `Failed to simulate days: Permission Denied. Check Firestore rules. ${error.message}`; } throw new Error(alertMessage); }
+}
+export async function adminAddGlobalSubject(subjectData) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    const subjectsRef = db.collection('subjects'); const { chapters, studied_chapters, pending_exams, ...definitionToSave } = subjectData;
+    definitionToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp(); definitionToSave.creatorUid = currentUser.uid; definitionToSave.creatorName = currentUser.displayName || currentUser.email;
+    const docRef = await subjectsRef.add(definitionToSave); const newSubjectDef = { id: docRef.id, ...definitionToSave, chapters: {} };
+    updateGlobalSubjectDefinition(docRef.id, newSubjectDef); return newSubjectDef;
+}
+export async function adminUpdateGlobalSubjectDefinition(subjectId, updates) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    const subjectRef = db.collection('subjects').doc(subjectId); const { chapters, studied_chapters, pending_exams, ...definitionUpdates } = updates;
+    definitionUpdates.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+    await subjectRef.update(definitionUpdates); const updatedDoc = await subjectRef.get(); const updatedDef = { id: updatedDoc.id, ...updatedDoc.data(), chapters: {} };
+    updateGlobalSubjectDefinition(subjectId, updatedDef); return updatedDef;
+}
+export async function adminDeleteGlobalSubject(subjectId) {
+    if (!currentUser?.isAdmin) throw new Error("Admin privileges required.");
+    await db.collection('subjects').doc(subjectId).delete(); globalSubjectDefinitionsMap.delete(subjectId);
+}
+export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSenderId) {
+    if (!db || !currentUser || !currentUser.isAdmin) return { success: false, count: 0, message: "Admin privileges required." };
+    if (!subject || !body) return { success: false, count: 0, message: "Subject and body are required." };
+    let usersProcessed = 0; const BATCH_SIZE = 400;
+    try {
+        let lastUserSnapshot = null; let moreUsers = true; let totalUsersSnapshots = 0;
+        while (moreUsers) {
+            let query = db.collection('users').orderBy(firebase.firestore.FieldPath.documentId()).limit(BATCH_SIZE); if (lastUserSnapshot) query = query.startAfter(lastUserSnapshot);
+            const usersSnapshot = await query.get(); totalUsersSnapshots += usersSnapshot.size; if (usersSnapshot.empty) { moreUsers = false; break; }
+            const batch = db.batch();
+            usersSnapshot.forEach(userDoc => { const userId = userDoc.id; const inboxRef = db.collection('users').doc(userId).collection('inbox').doc(); batch.set(inboxRef, { senderId: adminSenderId, senderName: `Admin (${currentUser.displayName || 'Lyceum'})`, timestamp: firebase.firestore.FieldValue.serverTimestamp(), subject: `📢 Announcement: ${subject}`, body: body, isRead: false, isGlobalAnnouncement: true }); usersProcessed++; });
+            await batch.commit();
+            if (usersSnapshot.size < BATCH_SIZE) moreUsers = false; else lastUserSnapshot = usersSnapshot.docs[usersSnapshot.docs.length - 1];
+            if (totalUsersSnapshots > 10000 && BATCH_SIZE > 0) { moreUsers = false; return { success: false, count: usersProcessed, message: "Processing stopped after 10,000 users." }; }
+        }
+        return { success: true, count: usersProcessed, message: `Announcement sent to ${usersProcessed} users.` };
+    } catch (error) { console.error("Error sending global announcement:", error); let message = `Failed to send global announcement: ${error.message}`; if (error.code === 'permission-denied') message = `Failed to send: Permission Denied. Check Firestore rules. ${error.message}`; return { success: false, count: usersProcessed, message: message }; }
+}
+// --- END OF FILE firebase_firestore.js ---
+```

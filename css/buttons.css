@@ -176,5 +176,38 @@ button:disabled, .btn:disabled, a.btn:disabled,
     display: inline-block !important;
 }
 
+.settings-tab-btn {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--color-gray-500);
+    border-bottom: 2px solid transparent;
+    transition: color var(--transition-fast), border-color var(--transition-fast);
+    cursor: pointer;
+    background-color: transparent;
+    margin-bottom: -1px; /* Overlap bottom border of container */
+}
+.dark .settings-tab-btn {
+    color: var(--color-gray-400);
+}
+.settings-tab-btn:hover {
+    color: var(--color-primary-600);
+    border-bottom-color: var(--color-gray-300);
+}
+.dark .settings-tab-btn:hover {
+    color: var(--color-primary-400);
+    border-bottom-color: var(--color-gray-600);
+}
+.settings-tab-btn.active-tab-btn,
+.settings-tab-btn[aria-selected="true"] {
+    color: var(--color-primary-600);
+    border-bottom-color: var(--color-primary-600);
+    font-weight: 600;
+}
+.dark .settings-tab-btn.active-tab-btn,
+.dark .settings-tab-btn[aria-selected="true"] {
+    color: var(--color-primary-400);
+    border-bottom-color: var(--color-primary-400);
+}
 
 /* --- END OF FILE buttons.css --- */

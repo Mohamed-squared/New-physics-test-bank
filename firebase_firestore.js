@@ -20,7 +20,8 @@ import {
     globalSubjectBootstrapData, ADMIN_UID, DEFAULT_PROFILE_PIC_URL, FOP_COURSE_ID,
     FOP_COURSE_DEFINITION, GRADING_WEIGHTS, PASSING_GRADE_PERCENT,
     SKIP_EXAM_PASSING_PERCENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER,
-    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG
+    DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG,
+    DEFAULT_EXPERIMENTAL_FEATURES
 } from './config.js';
 import { AI_FUNCTION_KEYS, DEFAULT_AI_SYSTEM_PROMPTS } from './ai_prompts.js';
 import { updateSubjectInfo, fetchAndUpdateUserInfo } from './ui_core.js';
@@ -1071,6 +1072,13 @@ export async function loadUserData(uid, authUserFromEvent = null) {
 
         if (userDoc.exists) {
             const userDataFromFirestore = userDoc.data();
+
+            // --- START: Modification to load and merge experimentalFeatures ---
+            const defaultExpFeatures = { ...DEFAULT_EXPERIMENTAL_FEATURES };
+            const userExpFeatures = (userDataFromFirestore.userSettings && typeof userDataFromFirestore.userSettings.experimentalFeatures === 'object')
+                ? { ...defaultExpFeatures, ...userDataFromFirestore.userSettings.experimentalFeatures }
+                : defaultExpFeatures;
+
             const userProfileForState = {
                 uid: uid,
                 email: userDataFromFirestore.email || authUserFromEvent?.email,
@@ -1080,7 +1088,12 @@ export async function loadUserData(uid, authUserFromEvent = null) {
                 isAdmin: userDataFromFirestore.isAdmin !== undefined ? (uid === ADMIN_UID || userDataFromFirestore.isAdmin) : (uid === ADMIN_UID),
                 credits: userDataFromFirestore.credits !== undefined ? Number(userDataFromFirestore.credits) : 0,
                 onboardingComplete: userDataFromFirestore.onboardingComplete !== undefined ? userDataFromFirestore.onboardingComplete : false,
+                userSettings: { // Ensure userSettings structure exists in state
+                    ...(userDataFromFirestore.userSettings || {}),
+                    experimentalFeatures: userExpFeatures
+                }
             };
+            // --- END: Modification ---
             setCurrentUser(userProfileForState);
             try {
                 const aiSettings = await loadUserAiSettings(uid);
@@ -1243,9 +1256,6 @@ export async function loadUserData(uid, authUserFromEvent = null) {
 
         } else {
             console.log("User document not found for UID:", uid, "- Initializing data.");
-            // If authUserFromEvent is null, it means this loadUserData call wasn't directly from onAuthStateChanged
-            // or the user object wasn't passed down correctly.
-            // This could happen if loadUserData is called from somewhere else without the auth object.
             const authUserToUseForInit = authUserFromEvent || firebaseAuth?.currentUser;
 
             if (!authUserToUseForInit) {
@@ -1254,14 +1264,14 @@ export async function loadUserData(uid, authUserFromEvent = null) {
             }
             await initializeUserData(
                 uid,
-                authUserToUseForInit.email, // Use the email from the auth object
-                (authUserToUseForInit.displayName || authUserToUseForInit.email?.split('@')[0] || `user_${uid.substring(0,6)}`), // Use display name or derive username
+                authUserToUseForInit.email, 
+                (authUserToUseForInit.displayName || authUserToUseForInit.email?.split('@')[0] || `user_${uid.substring(0,6)}`), 
                 authUserToUseForInit.displayName,
                 authUserToUseForInit.photoURL,
                 false,
-                authUserToUseForInit // Pass the auth object itself for fallback if needed by initializeUserData
+                authUserToUseForInit 
             );
-            await loadUserData(uid, authUserToUseForInit); // Recursive call with the auth object
+            await loadUserData(uid, authUserToUseForInit); 
             return;
         }
     } catch (error) {
@@ -1291,66 +1301,38 @@ export async function reloadUserDataAfterChange(uid) {
     try {
         console.log(`Reloading user data for UID: ${uid}`);
         
-        // Step 1: Reload core user app data
-        await loadUserData(uid);
+        await loadUserData(uid); // This will re-fetch appData and core user profile fields including userSettings
         
-        // Step 2: Reload AI chat settings
-        const aiSettings = await loadUserAiSettings(uid);
+        const aiSettings = await loadUserAiSettings(uid); // Reload AI Chat specific settings
         setUserAiChatSettings(aiSettings);
         console.log(`[reloadUserDataAfterChange] Reloaded AI settings for UID: ${uid}`, aiSettings);
         
-        // Step 3: If this is the current user, update currentUser state
-        if (currentUser && currentUser.uid === uid) {
-            const userRef = db.collection('users').doc(uid);
-            const doc = await userRef.get();
-            if (doc.exists) {
-                const userData = doc.data();
-                const updatedUser = {
-                    ...currentUser,
-                    email: userData.email || currentUser.email,
-                    displayName: userData.displayName || currentUser.displayName,
-                    photoURL: userData.photoURL || currentUser.photoURL,
-                    username: userData.username || currentUser.username,
-                    isAdmin: userData.isAdmin !== undefined ? (uid === ADMIN_UID || userData.isAdmin) : currentUser.isAdmin,
-                    credits: userData.credits !== undefined ? Number(userData.credits) : currentUser.credits,
-                    onboardingComplete: userData.onboardingComplete !== undefined ? userData.onboardingComplete : currentUser.onboardingComplete,
-                };
-                setCurrentUser(updatedUser);
-                console.log(`[reloadUserDataAfterChange] Updated currentUser state for UID: ${uid}`, updatedUser);
-            } else {
-                console.warn(`[reloadUserDataAfterChange] User doc not found for UID: ${uid} during currentUser update.`);
-            }
-        }
+        // currentUser state should have been updated by loadUserData via setCurrentUser
+        // which now handles merging experimental features correctly.
+
+        await loadAllUserCourseProgress(uid); // Reload course progress
         
-        // Step 4: Reload course progress
-        await loadAllUserCourseProgress(uid);
-        
-        // Step 5: Update UI
-        await fetchAndUpdateUserInfo();
+        await fetchAndUpdateUserInfo(); // Update top-bar UI
         console.log(`[reloadUserDataAfterChange] UI updated for UID: ${uid}`);
+
+        // Update experimental feature visibility in sidebar
+        if (typeof window.updateExperimentalFeaturesSidebarVisibility === 'function') {
+            window.updateExperimentalFeaturesSidebarVisibility();
+        }
+
     } catch (error) {
         console.error(`[reloadUserDataAfterChange] Error reloading user data for UID: ${uid}:`, error);
         alert(`Failed to reload user data: ${error.message}`);
     }
 }
 
-/**
- * Initializes the user document in Firestore with default appData and profile info.
- * @param {string} uid - The user's unique ID.
- * @param {string | null} email - User's email.
- * @param {string} username - User's chosen or derived username.
- * @param {string | null} [displayName=null] - User's display name.
- * @param {string | null} [photoURL=null] - User's photo URL.
- * @param {boolean} [forceReset=false] - Whether to force reset even if doc exists.
- * @param {object | null} [authUserObject=null] - The Firebase Auth user object, passed to ensure correct details are used.
- */
+// --- MODIFIED FUNCTION ---
 export async function initializeUserData(uid, emailParam, usernameParam, displayNameParam = null, photoURLParam = null, forceReset = false, authUserObjectForFallback = null) {
     if (!db || !firebaseAuth) {
         console.error("Firestore DB or Auth not initialized");
         throw new Error("Firestore DB or Auth not initialized.");
     }
 
-    // Validate essential parameters for new user creation
     if (!uid || typeof uid !== 'string' || uid.trim() === '') {
         console.error("[initializeUserData] CRITICAL: UID parameter is missing or invalid. Cannot proceed.");
         throw new Error("User ID is invalid. Cannot initialize user data.");
@@ -1379,17 +1361,14 @@ export async function initializeUserData(uid, emailParam, usernameParam, display
     const usernameLower = usernameParam.toLowerCase();
     const initialIsAdmin = (uid === ADMIN_UID);
 
-    // Use parameters for core fields, then authUserObjectForFallback for display fields if params are null
     const finalDisplayName = (forceReset && existingUserData?.displayName) ? existingUserData.displayName
                            : (displayNameParam || authUserObjectForFallback?.displayName || (emailParam ? emailParam.split('@')[0] : `User ${uid.substring(0,4)}`));
     const finalPhotoURL = (forceReset && existingUserData?.photoURL) ? existingUserData.photoURL
                         : (photoURLParam || authUserObjectForFallback?.photoURL || DEFAULT_PROFILE_PIC_URL);
-    const finalEmail = emailParam; // Always use the email passed from the auth event for the document
+    const finalEmail = emailParam;
 
     if (docExists && !forceReset) {
         let updatesNeeded = {};
-        // Only update if the field is UNDEFINED in existingUserData.
-        // This prevents overwriting valid existing data with derived/fallback values.
         if (existingUserData.username === undefined && usernameLower) { updatesNeeded.username = usernameLower; }
         if (existingUserData.displayName === undefined) { updatesNeeded.displayName = finalDisplayName; }
         if (existingUserData.onboardingComplete === undefined) { updatesNeeded.onboardingComplete = false; }
@@ -1398,8 +1377,26 @@ export async function initializeUserData(uid, emailParam, usernameParam, display
         if (existingUserData.userNotes === undefined) { updatesNeeded.userNotes = {}; }
         if (existingUserData.isAdmin === undefined) { updatesNeeded.isAdmin = initialIsAdmin; }
         if (existingUserData.credits === undefined) { updatesNeeded.credits = 0; }
+
+        // --- START: Modification for userSettings and experimentalFeatures ---
+        if (existingUserData.userSettings === undefined) {
+            updatesNeeded.userSettings = { experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES } };
+            console.log(`[initializeUserData] User ${uid} exists but userSettings missing. Initializing it.`);
+        } else if (existingUserData.userSettings.experimentalFeatures === undefined) {
+            updatesNeeded['userSettings.experimentalFeatures'] = { ...DEFAULT_EXPERIMENTAL_FEATURES };
+            console.log(`[initializeUserData] User ${uid} exists, userSettings exists, but experimentalFeatures missing. Initializing experimentalFeatures.`);
+        } else { // Merge if experimentalFeatures object exists but might be missing some keys
+            const currentExp = existingUserData.userSettings.experimentalFeatures;
+            const mergedExp = { ...DEFAULT_EXPERIMENTAL_FEATURES, ...currentExp };
+            if (JSON.stringify(currentExp) !== JSON.stringify(mergedExp)) {
+                updatesNeeded['userSettings.experimentalFeatures'] = mergedExp;
+                console.log(`[initializeUserData] User ${uid} experimentalFeatures merged with defaults.`);
+            }
+        }
+        // --- END: Modification ---
+
         if (existingUserData.userAiChatSettings === undefined) { updatesNeeded.userAiChatSettings = getDefaultAiSettings(); }
-        if (existingUserData.email === undefined && finalEmail) { updatesNeeded.email = finalEmail; } // Ensure email is present
+        if (existingUserData.email === undefined && finalEmail) { updatesNeeded.email = finalEmail; }
 
         if (!existingUserData.appData) {
             updatesNeeded.appData = { subjectProgress: {} };
@@ -1430,11 +1427,11 @@ export async function initializeUserData(uid, emailParam, usernameParam, display
     }
 
     console.log(`[initializeUserData] Full Init/Force Reset for user: ${uid}. Username: ${usernameLower}. Email for doc: ${finalEmail}`);
-    const defaultAppDataForNewUser = {
-        subjectProgress: {}
-    };
+    const defaultAppDataForNewUser = { subjectProgress: {} };
+
+    // --- START: Modification for userSettings on new user ---
     const dataToSet = {
-        email: finalEmail, // Storing the email from auth event. Rule checks this against token.
+        email: finalEmail,
         username: usernameLower,
         displayName: finalDisplayName,
         photoURL: finalPhotoURL,
@@ -1445,8 +1442,12 @@ export async function initializeUserData(uid, emailParam, usernameParam, display
         userNotes: (forceReset && existingUserData?.userNotes) ? existingUserData.userNotes : {},
         isAdmin: (forceReset && typeof existingUserData?.isAdmin === 'boolean') ? existingUserData.isAdmin : initialIsAdmin,
         credits: (forceReset && typeof existingUserData?.credits === 'number') ? existingUserData.credits : 0,
-        userAiChatSettings: (forceReset && existingUserData?.userAiChatSettings) ? existingUserData.userAiChatSettings : getDefaultAiSettings()
+        userAiChatSettings: (forceReset && existingUserData?.userAiChatSettings) ? existingUserData.userAiChatSettings : getDefaultAiSettings(),
+        userSettings: (forceReset && existingUserData?.userSettings)
+            ? { ...existingUserData.userSettings, experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES, ...(existingUserData.userSettings.experimentalFeatures || {}) } }
+            : { experimentalFeatures: { ...DEFAULT_EXPERIMENTAL_FEATURES } }
     };
+    // --- END: Modification ---
 
     try {
         await userRef.set(dataToSet);
@@ -1472,10 +1473,11 @@ export async function initializeUserData(uid, emailParam, usernameParam, display
                 (value && value._methodName === 'FieldValue.serverTimestamp') ? "{SERVER_TIMESTAMP}" : value, 2);
             console.error(`Data attempted for set: ${dataAttemptedLog}`);
         } catch (e) { console.error("Could not stringify dataToSet for logging."); }
-        // alert("Error setting up user data: " + error.message); // This alert is often too early / covered by signup
-        throw error; // Re-throw so calling function (signUpUser) can handle it
+        throw error;
     }
 }
+
+
 
 
 
@@ -3450,6 +3452,45 @@ export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSende
     }
 }
 
+export async function saveUserExperimentalFeatureSettings(userId, experimentalFeatureSettings) {
+    if (!db) {
+        console.error("Firestore DB not initialized");
+        window.playUiSound?.('error');
+        return false;
+    }
+    if (!userId || !experimentalFeatureSettings) {
+        console.warn("saveUserExperimentalFeatureSettings: Missing userId or settings.");
+        window.playUiSound?.('error');
+        return false;
+    }
 
+    const userRef = db.collection('users').doc(userId);
+    try {
+        // Use dot notation to update only the experimentalFeatures field within userSettings
+        await userRef.update({
+            'userSettings.experimentalFeatures': experimentalFeatureSettings
+        });
+        console.log(`User experimental feature settings saved successfully for user ${userId}.`);
+
+        // Update local currentUser state if it's the currently logged-in user
+        if (currentUser && currentUser.uid === userId) {
+            const updatedSettings = {
+                ...(currentUser.userSettings || {}), // Preserve other potential userSettings
+                experimentalFeatures: {
+                    ...(currentUser.userSettings?.experimentalFeatures || DEFAULT_EXPERIMENTAL_FEATURES), // Merge with defaults
+                    ...experimentalFeatureSettings // Apply new changes
+                }
+            };
+            setCurrentUser({ ...currentUser, userSettings: updatedSettings });
+            console.log("Local currentUser experimental features updated:", currentUser.userSettings.experimentalFeatures);
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error saving user experimental feature settings for user ${userId}:`, error);
+        alert("Error saving feature settings: " + error.message);
+        window.playUiSound?.('error');
+        return false;
+    }
+}
 
 // --- END OF FILE firebase_firestore.js ---

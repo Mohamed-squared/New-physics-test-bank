@@ -217,6 +217,7 @@ async function handleCropConfirm() {
         if (!canvas) {
             throw new Error("Could not get cropped image canvas.");
         }
+        console.log("Cropped Canvas Dimensions:", canvas.width, "x", canvas.height);
 
         canvas.toBlob(async (blob) => {
             if (!blob) {
@@ -227,13 +228,14 @@ async function handleCropConfirm() {
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const dataUrl = reader.result;
+                console.log("Cropped Data URL length:", dataUrl.length);
                 if (!dataUrl) {
                     hideLoading(); // Hide loading on reader error
                     throw new Error("Failed to read blob as Data URL.");
                 }
 
                 // Check data URL size
-                if (dataUrl.length > 1000000) { // ~1MB limit
+                if (dataUrl.length > 10000000) { // ~1MB limit
                     hideModalAndLoading();
                     throw new Error("Cropped image is still too large (max ~1MB). Please try cropping a smaller area or use a smaller source image.");
                 }

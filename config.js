@@ -201,7 +201,7 @@ export const MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE = 10; // Max total bonus poi
 // --- END MODIFICATION ---
 
 // --- NEW: Music & Sounds Configuration ---
-export const DEFAULT_UI_SOUNDS_ENABLED = true;
+export const DEFAULT_UI_SOUNDS_ENABLED = false;
 export const DEFAULT_AMBIENT_SOUND_VOLUME = 0.3; // 0.0 to 1.0
 
 export const DEFAULT_MUSIC_VOLUME = 0.5; // 0.0 to 1.0
@@ -214,6 +214,12 @@ export const UI_SOUND_EFFECTS = {
     button_click: './assets/sounds/ui/click_soft.mp3',
     notification: './assets/sounds/ui/notification_simple.mp3',
     error: './assets/sounds/ui/error_short.mp3',
+    // --- START: Added new UI sounds ---
+    navigation: './assets/sounds/ui/navigation_subtle.mp3',
+    toggle_on: './assets/sounds/ui/toggle_on.mp3',
+    toggle_off: './assets/sounds/ui/toggle_off.mp3',
+    save_success: './assets/sounds/ui/save_confirm.mp3',
+    // --- END: Added new UI sounds ---
 };
 
 export const AMBIENT_SOUNDS_LIBRARY = [
@@ -248,5 +254,27 @@ export const DEEZER_APP_ID_PLACEHOLDER = "YOUR_DEEZER_APP_ID";
 // SoundCloud and Anghami might require different approaches or API keys.
 // --- END NEW Music & Sounds Configuration ---
 
+// --- NEW: Default Experimental Features ---
+export const DEFAULT_EXPERIMENTAL_FEATURES = {
+    globalChat: false,
+    marketplace: false, // Default off for now
+    musicAndSounds: false,
+};
+// --- END NEW ---
+
+export const PREDEFINED_BACKGROUNDS_PATH = './assets/images/backgrounds/';
+export const PREDEFINED_BACKGROUND_IMAGES = [
+    { name: 'Dark Night', filename: 'dark-night.jpg' },
+    { name: 'Dark Stars', filename: 'dark-stars.jpg' },
+    { name: 'Light View', filename: 'light-view.jpg' },
+    { name: 'Steps of Light', filename: 'steps-of-light.jpg' },
+    { name: 'Default', filename: 'default.png' },
+    { name: 'Al-Aqsa Mosque', filename: 'Al-aqsa.jpg' }
+];
+export const DEFAULT_APP_BACKGROUND_IMAGE_URL = PREDEFINED_BACKGROUNDS_PATH + 'default.png';
+export const APP_BACKGROUND_LAYER_ID = 'app-background-layer';
+export const LOCALSTORAGE_KEY_BACKGROUND = 'lyceumAppBackground';
+export const LOCALSTORAGE_KEY_OPACITY = 'lyceumCardOpacity';
+export const DEFAULT_CARD_OPACITY = 0.88;
 
 // --- END OF FILE config.js ---
