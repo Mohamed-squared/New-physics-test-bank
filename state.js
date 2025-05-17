@@ -14,7 +14,9 @@ export let currentOnlineTestState = null;
 export let globalSubjectDefinitionsMap = new Map();
 
 import { ADMIN_UID, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL, FALLBACK_EXAM_CONFIG,
+         // --- START MODIFIED ---
          DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
+         // --- END MODIFIED ---
        } from './config.js';
 import {DEFAULT_AI_SYSTEM_PROMPTS} from './ai_prompts.js'
 
@@ -33,28 +35,30 @@ export let globalAiSystemPrompts = {};
 
 export let courseExamDefaults = null;
 
+// --- START MODIFIED: Updated musicPlayerState ---
 export let musicPlayerState = {
-    currentTrack: null,
+    currentTrack: null,          // { id, title, artist, albumArtUrl, url, videoId, source ('stream', 'youtubeMusic', 'lofi', 'binaural'), duration }
     currentPlaylist: [],
     currentPlaylistName: null,
     isPlaying: false,
-    volume: DEFAULT_MUSIC_VOLUME,
+    volume: DEFAULT_MUSIC_VOLUME,         // Main music volume (0.0 to 1.0)
     isShuffled: false,
-    repeatMode: 'none',
-    currentTime: 0,
-    showMiniPlayer: false,
-    miniPlayerVideoActive: false, // NEW: True if video is playing in the mini-player
-    miniPlayerYouTubeInstance: null, // NEW: Holds the YT.Player instance for the mini-player
+    repeatMode: 'none',          // 'none', 'all', 'one'
+    currentTime: 0,              // Current playback time in seconds
+    showMiniPlayer: false,       // Whether the floatie mini-player is visible
+    miniPlayerVideoActive: false, // True if a YouTube video is actively playing in the *mini-player* specifically
+    miniPlayerYouTubeInstance: null, // Holds the YT.Player instance for the mini-player
     linkedServices: {
-        spotify: { linked: false, playlists: [] },
-        youtubeMusic: { linked: false, playlists: [] },
+        spotify: { linked: false, playlists: [] }, // Placeholder
+        youtubeMusic: { linked: false, playlists: [] }, // Placeholder
     },
-    currentAmbientSound: null,
-    ambientVolume: DEFAULT_AMBIENT_SOUND_VOLUME,
+    currentAmbientSound: null,   // { id, name, url }
+    ambientVolume: DEFAULT_AMBIENT_SOUND_VOLUME, // Ambient sound volume (0.0 to 1.0)
     isAmbientPlaying: false,
     uiSoundsEnabled: DEFAULT_UI_SOUNDS_ENABLED,
-    userSavedPlaylists: [], // NEW: For client-side saved playlists
+    userSavedPlaylists: [],      // Array of { name: string, tracks: Array<TrackObject> }
 };
+// --- END MODIFIED ---
 
 // --- State Modifiers ---
 export function setAuth(newAuth) {
@@ -181,31 +185,54 @@ export function setCourseExamDefaults(newDefaults) {
     }
 }
 
+// --- START MODIFIED: Refined setMusicPlayerState logic ---
 export function setMusicPlayerState(newState) {
-    const oldState = { ...musicPlayerState };
+    const oldState = { ...musicPlayerState }; // Capture old state for comparison
     musicPlayerState = { ...musicPlayerState, ...newState };
     
-    // If currentTrack changed and it's a YouTube video, ensure main player is updated/created
-    if (newState.currentTrack && oldState.currentTrack?.id !== newState.currentTrack.id) {
-        if ((newState.currentTrack.source === 'youtube' || newState.currentTrack.source === 'youtubeMusic') && typeof window.createMainYouTubePlayer === 'function') {
-            if (window.mainYouTubePlayer) {
-                window.mainYouTubePlayer.loadVideoById(newState.currentTrack.videoId);
-                if (musicPlayerState.isPlaying) window.mainYouTubePlayer.playVideo();
+    // If currentTrack changed, handle YouTube player logic
+    if (newState.currentTrack && (oldState.currentTrack?.id !== newState.currentTrack.id || oldState.currentTrack?.source !== newState.currentTrack.source)) {
+        const isYouTubeTrack = newState.currentTrack.source === 'youtube' || newState.currentTrack.source === 'youtubeMusic';
+        const musicTabPlayerElement = document.getElementById('youtube-player-main'); // Element in Music & Sounds tab
+
+        if (isYouTubeTrack) {
+            // Decide which player to use/create
+            // If music tab is visible and its player element exists, prefer it. Otherwise, use mini-player.
+            if (musicTabPlayerElement && !musicTabPlayerElement.closest('#music-player-dashboard.hidden')) {
+                // Music tab is active
+                console.log("[State Setter] New YouTube track, Music Tab active. Using main player.");
+                if (typeof window.musicPlayerActions?.playYouTubeVideo === 'function') {
+                    window.musicPlayerActions.playYouTubeVideo(newState.currentTrack.videoId); // This will handle main/mini logic
+                } else {
+                    console.warn("[State Setter] musicPlayerActions.playYouTubeVideo not available for main player.");
+                }
             } else {
-                // Player might not be initialized if music tab isn't open
-                // window.createMainYouTubePlayer(newState.currentTrack.videoId); // This will be handled by showMusicPlayerDashboard or the mini-player logic
+                // Music tab not active or main player element not found, use mini-player
+                console.log("[State Setter] New YouTube track, Music Tab INACTIVE. Using mini-player.");
+                 if (typeof window.musicPlayerActions?.playYouTubeVideo === 'function') { // Ensure it's available
+                    window.musicPlayerActions.playYouTubeVideo(newState.currentTrack.videoId); // This will handle main/mini logic
+                } else {
+                    console.warn("[State Setter] musicPlayerActions.playYouTubeVideo not available for mini player.");
+                }
             }
+        } else {
+            // Not a YouTube track, ensure YouTube players are stopped/hidden
+            if (window.mainYouTubePlayer && typeof window.mainYouTubePlayer.stopVideo === 'function') window.mainYouTubePlayer.stopVideo();
+            if (musicPlayerState.miniPlayerYouTubeInstance && typeof musicPlayerState.miniPlayerYouTubeInstance.stopVideo === 'function') musicPlayerState.miniPlayerYouTubeInstance.stopVideo();
+            musicPlayerState.miniPlayerVideoActive = false; // Ensure this is reset
         }
     }
 
-    if (typeof window.updateAllPlayerUIs === 'function') { // Update main player UI if visible
+    // Always call UI updaters which will check current state
+    if (typeof window.updateAllPlayerUIs === 'function') {
         window.updateAllPlayerUIs();
     }
-    if (typeof window.updateMiniPlayerVisibility === 'function') { // Update mini player visibility and content
+    if (typeof window.updateMiniPlayerVisibility === 'function') {
         window.updateMiniPlayerVisibility();
     }
     // console.log("[State] Music player state updated:", musicPlayerState); // Can be noisy
 }
+// --- END MODIFIED ---
 
 export function clearUserSession() {
     setCurrentSubject(null);
@@ -220,34 +247,41 @@ export function clearUserSession() {
         fallbackModel: DEFAULT_FALLBACK_AI_MODEL,
         customSystemPrompts: {}
     });
+    // --- START MODIFIED: Enhanced music state clearing ---
+    const persistentVolume = musicPlayerState.volume;
+    const persistentAmbientVolume = musicPlayerState.ambientVolume;
+    const persistentUiSoundsEnabled = musicPlayerState.uiSoundsEnabled;
+    const persistentShowMiniPlayer = musicPlayerState.showMiniPlayer;
+    const persistentSavedPlaylists = musicPlayerState.userSavedPlaylists; // Keep user's saved playlists
+
     setMusicPlayerState({
         currentTrack: null,
         currentPlaylist: [],
         currentPlaylistName: null,
         isPlaying: false,
-        volume: DEFAULT_MUSIC_VOLUME, // Keep user's volume preference
+        volume: persistentVolume, // Keep user's volume preference
         isShuffled: false,
         repeatMode: 'none',
         currentTime: 0,
-        showMiniPlayer: musicPlayerState.showMiniPlayer, // Persist mini-player visibility preference
+        showMiniPlayer: persistentShowMiniPlayer, // Persist mini-player visibility preference
         miniPlayerVideoActive: false,
-        miniPlayerYouTubeInstance: null, // Destroy instance on logout
+        miniPlayerYouTubeInstance: null, // Will be destroyed by destroyYouTubePlayers
         linkedServices: {
             spotify: { linked: false, playlists: [] },
             youtubeMusic: { linked: false, playlists: [] },
         },
         currentAmbientSound: null,
-        ambientVolume: DEFAULT_AMBIENT_SOUND_VOLUME, // Keep user's ambient volume preference
+        ambientVolume: persistentAmbientVolume, // Keep user's ambient volume preference
         isAmbientPlaying: false,
-        uiSoundsEnabled: musicPlayerState.uiSoundsEnabled, // Persist UI sounds preference
-        userSavedPlaylists: [], // Clear user saved playlists from memory (they are in localStorage)
+        uiSoundsEnabled: persistentUiSoundsEnabled, // Persist UI sounds preference
+        userSavedPlaylists: persistentSavedPlaylists, // Restore saved playlists
     });
     // Stop any playing audio from HTML5 audio elements
     if (typeof window.stopAmbientSound === 'function') window.stopAmbientSound();
     if (typeof window.stopStreamableMusic === 'function') window.stopStreamableMusic();
     // Destroy YouTube player instances
     if (typeof window.destroyYouTubePlayers === 'function') window.destroyYouTubePlayers();
-
+    // --- END MODIFIED ---
 
     document.getElementById('content')?.replaceChildren();
     document.getElementById('dashboard')?.classList.add('hidden');
@@ -255,7 +289,7 @@ export function clearUserSession() {
     document.getElementById('subject-info')?.replaceChildren();
 
     window.cleanupPdfViewer?.();
-    window.cleanupYouTubePlayers?.(); 
+    // window.cleanupYouTubePlayers?.(); // This is now handled by destroyYouTubePlayers above
     document.getElementById('course-dashboard-area')?.replaceChildren();
     document.getElementById('course-dashboard-area')?.classList.add('hidden');
     console.log("[State] User session data cleared.");

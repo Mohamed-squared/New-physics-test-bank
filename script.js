@@ -3,10 +3,12 @@
 import {
     setAuth, setDb, auth, db, currentUser,
     currentSubject, activeCourseId, userCourseProgressMap,
-    setGlobalAiSystemPrompts, courseExamDefaults, musicPlayerState, setMusicPlayerState // Added musicPlayerState, setMusicPlayerState
+    setGlobalAiSystemPrompts, courseExamDefaults, 
+    // --- START MODIFIED ---
+    musicPlayerState, setMusicPlayerState 
+    // --- END MODIFIED ---
 } from './state.js';
 import { ADMIN_UID, FOP_COURSE_ID,
-    // --- NEW: Music Config Import for init ---
     DEFAULT_UI_SOUNDS_ENABLED, DEFAULT_AMBIENT_SOUND_VOLUME, DEFAULT_MUSIC_VOLUME
 } from './config.js';
 
@@ -43,11 +45,11 @@ import { showManageSubjects, selectSubject, editSubject, updateSubject, addSubje
 import { showProgressDashboard, closeDashboard, renderCharts } from './ui_progress_dashboard.js';
 import { showUserProfileDashboard, updateUserProfile } from './ui_user_profile.js';
 import { showOnboardingUI, showAddSubjectComingSoon, completeOnboarding } from './ui_onboarding.js';
-import { showAdminDashboard, promptAdminReply as promptAdminModerationReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js'; // Renamed promptAdminReply to avoid conflict
+import { showAdminDashboard, promptAdminReply as promptAdminModerationReply, handleAdminMarkCourseComplete, loadUserCoursesForAdmin, loadUserBadgesForAdmin, promptAddBadge, confirmRemoveBadge, loadUserSubjectsForAdmin, handleAdminUserSubjectApproval as handleAdminSubjectApprovalForUser } from './ui_admin_dashboard.js'; 
 import { showBrowseCourses, showAddCourseForm, submitNewCourse, handleCourseSearch, showCourseDetails, handleReportCourse, handleCourseApproval, showEditCourseForm, handleUpdateCourse } from './ui_courses.js';
-import { showInbox, handleMarkRead, showContactAdminModal, showReplyToAdminModal } from './ui_inbox.js'; // Added new inbox functions
+import { showInbox, handleMarkRead, showContactAdminModal, showReplyToAdminModal } from './ui_inbox.js'; 
 import { handleProfilePictureSelect } from './ui_profile_picture.js';
-import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatMessage, togglePinMessage as toggleGlobalChatPin, showPinnedMessages as showGlobalPinnedMessages, startReply as startGlobalChatReply, cancelReply as cancelGlobalChatReply } from './ui_chat.js'; // Renamed chat functions
+import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatMessage, togglePinMessage as toggleGlobalChatPin, showPinnedMessages as showGlobalPinnedMessages, startReply as startGlobalChatReply, cancelReply as cancelGlobalChatReply } from './ui_chat.js'; 
 
 // --- Leaderboard/Marketplace Imports ---
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
@@ -67,19 +69,20 @@ import {
      initPdfViewer, cleanupPdfViewer, handlePdfSnapshotForAI,
      triggerSkipExamGeneration, askQuestionAboutTranscription,
      handleTranscriptionClick, highlightTranscriptionLine, downloadFormulaSheetPdf, getYouTubeVideoId,
-     displayChapterSummary, downloadChapterSummaryPdf, askAboutFullPdf // Added askAboutFullPdf
+     displayChapterSummary, downloadChapterSummaryPdf, askAboutFullPdf 
 } from './ui_course_study_material.js';
-import { showCourseAssignmentsExams, startAssignmentOrExam, confirmDeleteCourseActivity, handleDeleteCourseActivity } from './ui_course_assignments_exams.js'; // Added confirmDeleteCourseActivity and handleDeleteCourseActivity
-import { showCourseProgressDetails, renderCourseCharts as renderCourseProgressCharts, regenerateCertificatePreview, downloadCertImage, downloadCertPdf } from './ui_course_progress.js'; // Renamed renderCourseCharts
+import { showCourseAssignmentsExams, startAssignmentOrExam, confirmDeleteCourseActivity, handleDeleteCourseActivity } from './ui_course_assignments_exams.js'; 
+import { showCourseProgressDetails, renderCourseCharts as renderCourseProgressCharts, regenerateCertificatePreview, downloadCertImage, downloadCertPdf } from './ui_course_progress.js'; 
 import { displayCourseContentMenu } from './ui_course_content_menu.js';
-import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, previewLatexNote, extractAndConvertImageNoteToLatexWrapper, downloadNoteAsPdfWrapper } from './ui_notes_documents.js'; // Added new note functions
-import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection, askAIFollowUp, deleteCompletedExamV2 as deleteCompletedTestgenExam } from './exam_storage.js'; // Renamed deleteCompletedExamV2
+import { showNotesDocumentsPanel, addNewNoteWrapper, editNoteWrapper, saveNoteChangesWrapper, uploadNoteWrapper, deleteNoteWrapper, shareCurrentNoteWrapper, viewNoteWrapper, convertNoteToLatexWrapper, improveNoteWithAIWrapper, reviewNoteWithAIWrapper, downloadNoteAsTexWrapper, previewLatexNote, extractAndConvertImageNoteToLatexWrapper, downloadNoteAsPdfWrapper } from './ui_notes_documents.js'; 
+import { showExamReviewUI, showIssueReportingModal, submitIssueReport, showAIExplanationSection, askAIFollowUp, deleteCompletedExamV2 as deleteCompletedTestgenExam } from './exam_storage.js'; 
 import { calculateChapterCombinedProgress } from './course_logic.js';
 import { showBackgroundManagement, loadAndApplyBackgroundPreference, loadAndApplyCardOpacityPreference} from './ui_background_management.js';
 
-// --- NEW: Music Player UI Import ---
+// --- START MODIFIED: Music Player UI and Audio Service Imports ---
 import { showMusicPlayerDashboard } from './ui_music_player.js';
-import { playUiSound } from './audio_service.js';
+import { playUiSound, initAudioPlayers as initGlobalAudioPlayers, destroyYouTubePlayers as destroyGlobalYouTubePlayers } from './audio_service.js'; // Added initGlobalAudioPlayers and destroyGlobalYouTubePlayers
+// --- END MODIFIED ---
 
 // --- Initialization ---
 
@@ -90,16 +93,20 @@ async function initializeApp() {
     loadAndApplyBackgroundPreference();
     loadAndApplyCardOpacityPreference();
 
-    // --- NEW: Initialize Music Player State ---
-    setMusicPlayerState({
-        // Load preferences from localStorage if they exist, otherwise use defaults
+    // --- START MODIFIED: Initialize Music Player State and Global Audio Players ---
+    setMusicPlayerState({ // Set initial state structure
         volume: parseFloat(localStorage.getItem('lyceumMusicVolume')) || DEFAULT_MUSIC_VOLUME,
         ambientVolume: parseFloat(localStorage.getItem('lyceumAmbientVolume')) || DEFAULT_AMBIENT_SOUND_VOLUME,
         uiSoundsEnabled: localStorage.getItem('lyceumUiSoundsEnabled') === 'false' ? false : DEFAULT_UI_SOUNDS_ENABLED,
-        // Other states like currentTrack, playlist will be transient or loaded later
+        showMiniPlayer: localStorage.getItem('lyceumShowMiniPlayer') === 'true', // Load mini player visibility preference
+        // Other states like currentTrack, playlist will be transient or loaded later from saved playlists
+        userSavedPlaylists: JSON.parse(localStorage.getItem('lyceumUserSavedPlaylists') || '[]'), // Load saved playlists
+        miniPlayerYouTubeInstance: null,
+        miniPlayerVideoActive: false,
     });
+    initGlobalAudioPlayers(); // Initialize HTML5 audio elements from audio_service
     console.log("Initializing with music player state:", musicPlayerState);
-    // --- END NEW ---
+    // --- END MODIFIED ---
 
     const publicHomepageContainer = document.getElementById('public-homepage-container');
     if (publicHomepageContainer) {
@@ -122,8 +129,6 @@ async function initializeApp() {
         }
     }
 
-
-    // Theme Init
     const themeToggle = document.getElementById('theme-toggle');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const savedTheme = localStorage.getItem('theme');
@@ -141,9 +146,9 @@ async function initializeApp() {
 
              const progressDash = document.getElementById('dashboard');
              const courseDashArea = document.getElementById('course-dashboard-area');
-             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); // Check one chart
+             const courseProgressCanvas = document.getElementById('assignmentScoresChart'); 
 
-             if (progressDash && !progressDash.classList.contains('hidden') && typeof window.renderCharts === 'function') { // Check if renderCharts is available
+             if (progressDash && !progressDash.classList.contains('hidden') && typeof window.renderCharts === 'function') { 
                 window.renderCharts();
              }
              if (courseDashArea && !courseDashArea.classList.contains('hidden') && courseProgressCanvas && typeof window.renderCourseProgressCharts === 'function') {
@@ -233,7 +238,7 @@ async function initializeApp() {
          }
         setAuth(firebase.auth());
         setDb(firebase.firestore());
-        window.auth = firebase.auth(); // Make compat Firebase globally available
+        window.auth = firebase.auth(); 
         window.db = firebase.firestore();
 
         await loadGlobalSubjectDefinitionsFromFirestore();
@@ -265,7 +270,10 @@ async function initializeApp() {
          console.warn("Mermaid not loaded yet. Will initialize later if needed.");
      }
 
-    loadYouTubeAPI(); // For course study material
+    // --- START MODIFIED: YouTube API is loaded by ui_music_player.js when needed, or ui_course_study_material.js ---
+    // loadYouTubeAPI(); // Removed from here, individual modules will handle their needs.
+    // The global onYouTubeIframeAPIReady in ui_music_player.js will become the central handler.
+    // --- END MODIFIED ---
 
     console.log("initializeApp finished basic setup. Waiting for Auth state...");
 }
@@ -363,11 +371,11 @@ window.downloadNoteAsPdfWrapper = downloadNoteAsPdfWrapper;
 window.showExamReviewUI = showExamReviewUI;
 window.showAIExplanationSection = showAIExplanationSection;
 window.askAIFollowUp = askAIFollowUp;
-window.reportQuestionIssue = showIssueReportingModal; // Note: showIssueReportingModal is the actual function
+window.reportQuestionIssue = showIssueReportingModal; 
 window.showIssueReportingModal = showIssueReportingModal;
 window.submitIssueReport = submitIssueReport;
-window.deleteCompletedTestgenExam = deleteCompletedTestgenExam; // For TestGen exams via ui_exams_dashboard
-window.deleteCompletedExamV2 = deleteCompletedTestgenExam; // Alias for clarity, used by exam_storage
+window.deleteCompletedTestgenExam = deleteCompletedTestgenExam; 
+window.deleteCompletedExamV2 = deleteCompletedTestgenExam; 
 
 window.promptTestType = promptTestType;
 window.promptChapterSelectionForTest = promptChapterSelectionForTest;
@@ -407,12 +415,12 @@ window.signOutUserWrapper = signOutUser;
 window.handleProfilePictureSelect = handleProfilePictureSelect;
 window.showInbox = showInbox;
 window.handleMarkRead = handleMarkRead;
-window.showContactAdminModal = showContactAdminModal; // New Inbox Function
-window.showReplyToAdminModal = showReplyToAdminModal; // New Inbox Function
+window.showContactAdminModal = showContactAdminModal; 
+window.showReplyToAdminModal = showReplyToAdminModal; 
 
 window.showGlobalChat = showGlobalChat;
-window.sendChatMessage = sendChatMessage; // Renamed to avoid conflict with global chat's internal send
-window.deleteGlobalChatMessage = deleteGlobalChatMessage; // Specific to global chat
+window.sendChatMessage = sendChatMessage; 
+window.deleteGlobalChatMessage = deleteGlobalChatMessage; 
 window.toggleGlobalChatPin = toggleGlobalChatPin;
 window.showGlobalPinnedMessages = showGlobalPinnedMessages;
 window.startGlobalChatReply = startGlobalChatReply;
@@ -427,7 +435,7 @@ window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
 window.showAdminDashboard = showAdminDashboard;
-window.promptAdminReply = promptAdminModerationReply; // Renamed from admin_moderation
+window.promptAdminReply = promptAdminModerationReply; 
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
 window.loadUserBadgesForAdmin = loadUserBadgesForAdmin;
@@ -436,10 +444,12 @@ window.confirmRemoveBadge = confirmRemoveBadge;
 window.loadUserSubjectsForAdmin = loadUserSubjectsForAdmin;
 window.handleAdminSubjectApproval = handleAdminSubjectApprovalForUser;
 window.showBackgroundManagement = showBackgroundManagement;
-window.renderMathIn = renderMathIn; // Make global for dynamic content
+window.renderMathIn = renderMathIn; 
 
-window.showMusicPlayerDashboard = showMusicPlayerDashboard; // Music Player
-window.playUiSound = playUiSound; // Global UI sound player
+// --- START MODIFIED: Global Music Player UI and Audio Service Functions ---
+window.showMusicPlayerDashboard = showMusicPlayerDashboard; 
+window.playUiSound = playUiSound; 
+// --- END MODIFIED ---
 
 window.toggleSidebarDropdown = function(contentId, arrowId) {
     const content = document.getElementById(contentId);
@@ -456,7 +466,7 @@ window.toggleSidebarDropdown = function(contentId, arrowId) {
 
 export function updateAdminPanelVisibility() {
     const adminPanelLink = document.getElementById('admin-panel-link');
-    const adminIcon = document.getElementById('admin-indicator-icon'); // This might not exist, but check
+    const adminIcon = document.getElementById('admin-indicator-icon'); 
     const stateCurrentUser = currentUser;
 
     const isAdmin = stateCurrentUser && (stateCurrentUser.uid === ADMIN_UID || stateCurrentUser.isAdmin === true);
@@ -467,8 +477,6 @@ export function updateAdminPanelVisibility() {
     if (adminIcon) {
          adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
-
-    // No need to call fetchAndUpdateUserInfo here, auth listener handles it.
 }
 
 

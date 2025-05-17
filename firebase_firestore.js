@@ -9,7 +9,8 @@ import {
     setUserAiChatSettings, globalAiSystemPrompts, setGlobalAiSystemPrompts, videoDurationMap,
     courseExamDefaults, setCourseExamDefaults,
     // --- NEW: Import for global subject defs map ---
-    globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition
+    globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition,
+    
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown, parseChaptersFromMarkdown  } from './markdown_parser.js';
