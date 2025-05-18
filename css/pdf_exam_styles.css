@@ -1,0 +1,451 @@
+/* --- START OF FILE css/pdf_exam_styles.css --- */
+
+/*
+   === PDF Exam Styles ===
+   Styles specifically for PDF test generation using Puppeteer/html2pdf.js.
+   Designed for a high-quality, academic, historic, and gamified look.
+*/
+
+/* --- CSS Variables for Color Scheme --- */
+:root {
+    --pdf-color-navy: #1B263B;
+    --pdf-color-burgundy: #4A1C2B;
+    --pdf-color-parchment: #F5E9D4;
+    --pdf-color-parchment-rgb: 245, 233, 212; /* For rgba */
+    --pdf-color-gold: #D4A017;
+    --pdf-color-emerald: #2E7D32;
+    --pdf-color-black: #000000;
+    --pdf-color-dark-charcoal: #333333;
+    --pdf-color-off-white: #F8F6F0;
+    --pdf-color-white: #FFFFFF;
+    --pdf-color-light-blue-accent: #e0f2fe; /* Example: Primary-100 */
+}
+
+/* --- Font Imports --- */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+
+/* --- Base Styles --- */
+body {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 12pt;
+    line-height: 1.3;
+    color: var(--pdf-color-dark-charcoal) !important;
+    background-color: var(--pdf-color-off-white) !important; /* Page background */
+    margin: 0; /* Puppeteer's margins will define the edge */
+    padding: 0;
+    box-sizing: border-box;
+}
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+/* --- Main Content Framing --- */
+.pdf-main-content {
+    /* This div will fill the area INSIDE Puppeteer's PDF margins */
+    padding: 1cm; /* Inner padding for content */
+    border: 3pt solid var(--pdf-color-navy); /* Visible frame */
+    min-height: calc(100vh - 3cm); /* Approximate height within 1.5cm top/bottom PDF margins */
+    background-color: var(--pdf-color-white); /* Content background, opaque over page bg */
+    box-shadow: 0 0 8px rgba(0,0,0,0.15); /* Optional subtle shadow for the frame */
+    position: relative; /* For any absolutely positioned children if needed */
+    z-index: 1;
+}
+
+
+/* --- Headings and Titles --- */
+h1 { /* Exam Title */
+    font-family: 'Cinzel', serif;
+    font-weight: 700;
+    font-size: 22pt; /* Slightly larger */
+    color: var(--pdf-color-navy) !important;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.8cm;
+    /* Double border bottom */
+    border-bottom: 2pt solid var(--pdf-color-navy);
+    padding-bottom: 0.25cm;
+    position: relative; /* For pseudo-element border */
+    line-height: 1.2;
+    font-variant: small-caps;
+    letter-spacing: 0.05em;
+    text-shadow: 1px 1px 2px rgba(var(--pdf-color-gold), 0.3); /* Subtle gold shadow */
+}
+h1::after { /* Second, thinner gold border */
+    content: '';
+    position: absolute;
+    bottom: -3pt; /* Position below the main border */
+    left: 10%; /* Indent from sides */
+    width: 80%;
+    height: 0.5pt;
+    background-color: var(--pdf-color-gold);
+}
+
+
+h2, h3, h4 { /* Section Titles like "Questions", "Solutions" */
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    color: var(--pdf-color-navy) !important;
+    margin-top: 1.2cm;
+    margin-bottom: 0.6cm;
+    line-height: 1.3;
+    border-bottom: 1pt solid var(--pdf-color-burgundy);
+    padding-bottom: 0.15cm;
+    position: relative;
+}
+h2::before { /* Ornamental character for H2 */
+    content: '⚜️ '; /* Unicode Flourish or other symbol */
+    color: var(--pdf-color-gold);
+    font-size: 0.9em; /* Adjust size as needed */
+    margin-right: 0.2em;
+    font-family: 'Times New Roman', serif; /* Ensure consistent symbol rendering */
+}
+h2 { font-size: 18pt; margin-top: 0; } /* "Questions" / "Solutions" titles */
+h3 { font-size: 15pt; }
+h4 { font-size: 13pt; font-weight: 700; }
+
+.exam-details { /* "Total Questions: 42" */
+    font-family: 'EB Garamond', Georgia, serif;
+    text-align: center;
+    font-size: 11pt;
+    color: var(--pdf-color-dark-charcoal);
+    margin-bottom: 1cm; /* Space after header details before questions start */
+    page-break-after: avoid; /* Try to keep with first question */
+}
+
+
+/* --- Paragraphs and Text --- */
+p {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 12pt;
+    line-height: 1.35; /* Slightly increased for readability */
+    color: var(--pdf-color-dark-charcoal) !important;
+    margin-bottom: 0.6em;
+    text-align: justify;
+}
+
+.question-text, .option-text-container, .solution-text, .note-text-content, .note-latex-content, .note-ai-review-content {
+     font-family: 'EB Garamond', Georgia, serif;
+     font-size: 12pt;
+     line-height: 1.35;
+     color: var(--pdf-color-dark-charcoal) !important;
+     text-align: justify;
+}
+.question-text p, .option-text-container p, .solution-text p, .note-text-content p, .note-latex-content p, .note-ai-review-content p {
+     margin-bottom: 0.3em;
+}
+.solution-text {
+    margin-top: 0.2em;
+}
+
+
+/* --- Lists (Questions, Options) --- */
+.question-list {
+    list-style-type: none; /* Removed default decimal */
+    padding-left: 0; /* No default padding */
+    margin-top: 0.5cm;
+    margin-bottom: 0.8cm;
+    counter-reset: question-counter; /* Initialize counter for custom numbering */
+}
+.question-list li.question-item-wrapper { /* Target only question items */
+    margin-bottom: 1cm; /* Increased spacing between questions */
+    page-break-inside: avoid;
+    padding-left: 2.5em; /* Space for custom number */
+    position: relative;
+}
+
+/* Custom Question Numbering */
+.question-list li.question-item-wrapper::before {
+    counter-increment: question-counter;
+    content: counter(question-counter) ".";
+    position: absolute;
+    left: 0;
+    top: 0; /* Adjust if question-header has top margin */
+    font-family: 'Playfair Display', serif;
+    font-weight: bold;
+    font-size: 13pt;
+    color: var(--pdf-color-gold);
+    width: 2em; /* Ensure space */
+    text-align: right;
+    padding-right: 0.5em;
+}
+
+
+/* Question Headers (Problem X (Ch Y)) */
+.question-header {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    font-size: 13pt;
+    margin-bottom: 0.4em; /* Space before question text */
+    color: var(--pdf-color-navy);
+}
+.is-problem .question-header {
+    /* Optional: Add distinct styling for "Problem" headers */
+    /* background-color: rgba(var(--pdf-color-parchment-rgb), 0.3); */
+    /* padding: 0.1em 0.3em; */
+    /* border-left: 3px solid var(--pdf-color-burgundy); */
+}
+.is-mcq .question-header {
+    /* Optional: Styling for "Question" (MCQ) headers */
+    /* color: var(--pdf-color-emerald); */
+}
+
+
+/* Gold divider after each question */
+.question-list li.question-item-wrapper::after {
+    content: '';
+    display: block;
+    width: 80%;
+    height: 1px;
+    margin: 0.8cm auto 0; /* Increased margin */
+    background: linear-gradient(to right, transparent, var(--pdf-color-gold), transparent);
+}
+.question-list li.question-item-wrapper:last-child::after {
+    display: none;
+}
+
+/* Multiple Choice Options List */
+.options-list {
+    list-style: none;
+    padding-left: 0.5em; /* Slightly more indent for options */
+    margin-top: 0.5cm;
+    page-break-inside: avoid;
+    /* background-color: rgba(var(--pdf-color-parchment-rgb), 0.15); /* Very subtle parchment background */
+    /* padding: 0.3em; */
+    /* border-radius: 3px; */
+}
+.options-list li.option-item { /* No empty lines between options unless in original text */
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 0.3em; /* Spacing between options */
+    font-size: 11pt !important;
+    line-height: 1.25; /* Tighter line height for options */
+    color: var(--pdf-color-dark-charcoal) !important;
+}
+
+.option-letter {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-weight: bold;
+    margin-right: 0.6em;
+    width: 1.6em;
+    text-align: right;
+    color: var(--pdf-color-burgundy) !important;
+    flex-shrink: 0;
+}
+
+.option-text-container {
+    flex-grow: 1;
+    text-align: justify;
+    color: var(--pdf-color-dark-charcoal) !important;
+}
+
+/* Styling FOR SOLUTIONS PDF to show correct answer */
+.solutions-pdf .option-item.is-correct {
+    background-color: rgba(var(--pdf-color-emerald), 0.1);
+    border: 0.5pt solid var(--pdf-color-emerald);
+    padding: 0.2em;
+    border-radius: 3px;
+}
+.solutions-pdf .option-item.is-correct .option-letter,
+.solutions-pdf .option-item.is-correct .option-text-container {
+     color: var(--pdf-color-emerald) !important;
+}
+.solutions-pdf .option-item.is-correct::before {
+    content: '✅';
+    font-size: 1em;
+    margin-right: 0.5em;
+    color: var(--pdf-color-emerald);
+    flex-shrink: 0;
+}
+.solutions-pdf .options-list li.is-correct {
+    display: flex;
+}
+
+/* --- Mathematical Content --- */
+mjx-container[jax="SVG"] {
+     color: var(--pdf-color-black) !important;
+}
+mjx-container[jax="SVG"] svg {
+    overflow: visible !important;
+}
+mjx-container[jax="SVG"]:not([display="true"]) {
+    vertical-align: -0.2ex !important;
+    margin: 0 0.05em !important;
+    display: inline-block !important;
+}
+mjx-container[jax="SVG"][display="true"] {
+    display: block !important;
+    margin: 0.8em auto !important;
+    text-align: center !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    max-width: 100% !important;
+    line-height: 0;
+}
+.equation-box {
+    border: 1pt solid var(--pdf-color-navy);
+    padding: 0.5em;
+    margin: 0.8em auto;
+    background-color: rgba(var(--pdf-color-parchment-rgb), 0.3);
+    border-radius: 5px;
+    page-break-inside: avoid;
+}
+.equation-box mjx-container[jax="SVG"][display="true"] {
+     margin: 0 !important;
+     padding: 0;
+}
+
+/* --- Images --- */
+.question-image-container, .note-image-container {
+    text-align: center;
+    margin: 0.8cm 0;
+    page-break-inside: avoid;
+}
+.question-image, .note-image {
+    max-width: 90% !important;
+    height: auto;
+    border: 1pt solid var(--pdf-color-navy);
+    padding: 3px;
+    background-color: var(--pdf-color-white);
+    border-radius: 5px;
+    display: inline-block;
+}
+
+/* --- Solutions Section --- */
+.solution-section {
+    margin-top: 1cm; /* Reduced margin for solutions */
+    padding-top: 0.3cm;
+    border-top: 1pt solid var(--pdf-color-emerald);
+    page-break-before: auto;
+    page-break-inside: avoid;
+}
+.solution-label {
+    font-family: 'Playfair Display', serif;
+    font-weight: bold;
+    color: var(--pdf-color-emerald) !important;
+    font-size: 13pt !important;
+    margin-bottom: 0.3em;
+    display: block;
+}
+
+/* --- Achievement Motif (End of Exam - if you add HTML for it) --- */
+.achievement-section {
+    margin-top: 2cm;
+    padding: 1.5cm;
+    border: 2pt solid var(--pdf-color-gold);
+    border-radius: 10px;
+    background-color: rgba(var(--pdf-color-parchment-rgb), 0.5);
+    text-align: center;
+    page-break-before: always;
+}
+.achievement-title {
+    font-family: 'Cinzel', serif; /* Using Cinzel for more impact */
+    font-size: 24pt;
+    font-weight: bold;
+    color: var(--pdf-color-burgundy) !important;
+    margin-bottom: 0.5cm;
+}
+.achievement-text {
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: 14pt;
+    line-height: 1.5;
+    color: var(--pdf-color-navy) !important;
+    margin-bottom: 1cm;
+}
+.achievement-signature {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 16pt;
+    font-weight: normal; /* Signature often not bold */
+    color: var(--pdf-color-emerald) !important;
+}
+
+/* --- End of Exam Section --- */
+.end-of-exam-section {
+    margin-top: 2cm;
+    padding-top: 1cm;
+    border-top: 1.5pt dashed var(--pdf-color-burgundy);
+    text-align: center;
+    font-family: 'Cinzel', serif;
+    font-size: 14pt;
+    color: var(--pdf-color-navy);
+    page-break-before: auto;
+}
+.end-of-exam-section p {
+    text-align: center; /* Override justify for these paragraphs */
+    margin-bottom: 0.3em;
+}
+
+/* --- Utility Classes for Page Breaks --- */
+.page-break-before { page-break-before: always !important; }
+.page-break-after { page-break-after: always !important; }
+.page-break-inside-avoid { page-break-inside: avoid !important; }
+.no-page-break { page-break-inside: avoid !important; }
+
+/* Add specific styles for code blocks in PDF */
+pre {
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    background-color: rgba(var(--pdf-color-parchment-rgb), 0.4);
+    padding: 0.8em;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin: 1em 0;
+    border: 1px solid rgba(var(--pdf-color-navy), 0.5);
+    page-break-inside: avoid;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    font-size: 10pt;
+    line-height: 1.4;
+    color: var(--pdf-color-dark-charcoal);
+}
+pre code {
+    background-color: transparent;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: inherit;
+}
+/* Inline code styling */
+code:not(pre code) { /* Target only inline code */
+    font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    background-color: rgba(var(--pdf-color-parchment-rgb), 0.3);
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.9em;
+    border: 1px solid rgba(var(--pdf-color-navy), 0.2);
+    color: var(--pdf-color-dark-charcoal);
+}
+
+/* Ensure links are underlined and potentially colored */
+a {
+    color: var(--pdf-color-navy);
+    text-decoration: underline;
+}
+
+/* Ensure horizontal rules are styled */
+hr {
+    border: none;
+    border-top: 1pt solid var(--pdf-color-burgundy);
+    margin: 1.5cm 0;
+}
+
+/* Note metadata specific styling */
+.note-meta {
+    font-size: 10pt;
+    color: var(--pdf-color-dark-charcoal) !important;
+    margin-bottom: 0.5cm;
+    border-bottom: 0.5pt solid var(--pdf-color-navy);
+    padding-bottom: 0.2cm;
+}
+.note-meta p {
+    margin-bottom: 0.1em;
+    font-size: 10pt;
+    text-align: left; /* Override justify for note meta */
+}
+.note-latex-content, .note-ai-review-content {
+    margin-top: 0.5cm;
+}
+
+/* --- END OF FILE css/pdf_exam_styles.css --- */

@@ -48,17 +48,48 @@ if (typeof MathJax !== 'undefined' && MathJax.startup?.promise) {
 
     const mjScript = document.getElementById('mathjax-script');
     if (mjScript) {
-        const handleMathJaxLoad = () => { /* ... (same as previous robust version) ... */ };
+        const handleMathJaxLoad = () => {
+            console.log("[MathJax Utils] MathJax script 'load' event fired.");
+            if (typeof MathJax !== 'undefined' && MathJax.startup?.promise) {
+                MathJax.startup.promise.then(() => {
+                    console.log("[MathJax Utils] MathJax startup.promise resolved after script load event.");
+                    if (mathJaxResolveReference) {
+                        mathJaxResolveReference();
+                        mathJaxResolveReference = null; // Prevent multiple resolves
+                    }
+                }).catch(err => {
+                    console.error("[MathJax Utils] Error during MathJax startup after script load:", err);
+                    if (mathJaxResolveReference) {
+                        mathJaxResolveReference(); // Resolve anyway to not block indefinitely
+                        mathJaxResolveReference = null;
+                    }
+                });
+            } else {
+                console.error("[MathJax Utils] MathJax script loaded, but MathJax object or startup.promise not found.");
+                if (mathJaxResolveReference) {
+                    mathJaxResolveReference(); // Resolve to avoid blocking
+                    mathJaxResolveReference = null;
+                }
+            }
+        };
         mjScript.addEventListener('load', handleMathJaxLoad);
-        mjScript.addEventListener('error', () => { /* ... (same as previous robust version) ... */ });
-        if (mjScript.readyState === 'complete' || mjScript.readyState === 'loaded') { handleMathJaxLoad(); }
+        mjScript.addEventListener('error', () => {
+             console.error("[MathJax Utils] MathJax script 'error' event fired.");
+             if (mathJaxResolveReference) {
+                 mathJaxResolveReference(); // Resolve to avoid blocking
+                 mathJaxResolveReference = null;
+             }
+        });
+        // Check if already loaded (e.g., cached script)
+        if (mjScript.readyState === 'complete' || mjScript.readyState === 'loaded') {
+             console.log("[MathJax Utils] MathJax script already in 'complete' or 'loaded' state on listener attach.");
+             handleMathJaxLoad();
+        }
     } else {
         console.error("[MathJax Utils] MathJax script tag (#mathjax-script) not found.");
         if (mathJaxResolveReference) { mathJaxResolveReference(); mathJaxResolveReference = null; }
     }
 }
-
-setTimeout(() => { /* ... (fallback timeout same as previous robust version) ... */ }, 2000);
 
 // Fallback timeout check for MathJax readiness, in case events are unreliable
 // This ensures the mathJaxReadyPromise eventually resolves.
@@ -85,7 +116,7 @@ setTimeout(() => {
             mathJaxResolveReference = null;
         }
     }
-}, 2000); // Wait 2 seconds, adjust if necessary
+}, 2500); // Increased timeout slightly to 2.5s
 
 
 // --- MathJax Rendering Helper ---
@@ -138,6 +169,7 @@ export async function renderMathIn(element) {
         }
     }
 }
+window.renderMathIn = renderMathIn; // Make it globally accessible if not already (e.g. for script.js)
 
 // --- General Utilities ---
 

@@ -26,15 +26,37 @@ export const DEFAULT_COURSE_LECTURE_MCQ_FILENAME = "LecturesMCQ.md"; // Example
 export const DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME = "LecturesProblems.md"; // Example
 // --- End File Path Configuration ---
 
-
+// --- START MODIFIED: PDF_GENERATION_OPTIONS ---
 export const PDF_GENERATION_OPTIONS = {
-    margin: 1.5, // Margin in cm
-    filename: 'exam.pdf', // Default filename, will be updated
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 1122 /* A4 width at 96dpi */ }, // Improve quality, allow cross-origin images if needed, set scroll and width
-    jsPDF: { unit: 'cm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'], before: '.question-item' } // Better page breaking, target class for breaks
+    margin: [1.5, 1.2, 1.5, 1.2], // Margins in cm: [top, left, bottom, right] or a single number for all
+    filename: 'lyceum_document.pdf', // Default filename, will be updated
+    image: { type: 'jpeg', quality: 0.95 }, // Use JPEG for smaller file sizes, quality 0.95
+    html2canvas: {
+        scale: 2, // Higher scale for better quality rendering
+        useCORS: true, // Allow cross-origin images (important if logo or other images are external)
+        logging: true, // Enable html2canvas logging for debugging
+        // windowWidth and windowHeight will be set dynamically based on content
+        scrollX: 0,
+        scrollY: 0,
+        // Setting width and height explicitly can sometimes help with complex layouts
+        // width: 794, // A4 width in pixels at 96 DPI (approx 210mm) - will be overridden by tempElement.scrollWidth
+        // height: 1123 // A4 height in pixels at 96 DPI (approx 297mm) - will be overridden by tempElement.scrollHeight
+    },
+    jsPDF: {
+        unit: 'cm', // Use cm for easier margin definition
+        format: 'a4',
+        orientation: 'portrait'
+    },
+    pagebreak: {
+        mode: ['avoid-all', 'css', 'legacy'], // Standard modes
+        before: ['.page-break-before', '.question-item', '.note-section-start', '.solution-header', '.exam-header'], // Classes that should start on a new page
+        after: ['.page-break-after'],
+        avoid: ['h2', 'h3', 'h4', '.solution', '.options-list', 'pre', 'table', 'figure', 'img', '.no-page-break'] // Elements to try to keep on one page
+    },
+    enableLinks: true // Attempt to make links in the HTML clickable in the PDF
 };
+// --- END MODIFIED: PDF_GENERATION_OPTIONS ---
+
 
 // Base LaTeX structure (used by generateTexSource)
 export const LATEX_DOCUMENT_CLASS = "\\documentclass[12pt]{article}";

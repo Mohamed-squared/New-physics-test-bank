@@ -19,7 +19,7 @@ import { generateFormulaSheet, explainStudyMaterialSnippet, getExplanationForPdf
 // *** MODIFIED: Import extractQuestionsFromMarkdown (not parseSkipExamText) ***
 import { extractQuestionsFromMarkdown } from './markdown_parser.js';
 import { launchOnlineTestUI, setCurrentOnlineTestState } from './ui_online_test.js';
-import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js';
+import { generateAndDownloadPdfWithMathJax, generateFormulaSheetPdfBaseHtml, downloadTexFile } from './ui_pdf_generation.js';
 import { showCurrentCourseDashboard } from './ui_course_dashboard.js';
 // MODIFIED: Import test_logic functions (Keep if needed elsewhere, but not used in skip exam now)
 import { parseChapterProblems, selectProblemsForExam, combineProblemsWithQuestions } from './test_logic.js';
@@ -1195,20 +1195,28 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
     }
     console.log(`Generating new formula sheet for course ${courseId}, chapter ${chapterNum}`);
     try {
-        const sheetHtml = await generateFormulaSheet(courseId, chapterNum);
-        formulaContent.innerHTML = sheetHtml; 
-        const generationFailed = sheetHtml.includes('Error generating') ||
-                                 sheetHtml.includes('No text content available') ||
-                                 sheetHtml.includes('bigger than the model') ||
-                                 sheetHtml.includes('Loading Formula Sheet...'); 
-        if (!generationFailed && sheetHtml.trim() !== "") {
+        const rawAiGeneratedSheetHtml = await generateFormulaSheet(courseId, chapterNum); // Get raw AI output
+
+        // *** CRITICAL DEBUG LOG ***
+        console.log("------------------------------------------------------------");
+        console.log("RAW AI-Generated HTML for Formula Sheet (before styling wrapper):\n", rawAiGeneratedSheetHtml);
+        console.log("------------------------------------------------------------");
+        // *** END CRITICAL DEBUG LOG ***
+
+        formulaContent.innerHTML = rawAiGeneratedSheetHtml; // Display raw AI output for now in the UI preview
+        
+        const generationFailed = rawAiGeneratedSheetHtml.includes('Error generating') ||
+                                 rawAiGeneratedSheetHtml.includes('No text content available') ||
+                                 rawAiGeneratedSheetHtml.includes('bigger than the model') ||
+                                 rawAiGeneratedSheetHtml.includes('Loading Formula Sheet...');
+        if (!generationFailed && rawAiGeneratedSheetHtml.trim() !== "") {
              try {
                 await renderMathIn(formulaContent); 
                 downloadBtn.classList.remove('hidden'); 
-                await saveUserFormulaSheet(currentUser.uid, courseId, chapterNum, sheetHtml);
+                await saveUserFormulaSheet(currentUser.uid, courseId, chapterNum, rawAiGeneratedSheetHtml); // Save the RAW AI HTML
                 console.log("Successfully saved generated formula sheet to user document.");
             } catch (saveOrRenderError) {
-                 if (saveOrRenderError.message.includes('MathJax')) {
+                 if (saveOrRenderError.message && saveOrRenderError.message.includes('MathJax')) { // Check if error message exists
                      console.error("Error rendering MathJax in generated formula sheet:", saveOrRenderError);
                      formulaContent.innerHTML += `<p class="text-red-500 text-xs mt-1">Error rendering math content.</p>`;
                  } else {
@@ -1218,7 +1226,7 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
             }
         } else {
             console.warn("AI generation indicated an issue, or content is empty. Not caching or enabling download for formula sheet.");
-            formulaContent.innerHTML = sheetHtml || '<p class="text-yellow-500 p-2">Formula sheet generation resulted in empty content or an error.</p>'; 
+            formulaContent.innerHTML = rawAiGeneratedSheetHtml || '<p class="text-yellow-500 p-2">Formula sheet generation resulted in empty content or an error.</p>'; 
             downloadBtn.classList.add('hidden'); 
         }
     } catch (error) {
@@ -1237,60 +1245,60 @@ export async function displayFormulaSheet(courseId, chapterNum, forceRegenerate 
         regenerateBtn.disabled = false; 
     }
 }
+// Ensure this wrapper is on window if displayFormulaSheet is not directly assigned to window later
 window.displayFormulaSheetWrapper = (courseId, chapterNum, forceRegenerate = false) => {
     displayFormulaSheet(courseId, chapterNum, forceRegenerate);
 };
 
 
 export async function downloadFormulaSheetPdf() {
-     const formulaContentElement = document.getElementById('formula-sheet-content');
-    if (!formulaContentElement || !currentChapterNumber || !currentCourseIdInternal) {
+    const formulaContentElement = document.getElementById('formula-sheet-content');
+    // Ensure currentChapterNumber and currentCourseIdInternal are correctly set module-level variables
+    if (!formulaContentElement || currentChapterNumber === null || currentCourseIdInternal === null) {
          alert("Cannot download: Formula sheet content or course/chapter context missing.");
+         console.error("downloadFormulaSheetPdf: Missing formulaContentElement, currentChapterNumber, or currentCourseIdInternal.", {
+             hasContentElement: !!formulaContentElement,
+             chapter: currentChapterNumber,
+             course: currentCourseIdInternal
+         });
          return;
      }
-    const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
+
+    const courseDef = globalCourseDataMap.get(currentCourseIdInternal);
+    const courseName = courseDef?.name || 'Course';
     const filename = `Formula_Sheet_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`;
 
     showLoading(`Generating ${filename}.pdf...`);
     try {
-        let sheetHtml = formulaContentElement.innerHTML;
-        if (!sheetHtml || sheetHtml.trim() === "" ||
-            sheetHtml.includes('Error generating') ||
-            sheetHtml.includes('No text content available') ||
-            sheetHtml.includes('Loading Formula Sheet...')) {
-            alert("Valid formula sheet content not available for PDF generation. Please ensure the sheet is loaded correctly.");
+        // Get the raw innerHTML which should be the AI-generated content displayed in the UI
+        let rawAiGeneratedSheetHtml = formulaContentElement.innerHTML;
+        
+        // Critical Log: Log the HTML content that will be wrapped
+        console.log("------------------------------------------------------------");
+        console.log("HTML Content from formulaContentElement for PDF Generation (Formula Sheet):\n", rawAiGeneratedSheetHtml);
+        console.log("------------------------------------------------------------");
+
+        if (!rawAiGeneratedSheetHtml || rawAiGeneratedSheetHtml.trim() === "" ||
+            rawAiGeneratedSheetHtml.includes('Error generating') ||
+            rawAiGeneratedSheetHtml.includes('No text content available') ||
+            rawAiGeneratedSheetHtml.includes('Loading Formula Sheet...')) {
+            alert("Valid formula sheet content not available for PDF generation. Please ensure the sheet is loaded correctly and does not show an error message.");
             throw new Error("Valid formula sheet content not available for PDF generation.");
         }
-        console.log("Formula Sheet PDF - sheetHtml (first 500 chars):", sheetHtml.substring(0, 500));
-        const printHtml = `<!DOCTYPE html>
-        <html>
-        <head>
-            <title>${escapeHtml(filename)}</title>
-            <meta charset="UTF-8">
-            <script>
-                MathJax = {
-                    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
-                    svg: { fontCache: 'global' }
-                };
-            </script>
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-            <style>
-                body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
-                .prose { max-width: none; }
-                mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
-                h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
-            </style>
-        </head>
-        <body>
-            <h2 style="text-align: center;">Formula Sheet - Chapter ${currentChapterNumber}</h2>
-            <div class="prose">
-                ${sheetHtml}
-            </div>
-        </body>
-        </html>`;
-        await generateAndDownloadPdfWithMathJax(printHtml, filename);
+
+        // Use the specific base HTML generator for formula sheets
+        const finalHtmlForPdf = generateFormulaSheetPdfBaseHtml(
+            `Formula Sheet - Chapter ${currentChapterNumber}`, // Title for the PDF document
+            rawAiGeneratedSheetHtml                                 // The inner HTML (AI-generated formula sheet)
+        );
+
+        console.log("[downloadFormulaSheetPdf] Final HTML for PDF to be sent to server (first 500 chars):", finalHtmlForPdf.substring(0, 500));
+
+        await generateAndDownloadPdfWithMathJax(finalHtmlForPdf, filename);
+
     } catch (error) {
         console.error("Error generating formula sheet PDF:", error);
+        // Avoid alerting if the error was already an alert about content validity
         if (!error.message.includes("Valid formula sheet content not available")) {
             alert(`Failed to generate PDF for formula sheet: ${error.message}`);
         }
@@ -1298,6 +1306,7 @@ export async function downloadFormulaSheetPdf() {
         hideLoading();
     }
 }
+// Assign to window if called from HTML, e.g. in script.js or if this file is type="module" and functions are not directly window-scoped
 window.downloadFormulaSheetPdf = downloadFormulaSheetPdf;
 
 export async function displayChapterSummary(courseId, chapterNum, forceRegenerate = false) {
@@ -1401,52 +1410,36 @@ window.displayChapterSummaryWrapper = (courseId, chapterNum, forceRegenerate = f
 
 
 export async function downloadChapterSummaryPdf() {
-     const summaryContentElement = document.getElementById('chapter-summary-content');
-     if (!summaryContentElement || !currentChapterNumber || !currentCourseIdInternal) {
+    const summaryContentElement = document.getElementById('chapter-summary-content');
+    if (!summaryContentElement || currentChapterNumber === null || currentCourseIdInternal === null) {
          alert("Cannot download: Summary content or course/chapter context missing.");
          return;
      }
-    const courseName = globalCourseDataMap.get(currentCourseIdInternal)?.name || 'Course';
+    const courseDef = globalCourseDataMap.get(currentCourseIdInternal);
+    const courseName = courseDef?.name || 'Course';
     const filename = `Chapter_Summary_${courseName.replace(/[^a-zA-Z0-9]/g, '_')}_Ch${currentChapterNumber}`;
 
     showLoading(`Generating ${filename}.pdf...`);
     try {
-        let summaryHtml = summaryContentElement.innerHTML;
-        if (!summaryHtml || summaryHtml.trim() === "" ||
-            summaryHtml.includes('Error generating') ||
-            summaryHtml.includes('No text content available') ||
-            summaryHtml.includes('Loading Chapter Summary...')) {
-            alert("Valid summary content not available for PDF generation. Please ensure the summary is loaded correctly.");
+        let rawAiGeneratedSummaryHtml = summaryContentElement.innerHTML;
+        
+        console.log("------------------------------------------------------------");
+        console.log("HTML Content from summaryContentElement for PDF Generation (Summary):\n", rawAiGeneratedSummaryHtml);
+        console.log("------------------------------------------------------------");
+
+        if (!rawAiGeneratedSummaryHtml || rawAiGeneratedSummaryHtml.trim() === "" ||
+            rawAiGeneratedSummaryHtml.includes('Error generating') ||
+            rawAiGeneratedSummaryHtml.includes('No text content available') ||
+            rawAiGeneratedSummaryHtml.includes('Loading Chapter Summary...')) {
+            alert("Valid summary content not available for PDF generation. Ensure it's loaded correctly.");
             throw new Error("Valid summary content not available for PDF generation.");
         }
-        console.log("Chapter Summary PDF - summaryHtml (first 500 chars):", summaryHtml.substring(0, 500));
-        const printHtml = `<!DOCTYPE html>
-        <html>
-        <head>
-            <title>${escapeHtml(filename)}</title>
-             <meta charset="UTF-8">
-            <script>
-                MathJax = {
-                    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
-                    svg: { fontCache: 'global' }
-                };
-            </script>
-            <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js"></script>
-            <style>
-                 body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; line-height: 1.4; margin: 2cm; }
-                 .prose { max-width: none; }
-                 mjx-container[jax="SVG"] > svg { vertical-align: -0.15ex; }
-                 h2, h3, h4 { margin-top: 1.5em; margin-bottom: 0.5em; }
-            </style>
-        </head>
-        <body>
-            <h2 style="text-align: center;">Chapter Summary - Chapter ${currentChapterNumber}</h2>
-             <div class="prose">
-                 ${summaryHtml}
-             </div>
-        </body>
-        </html>`;
-        await generateAndDownloadPdfWithMathJax(printHtml, filename);
+        
+        const finalHtmlForPdf = generateFormulaSheetPdfBaseHtml( // Using formula sheet base for summaries too
+            `Chapter Summary - Chapter ${currentChapterNumber}`,
+            rawAiGeneratedSummaryHtml
+        );
+        await generateAndDownloadPdfWithMathJax(finalHtmlForPdf, filename);
     } catch (error) {
         console.error("Error generating summary PDF:", error);
         if (!error.message.includes("Valid summary content not available")) {

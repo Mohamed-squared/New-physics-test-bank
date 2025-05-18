@@ -575,7 +575,7 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
         window.showTestGenerationDashboard(); 
         return;
     }
-    showLoading(`Generating ${testType === 'online' ? 'Online Test' : 'Test Files'}...`);
+    showLoading(`Generating ${testType === 'online' ? 'Online Test' : 'Test Files'}... (Gathering Content)`);
     await new Promise(resolve => setTimeout(resolve, 100)); 
 
     let chaptersInScopeNumbers = [];
@@ -590,64 +590,70 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
     } else if (mode === 'specific' && selectedChapters) {
         chaptersInScopeNumbers = selectedChapters.map(String);
     } else {
-        hideLoading(); displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
-        setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); return;
+        hideLoading(); 
+        displayContent('<p class="text-red-500 p-4">Invalid test mode or chapter selection.</p>');
+        setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); 
+        return;
     }
     if (chaptersInScopeNumbers.length === 0) {
-         hideLoading(); displayContent('<p class="text-red-500 p-4">No chapters selected for the test.</p>');
-         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); return;
+         hideLoading(); 
+         displayContent('<p class="text-red-500 p-4">No chapters selected for the test.</p>');
+         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content'); 
+         return;
     }
 
     const allSelectedMcqs = [];
     const allSelectedProblems = [];
-    const allMcqAnswers = {};
-    // Ensure actualTotalQuestionsGenerated is declared at the function scope
+    const allMcqAnswers = {}; // To store correct answers for all MCQs
     let actualTotalQuestionsGenerated = 0;
     
-    const courseDir = currentSubject.courseDirName ? cleanTextForFilename(currentSubject.courseDirName) : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
+    const courseDir = currentSubject.courseDirName 
+        ? cleanTextForFilename(currentSubject.courseDirName) 
+        : cleanTextForFilename(currentSubject.name || `subject_${currentSubject.id}`);
     const resourceBasePath = `${COURSE_BASE_PATH}/${courseDir}/${SUBJECT_RESOURCE_FOLDER}/`;
     const subjectId = currentSubject.id;
 
     // Helper to fetch, parse, select MCQs
     async function processMcqSource(filePath, requestedCount, sourceLogName, sourceTypeKey) {
         if (requestedCount > 0 && filePath) {
-            console.log(`Processing ${sourceLogName} from: ${filePath}`);
-            const mdContent = await fetchContentForSource(filePath, sourceLogName);
+            console.log(`Processing ${sourceLogName} from: ${filePath} for ${requestedCount} MCQs`);
+            const mdContent = await fetchContentForSource(filePath, sourceLogName); // fetchContentForSource is defined in ui_test_generation.js
             if (mdContent) {
                 const { questions, answers } = extractQuestionsFromMarkdown(mdContent, buildScopeMap(chaptersInScopeNumbers), sourceTypeKey);
-                const randomSelection = selectRandomItems(questions, requestedCount);
+                const randomSelection = selectRandomItems(questions, requestedCount); // selectRandomItems defined in ui_test_generation.js
                 allSelectedMcqs.push(...randomSelection);
                 Object.assign(allMcqAnswers, answers); 
-                console.log(`Added ${randomSelection.length} MCQs from ${sourceLogName}.`);
+                console.log(`Added ${randomSelection.length} MCQs from ${sourceLogName}. Total MCQs now: ${allSelectedMcqs.length}`);
             }
         }
     }
     // Helper to fetch, parse, select Problems
     async function processProblemSource(filePath, requestedCount, sourceLogName, problemCacheTypeKey) {
         if (requestedCount > 0 && filePath) {
-            console.log(`Processing ${sourceLogName} from: ${filePath}`);
-            await parseChapterProblems(filePath, subjectId, problemCacheTypeKey);
+            console.log(`Processing ${sourceLogName} from: ${filePath} for ${requestedCount} Problems`);
+            await parseChapterProblems(filePath, subjectId, problemCacheTypeKey); // From test_logic.js
             const problemCacheKey = `${subjectId}|${problemCacheTypeKey}`;
             const problemsFromCache = window.subjectProblemCache?.get(problemCacheKey) || {};
-            const problemsInScope = [];
+            const problemsInScopeRaw = [];
             chaptersInScopeNumbers.forEach(chapNum => {
                 if (problemsFromCache[chapNum]) {
-                    problemsInScope.push(...problemsFromCache[chapNum]);
+                    problemsInScopeRaw.push(...problemsFromCache[chapNum]);
                 }
             });
-            const randomSelection = selectRandomItems(problemsInScope, requestedCount);
-            allSelectedProblems.push(...formatProblemsForExam(randomSelection, subjectId, problemCacheTypeKey));
-            console.log(`Added ${randomSelection.length} Problems from ${sourceLogName}.`);
+            const randomSelectionRaw = selectRandomItems(problemsInScopeRaw, requestedCount);
+            allSelectedProblems.push(...formatProblemsForExam(randomSelectionRaw, subjectId, problemCacheTypeKey)); // formatProblemsForExam defined in ui_test_generation.js
+            console.log(`Added ${randomSelectionRaw.length} Problems from ${sourceLogName}. Total Problems now: ${allSelectedProblems.length}`);
         }
     }
     
     // --- Phase 1: Fulfill Explicit Positive Requests ---
+    showLoading("Generating Test... (Phase 1: Specific Requests)");
     if (currentSubject.mcqFileName) {
         await processMcqSource(`${resourceBasePath}${cleanTextForFilename(currentSubject.mcqFileName)}`, testGenConfig.textMcqCount, "Text MCQs (Main File)", "tg_text_mcq");
     }
     const textProblemsFileActual = (currentSubject.textProblemsFileName && currentSubject.textProblemsFileName.trim() !== '') 
         ? cleanTextForFilename(currentSubject.textProblemsFileName) 
-        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME;
+        : DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME; // From config.js
     if (textProblemsFileActual) { 
         await processProblemSource(`${resourceBasePath}${textProblemsFileActual}`, testGenConfig.textProblemCount, "Text Problems (Main File)", "tg_text_prob");
     }
@@ -670,10 +676,10 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
 
     // --- Phase 2: Handle Deficit with "Auto" Sources (where user entered 0 for a source count) ---
     if (deficit > 0) {
+        showLoading("Generating Test... (Phase 2: Auto-filling)");
         console.log(`Deficit of ${deficit} questions. Attempting to fill from "auto" (0-count) sources, respecting subject's MCQ/Problem ratio.`);
         
         const autoSources = [];
-        // Identify "auto" Text MCQs
         if (testGenConfig.textMcqCount === 0 && currentSubject.mcqFileName) {
             const available = [];
             const mdContent = await fetchContentForSource(`${resourceBasePath}${cleanTextForFilename(currentSubject.mcqFileName)}`, "Auto Text MCQs");
@@ -684,10 +690,9 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
             }
             if (available.length > 0) autoSources.push({ type: 'mcq', sourceName: 'Text (Main)', availableItems: available, sourceTypeKey: "auto_tg_text_mcq"});
         }
-        // Identify "auto" Text Problems
         if (testGenConfig.textProblemCount === 0 && textProblemsFileActual) {
             const available = [];
-            await parseChapterProblems(`${resourceBasePath}${textProblemsFileActual}`, subjectId, "tg_text_prob");
+            await parseChapterProblems(`${resourceBasePath}${textProblemsFileActual}`, subjectId, "tg_text_prob"); // Ensures cache is populated
             const problemCacheKey = `${subjectId}|tg_text_prob`;
             const problemsFromCache = window.subjectProblemCache?.get(problemCacheKey) || {};
             chaptersInScopeNumbers.forEach(chapNum => { if (problemsFromCache[chapNum]) available.push(...problemsFromCache[chapNum]); });
@@ -759,20 +764,21 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
     let finalExamItems;
 
     // --- Phase 3: Final Capping/Adjustment ---
-    actualTotalQuestionsGenerated = finalExamItemsCombined.length; // Assign to the function-scoped variable
+    showLoading("Generating Test... (Phase 3: Finalizing)");
+    actualTotalQuestionsGenerated = finalExamItemsCombined.length; 
     if (actualTotalQuestionsGenerated > targetTotalQuestionsFromForm) {
         console.log(`Generated ${actualTotalQuestionsGenerated} questions, but target was ${targetTotalQuestionsFromForm}. Truncating by random selection.`);
         finalExamItems = selectRandomItems(finalExamItemsCombined, targetTotalQuestionsFromForm); 
     } else {
         finalExamItems = finalExamItemsCombined;
     }
-    actualTotalQuestionsGenerated = finalExamItems.length; // Re-assign after potential truncation
+    actualTotalQuestionsGenerated = finalExamItems.length; 
     
     if (actualTotalQuestionsGenerated === 0 || (actualTotalQuestionsGenerated < 10 && targetTotalQuestionsFromForm >=10)) {
         hideLoading();
         let errorMsg = `Test Generation Failed: Only ${actualTotalQuestionsGenerated} questions could be selected. Need at least 10.`;
         if (actualTotalQuestionsGenerated === 0) errorMsg = "Test Generation Failed: No questions could be selected from the specified sources for the chosen chapters. Please check counts and file availability.";
-        displayContent(`<p class="text-red-500 p-4 font-semibold">${errorMsg}</p><button onclick="window.promptTestType('${mode}', ${JSON.stringify(selectedChapters)})" class="btn-secondary mt-2">Reconfigure Test</button>`);
+        displayContent(`<p class="text-red-500 p-4 font-semibold">${errorMsg}</p><button onclick="window.promptTestType('${mode}', ${JSON.stringify(chaptersInScopeNumbers)})" class="btn-secondary mt-2">Reconfigure Test</button>`);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
         return;
     }
@@ -787,7 +793,7 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
     if (testGenConfig.timingOption === 'calculated') {
         const numMcqsInFinal = finalExamItems.filter(q => !q.isProblem).length;
         const numProblemsInFinal = finalExamItems.filter(q => q.isProblem).length;
-        testDuration = (numMcqsInFinal * 3) + (numProblemsInFinal * 15);
+        testDuration = (numMcqsInFinal * 3) + (numProblemsInFinal * 15); // Example timing
     } else if (testGenConfig.timingOption === 'custom' && testGenConfig.customDurationMinutes) {
         testDuration = testGenConfig.customDurationMinutes;
     } else { // 'default' or fallback
@@ -838,7 +844,7 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
             })),
             results_entered: false,
             timestamp: new Date().toISOString(),
-            totalQuestions: actualTotalQuestionsGenerated, // Correct variable used here
+            totalQuestions: actualTotalQuestionsGenerated, 
             testGenConfig: testGenConfig 
         });
         await saveUserData(currentUser.uid); 
@@ -869,7 +875,7 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
 
         displayContent(`
             <div class="bg-blue-100 dark:bg-blue-900/30 border-l-4 border-blue-500 text-blue-700 dark:text-blue-300 p-4 rounded-md mb-6 animate-fade-in">
-                <p class="font-medium">PDF Test Files Ready</p>
+                <p class="font-medium">Test Files Ready for Download (Server-Side PDF Generation)</p>
                 <p>Exam ID: ${escapeHtml(examId)}</p>
                 <details class="text-sm mt-2 text-gray-600 dark:text-gray-400">
                      <summary class="flex items-center cursor-pointer hover:text-blue-700 dark:hover:text-blue-400 font-medium">
@@ -880,21 +886,26 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
                  </details>
             </div>
              <div class="space-y-3">
-                 <button id="download-pdf-q" class="w-full btn-primary">Download Questions PDF</button>
-                 <button id="download-pdf-s" class="w-full btn-primary">Download Solutions PDF</button>
+                 <button id="download-pdf-q-server" class="w-full btn-primary">Download Questions PDF (via Server)</button>
+                 <button id="download-pdf-s-server" class="w-full btn-primary">Download Solutions PDF (via Server)</button>
                  <button onclick="window.downloadTexFileWrapper('${escapeHtml(baseFilename)}_Questions.tex', \`${btoa(unescape(encodeURIComponent(questionsTex)))}\`)" class="w-full btn-secondary">Download Questions .tex</button>
                  <button onclick="window.downloadTexFileWrapper('${escapeHtml(baseFilename)}_Solutions.tex', \`${btoa(unescape(encodeURIComponent(solutionsTex)))}\`)" class="w-full btn-secondary">Download Solutions .tex</button>
-                 <button onclick="window.showExamsDashboard()" class="w-full btn-secondary mt-4">Go to Exams Dashboard (for manual result entry)</button>
+                 <button onclick="window.showExamsDashboard()" class="w-full btn-secondary mt-4">Go to Exams Dashboard</button>
              </div>
-             <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">This exam is now pending. Enter results manually via the Exams Dashboard.</p>
+             <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">This exam is now pending. Remember to run your local PDF server. Enter results manually via the Exams Dashboard.</p>
          `);
         setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 
-        document.getElementById('download-pdf-q')?.addEventListener('click', () => generateAndDownloadPdfWithMathJax(questionHtml, `${baseFilename}_Questions`));
-        document.getElementById('download-pdf-s')?.addEventListener('click', () => generateAndDownloadPdfWithMathJax(solutionHtml, `${baseFilename}_Solutions`));
+        document.getElementById('download-pdf-q-server')?.addEventListener('click', () => 
+            generateAndDownloadPdfWithMathJax(questionHtml, `${baseFilename}_Questions`) 
+        );
+        document.getElementById('download-pdf-s-server')?.addEventListener('click', () => 
+            generateAndDownloadPdfWithMathJax(solutionHtml, `${baseFilename}_Solutions`) 
+        );
         hideLoading();
     }
 }
+
 
 window.downloadTexFileWrapper = (filename, base64Content) => {
      try {

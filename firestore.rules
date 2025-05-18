@@ -136,11 +136,18 @@ service cloud.firestore {
                       isValidString(request.resource.data.userAiChatSettings.fallbackModel, 1, 100) && // Must exist and be valid
                       request.resource.data.userAiChatSettings.customSystemPrompts is map && // Must exist and be a map
                       request.resource.data.completedCourseBadges is list && // Must be a list
+                     // ** ADDED: userSettings structure checks **
+                      request.resource.data.userSettings is map &&
+                      request.resource.data.userSettings.experimentalFeatures is map &&
+                      // Ensure experimentalFeatures sub-fields are booleans if they exist (optional: add specific checks if needed)
+                      (request.resource.data.userSettings.experimentalFeatures.globalChat == null || request.resource.data.userSettings.experimentalFeatures.globalChat is bool) &&
+                      (request.resource.data.userSettings.experimentalFeatures.marketplace == null || request.resource.data.userSettings.experimentalFeatures.marketplace is bool) &&
+                      (request.resource.data.userSettings.experimentalFeatures.musicAndSounds == null || request.resource.data.userSettings.experimentalFeatures.musicAndSounds is bool) &&
                       request.resource.data.keys().hasAll([ // Exactly these 12 keys, no more, no less
                         'email', 'username', 'displayName', 'photoURL', 'createdAt',
                         'onboardingComplete', 'isAdmin', 'credits', 'appData', 'userNotes',
-                        'userAiChatSettings', 'completedCourseBadges'
-                      ]) && request.resource.data.keys().size() == 12;
+                        'userAiChatSettings', 'completedCourseBadges', 'userSettings' 
+                      ]) && request.resource.data.keys().size() == 13;
     
 
       allow delete: if isOwner(userId) || isPrimaryAdmin(); // This is for the main user document

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "ai_exam_marking.js",
   "scripts": {
-  "test": "jest",
-  "test:watch": "jest --watch"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "repository": {
     "type": "git",
@@ -26,7 +26,11 @@
     "jest-environment-jsdom": "^29.7.0",
     "jest-fetch-mock": "^3.0.3",
     "playwright": "^1.52.0"
+  },
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "puppeteer": "^24.8.2"
   }
-  
 }
-

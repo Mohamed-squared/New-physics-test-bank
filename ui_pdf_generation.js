@@ -1,357 +1,455 @@
-import { PDF_GENERATION_OPTIONS, LATEX_DOCUMENT_CLASS, LATEX_PACKAGES, LATEX_BEGIN_DOCUMENT, LATEX_END_DOCUMENT } from './config.js';
-import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js'; // Added escapeHtml import
+// --- START OF FILE ui_pdf_generation.js ---
 
-// --- PDF / TeX Generation ---
+import { PDF_GENERATION_OPTIONS, LATEX_DOCUMENT_CLASS, LATEX_PACKAGES, LATEX_BEGIN_DOCUMENT, LATEX_END_DOCUMENT, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER } from './config.js';
+import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js';
+import { cleanTextForFilename } from './filename_utils.js';
 
-// Updated to better match the desired structure, still HTML based
-export function generatePdfHtml(examId, questions) {
-    let questionHtml = '';
-    let solutionHtml = '';
-
-    const placeholderText = '[Content Missing]';
-
-    // Basic Styles for PDF rendering (Mimicking TeX structure)
-    // Added class for AI Review and Note content
+// --- Base HTML for General Exams (Questions/Solutions) ---
+function generatePdfBaseHtml(title, innerContentHtml) {
+    const escapedTitle = escapeHtml(title);
     const styles = `
-        <style>
-            body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; font-size: 11pt; margin: 0; padding: 0; }
-            .container { padding: 1.5cm; } /* Matches jsPDF margin */
-            .exam-header, .note-header { text-align: center; margin-bottom: 1.5em; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
-            .question-list { list-style-type: decimal; padding-left: 1.5em; margin-left: 0; } /* Main question numbering */
-            .question-item, .note-content, .ai-review-content { margin-bottom: 1.2em; page-break-inside: avoid; }
-            .question-content { margin-left: 0; }
-            .question-text { margin-bottom: 0.8em; }
-            .question-image-container { text-align: center; margin: 0.8em 0; } /* Center image container */
-            .question-image { max-width: 60%; max-height: 150px; height: auto; display: inline-block; border: 1px solid #eee; padding: 2px; } /* Adjust width as needed */
-            .options-list { list-style-type: upper-alpha; padding-left: 1.5em; margin-top: 0.5em; margin-bottom: 0.5em; } /* Option lettering */
-            .option-item { margin-bottom: 0.3em; }
-            .option-text { display: inline; }
-            .solution { color: #006400; font-weight: bold; margin-top: 0.5em; padding-top: 0.3em; border-top: 1px dashed #ddd; }
-            /* MathJax Specific Styling for PDF */
-            mjx-container { text-align: left !important; margin: 0.5em 0 !important; display: block !important; } /* Ensure block display */
-            mjx-container[display="true"] { display: block; overflow-x: auto; }
-            mjx-container > svg { max-width: 100%; vertical-align: middle; } /* Prevent SVG overflow */
-            .MathJax_Display { text-align: left !important; }
-            /* Prose adjustments for tighter spacing */
-            .prose { max-width: none; }
-            .prose p { margin-top: 0.3em; margin-bottom: 0.3em; line-height: 1.3; }
-            .prose ol, .prose ul { margin-top: 0.3em; margin-bottom: 0.3em; padding-left: 1.5em;}
-            .prose li { margin-bottom: 0.1em; line-height: 1.3;}
-            .prose code { font-size: 0.85em; padding: 0.1em 0.3em; background-color: #f0f0f0; border-radius: 3px; }
-            .prose pre { font-size: 0.85em; background-color: #f0f0f0; padding: 0.5em; border-radius: 4px; overflow-x: auto; }
-            .prose pre code { background-color: transparent; padding: 0; }
-            /* Problem type styling */
-            .problem-text-container { border: 1px solid #eee; padding: 10px; margin-top: 10px; background-color: #f9f9f9; }
-            /* AI Review styling */
-             .ai-review-content .prose { border-left: 3px solid #8b5cf6; padding-left: 1em; background-color: #faf5ff; }
-        </style>
+        body { font-family: Arial, sans-serif; font-size: 11pt; color: #000 !important; background-color: #fff !important; margin: 0; padding: 0; box-sizing: border-box; position: relative; }
+        h1, h2, h3, h4, h5, h6 { color: #000 !important; }
+        mjx-container { vertical-align: -0.2ex !important; line-height: 1; }
+        mjx-container[display="true"] { display: block !important; margin: 0.8em auto !important; }
+        mjx-container svg { overflow: visible !important; }
+        .page-break-inside-avoid, .no-page-break { page-break-inside: avoid !important; }
+        .page-break-before { page-break-before: always !important; }
+        .page-break-after { page-break-after: always !important; }
+        #pdf-background-watermark { z-index: 0; position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .pdf-main-content { position: relative; z-index: 1; width: 100%; height: 100%; }
+        .note-image-container { text-align: center; margin: 0.5em 0; page-break-inside: avoid; }
+        .note-image { max-width: 90%; height: auto; border: 1px solid #ccc; padding: 2px; background-color: #fff; display: inline-block; }
     `;
 
-    // Questions are assumed to be pre-shuffled before calling this function
-    questions.forEach((q, index) => { // Use index for numbering if needed, though list handles it
+    const mathJaxConfigAndScript = `
+        <script>
+          window.MathJax = {
+            loader: { load: ['input/tex', 'output/svg'] },
+            tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']] },
+            svg: { fontCache: 'global', scale: 1, mtextInheritFont: true, merrorInheritFont: true, displayAlign: 'left', displayIndent: '0em'},
+            startup: {
+                ready: () => {
+                    console.log('[PDF HTML Inner] MathJax Startup: Ready function called.');
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                         console.log('[PDF HTML Inner] MathJax initial typesetting complete.');
+                         setTimeout(() => {
+                             console.log('[PDF HTML Inner] Setting window.mathJaxIsCompletelyReadyForPdf TO TRUE after timeout.');
+                             window.mathJaxIsCompletelyReadyForPdf = true;
+                         }, 500);
+                    }).catch(err => {
+                        console.error('[PDF HTML Inner] MathJax startup.promise REJECTED:', err);
+                        window.mathJaxIsCompletelyReadyForPdf = 'error';
+                    });
+                }
+            }
+          };
+        </script>
+        <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js" id="mathjax-pdf-script"></script>
+        <script>
+            console.log("[PAGE SCRIPT EXAM] Debug script loaded for Exam PDF."); // Changed log prefix
+            window.addEventListener('load', () => {
+                console.log("[PAGE SCRIPT EXAM] Page Load event fired for Exam PDF.");
+                const link = document.querySelector('link[href="css/pdf_exam_styles.css"]');
+                if (link) {
+                    console.log("[PAGE SCRIPT EXAM] Found the EXAM CSS link tag. Waiting for styles to apply...");
+                    setTimeout(() => {
+                        const mainContent = document.querySelector('.pdf-main-content');
+                        if (mainContent) {
+                            const style = getComputedStyle(mainContent);
+                            const color = style.getPropertyValue('color');
+                            console.log(\`[PAGE SCRIPT EXAM] .pdf-main-content computed color: "\${color}". Expected non-default.\`);
+                            if (color === 'rgb(51, 51, 51)') {
+                                console.log("[PAGE SCRIPT EXAM] Successfully detected expected color on .pdf-main-content (from exam styles)!");
+                            } else {
+                                console.warn("[PAGE SCRIPT EXAM] Exam CSS: Computed color (\${color}) is not the expected value. CSS styles might not be applied correctly.");
+                            }
+                        } else {
+                            console.error("[PAGE SCRIPT EXAM] .pdf-main-content element NOT found after load!");
+                        }
+                    }, 300);
+                } else {
+                    console.error("[PAGE SCRIPT EXAM] EXAM CSS link tag with href='css/pdf_exam_styles.css' NOT found in the DOM! CSS injection in server.js is expected.");
+                }
+            });
+        </script>
+    `;
+    const externalCssLink = '<link rel="stylesheet" href="css/pdf_exam_styles.css">'; // This will be removed by server if injecting
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${escapedTitle}</title>
+            <meta charset="UTF-8">
+            ${externalCssLink} 
+            <style>${styles}</style>
+            ${mathJaxConfigAndScript}
+        </head>
+        <body>
+            <div id="pdf-background-watermark"></div>
+            <div class="pdf-main-content">
+                <h1>${escapedTitle}</h1>
+                <div class="content-body">${innerContentHtml}</div>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+// --- NEW: Base HTML for Formula Sheets (links to different CSS) ---
+export function generateFormulaSheetPdfBaseHtml(title, innerContentHtml) {
+    const escapedTitle = escapeHtml(title);
+    // MINIMIZE inline styles, let external CSS do the heavy lifting
+    const styles = `
+        body { margin: 0; padding: 0; box-sizing: border-box; background-color: #F8F6F0 !important; /* Ensure page bg from var(--pdf-fs-color-off-white) */ }
+        /* Remove other body styles if they are in pdf_formula_sheet_styles.css */
+        mjx-container svg { overflow: visible !important; } /* Keep this for MathJax */
+    `;
+
+    const mathJaxConfigAndScript = `
+        <script>
+          window.MathJax = {
+            loader: { load: ['input/tex', 'output/svg'] },
+            tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']] },
+            svg: { fontCache: 'global', scale: 0.95, mtextInheritFont: true, merrorInheritFont: true, displayAlign: 'left', displayIndent: '0em'},
+            startup: {
+                ready: () => {
+                    console.log('[PDF FORMULA SHEET Inner] MathJax Startup: Ready function called.');
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                         console.log('[PDF FORMULA SHEET Inner] MathJax initial typesetting complete.');
+                         setTimeout(() => {
+                             console.log('[PDF FORMULA SHEET Inner] Setting window.mathJaxIsCompletelyReadyForPdf TO TRUE.');
+                             window.mathJaxIsCompletelyReadyForPdf = true;
+                         }, 500);
+                    }).catch(err => {
+                        console.error('[PDF FORMULA SHEET Inner] MathJax startup.promise REJECTED:', err);
+                        window.mathJaxIsCompletelyReadyForPdf = 'error';
+                    });
+                }
+            }
+          };
+        </script>
+        <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js" id="mathjax-pdf-script"></script>
+        <script>
+            console.log("[PAGE SCRIPT FS] Debug script loaded for Formula Sheet.");
+            window.addEventListener('DOMContentLoaded', () => {
+                console.log("[PAGE SCRIPT FS] DOMContentLoaded event fired for Formula Sheet.");
+                setTimeout(() => {
+                    const mainContent = document.querySelector('.pdf-fs-main-content');
+                    if (mainContent) {
+                        const style = getComputedStyle(mainContent);
+                        const borderColor = style.getPropertyValue('border-top-color');
+                        const fontFamily = style.getPropertyValue('font-family');
+                        console.log(\`[PAGE SCRIPT FS] .pdf-fs-main-content computed border-top-color: "\${borderColor}", font-family: "\${fontFamily}".\`);
+                        if (borderColor === 'rgb(27, 38, 59)') {
+                            console.log("[PAGE SCRIPT FS] Successfully detected expected BORDER color!");
+                        } else {
+                            console.warn("[PAGE SCRIPT FS] Formula Sheet CSS: Computed BORDER color (\${borderColor}) is not as expected.");
+                        }
+                        if (fontFamily.toLowerCase().includes('eb garamond')) {
+                            console.log("[PAGE SCRIPT FS] Successfully detected expected FONT FAMILY!");
+                        } else {
+                            console.warn("[PAGE SCRIPT FS] Formula Sheet CSS: Computed FONT FAMILY (\${fontFamily}) is not as expected.");
+                        }
+                    } else {
+                        console.error("[PAGE SCRIPT FS] .pdf-fs-main-content element NOT found!");
+                    }
+                }, 500);
+            });
+        </script>
+    `;
+    // const externalCssLink = '<link rel="stylesheet" href="css/pdf_formula_sheet_styles.css">'; // This is removed by server
+
+    return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${escapedTitle}</title>
+            <meta charset="UTF-8">
+            <!-- The server will inject pdf_formula_sheet_styles.css here -->
+            <style>${styles}</style> <!-- Minimal inline styles -->
+            ${mathJaxConfigAndScript}
+        </head>
+        <body>
+            <div class="pdf-fs-main-content">
+                <h1 class="pdf-fs-title">${escapedTitle}</h1>
+                <div class="content-body pdf-fs-body-text">${innerContentHtml}</div>
+            </div>
+        </body>
+        </html>
+    `;
+}
+
+
+export function generatePdfHtml(examId, questions) {
+    const placeholderText = '[Content Missing]';
+    let questionItemsHtml = '';
+    let solutionItemsHtml = '';
+
+    let imageBasePath = './';
+    if (window.currentSubject && window.currentSubject.courseDirName) {
+        const courseBasePath = (typeof window.COURSE_BASE_PATH === 'string' && window.COURSE_BASE_PATH !== "./courses") ? window.COURSE_BASE_PATH : "courses";
+        const subjectResourceFolder = typeof window.SUBJECT_RESOURCE_FOLDER === 'string' ? window.SUBJECT_RESOURCE_FOLDER : 'Problems';
+        imageBasePath = `${courseBasePath}/${cleanTextForFilename(window.currentSubject.courseDirName)}/${subjectResourceFolder}/images/`;
+    } else { imageBasePath = './assets/images/'; }
+    if (imageBasePath && !imageBasePath.endsWith('/')) imageBasePath += '/';
+
+    questions.forEach((q, index) => {
+        const questionNumber = index + 1;
         let qTextForHtml = q.text || placeholderText;
         let optionsForHtml = '';
-        let solutionAnswer = q.answer || 'N/A'; // Default for MCQ
+        let solutionAnswerText = q.isProblem ? 'Solution details vary based on steps.' : (q.correctAnswer ? escapeHtml(q.correctAnswer) : 'N/A');
+        const isProblemType = q.isProblem || !q.options || q.options.length === 0;
 
-        if (q.isProblem) {
-             optionsForHtml = ''; // No options for problems
-             solutionAnswer = 'See marking scheme/AI feedback.'; // Placeholder for solution
-        } else if (q.options && q.options.length > 0) {
-             optionsForHtml = (q.options || []).map(opt => {
-                 let optTextForHtml = opt.text || placeholderText;
-                 return `<li class="option-item"><span class="option-text">${optTextForHtml}</span></li>`;
-             }).join('');
-             optionsForHtml = `<ol class="options-list" type="A">${optionsForHtml}</ol>`;
+        // Options for Questions PDF (no correct answer indication)
+        if (!isProblemType && q.options && q.options.length > 0) {
+            optionsForHtml = `<ol class="options-list">` +
+                (q.options || []).map(opt => {
+                    let optTextForHtml = opt.text || placeholderText;
+                    const optionItemClass = 'option-item page-break-inside-avoid'; // No 'is-correct' class
+                    return `<li class="${optionItemClass}"><span class="option-letter">${escapeHtml(opt.letter)}.</span><span class="option-text-container">${optTextForHtml}</span></li>`;
+                }).join('') + `</ol>`;
         }
 
-        let imageHtml = q.image ? `<div class="question-image-container"><img src="${q.image}" alt="Question Image" class="question-image" crossorigin="anonymous"></div>` : '';
+        // Options for Solutions PDF (with correct answer indication)
+        let solutionOptionsHtml = '';
+        if (!isProblemType && q.options && q.options.length > 0) {
+             solutionOptionsHtml = `<ol class="options-list">` +
+                 (q.options || []).map(opt => {
+                     let optTextForHtml = opt.text || placeholderText;
+                     const isCorrectOption = !q.isProblem && q.correctAnswer && (String(opt.letter).toUpperCase() === String(q.correctAnswer).toUpperCase());
+                     const optionItemClass = isCorrectOption ? 'option-item is-correct page-break-inside-avoid' : 'option-item page-break-inside-avoid';
+                     return `<li class="${optionItemClass}"><span class="option-letter">${escapeHtml(opt.letter)}.</span><span class="option-text-container">${optTextForHtml}</span></li>`;
+                 }).join('') + `</ol>`;
+        }
 
-        // Assemble HTML for the question item
-        const questionItemHtml = `
-            <li class="question-item">
-                <div class="question-content">
-                    <div class="question-text prose ${q.isProblem ? 'problem-text-container' : ''}">${qTextForHtml}</div>
-                    ${imageHtml}
-                    ${optionsForHtml || ''}
-                 </div>
-            </li>
+
+        let imageSrc = null;
+        const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/;
+        const imgMatchInText = qTextForHtml.match(imageMarkdownRegex);
+
+        if (imgMatchInText) {
+            imageSrc = imgMatchInText[2];
+            qTextForHtml = qTextForHtml.replace(imageMarkdownRegex, '').trim();
+        } else if (q.image && typeof q.image === 'string') {
+            let imageName = q.image;
+            if (imageName.startsWith('./images/')) imageName = imageName.substring(9);
+            else if (imageName.startsWith('images/')) imageName = imageName.substring(7);
+            else if (imageName.startsWith('./')) imageName = imageName.substring(2);
+            imageName = imageName.split('/').pop();
+            imageSrc = `${imageBasePath}${cleanTextForFilename(imageName).split('?')[0]}`;
+            imageSrc = imageSrc.replace(/\/{2,}/g, '/');
+        }
+
+        let imageHtml = imageSrc ? `<div class="question-image-container page-break-inside-avoid"><img src="${escapeHtml(imageSrc)}" alt="Image" class="question-image" crossorigin="anonymous" onerror="this.style.display='none';console.warn('Failed to load PDF image: ${escapeHtml(imageSrc)}')"></div>` : '';
+        const questionItemClasses = `question-item-wrapper ${isProblemType ? 'is-problem' : 'is-mcq'}`;
+
+        const questionItemContent = `
+            <div class="question-header">${isProblemType ? 'Problem' : 'Question'} ${questionNumber}${q.chapter ? ` (Ch ${q.chapter})` : ''}</div>
+            <div class="question-text">${qTextForHtml}</div>
+            ${imageHtml}
+            ${optionsForHtml || ''}
         `;
-        questionHtml += questionItemHtml;
+        questionItemsHtml += `<li class="${questionItemClasses}">${questionItemContent}</li>`;
 
-        // Assemble HTML for the solution item (includes answer)
-        solutionHtml += `
-            <li class="question-item">
-                 <div class="question-content">
-                    <div class="question-text prose ${q.isProblem ? 'problem-text-container' : ''}">${qTextForHtml}</div>
-                    ${imageHtml}
-                    ${optionsForHtml || ''}
-                    <div class="solution">Answer: ${solutionAnswer}</div>
-                </div>
-            </li>
+         const solutionItemContent = `
+             <div class="question-header">${isProblemType ? 'Problem' : 'Question'} ${questionNumber}${q.chapter ? ` (Ch ${q.chapter})` : ''}</div>
+             <div class="question-text">${qTextForHtml}</div>
+             ${imageHtml}
+             ${solutionOptionsHtml || ''}
+             <div class="solution-section page-break-inside-avoid">
+                 <span class="solution-label">Answer:</span>
+                 <div class="solution-text">${solutionAnswerText}</div>
+             </div>
          `;
+        solutionItemsHtml += `<li class="${questionItemClasses}">${solutionItemContent}</li>`;
     });
 
-    // Wrap generated content in full HTML structure
-    const fullQuestionHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Exam ${escapeHtml(examId || placeholderText)}</title>${styles}</head><body><div class="container"><div class="exam-header">Exam: ${escapeHtml(examId || placeholderText)}</div><ol class="question-list">${questionHtml}</ol></div></body></html>`;
-    const fullSolutionHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Solutions ${escapeHtml(examId || placeholderText)}</title>${styles}</head><body><div class="container"><div class="exam-header">Solutions: ${escapeHtml(examId || placeholderText)}</div><ol class="question-list">${solutionHtml}</ol></div></body></html>`;
-
-    console.log("generatePdfHtml: Generated Question HTML (first 1000 chars):", fullQuestionHtml.substring(0, 1000));
-    console.log("generatePdfHtml: Generated Solution HTML (first 1000 chars):", fullSolutionHtml.substring(0, 1000));
-
-    return { questionHtml: fullQuestionHtml, solutionHtml: fullSolutionHtml };
-}
-
-// --- NEW: Generate PDF HTML for a single Note ---
-export function generateNotePdfHtml(note) {
-    const placeholderText = '[Content Missing]';
-    const styles = `
-        <style>
-            body { font-family: 'Times New Roman', Times, serif; line-height: 1.4; font-size: 11pt; margin: 0; padding: 0; }
-            .container { padding: 1.5cm; }
-            .note-header { text-align: center; margin-bottom: 1.5em; font-size: 14pt; font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 0.5em; }
-            .note-meta { text-align: center; font-size: 9pt; color: #555; margin-bottom: 1.5em; }
-            .note-content { margin-bottom: 1.2em; page-break-inside: avoid; } /* Added page-break-inside */
-            /* MathJax Specific Styling for PDF */
-            mjx-container { text-align: left !important; margin: 0.5em 0 !important; display: block !important; }
-            mjx-container[display="true"] { display: block; overflow-x: auto; }
-            mjx-container > svg { max-width: 100%; vertical-align: middle; }
-            .MathJax_Display { text-align: left !important; }
-            /* Prose adjustments */
-            .prose { max-width: none; } .prose p { margin: 0.5em 0; } .prose ul, .prose ol { margin: 0.5em 0; padding-left: 1.6em; } .prose li { margin: 0.1em 0; }
-            .prose code { font-size: 0.9em; padding: 0.1em 0.3em; background-color: #f0f0f0; border-radius: 3px; border: 1px solid #ddd; }
-            .prose pre { font-size: 0.9em; background-color: #f0f0f0; padding: 0.7em; border-radius: 4px; overflow-x: auto; border: 1px solid #ddd;}
-            .prose pre code { background-color: transparent; padding: 0; border: none; }
-            /* AI Review styling */
-             .ai-review-content .prose { border-left: 3px solid #ddd; padding-left: 1em; background-color: #f8f8f8; }
-        </style>
+    const endOfExamSectionHtml = `
+        <div class="end-of-exam-section page-break-before">
+            <p>End of Exam</p>
+            <p>Please review your answers before submission.</p>
+            <p style="margin-top: 1cm; font-size: 10pt;">"The pursuit of knowledge is a journey without end."</p>
+            <p style="font-size: 10pt;">"May your understanding deepen with every challenge."</p>
+        </div>
     `;
-    const noteTitle = note.title || placeholderText;
-    const noteContent = note.content || placeholderText;
-    const dateStr = note.timestamp ? new Date(note.timestamp).toLocaleString() : 'N/A';
 
-    let contentForPdf = '';
-    if (note.type === 'latex') {
-         contentForPdf = `<div class="note-content"><pre><code>${escapeHtml(noteContent)}</code></pre></div>`;
-    } else if (note.type === 'ai_review') {
-         contentForPdf = `<div class="ai-review-content note-content">${noteContent}</div>`; // noteContent is already HTML
-    } else { // text or file (with extracted text)
-        contentForPdf = `<div class="note-content prose">${String(noteContent).replace(/\n/g, '<br>')}</div>`;
-    }
+    const examHeaderHtml = `<div class="exam-details page-break-inside-avoid">Total Questions: ${questions.length}</div>`;
+    const questionListContent = `<h2 class="page-break-before">Questions</h2><ol class="question-list">${questionItemsHtml}</ol>${endOfExamSectionHtml}`;
+    const solutionListContent = `<h2 class="page-break-before">Solutions</h2><div class="solutions-pdf"><ol class="question-list">${solutionItemsHtml}</ol></div>`;
 
-    const fullNoteHtml = `
-        <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Note - ${escapeHtml(noteTitle)}</title>${styles}</head>
-        <body><div class="container">
-            <div class="note-header">Note: ${escapeHtml(noteTitle)}</div>
-            <div class="note-meta">Chapter ${note.chapterNum || 'N/A'} | Last Updated: ${dateStr} ${note.filename ? `| Original File: ${escapeHtml(note.filename)}` : ''}</div>
-            ${contentForPdf}
-        </div></body></html>`;
-    
-    console.log("generateNotePdfHtml: Generated Note HTML (first 1000 chars):", fullNoteHtml.substring(0, 1000));
-    return fullNoteHtml;
+
+    const finalQuestionHtml = generatePdfBaseHtml(`Exam: ${examId}`, examHeaderHtml + questionListContent);
+    const finalSolutionHtml = generatePdfBaseHtml(`Solutions: ${examId}`, examHeaderHtml + solutionListContent);
+
+    return { questionHtml: finalQuestionHtml, solutionHtml: finalSolutionHtml };
 }
 
+export function generateNotePdfHtml(note) {
+     const noteTitle = note.title || '[Content Missing]';
+     let noteContent = note.content || '[Content Missing]';
+     const dateStr = note.timestamp ? new Date(note.timestamp).toLocaleString() : 'N/A';
+     const titleSuffix = note.filename ? ` (from file: ${escapeHtml(note.filename)})` : '';
+     // Use generateFormulaSheetPdfBaseHtml for notes as well, as it's more generic now
+     const noteSpecificInlineStyles = `<style>
+        .note-meta p { text-align: left !important; margin-bottom: 0.1em !important; font-size: 10pt; }
+     </style>`;
+
+
+     let contentForPdf = '';
+     let imageHtml = '';
+
+     const imageMarkdownRegex = /!\[(.*?)\]\((.*?)\)/;
+     const imgMatchInContent = noteContent.match(imageMarkdownRegex);
+
+     if (imgMatchInContent) {
+          const imageUrl = imgMatchInContent[2];
+          noteContent = noteContent.replace(imageMarkdownRegex, '').trim();
+          imageHtml = `<div class="note-image-container page-break-inside-avoid"><img src="${escapeHtml(imageUrl)}" alt="Note Image" class="note-image" crossorigin="anonymous" onerror="this.style.display='none';console.warn('Failed to load PDF image: ${escapeHtml(imageUrl)}')"></div>`;
+     } else if (note.imageDataUri) {
+          imageHtml = `<div class="note-image-container page-break-inside-avoid"><img src="${escapeHtml(note.imageDataUri)}" alt="Note Image" class="note-image" crossorigin="anonymous"></div>`;
+     }
+
+     if (note.type === 'latex') {
+         contentForPdf = `<div class="note-latex-content">${noteContent}</div>`;
+     } else if (note.type === 'ai_review') {
+          contentForPdf = `<div class="note-ai-review-content prose prose-sm dark:prose-invert max-w-none">${noteContent}</div>`;
+     } else {
+          contentForPdf = `<div class="note-text-content">${escapeHtml(noteContent).replace(/\n/g, '<br>\n')}</div>`;
+     }
+
+     const innerHtml = `
+         <div class="note-meta page-break-inside-avoid">
+             <p>Chapter ${note.chapterNum || 'N/A'}</p>
+             <p>Updated: ${dateStr}${titleSuffix}</p>
+         </div>
+         ${imageHtml}
+         ${contentForPdf}
+     `;
+     // Use generateFormulaSheetPdfBaseHtml as it links the formula sheet styles, which are now more generic.
+     // If notes need very different base styling, a new generateNotePdfBaseHtml might be needed.
+     return generateFormulaSheetPdfBaseHtml(`Note: ${noteTitle}`, innerHtml).replace('</head>', `${noteSpecificInlineStyles}</head>`);
+}
 
 export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilename) {
-    showLoading(`Generating ${baseFilename}...`);
-
-    const tempElement = document.createElement('div');
-    tempElement.id = `pdf-temp-render-area-${Date.now()}`; // Unique ID for easier debugging
-    tempElement.style.position = 'fixed';
-    tempElement.style.left = '-9999px'; // Keep it off-screen
-    // tempElement.style.left = '0px'; // For debugging layout, make it visible
-    tempElement.style.top = '0px';
-    tempElement.style.width = '21cm'; // A4 width approx
-    tempElement.style.minHeight = '29.7cm'; // A4 height approx, will expand if content is taller
-    tempElement.style.height = 'auto'; // Let content define height
-    tempElement.style.visibility = 'hidden'; // Hidden, not display:none, so rendering happens
-    // tempElement.style.visibility = 'visible'; // For debugging layout
-    tempElement.style.background = 'white'; // Ensure a white background
-    tempElement.innerHTML = htmlContent;
-    document.body.appendChild(tempElement);
-
-    console.log(`generateAndDownloadPdf: Temporary element ${tempElement.id} appended to body.`);
-    console.log(`generateAndDownloadPdf: Initial innerHTML of ${tempElement.id} (first 1000 chars):`, (tempElement.innerHTML || "").substring(0, 1000));
+    showLoading(`Requesting PDF generation for: ${baseFilename}...`);
+    const PDF_SERVER_URL = 'http://localhost:3001/generate-pdf';
 
     try {
-        console.log(`generateAndDownloadPdf: Rendering MathJax in ${tempElement.id}...`);
-        try {
-            await renderMathIn(tempElement);
-            console.log(`generateAndDownloadPdf: MathJax rendering complete for ${tempElement.id}.`);
-        } catch (mathJaxError) {
-            console.error(`generateAndDownloadPdf: MathJax rendering failed inside temporary element ${tempElement.id}.`, mathJaxError);
-            hideLoading();
-            if (document.body.contains(tempElement)) {
-                document.body.removeChild(tempElement);
-                console.log(`generateAndDownloadPdf: Removed temporary element ${tempElement.id} after MathJax error.`);
-            }
-            // alert('MathJax rendering failed during PDF generation. Cannot proceed. Check console.');
-            throw new Error('MathJax rendering failed during PDF generation. Check console.');
-        }
-        
-        // Increased delay to allow complex rendering and potential image loading
-        console.log(`generateAndDownloadPdf: Waiting 2.5s for rendering to settle in ${tempElement.id}...`);
-        await new Promise(resolve => setTimeout(resolve, 2500)); 
-
-        console.log(`generateAndDownloadPdf: Dimensions of ${tempElement.id} before html2pdf: 
-            OffsetWidth: ${tempElement.offsetWidth}, OffsetHeight: ${tempElement.offsetHeight},
-            ScrollWidth: ${tempElement.scrollWidth}, ScrollHeight: ${tempElement.scrollHeight}`);
-
-
-        const options = { ...PDF_GENERATION_OPTIONS }; // Use global config
-        options.filename = `${baseFilename}.pdf`;
-        options.html2canvas = {
-            ...options.html2canvas,
-            scale: 2, // DPI scaling
-            logging: true, // Enable html2canvas logging for debugging
-            useCORS: true, // For images from other domains
-            windowWidth: tempElement.scrollWidth, // Capture full width
-            windowHeight: tempElement.scrollHeight, // Capture full height
-            scrollY: 0, // Start capture from the top of the element
-            scrollX: 0,
-        };
-        options.jsPDF = {
-            ...options.jsPDF,
-            unit: 'pt', // Points are generally more consistent with html2canvas output
-            format: 'a4',
-            orientation: 'portrait'
-        };
-        // Adjust pagebreak classes if needed; .question-item, .note-content, .ai-review-content already exist
-        options.pagebreak = { 
-            mode: ['avoid-all', 'css', 'legacy'], 
-            before: ['.question-item', '.note-content', '.ai-review-content', '.note-header'] // Added .note-header as a potential break point
-        };
-
-        console.log(`generateAndDownloadPdf: Starting html2pdf generation for ${options.filename} with options:`, JSON.stringify(options));
-        
-        const pdfWorker = html2pdf().set(options).from(tempElement);
-
-        await pdfWorker.save().catch(pdfError => {
-             console.error(`generateAndDownloadPdf: html2pdf generation/save error for ${options.filename}:`, pdfError);
-             // alert(`Failed to generate PDF (${options.filename}): ${pdfError.message || 'Unknown PDF generation error'}. Check console for details.`);
-             throw new Error(`html2pdf failed for ${options.filename}: ${pdfError.message || 'Unknown PDF generation error'}`);
+        const response = await fetch(PDF_SERVER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', },
+            body: JSON.stringify({ htmlContent: htmlContent, filename: `${baseFilename}.pdf` }),
         });
-
-        console.log(`generateAndDownloadPdf: PDF generation successful for ${options.filename}.`);
-
-    } catch (error) {
-        console.error(`generateAndDownloadPdf: Error generating PDF ${baseFilename}:`, error);
-        alert(`Failed to generate PDF: ${baseFilename}. Error: ${error.message}. Check console for more details.`);
-        // No need to re-throw here, the alert and console log are sufficient for user/dev feedback.
-    } finally {
-        console.log(`generateAndDownloadPdf: Entering finally block for ${tempElement.id}.`);
-        if (document.body.contains(tempElement)) {
-             document.body.removeChild(tempElement);
-             console.log(`generateAndDownloadPdf: Successfully removed temporary element ${tempElement.id} from body.`);
-        } else {
-             console.warn(`generateAndDownloadPdf: Temporary element ${tempElement.id} was not found in body during finally block, might have been removed earlier.`);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`PDF server error: ${response.status} - ${errorText}`);
         }
+        const pdfBlob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `${baseFilename}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+        console.log(`[PDF Client] PDF '${baseFilename}.pdf' downloaded successfully.`);
+    } catch (error) {
+        console.error(`[PDF Client] Error generating or downloading PDF for '${baseFilename}':`, error);
+        alert(`Failed to generate PDF: ${baseFilename}. Error: ${error.message}. Ensure the local PDF server is running and accessible.`);
+    } finally {
         hideLoading();
-        console.log(`generateAndDownloadPdf: Loading hidden for ${baseFilename}.`);
     }
 }
 
-
-// --- TeX Source Generation (Rewritten) ---
 export function generateTexSource(examId, questions) {
     const placeholderText = '[Content Missing]';
-    // Helper to escape LaTeX special characters, ignoring common math delimiters
     const escapeLatex = (str) => {
         if (str === null || typeof str === 'undefined') str = placeholderText;
         str = String(str);
-
-        // More robust placeholder technique
         let mathSegments = [];
         let placeholderCounter = 0;
-        const placeholderPrefix = "@@MATHJAX_LATEX_PLACEHOLDER_";
-        const placeholderSuffix = "@@";
-
-        // Temporarily replace math segments: $, $$, \[, \], \(, \)
-        let processedStr = str.replace(/(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\$[\s\S]*?\$|\\\(.*?\\\))/g, (match) => {
-            const placeholder = `${placeholderPrefix}${placeholderCounter++}${placeholderSuffix}`;
-            mathSegments.push({ placeholder, math: match });
-            return placeholder;
-        });
-
-        // Escape the remaining text
+        const placeholderPrefix = "@@LATEX_PLACEHOLDER_";
+        const placeholderSuffix = "@@END_LATEX_PLACEHOLDER";
+        let processedStr = str.replace(
+            /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|(?<!\\)\$(?:[^\$\\]|\\.)*?\$|\\\(.*?\\\))/g,
+            (match) => {
+                if (match.includes(placeholderPrefix)) return match;
+                const placeholder = `${placeholderPrefix}${placeholderCounter++}${placeholderSuffix}`;
+                mathSegments.push({ placeholder, math: match });
+                return placeholder;
+            }
+        );
         processedStr = processedStr
-            .replace(/\\/g, '\\textbackslash{}') // Must be first
+            .replace(/\\/g, '\\textbackslash{}')
             .replace(/~/g, '\\textasciitilde{}')
             .replace(/\^/g, '\\textasciicircum{}')
             .replace(/&/g, '\\&')
             .replace(/%/g, '\\%')
-            .replace(/\$/g, '\\$') // Escape literal dollar signs if any remain
+            .replace(/\$/g, '\\$')
             .replace(/#/g, '\\#')
             .replace(/_/g, '\\_')
             .replace(/{/g, '\\{')
             .replace(/}/g, '\\}')
             .replace(/>/g, '\\textgreater{}')
-            .replace(/</g, '\\textless{}')
-            .replace(/\n/g, '\\\\ \n'); // Replace newline with LaTeX line break
-
-        // Restore math segments
+            .replace(/</g, '\\textless{}');
+        processedStr = processedStr
+            .replace(/\n\n+/g, '\\par\\medskip\n')
+            .replace(/\n/g, '\\\\ \n');
         mathSegments.forEach(item => {
-            const regex = new RegExp(item.placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g');
-             processedStr = processedStr.replace(regex, item.math);
+            const regexSafePlaceholder = item.placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            const regex = new RegExp(regexSafePlaceholder, 'g');
+            processedStr = processedStr.replace(regex, item.math);
         });
-
         return processedStr;
     };
 
-    // Build TeX strings
     let questionsBody = '';
     let solutionsBody = '';
     const examIdTex = escapeLatex(examId || placeholderText);
 
-    // Questions are assumed to be pre-shuffled
-    questions.forEach((q, index) => { // Use index for numbering if needed, though list handles it
+    questions.forEach((q, index) => {
+        const questionNumber = index + 1;
         let qTextForTex = escapeLatex(q.text);
         let imageTex = '';
-        if (q.image) {
-             // Basic filename cleaning - assumes image is in the same directory or relative path is correct
-             const safeImageFilename = q.image.replace(/[{}\\^%&#_ ]/g, '-');
-             imageTex = `\\begin{center}\n\\includegraphics[width=0.6\\textwidth]{${safeImageFilename}}\n\\end{center}\n`;
+        if (q.image && typeof q.image === 'string') {
+             let imageName = q.image;
+             if (imageName.startsWith('./images/')) imageName = imageName.substring(9);
+             else if (imageName.startsWith('images/')) imageName = imageName.substring(7);
+             else if (imageName.startsWith('./')) imageName = imageName.substring(2);
+             imageName = imageName.split('/').pop();
+             const safeImageFilename = escapeLatex(cleanTextForFilename(imageName));
+             imageTex = `\\begin{center}\n\\includegraphics[width=0.6\\textwidth,keepaspectratio]{images/${safeImageFilename}}\n\\end{center}\n`;
         }
-
         let optionsText = '';
-        let solutionAnswer = escapeLatex(q.answer || 'N/A'); // Default
-
-        if (q.isProblem) {
-             optionsText = ''; // No options for problems
-             solutionAnswer = 'See marking scheme/AI feedback.'; // This doesn't need LaTeX escaping if it's plain text
-        } else if (q.options && q.options.length > 0) {
-             optionsText = (q.options || []).map(opt => {
-                 let escapedOptText = escapeLatex(opt.text);
-                 return `\\item ${escapedOptText}`;
-             }).join('\n      ');
-             // solutionAnswer is already set and escaped above
+        let solutionAnswer = (q.isProblem || !q.options || q.options.length === 0) ? 'Solution details vary.' : escapeLatex(q.correctAnswer || 'N/A');
+        if (!(q.isProblem || !q.options || q.options.length === 0) && q.options && q.options.length > 0) {
+             optionsText = (q.options || []).map(opt => `\\item[${escapeLatex(opt.letter)}.] ${escapeLatex(opt.text)}`).join('\n      ');
         }
-
-        let optionsBlock = '';
-        if (optionsText) {
-             optionsBlock = `    \\begin{enumerate}[label=\\Alph*.]\n      ${optionsText}\n    \\end{enumerate}\n`;
-        }
-
-        // Assemble TeX for one question item
-        const questionItemTex = `\\item ${qTextForTex}\n${imageTex}${optionsBlock}`;
-        questionsBody += questionItemTex + '\n\n';
-
-        // Assemble TeX for one solution item
-        const solutionItemTex = `\\item ${qTextForTex}\n${imageTex}${optionsBlock}\n    \\textbf{Answer: ${solutionAnswer}}\n`;
-        solutionsBody += solutionItemTex + '\n\n';
+        let optionsBlock = optionsText ? `    \\begin{itemize}[labelwidth=!, labelindent=0pt, leftmargin=*, itemsep=0.2em]\n      ${optionsText}\n    \\end{itemize}\n` : '';
+        questionsBody += `\\item ${qTextForTex}\n${imageTex}${optionsBlock}\n\\vspace{0.5cm}\n`;
+        solutionsBody += `\\item ${qTextForTex}\n${imageTex}${optionsBlock}\n    \\textbf{Answer: ${solutionAnswer}}\n\\vspace{0.5cm}\n`;
     });
 
-    // Combine into full documents
-    const questionsTex = `${LATEX_DOCUMENT_CLASS}\n${LATEX_PACKAGES}\n${LATEX_BEGIN_DOCUMENT}\n\n\\section*{Exam: ${examIdTex}}\n\\begin{enumerate}\n\n${questionsBody}\\end{enumerate}\n\n${LATEX_END_DOCUMENT}`;
-    const solutionsTex = `${LATEX_DOCUMENT_CLASS}\n${LATEX_PACKAGES}\n${LATEX_BEGIN_DOCUMENT}\n\n\\section*{Solutions: ${examIdTex}}\n\\begin{enumerate}\n\n${solutionsBody}\\end{enumerate}\n\n${LATEX_END_DOCUMENT}`;
-
+    const fullDocumentPreamble = `${LATEX_DOCUMENT_CLASS}\n${LATEX_PACKAGES}\n\\usepackage{enumitem}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{hyperref}\n\\graphicspath{{images/}}\n\\usepackage{geometry}\n\\geometry{margin=1.5cm}\n\\title{Exam: ${examIdTex}}\n\\author{Lyceum}\n\\date{\\today}\n\n\\begin{document}\n\\maketitle\n\\thispagestyle{empty}\n\\pagestyle{plain}\n\\parindent0pt\n\\sloppy\n\n`;
+    const questionsTex = `${fullDocumentPreamble}\\section*{Questions}\n\\begin{enumerate}[label=\\arabic*., itemsep=0.5cm, topsep=0.2cm]\n\n${questionsBody}\\end{enumerate}\n\n\\end{document}`;
+    const solutionsTex = `${fullDocumentPreamble}\\section*{Solutions}\n\\begin{enumerate}[label=\\arabic*., itemsep=0.5cm, topsep=0.2cm]\n\n${solutionsBody}\\end{enumerate}\n\n\\end{document}`;
     return { questionsTex, solutionsTex };
 }
 
-// --- File Download Helper ---
 export function downloadTexFile(filename, base64Content) {
      try {
-         const content = decodeURIComponent(escape(atob(base64Content)));
-         const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+         const byteCharacters = atob(base64Content);
+         const byteNumbers = new Array(byteCharacters.length);
+         for (let i = 0; i < byteCharacters.length; i++) {
+             byteNumbers[i] = byteCharacters.charCodeAt(i);
+         }
+         const byteArray = new Uint8Array(byteNumbers);
+         const blob = new Blob([byteArray], { type: "text/plain;charset=utf-8" });
          const url = URL.createObjectURL(blob);
          const a = document.createElement('a');
          a.href = url;
@@ -362,6 +460,7 @@ export function downloadTexFile(filename, base64Content) {
          URL.revokeObjectURL(url);
      } catch (e) {
          console.error("Error creating/downloading .tex file:", e);
-         alert(`Failed to prepare the download file (${filename}). See console for details.`);
+         alert(`Failed to prepare the download file (${filename}). Error: ${e.message}. See console for details.`);
      }
 }
+// --- END OF FILE ui_pdf_generation.js ---
