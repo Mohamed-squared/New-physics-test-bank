@@ -152,6 +152,7 @@ export async function handlePaceSelection(event, courseId) {
         finalExamScores: null,
         attendanceScore: 100, // Start at 100, decrease if assignments missed
         extraPracticeBonus: 0, // Start at 0
+        testGenBonus: 0,
         totalMark: null,
         grade: null,
         status: 'enrolled',

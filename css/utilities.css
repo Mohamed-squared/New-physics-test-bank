@@ -7,11 +7,11 @@
    Animations
    ========================================================================== */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); } /* Consistent with homepage */
+    from { opacity: 0; transform: translateY(8px); } 
     to { opacity: 1; transform: translateY(0); }
 }
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); } /* Consistent with homepage */
+    from { opacity: 0; transform: translateY(20px); }
     to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
@@ -28,7 +28,7 @@
 
 /* Background utilities (example) */
 .bg-blue-100 { background-color: var(--color-primary-100); }
-.dark .bg-blue-900-60 { background-color: rgba(12, 74, 110, 0.6); } /* #0c4a6e */
+.dark .bg-blue-900-60 { background-color: rgba(12, 74, 110, 0.6); } 
 .bg-gray-100 { background-color: var(--color-gray-100); }
 .dark .bg-gray-700 { background-color: var(--color-gray-700); }
 .bg-gray-200 { background-color: var(--color-gray-200); }
@@ -47,6 +47,24 @@
 .hidden { display: none !important; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
 
+/* --- NEW: Text Handling Utilities --- */
+.break-word {
+    overflow-wrap: break-word;
+    word-wrap: break-word; /* older browsers */
+    word-break: break-word; /* for CJK etc. */
+}
+
+.truncate-text { /* Single line truncation */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; line-clamp: 1; }
+.line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; }
+/* --- END NEW --- */
+
 
 /* ==========================================================================
    Global Scrollbar Styles
@@ -54,7 +72,7 @@
 
 body::-webkit-scrollbar,
 main#main-content::-webkit-scrollbar,
-aside nav::-webkit-scrollbar, /* Already styled in sidebar.css, but keep global rule */
+aside nav::-webkit-scrollbar, 
 .overflow-y-auto::-webkit-scrollbar,
 #global-chat-content::-webkit-scrollbar,
 #mention-suggestion-popup::-webkit-scrollbar {
@@ -63,7 +81,7 @@ aside nav::-webkit-scrollbar, /* Already styled in sidebar.css, but keep global 
 }
 body::-webkit-scrollbar-track,
 main#main-content::-webkit-scrollbar-track,
-aside nav::-webkit-scrollbar-track, /* Already styled in sidebar.css, but keep global rule */
+aside nav::-webkit-scrollbar-track, 
 .overflow-y-auto::-webkit-scrollbar-track,
 #global-chat-content::-webkit-scrollbar-track,
 #mention-suggestion-popup::-webkit-scrollbar-track {
@@ -71,18 +89,18 @@ aside nav::-webkit-scrollbar-track, /* Already styled in sidebar.css, but keep g
 }
 body::-webkit-scrollbar-thumb,
 main#main-content::-webkit-scrollbar-thumb,
-aside nav::-webkit-scrollbar-thumb, /* Already styled in sidebar.css, but keep global rule */
+aside nav::-webkit-scrollbar-thumb, 
 .overflow-y-auto::-webkit-scrollbar-thumb,
 #global-chat-content::-webkit-scrollbar-thumb,
 #mention-suggestion-popup::-webkit-scrollbar-thumb {
     background: var(--color-gray-300);
     border-radius: 4px;
     border: 2px solid transparent;
-    background-clip: content-box; /* Ensures border creates space */
+    background-clip: content-box; 
 }
 body::-webkit-scrollbar-thumb:hover,
 main#main-content::-webkit-scrollbar-thumb:hover,
-aside nav::-webkit-scrollbar-thumb:hover, /* Already styled in sidebar.css, but keep global rule */
+aside nav::-webkit-scrollbar-thumb:hover, 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover,
 #global-chat-content::-webkit-scrollbar-thumb:hover,
 #mention-suggestion-popup::-webkit-scrollbar-thumb:hover {
@@ -90,7 +108,7 @@ aside nav::-webkit-scrollbar-thumb:hover, /* Already styled in sidebar.css, but 
 }
 .dark body::-webkit-scrollbar-thumb,
 .dark main#main-content::-webkit-scrollbar-thumb,
-.dark aside nav::-webkit-scrollbar-thumb, /* Already styled in sidebar.css, but keep global rule */
+.dark aside nav::-webkit-scrollbar-thumb, 
 .dark .overflow-y-auto::-webkit-scrollbar-thumb,
 .dark #global-chat-content::-webkit-scrollbar-thumb,
 .dark #mention-suggestion-popup::-webkit-scrollbar-thumb {
@@ -98,7 +116,7 @@ aside nav::-webkit-scrollbar-thumb:hover, /* Already styled in sidebar.css, but 
 }
 .dark body::-webkit-scrollbar-thumb:hover,
 .dark main#main-content::-webkit-scrollbar-thumb:hover,
-.dark aside nav::-webkit-scrollbar-thumb:hover, /* Already styled in sidebar.css, but keep global rule */
+.dark aside nav::-webkit-scrollbar-thumb:hover, 
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover,
 .dark #global-chat-content::-webkit-scrollbar-thumb:hover,
 .dark #mention-suggestion-popup::-webkit-scrollbar-thumb:hover {
@@ -106,7 +124,7 @@ aside nav::-webkit-scrollbar-thumb:hover, /* Already styled in sidebar.css, but 
 }
 body,
 main#main-content,
-aside nav, /* Already styled in sidebar.css, but keep global rule */
+aside nav, 
 .overflow-y-auto,
 #global-chat-content,
 #mention-suggestion-popup {
@@ -115,7 +133,7 @@ aside nav, /* Already styled in sidebar.css, but keep global rule */
 }
 .dark body,
 .dark main#main-content,
-.dark aside nav, /* Already styled in sidebar.css, but keep global rule */
+.dark aside nav, 
 .dark .overflow-y-auto,
 .dark #global-chat-content,
 .dark #mention-suggestion-popup {

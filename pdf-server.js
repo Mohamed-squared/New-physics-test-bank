@@ -22,19 +22,19 @@ async function getBrowserInstance() {
     if (!browserInstance || !browserInstance.isConnected()) {
         console.log("[SERVER] Launching new Puppeteer browser instance...");
         browserInstance = await puppeteer.launch({
-            headless: true,
+            headless: true, // Default to true, can be 'new' for newer versions
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--font-render-hinting=none',
+                '--font-render-hinting=none', // Consider 'medium' or 'full' for better text
                 '--enable-precise-memory-info',
-                '--disable-gpu',
-                '--disable-web-security',
-                '--allow-file-access-from-files',
-                '--disable-features=BlockTruncatedQueues',
+                '--disable-gpu', // Often recommended for server environments
+                // '--disable-web-security', // Use with caution if needed for local file access
+                // '--allow-file-access-from-files', // Use with caution
+                // '--disable-features=BlockTruncatedQueues', // May not be needed
             ],
-            dumpio: true
+            dumpio: process.env.DEBUG_PUPPETEER === 'true' // Conditional logging
         });
         browserInstance.on('disconnected', () => {
             console.log('[SERVER] Puppeteer browser disconnected.');
@@ -55,27 +55,29 @@ app.post('/generate-pdf', async (req, res) => {
 
     let injectedCss = '';
     try {
-        // --- MODIFIED: Determine CSS file based on filename ---
         let cssFileNameToInject = 'pdf_exam_styles.css'; // Default to exam styles
         const lowerFilename = filename.toLowerCase();
+
         if (lowerFilename.includes('formula_sheet') || 
             lowerFilename.includes('summary') || 
-            lowerFilename.includes('note_')) { // Check for "note_" for general notes
-            cssFileNameToInject = 'pdf_formula_sheet_styles.css'; // Use formula sheet styles for these
+            lowerFilename.includes('note_')) {
+            cssFileNameToInject = 'pdf_formula_sheet_styles.css';
         }
+        // New condition for feedback PDF
+        else if (lowerFilename.includes('feedback_report')) {
+             cssFileNameToInject = 'pdf_exam_styles.css'; // Or a dedicated feedback_styles.css
+             console.log(`[SERVER] Using ${cssFileNameToInject} for feedback report.`);
+        }
+        
         console.log(`[SERVER] Determined CSS file to inject: ${cssFileNameToInject}`);
-        // --- END MODIFICATION ---
 
         const cssFilePath = path.join(__dirname, 'css', cssFileNameToInject);
         if (fs.existsSync(cssFilePath)) {
             injectedCss = fs.readFileSync(cssFilePath, 'utf8');
             console.log(`[SERVER] Successfully read ${cssFileNameToInject}. Length: ${injectedCss.length}`);
             
-            // Remove any existing <link rel="stylesheet" href="css/..."> tag
-            // This regex is broad and might remove other links if they have href="css/..."
-            // A more specific one would be: /<link\s+rel="stylesheet"\s+href="css\/(pdf_exam_styles\.css|pdf_formula_sheet_styles\.css)"\s*\/?>/gi
             htmlContent = htmlContent.replace(/<link\s+rel="stylesheet"\s+href="css\/[^"]+\.css"\s*\/?>/gi, '');
-            console.log("[SERVER] Removed existing linked CSS tags if any.");
+            console.log("[SERVER] Removed existing linked CSS tags if any (to prevent double application).");
 
             const headEndTag = '</head>';
             const headEndIndex = htmlContent.toLowerCase().indexOf(headEndTag);
@@ -85,7 +87,7 @@ app.post('/generate-pdf', async (req, res) => {
                               htmlContent.slice(headEndIndex);
                 console.log(`[SERVER] Injected ${cssFileNameToInject} content directly into HTML <head>.`);
             } else {
-                console.warn("[SERVER] Could not find </head> tag to inject CSS. Styles might not apply correctly.");
+                console.warn("[SERVER] Could not find </head> tag to inject CSS. Attempting to inject before <body>.");
                 const bodyStartTag = '<body';
                 const bodyStartIndex = htmlContent.toLowerCase().indexOf(bodyStartTag);
                 if (bodyStartIndex !== -1) {
@@ -102,9 +104,10 @@ app.post('/generate-pdf', async (req, res) => {
         }
     } catch (cssError) {
         console.error('[SERVER] Error reading or injecting CSS file:', cssError);
+        // Proceed without injected CSS, but log it clearly
     }
 
-    console.log("[SERVER DEBUG] HTML Content Start (first 500 chars after CSS injection):", htmlContent.substring(0, 500) + "...");
+    console.log("[SERVER DEBUG] HTML Content Start (first 500 chars after CSS injection attempts):", htmlContent.substring(0, 500) + "...");
 
     let page;
     try {
@@ -114,59 +117,69 @@ app.post('/generate-pdf', async (req, res) => {
         page.on('console', async msg => {
             const type = msg.type().toUpperCase();
             try {
-                const args = await Promise.all(msg.args().map(arg => arg.jsonValue()));
-                 if (!args.some(arg => typeof arg === 'string' && arg.includes('[PDF HTML Inner] MathJax'))) {
+                const argsPromises = msg.args().map(arg => arg.jsonValue().catch(e => `Error serializing: ${e.message}`));
+                const args = await Promise.all(argsPromises);
+                 if (!args.some(arg => typeof arg === 'string' && arg.includes('[PDF HTML Inner] MathJax'))) { // Filter out verbose MathJax logs
                     console.log(`[PUPPETEER PAGE - ${type}]:`, ...args);
                  }
             } catch (e) {
-                 console.log(`[PUPPETEER PAGE - ${type}]: (Could not stringify args)`, msg.text());
+                 console.log(`[PUPPETEER PAGE - ${type}]: (Could not stringify args for console) Text:`, msg.text());
             }
         });
         page.on('pageerror', ({ message }) => console.error(`[PUPPETEER PAGE ERROR]: ${message}`));
         page.on('requestfailed', request => console.warn(`[PUPPETEER REQUEST FAILED]: ${request.url()} - ${request.failure()?.errorText}`));
+        
         page.on('request', request => {
              const resourceType = request.resourceType();
              const url = request.url();
-             if (resourceType === 'image' || url.includes('/images/')) { // Only log images now
+             // Log image requests specifically or if they are from the expected path
+             if (resourceType === 'image' || url.includes('/images/') || url.includes('/assets/images/')) {
                   console.log(`[PUPPETEER PAGE - REQUEST]: ${resourceType.toUpperCase()} ${request.method()} ${url}`);
              }
          });
 
-        console.log('[SERVER] Setting page content in Puppeteer (CSS is inline)...');
-        await page.goto('about:blank');
+        console.log('[SERVER] Setting page content in Puppeteer (CSS should be inline)...');
+        // Using `file://` protocol requires `--allow-file-access-from-files` and careful path construction if serving local HTML files.
+        // For HTML content string, `about:blank` then `setContent` is more reliable.
+        await page.goto('about:blank', { waitUntil: 'networkidle0' });
         await page.setContent(htmlContent, {
-            waitUntil: 'networkidle0', // Wait for network to be idle
-            timeout: 90000 // Increased timeout
+            waitUntil: 'networkidle0', // Waits for network to be idle (useful if HTML loads external resources)
+            timeout: 90000 
         });
         console.log('[SERVER] Page content set. Waiting for MathJax global flag...');
 
         try {
             await page.waitForFunction('window.mathJaxIsCompletelyReadyForPdf === true || window.mathJaxIsCompletelyReadyForPdf === "error"', {
-                timeout: 75000
+                timeout: 75000 // Increased timeout for MathJax
             });
             const mathJaxState = await page.evaluate(() => window.mathJaxIsCompletelyReadyForPdf);
             if (mathJaxState === 'error') {
                 console.error('[SERVER] MathJax signaled an error during its startup/typesetting in Puppeteer.');
+                // Potentially log more details from the page if MathJax provides them.
             } else if (mathJaxState === true) {
                 console.log('[SERVER] MathJax signaled ready via global flag.');
             } else {
-                 console.warn('[SERVER] MathJax did not explicitly signal readiness or error.');
+                 console.warn('[SERVER] MathJax did not explicitly signal readiness (flag was not true) nor error. Proceeding with PDF generation.');
             }
         } catch (e) {
-            console.error('[SERVER] Timeout or error waiting for MathJax signal.', e);
-            const bodyHTMLSample = await page.evaluate(() => document.body.innerHTML.substring(0, 2000));
+            console.error('[SERVER] Timeout or error waiting for MathJax signal `window.mathJaxIsCompletelyReadyForPdf`. Error:', e.message);
+            // Attempt to get more diagnostic info from the page
+            const bodyHTMLSample = await page.evaluate(() => document.body.innerHTML.substring(0, 2000)).catch(() => "Could not get body HTML");
             console.error("[SERVER DEBUG] Body HTML sample on MathJax timeout:", bodyHTMLSample);
+            const mathJaxScriptTag = await page.evaluate(() => document.getElementById('mathjax-pdf-script')?.outerHTML).catch(() => "MathJax script tag not found");
+            console.error("[SERVER DEBUG] MathJax script tag:", mathJaxScriptTag);
         }
 
-        console.log('[SERVER] Waiting a final short delay for rendering stabilization...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        console.log('[SERVER] Waiting a final short delay (e.g., 5s) for rendering stabilization after MathJax signal...');
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Delay to ensure rendering stability
 
         console.log('[SERVER] Generating PDF with Puppeteer...');
         const pdfBuffer = await page.pdf({
             format: 'A4',
-            printBackground: true,
-            margin: { top: '1.5cm', right: '1.5cm', bottom: '1.5cm', left: '1.5cm' },
-            timeout: 120000,
+            printBackground: true, // Crucial for custom backgrounds
+            margin: { top: '1.5cm', right: '1.2cm', bottom: '1.5cm', left: '1.2cm' }, // Slightly adjusted example margins
+            timeout: 120000, // Puppeteer PDF generation timeout
+            // preferCSSPageSize: true, // If you use @page in CSS
         });
         console.log('[SERVER] PDF generated successfully by Puppeteer.');
 
@@ -175,7 +188,11 @@ app.post('/generate-pdf', async (req, res) => {
 
     } catch (error) {
         console.error('[SERVER] Error generating PDF in Puppeteer server:', error);
-        res.status(500).send(`Error generating PDF: ${error.message}`);
+        let errorDetailsForClient = `Error generating PDF: ${error.message}.`;
+        if (error.message && error.message.toLowerCase().includes('timeout')) {
+            errorDetailsForClient += " The page took too long to render or MathJax timed out. Check console for details.";
+        }
+        res.status(500).send(errorDetailsForClient);
     } finally {
         if (page) {
             try {

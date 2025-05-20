@@ -210,4 +210,16 @@ button:disabled, .btn:disabled, a.btn:disabled,
     border-bottom-color: var(--color-primary-400);
 }
 
+/* Styles for active toggle buttons in lesson UI */
+.btn-secondary-small.active-toggle {
+    background-color: var(--color-primary-500);
+    color: var(--color-white);
+    border-color: var(--color-primary-500);
+}
+.dark .btn-secondary-small.active-toggle {
+    background-color: var(--color-primary-400);
+    color: var(--color-gray-900); /* Or white if contrast is better */
+    border-color: var(--color-primary-400);
+}
+
 /* --- END OF FILE buttons.css --- */
