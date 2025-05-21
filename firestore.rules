@@ -24,6 +24,18 @@ service cloud.firestore {
              get(/databases/$(database)/documents/users/$(uid)).data.isAdmin == true;
     }
 
+    // Checks if a user with a given uid has the isAdmin flag set to true in their user document.
+    // IMPORTANT: This function relies on the ability to read the user document /users/$(uid).
+    // If the requesting user does not have read access to that document (e.g., due to the
+    // `allow read: if isOwner(userId) || isAdmin();` rule on /users/{userId}), this function
+    // will effectively return false, even if the target user *is* an admin.
+    // Thus, checking another user's admin status via this function will only succeed if the
+    // requester is already an admin themselves (or the owner, which is less common for this check).
+    function isAssignedAdmin(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid)) &&
+             get(/databases/$(database)/documents/users/$(uid)).data.isAdmin == true;
+    }
+
     function isAdmin() {
        return isLoggedIn() && (isPrimaryAdminUid(request.auth.uid) || isAssignedAdmin(request.auth.uid));
     }
@@ -118,6 +130,12 @@ service cloud.firestore {
 
     // --- Users Collection ---
     match /users/{userId} {
+      // Read access to a user document is granted if the requester is the owner of the document
+      // or if the requester is an admin (either primary or assigned).
+      // Note: This rule means that the `isAssignedAdmin` function will only successfully check
+      // another user's admin status if the current user is already an admin.
+      // If a non-admin tries to use a rule that calls `isAssignedAdmin` on another user's ID,
+      // the `get()` call within `isAssignedAdmin` will be denied, and the function will return false.
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isLoggedIn() && request.auth.uid == userId &&
                       (request.resource.data.email == request.auth.token.email || request.resource.data.email == null) &&
