@@ -11,9 +11,51 @@ import { showExamsDashboard } from './ui_exams_dashboard.js';
 import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT, MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE } from './config.js'; // Added MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 import { generateLatexToolbar } from './ui_latex_toolbar.js';
+
+// Module-level variable to store the active key listener
+let activeTestKeyListener = null;
+
 // --- Online Test UI & Logic ---
 
+// New function to handle keyboard navigation
+function handleOnlineTestKeystrokes(event) {
+    if (!currentOnlineTestState || currentOnlineTestState.status !== 'active') {
+        return;
+    }
+
+    const testArea = document.getElementById('online-test-area');
+    if (!testArea || testArea.classList.contains('hidden')) {
+        return; // Test UI not visible
+    }
+
+    // Ignore key events if the target is an input field, textarea, or contenteditable element
+    const targetTagName = event.target.tagName;
+    if (targetTagName === 'INPUT' || targetTagName === 'TEXTAREA' || event.target.isContentEditable) {
+        return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+        const prevBtn = document.getElementById('prev-btn');
+        if (prevBtn && !prevBtn.disabled) {
+            window.navigateQuestion(-1);
+            event.preventDefault();
+        }
+    } else if (event.key === 'ArrowRight') {
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn && !nextBtn.disabled) {
+            window.navigateQuestion(1);
+            event.preventDefault();
+        }
+    }
+}
+
 export function launchOnlineTestUI() {
+    // Remove any existing listener before setting up a new one
+    if (activeTestKeyListener) {
+        document.removeEventListener('keydown', activeTestKeyListener);
+        activeTestKeyListener = null;
+    }
+
     clearContent();
     const testArea = document.getElementById('online-test-area');
     
@@ -92,6 +134,10 @@ export function launchOnlineTestUI() {
 
     startTimer();
     displayCurrentQuestion();
+
+    // Define and add the new key listener
+    activeTestKeyListener = handleOnlineTestKeystrokes; // Assign the function reference
+    document.addEventListener('keydown', activeTestKeyListener);
 }
 
 export function startTimer() {
@@ -454,6 +500,12 @@ export async function submitOnlineTest() {
             return;
         }
 
+        // Remove key listener as the test is being submitted
+        if (activeTestKeyListener) {
+            document.removeEventListener('keydown', activeTestKeyListener);
+            activeTestKeyListener = null;
+        }
+
         currentOnlineTestState.status = 'submitting';
         if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
         currentOnlineTestState.timerInterval = null;
@@ -702,6 +754,11 @@ export async function submitOnlineTest() {
 
     } catch (error) {
         console.error("Error finishing test:", error);
+        // Ensure listener is removed on error too, if not already
+        if (activeTestKeyListener) {
+            document.removeEventListener('keydown', activeTestKeyListener);
+            activeTestKeyListener = null;
+        }
         setCurrentOnlineTestState(null); // Clear state on error too
         alert("Error submitting test results. Please try again later. " + error.message);
         

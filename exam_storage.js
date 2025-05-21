@@ -6,6 +6,8 @@ import { displayContent, setActiveSidebarLink} from './ui_core.js';
 import { showProgressDashboard } from './ui_progress_dashboard.js';
 import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+import { generatePdfHtml, generateAndDownloadPdfWithMathJax, generateExamFeedbackPdfHtml } from './ui_pdf_generation.js';
+import { generateExplanation } from './ai_exam_marking.js'; // Ensure this is present
 
 // --- Exam Storage and Retrieval Functions ---
 
@@ -330,7 +332,14 @@ export async function showExamReviewUI(userId, examId) {
         const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
                            : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
                            : 'Standard Test';
-        const typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        let typeDisplay;
+        if (examDetails.isTestGen) {
+            typeDisplay = "TestGen Exam";
+        } else if (type) { // type here refers to examDetails.type
+            typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        } else {
+            typeDisplay = "Exam"; // Fallback
+        }
 
         let questionsHtml = '<p class="text-center text-muted italic">No question data found in this record.</p>';
         if (questions && questions.length > 0 && markingResults?.questionResults) {
@@ -462,7 +471,10 @@ export async function showExamReviewUI(userId, examId) {
                     </div>
                 </div>
 
-                <div class="text-center mt-6">
+                <div class="text-center mt-6 flex flex-wrap justify-center gap-3">
+                    <button onclick="window.handleDownloadExamQuestionsPdfWrapper('${userId}', '${examId}')" class="btn-secondary">Download Questions PDF</button>
+                    <button onclick="window.handleDownloadExamSolutionsPdfWrapper('${userId}', '${examId}')" class="btn-primary">Download Solutions & Explanations PDF</button>
+                    <button onclick="window.handleDownloadFullReportWrapper('${userId}', '${examId}')" class="btn-info">Download Full Report (HTML)</button>
                     <button onclick="window.showExamsDashboard()" class="btn-secondary">Back to Exams List</button>
                 </div>
             </div>
@@ -892,5 +904,122 @@ export async function deleteCompletedExamV2(examId) {
     }
 }
 window.deleteCompletedExamV2 = deleteCompletedExamV2;
+
+// --- PDF Download Logic and Wrappers ---
+
+async function handleDownloadExamQuestionsPdfLogic(userId, examId) {
+    showLoading("Preparing Questions PDF...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate PDF.');
+            hideLoading();
+            return;
+        }
+        // Note: generatePdfHtml is now async and expects full examDetails
+        const { questionHtml } = await generatePdfHtml(examDetails);
+        // generateAndDownloadPdfWithMathJax handles its own loading for the server part, but we keep overall loading here
+        await generateAndDownloadPdfWithMathJax(questionHtml, `Exam-${examId}-Questions`);
+    } finally {
+        hideLoading(); // Ensure loading is hidden regardless of success or failure within this scope
+    }
+}
+
+async function handleDownloadExamSolutionsPdfLogic(userId, examId) {
+    showLoading("Preparing Solutions & Explanations PDF...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate PDF.');
+            hideLoading();
+            return;
+        }
+        // Note: generatePdfHtml is now async and expects full examDetails
+        const { solutionHtml } = await generatePdfHtml(examDetails);
+        await generateAndDownloadPdfWithMathJax(solutionHtml, `Exam-${examId}-Solutions-Explanations`);
+    } finally {
+        hideLoading(); // Ensure loading is hidden
+    }
+}
+
+export async function handleDownloadExamQuestionsPdfWrapper(userId, examId) {
+    try {
+        await handleDownloadExamQuestionsPdfLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading questions PDF:", error);
+        alert("Failed to download questions PDF: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+window.handleDownloadExamQuestionsPdfWrapper = handleDownloadExamQuestionsPdfWrapper;
+
+export async function handleDownloadExamSolutionsPdfWrapper(userId, examId) {
+    try {
+        await handleDownloadExamSolutionsPdfLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading solutions PDF:", error);
+        alert("Failed to download solutions PDF: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+window.handleDownloadExamSolutionsPdfWrapper = handleDownloadExamSolutionsPdfWrapper;
+
+// --- Full HTML Report Download Logic and Wrapper ---
+
+async function handleDownloadFullReportLogic(userId, examId) {
+    showLoading("Preparing Full Report...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate full report.');
+            hideLoading();
+            return;
+        }
+
+        const populatedFeedbackDetails = {};
+        showLoading("Generating AI Explanations for Full Report..."); // Update loading message
+        for (let i = 0; i < examDetails.questions.length; i++) {
+            const question = examDetails.questions[i];
+            const studentAnswer = examDetails.userAnswers?.[question.id];
+            const questionMarkingResult = examDetails.markingResults?.questionResults?.find(r => r.questionId === question.id);
+            try {
+                const explanationResult = await generateExplanation(question, questionMarkingResult, studentAnswer, []);
+                populatedFeedbackDetails[question.id] = { explanationHtml: explanationResult.explanationHtml };
+            } catch (err) {
+                console.error(`Error generating explanation for question ${question.id} for full report:`, err);
+                populatedFeedbackDetails[question.id] = { explanationHtml: "<p><i>Error generating AI explanation for this question.</i></p>" };
+            }
+        }
+        hideLoading(); // Hide after explanations are generated
+
+        showLoading("Generating HTML Report..."); // Show loading for HTML generation
+        // generateExamFeedbackPdfHtml is misnamed if it returns general HTML, but using as specified
+        const reportHtml = generateExamFeedbackPdfHtml(examDetails.examId, examDetails, populatedFeedbackDetails);
+
+        const blob = new Blob([reportHtml], { type: 'text/html' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `Exam-Report-${examDetails.examId}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+
+    } finally {
+        hideLoading(); // Ensure loading is hidden
+    }
+}
+
+export async function handleDownloadFullReportWrapper(userId, examId) {
+    try {
+        await handleDownloadFullReportLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading full HTML report:", error);
+        alert("Failed to download full HTML report: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+window.handleDownloadFullReportWrapper = handleDownloadFullReportWrapper;
 
 // --- END OF FILE exam_storage.js ---
