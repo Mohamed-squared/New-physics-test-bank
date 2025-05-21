@@ -1,321 +1,564 @@
-// --- START OF FILE ui_pdf_generation.js ---
+// --- START OF FILE ui_online_test.js ---
+// --- START MODIFIED ---
+import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, currentUser, data, setData, activeCourseId, userCourseProgressMap, globalCourseDataMap, updateUserCourseProgress } from './state.js';
+import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
+import { showLoading, hideLoading, escapeHtml, getFormattedDate, renderMathIn as utilsRenderMathIn } from './utils.js'; 
+import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress, updateUserCredits } from './firebase_firestore.js'; // Added updateUserCredits
+import { showTestGenerationDashboard } from './ui_test_generation.js';
+import { showExamsDashboard } from './ui_exams_dashboard.js';
+import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT, MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE, COURSE_BASE_PATH, SUBJECT_RESOURCE_FOLDER, DEFAULT_COURSE_TEXT_PROBLEMS_FILENAME, DEFAULT_COURSE_TEXT_MCQ_FILENAME, DEFAULT_COURSE_LECTURE_MCQ_FILENAME, DEFAULT_COURSE_LECTURE_PROBLEMS_FILENAME } from './config.js';
+// --- MODIFIED: Import generateExamFeedbackPdfHtml ---
+import { generateExamFeedbackPdfHtml, generateAndDownloadPdfWithMathJax } from './ui_pdf_generation.js';
+import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport, deleteCompletedExamV2 as deleteTestgenExam } from './exam_storage.js'; // Renamed deleteCompletedExamV2
+import { generateLatexToolbar } from './ui_latex_toolbar.js';
+import { calculateTotalMark, getLetterGrade } from './course_logic.js';
+// --- END MODIFIED ---
 
-import { PDF_GENERATION_OPTIONS, LATEX_DOCUMENT_CLASS, LATEX_PACKAGES, LATEX_BEGIN_DOCUMENT, LATEX_END_DOCUMENT } from './config.js';
-import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js';
+// --- Add global listener variable ---
+let onlineTestKeyListener = null;
 
-// generatePdfBaseHtml, generatePdfHtml, generateNotePdfHtml, generateTexSource, downloadTexFile
-// remain IDENTICAL to the previous good version you had (the one focusing on better styling for PDF).
-// I'll include them here for completeness.
+export function launchOnlineTestUI() {
+    if (onlineTestKeyListener) {
+        document.removeEventListener('keydown', onlineTestKeyListener);
+        onlineTestKeyListener = null;
+        console.log("[Launch Test UI] Removed previous online test key listener.");
+    }
 
-function generatePdfBaseHtml(title, innerContentHtml) {
-    const escapedTitle = escapeHtml(title);
-    const styles = `
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 11pt; 
-            color: #000000 !important; 
-            background-color: #ffffff !important; 
-            margin: 1.5cm; 
-            padding: 0;
-            line-height: 1.4;
+    clearContent();
+    const testArea = document.getElementById('online-test-area');
+    
+    if (!currentOnlineTestState) {
+        console.error("launchOnlineTestUI Error: Online test state missing.");
+        displayContent("<p class='text-red-500 p-4'>Error: Could not start the test. Test state missing.</p>", 'content');
+        return;
+    }
+    if (!testArea) {
+        console.error("launchOnlineTestUI Error: Test area element (#online-test-area) not found.");
+        alert("Critical Error: Test UI container is missing from the page. Cannot launch test.");
+        return;
+    }
+
+    testArea.classList.remove('hidden');
+
+    const totalQuestions = currentOnlineTestState.questions.length;
+    const durationMinutes = currentOnlineTestState.durationMinutes;
+    if (!durationMinutes || durationMinutes <= 0) {
+         console.error("Invalid duration in test state:", durationMinutes);
+         currentOnlineTestState.durationMinutes = 60; // Fallback
+    }
+    const durationMillis = currentOnlineTestState.durationMinutes * 60 * 1000;
+    currentOnlineTestState.endTime = currentOnlineTestState.startTime + durationMillis;
+    currentOnlineTestState.status = 'active';
+
+    let displayTitle = currentOnlineTestState.examId;
+    if (currentOnlineTestState.courseContext?.isSkipExam) { /* ... existing title logic ... */ }
+    if (currentOnlineTestState.courseContext?.activityType) {
+        const type = currentOnlineTestState.courseContext.activityType.replace(/_/g, ' ');
+        const idPart = currentOnlineTestState.courseContext.activityId || '';
+        displayTitle = `${type.charAt(0).toUpperCase() + type.slice(1)} ${idPart}`;
+        if(currentOnlineTestState.courseContext.courseId) {
+            const courseName = globalCourseDataMap.get(currentOnlineTestState.courseContext.courseId)?.name || '';
+            if(courseName) displayTitle += ` (${courseName})`;
         }
-        h1, h2, h3, h4, h5, h6 {
-            color: #000000 !important; 
-            font-family: Arial, Helvetica, sans-serif;
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-            font-weight: bold;
-            line-height: 1.2;
-        }
-        h1 { font-size: 18pt; text-align: center; margin-bottom: 0.7cm; border-bottom: 1.5px solid #333333; padding-bottom: 0.2cm; }
-        h2 { font-size: 15pt; margin-bottom: 0.5cm; border-bottom: 1px solid #555555; padding-bottom: 0.15cm;}
-        p {
-            margin-bottom: 0.6em;
-            text-align: left; 
-            color: #000000 !important; 
-        }
-        ul, ol {
-            margin-bottom: 0.6em;
-            padding-left: 1.8em; 
-        }
-        li {
-            margin-bottom: 0.25em;
-            color: #000000 !important;
-        }
-        /* MathJax SVG styling */
-        mjx-container svg { display: inline-block; }
-        mjx-container svg g[fill] { fill: black !important; }
-        mjx-container svg g[stroke] { stroke: black !important; }
-        mjx-container:not([display="true"]) { vertical-align: -0.2ex !important; margin: 0 0.05em !important; }
-        mjx-container[display="true"] { margin: 0.8em auto !important; display: block !important; text-align: left !important; }
-        .keep-together { page-break-inside: avoid !important; }
+    } else if (currentOnlineTestState.subjectId) {
+         const subjectName = window.data?.subjects?.[currentOnlineTestState.subjectId]?.name || 'TestGen';
+         displayTitle = `${subjectName} Test`;
+    }
+
+
+    testArea.innerHTML =  `
+    <div class="fixed top-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow z-40 border-b dark:border-gray-700">
+        <div class="container mx-auto flex justify-between items-center">
+            <span class="text-lg font-semibold text-primary-600 dark:text-primary-400 truncate max-w-[calc(100% - 250px)]" title="${escapeHtml(currentOnlineTestState.examId)}">
+                ${escapeHtml(displayTitle)}
+            </span>
+            <div class="flex items-center space-x-4">
+                <button id="force-submit-btn" onclick="window.confirmForceSubmit()" class="btn-danger-small hidden flex-shrink-0">Submit Now</button>
+                <div id="timer" class="text-lg font-mono px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0">--:--:--</div>
+            </div>
+        </div>
+    </div>
+    <div id="question-container" class="pt-20 pb-24 container mx-auto px-4">
+        <div class="text-center p-8"><div class="loader animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-500 mx-auto"></div><p class="mt-4">Loading first question...</p></div>
+    </div>
+    <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow-up z-40 border-t dark:border-gray-700">
+         <div class="container mx-auto flex justify-between items-center">
+             <button id="prev-btn" onclick="window.navigateQuestion(-1)" class="btn-secondary" disabled>
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
+                 Previous
+             </button>
+            <span id="question-counter" class="text-sm text-gray-600 dark:text-gray-400">Question 1 / ${totalQuestions}</span>
+             <button id="next-btn" onclick="window.navigateQuestion(1)" class="btn-primary">
+                 Next
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 ml-1"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
+             </button>
+             <button id="submit-btn" onclick="window.confirmSubmitOnlineTest()" class="btn-success hidden">
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
+                 Submit Test
+             </button>
+        </div>
+    </div>
     `;
 
-    const mathJaxConfigAndScript = `
-        <script>
-          window.MathJax = {
-            loader: { load: ['input/tex', 'output/svg'] },
-            tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']] },
-            svg: { fontCache: 'global', scale: 1, mtextInheritFont: true, merrorInheritFont: true, displayAlign: 'left', displayIndent: '0em'},
-            startup: {
-                ready: () => {
-                    console.log('[PDF HTML Inner] MathJax Startup: Ready function called.');
-                    MathJax.startup.defaultReady(); // This is important!
-                    MathJax.startup.promise.then(() => {
-                        console.log('[PDF HTML Inner] MathJax Startup: Main promise resolved. Setting window flag now.');
-                        window.mathJaxIsCompletelyReadyForPdf = true; // Signal readiness
-                        console.log('[PDF HTML Inner] window.mathJaxIsCompletelyReadyForPdf SET TO TRUE.');
-                    }).catch(err => {
-                        console.error('[PDF HTML Inner] MathJax startup.promise REJECTED:', err);
-                        window.mathJaxIsCompletelyReadyForPdf = 'error'; // Signal an error state
-                    });
+    onlineTestKeyListener = (event) => {
+        if (document.activeElement && (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT')) {
+            // Don't navigate if user is typing in an input/textarea
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                // Allow default behavior for text navigation
+                return;
+            }
+        }
+
+        if (event.key === 'ArrowLeft') {
+            event.preventDefault(); // Prevent browser back navigation
+            const prevBtn = document.getElementById('prev-btn');
+            if (prevBtn && !prevBtn.disabled) {
+                window.navigateQuestion(-1);
+            }
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault(); // Prevent browser forward navigation
+            const nextBtn = document.getElementById('next-btn');
+            const submitBtn = document.getElementById('submit-btn');
+            if (nextBtn && !nextBtn.classList.contains('hidden') && !nextBtn.disabled) {
+                window.navigateQuestion(1);
+            } else if (submitBtn && !submitBtn.classList.contains('hidden') && !submitBtn.disabled) {
+                // If on last question, ArrowRight could potentially open submit confirmation
+                // For now, it does nothing to avoid accidental submission.
+                // window.confirmSubmitOnlineTest(); // Uncomment to make ArrowRight submit on last Q
+            }
+        }
+    };
+    document.addEventListener('keydown', onlineTestKeyListener);
+    console.log("[Launch Test UI] Added online test key listener.");
+
+    startTimer();
+    displayCurrentQuestion();
+}
+
+export function startTimer() {
+    const timerElement = document.getElementById('timer');
+    if (!timerElement) { console.warn("startTimer: Timer element (#timer) not found."); return; }
+    if (!currentOnlineTestState) { console.warn("startTimer: currentOnlineTestState is null."); timerElement.textContent = "Error"; return; }
+    if (currentOnlineTestState.timerInterval) { clearInterval(currentOnlineTestState.timerInterval); }
+    function updateTimerDisplay() {
+        if (!currentOnlineTestState || !currentOnlineTestState.endTime || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed') {
+             if(currentOnlineTestState?.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
+             currentOnlineTestState.timerInterval = null;
+             if(timerElement) timerElement.textContent = "00:00:00";
+             return;
+        }
+        const now = Date.now(); const remaining = currentOnlineTestState.endTime - now;
+        if (remaining <= 0) {
+            clearInterval(currentOnlineTestState.timerInterval);
+            currentOnlineTestState.timerInterval = null;
+            if (timerElement) { timerElement.textContent = "00:00:00"; timerElement.classList.add('text-red-500'); }
+            if (currentOnlineTestState.status !== 'submitting' && currentOnlineTestState.status !== 'completed') {
+                 currentOnlineTestState.status = 'submitting';
+                 alert("Time's up! Submitting test.");
+                 submitOnlineTest();
+            }
+        } else {
+            const h = Math.floor(remaining / 3600000); const m = Math.floor((remaining % 3600000) / 60000); const s = Math.floor((remaining % 60000) / 1000);
+             if(timerElement) timerElement.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+             const forceSubmitBtn = document.getElementById('force-submit-btn'); if (forceSubmitBtn) { forceSubmitBtn.classList.toggle('hidden', remaining / 60000 >= 5); }
+              if(timerElement) timerElement.classList.remove('text-red-500');
+        }
+    }
+    updateTimerDisplay();
+    currentOnlineTestState.timerInterval = setInterval(updateTimerDisplay, 1000);
+}
+
+export async function displayCurrentQuestion() {
+    console.log("[DisplayQuestion] State:", JSON.parse(JSON.stringify(currentOnlineTestState || {})));
+    console.log("displayCurrentQuestion START");
+    const container = document.getElementById('question-container');
+    if (!currentOnlineTestState) { console.error("displayCurrentQuestion HALTED: currentOnlineTestState is null."); if (container) container.innerHTML = '<p class="text-red-500 p-4">Error: Test state lost.</p>'; else console.error("displayCurrentQuestion HALTED: Also #question-container not found."); return; }
+    if (!container) { console.error("displayCurrentQuestion HALTED: Question container not found."); return; }
+    const index = currentOnlineTestState.currentQuestionIndex; const questions = currentOnlineTestState.questions;
+    if (index < 0 || !Array.isArray(questions) || questions.length === 0 || index >= questions.length) { console.error(`displayCurrentQuestion HALTED: Invalid index ${index}/${questions?.length}`); container.innerHTML = '<p class="text-red-500 p-4">Error: Invalid question index.</p>'; return; }
+    const question = questions[index]; const totalQuestions = questions.length;
+    if (!question) { console.error("displayCurrentQuestion HALTED: Missing question object at index", index); container.innerHTML = `<p class="text-red-500 p-4">Error: Could not load question data for question ${index + 1}.</p>`; return; }
+    const questionId = String(question.id || `q-${index+1}`);
+    let imageHtml = question.image ? `<img src="${question.image}" alt="Question Image" class="max-w-full h-auto mx-auto my-4 border dark:border-gray-600 rounded" onerror="this.style.display='none';">` : '';
+    let answerAreaHtml = '';
+    if (question.isProblem) {
+        const currentAnswer = currentOnlineTestState.userAnswers[questionId] || '';
+        answerAreaHtml = `
+        <div class="mt-4 problem-input-container">
+            <label for="problem-answer-preview-${questionId}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Answer / Solution Steps (Live Preview):</label>
+            <div id="latex-toolbar-${questionId}" class="latex-toolbar"><span class="text-xs text-gray-400 dark:text-gray-500 p-1">Loading LaTeX tools...</span></div>
+            <div id="problem-answer-preview-${questionId}" tabindex="0" class="min-h-[120px] p-3 border border-t-0 rounded-b-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 prose prose-sm dark:prose-invert max-w-none pretty-scrollbar overflow-auto focus:ring-2 focus:ring-primary-500 focus:border-primary-500" style="max-height: 250px;" aria-label="Live LaTeX Preview" onclick="document.getElementById('problem-answer-input-${questionId}').focus();" onfocus="this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500');" onblur="this.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500');" title="Click to edit raw LaTeX below."></div>
+            <div class="mt-2">
+                <label for="problem-answer-input-${questionId}" class="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-0.5">Edit Raw LaTeX Code:</label>
+                <textarea id="problem-answer-input-${questionId}" name="problemAnswer" rows="3" class="w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-50 font-mono text-xs leading-normal" placeholder="Type raw LaTeX here..." oninput="window.recordAnswer('${questionId}', this.value); window.updateLatexPreview('${questionId}')" spellcheck="false">${escapeHtml(currentAnswer)}</textarea>
+            </div>
+            <p class="text-xs text-muted mt-1">Use toolbar or type LaTeX. Preview updates automatically.</p>
+        </div>`;
+    } else { 
+         answerAreaHtml = (question.options?.length > 0) ? `<div class="space-y-3 mt-4">` + question.options.map(opt => {
+             const qIdStr = String(questionId); const optLetterStr = String(opt.letter); const storedAnswer = String(currentOnlineTestState.userAnswers[qIdStr] ?? ''); const isChecked = storedAnswer === optLetterStr;
+             return `<input type="radio" id="radio-${qIdStr}-${optLetterStr}" name="mcqOption-${qIdStr}" value="${opt.letter}" class="hidden" ${isChecked ? 'checked' : ''} onchange="window.recordAnswer('${qIdStr}', this.value)"><label for="radio-${qIdStr}-${optLetterStr}" class="option-label flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"><div class="flex items-baseline w-full"><span class="font-mono w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div></label>`;
+         }).join('') + `</div>` : '<p class="text-sm text-yellow-600 mt-4">(No MC options found)</p>';
+    }
+    container.innerHTML = `<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-4 animate-fade-in question-card"><p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Question ${index + 1} / ${totalQuestions} ${question.chapter ? `(Chapter ${question.chapter})` : ''}</p>${imageHtml}<div class="prose dark:prose-invert max-w-none mb-4 question-text-container">${question.text}</div>${answerAreaHtml}</div>`;
+    if (question.isProblem) { if (typeof window.generateLatexToolbar === 'function') window.generateLatexToolbar(questionId); if (typeof window.updateLatexPreview === 'function') window.updateLatexPreview(questionId); }
+    try { if (typeof utilsRenderMathIn === 'function') await utilsRenderMathIn(container); else console.error("utilsRenderMathIn not available."); } catch (mathError) { console.error("MathJax render error:", mathError); }
+    const prevBtn = document.getElementById('prev-btn'); const nextBtn = document.getElementById('next-btn'); const submitBtn = document.getElementById('submit-btn'); const counterSpan = document.getElementById('question-counter');
+    if (prevBtn) prevBtn.disabled = (index === 0);
+    if (counterSpan) counterSpan.textContent = `Question ${index + 1} / ${totalQuestions}`;
+    if (nextBtn && submitBtn) { if (index === totalQuestions - 1) { nextBtn.classList.add('hidden'); submitBtn.classList.remove('hidden'); } else { nextBtn.classList.remove('hidden'); submitBtn.classList.add('hidden'); } }
+    console.log("displayCurrentQuestion END");
+}
+
+window.updateLatexPreview = async function(questionId) {
+    const textarea = document.getElementById(`problem-answer-input-${questionId}`);
+    const previewArea = document.getElementById(`problem-answer-preview-${questionId}`);
+    if (textarea && previewArea) {
+        // Directly set the LaTeX content for MathJax to process.
+        // MathJax.tex2svgPromise() is more for converting a single string,
+        // for a block of content, just setting innerHTML and calling typeset is better.
+        previewArea.innerHTML = textarea.value; // Render raw LaTeX
+        try {
+            await utilsRenderMathIn(previewArea); // Let MathJax find and render it
+        } catch (e) {
+            console.error("Error rendering LaTeX preview:", e);
+            previewArea.innerHTML = `<p class="text-red-500 text-xs">Error rendering LaTeX. Check syntax.</p>`;
+        }
+    }
+};
+
+
+export function navigateQuestion(direction) {
+    if (!currentOnlineTestState) return;
+    const newIndex = currentOnlineTestState.currentQuestionIndex + direction;
+    if (newIndex >= 0 && newIndex < currentOnlineTestState.questions.length) { 
+        currentOnlineTestState.currentQuestionIndex = newIndex; 
+        displayCurrentQuestion(); 
+        // Optional: Play UI sound for navigation
+        window.playUiSound?.('navigation_subtle'); 
+    }
+}
+
+export function recordAnswer(questionId, answer) {
+    if (!currentOnlineTestState) return;
+    const qIdStr = String(questionId); const ansStr = String(answer);
+    currentOnlineTestState.userAnswers[qIdStr] = ansStr;
+    const question = currentOnlineTestState.questions.find(q => String(q.id || `q-${currentOnlineTestState.questions.indexOf(q)+1}`) === qIdStr);
+    if (question && !question.isProblem) updateSelectedOptionUI(qIdStr, ansStr);
+}
+
+function updateSelectedOptionUI(questionId, selectedValue) {
+    const container = document.getElementById('question-container'); if (!container) return;
+    const radios = container.querySelectorAll(`input[type="radio"][name="mcqOption-${questionId}"]`);
+    radios.forEach(radio => {
+        const label = document.querySelector(`label[for="${radio.id}"]`);
+        if (label) {
+            const isChecked = radio.value === selectedValue;
+            label.classList.toggle('ring-2', isChecked); label.classList.toggle('ring-primary-500', isChecked);
+            label.classList.toggle('bg-primary-50', isChecked); label.classList.toggle('dark:bg-primary-700/30', isChecked);
+        }
+    });
+}
+
+
+export function confirmSubmitOnlineTest() {
+     if (!currentOnlineTestState) return;
+     const unanswered = currentOnlineTestState.questions.filter(q => {
+        const answer = currentOnlineTestState.userAnswers[String(q.id || `q-${currentOnlineTestState.questions.indexOf(q)+1}`)];
+        return answer === null || answer === undefined || (typeof answer === 'string' && answer.trim() === '');
+    }).length;
+    let msg = "Submit test?"; if (unanswered > 0) msg += `\n\n${unanswered} unanswered question(s).`;
+    if (confirm(msg)) submitOnlineTest();
+}
+export function confirmForceSubmit() { 
+    if (confirm("Submit test now? Any remaining time will be forfeited.")) submitOnlineTest();
+}
+
+export async function submitOnlineTest() {
+    showLoading("Submitting and marking exam...");
+    try {
+        if (!currentOnlineTestState || currentOnlineTestState.status === 'submitting' || currentOnlineTestState.status === 'completed' || !currentUser) {
+            if (currentOnlineTestState?.status !== 'submitting' && currentOnlineTestState?.status !== 'completed') {
+                 alert("Error: Missing test data, user session, or test already submitted.");
+            }
+            hideLoading(); return;
+        }
+        currentOnlineTestState.status = 'submitting';
+        if (currentOnlineTestState.timerInterval) clearInterval(currentOnlineTestState.timerInterval);
+        currentOnlineTestState.timerInterval = null;
+
+        if (onlineTestKeyListener) {
+            document.removeEventListener('keydown', onlineTestKeyListener);
+            onlineTestKeyListener = null;
+            console.log("[Submit Test] Removed online test key listener.");
+        }
+
+        const testArea = document.getElementById('online-test-area');
+        if (testArea) testArea.classList.add('hidden');
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const isCourseActivity = !!currentOnlineTestState.courseContext?.isCourseActivity;
+        const isSkipExam = currentOnlineTestState.courseContext?.activityType === 'skip_exam';
+        const courseId = currentOnlineTestState.courseContext?.courseId;
+        const activityType = currentOnlineTestState.courseContext?.activityType || 'testgen'; // Default to testgen if no specific type
+        const activityId = currentOnlineTestState.courseContext?.activityId;
+        const chapterNumForSkipExam = currentOnlineTestState.courseContext?.chapterNum;
+
+        const examRecord = await storeExamResult(courseId, currentOnlineTestState, activityType);
+
+        if (!examRecord || !examRecord.markingResults) {
+            hideLoading(); alert("Issue processing exam results.");
+            if (isCourseActivity && courseId) window.showCurrentAssignmentsExams?.(courseId);
+            else showTestGenerationDashboard();
+            setCurrentOnlineTestState(null); return;
+        }
+
+        if (isCourseActivity && courseId) {
+            const progress = userCourseProgressMap.get(courseId);
+            if (progress) {
+                const percentageScore = examRecord.markingResults.maxPossibleScore > 0
+                    ? (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100 : 0;
+                
+                switch (activityType) {
+                    case 'assignment':
+                        progress.assignmentScores = progress.assignmentScores || {};
+                        progress.assignmentScores[activityId] = percentageScore;
+                        const todayStr = getFormattedDate();
+                        progress.dailyProgress = progress.dailyProgress || {};
+                        progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
+                        progress.dailyProgress[todayStr].assignmentCompleted = true;
+                        progress.dailyProgress[todayStr].assignmentScore = percentageScore;
+                        break;
+                    case 'weekly_exam': progress.weeklyExamScores = progress.weeklyExamScores || {}; progress.weeklyExamScores[activityId] = percentageScore; break;
+                    case 'final':
+                        progress.finalExamScores = progress.finalExamScores || [];
+                        const finalExamNumMatch = activityId.match(/final(\d+)/);
+                        if (finalExamNumMatch) { const attemptIndex = parseInt(finalExamNumMatch[1], 10) - 1; if (attemptIndex >= 0) { while (progress.finalExamScores.length <= attemptIndex) progress.finalExamScores.push(null); progress.finalExamScores[attemptIndex] = percentageScore; } }
+                        break;
+                    case 'midcourse': progress.midcourseExamScores = progress.midcourseExamScores || {}; progress.midcourseExamScores[activityId] = percentageScore; break;
+                    case 'skip_exam': break; 
+                }
+
+                progress.totalMark = calculateTotalMark(progress); 
+                progress.grade = getLetterGrade(progress.totalMark); 
+
+                updateUserCourseProgress(courseId, progress);
+                await saveUserCourseProgress(currentUser.uid, courseId, progress);
+            }
+        }
+
+        currentOnlineTestState.status = 'completed';
+        await displayOnlineTestResults(examRecord);
+
+        if (isSkipExam && chapterNumForSkipExam && courseId && examRecord.markingResults.maxPossibleScore > 0) {
+            const percentage = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore) * 100;
+            const progress = userCourseProgressMap.get(courseId);
+            if (progress) {
+                 progress.lastSkipExamScore = progress.lastSkipExamScore || {}; progress.lastSkipExamScore[chapterNumForSkipExam] = percentage;
+                 progress.skipExamAttempts = progress.skipExamAttempts || {}; progress.skipExamAttempts[chapterNumForSkipExam] = (progress.skipExamAttempts[chapterNumForSkipExam] || 0) + 1;
+                 const todayStr = getFormattedDate();
+                 progress.dailyProgress = progress.dailyProgress || {};
+                 progress.dailyProgress[todayStr] = progress.dailyProgress[todayStr] || { chaptersStudied: [], skipExamsPassed: [], assignmentCompleted: false, assignmentScore: null };
+                 if (percentage >= SKIP_EXAM_PASSING_PERCENT) {
+                     if (!progress.dailyProgress[todayStr].skipExamsPassed.includes(chapterNumForSkipExam)) { progress.dailyProgress[todayStr].skipExamsPassed.push(chapterNumForSkipExam); progress.dailyProgress[todayStr].skipExamsPassed.sort((a,b) => a - b); }
+                     await markChapterStudiedInCourse(currentUser.uid, courseId, chapterNumForSkipExam, "skip_exam_passed");
+                 } else { await saveUserCourseProgress(currentUser.uid, courseId, progress); }
+            }
+        } else if (!isCourseActivity && currentSubject && data?.subjects?.[currentSubject.id]) {
+            // --- START MODIFIED: TestGen Bonus Logic ---
+            let chaptersDataModified = false;
+            const subjectToUpdate = data.subjects[currentSubject.id];
+            if (examRecord.questions && examRecord.markingResults?.questionResults) {
+                 examRecord.markingResults.questionResults.forEach(result => {
+                      const question = examRecord.questions.find(q => q.id === result.questionId);
+                      if (question && question.chapter) {
+                           const chap = subjectToUpdate.chapters[question.chapter];
+                           if (chap) {
+                                if (!question.isProblem) { // Only update MCQ stats in TestGen progress
+                                     chap.total_attempted = (chap.total_attempted || 0) + 1;
+                                     const isCorrect = result.score > 0; // Assuming MCQ score is > 0 if correct
+                                     if (!isCorrect) chap.total_wrong = (chap.total_wrong || 0) + 1;
+                                     chap.mistake_history = chap.mistake_history || []; chap.mistake_history.push(isCorrect ? 0 : 1);
+                                     if (chap.mistake_history.length > 20) chap.mistake_history.shift();
+                                     chap.consecutive_mastery = isCorrect ? (chap.consecutive_mastery || 0) + 1 : 0;
+                                     chaptersDataModified = true;
+                                     // Remove from available_questions
+                                     if (chap.available_questions && Array.isArray(chap.available_questions) && question.number) {
+                                          const qIndex = chap.available_questions.indexOf(question.number); // Assuming question.number is the MCQ number
+                                          if (qIndex > -1) chap.available_questions.splice(qIndex, 1);
+                                      }
+                                }
+                           }
+                      }
+                  });
+            }
+            if (chaptersDataModified) {
+                Object.values(subjectToUpdate.chapters).forEach(chap => { if (chap.available_questions) chap.available_questions.sort((a, b) => a - b); });
+                await saveUserData(currentUser.uid, data); // Save updated appData
+            }
+
+            // Award TestGen Bonus
+            if (examRecord.subjectId && examRecord.markingResults && examRecord.markingResults.maxPossibleScore > 0) {
+                let bonusAppliedToCourseId = null;
+                const testGenScorePercent = (examRecord.markingResults.totalScore / examRecord.markingResults.maxPossibleScore); // Ratio 0-1
+
+                if (testGenScorePercent > 0.5) { // Example: Give bonus if score > 50%
+                    const bonusPoints = Math.min(MAX_BONUS_FROM_TESTGEN, testGenScorePercent * MAX_BONUS_FROM_TESTGEN);
+
+                    // Determine which course (if any) to apply the bonus to
+                    if (activeCourseId && userCourseProgressMap.has(activeCourseId)) {
+                        const activeCourseDef = globalCourseDataMap.get(activeCourseId);
+                        if (activeCourseDef && activeCourseDef.relatedSubjectId === examRecord.subjectId) {
+                            bonusAppliedToCourseId = activeCourseId;
+                        }
+                    }
+                    if (!bonusAppliedToCourseId) { // If not active course, find first relevant enrolled course
+                        for (const [enrolledCId, enrolledProgress] of userCourseProgressMap.entries()) {
+                            const enrolledCourseDef = globalCourseDataMap.get(enrolledCId);
+                            if (enrolledCourseDef && enrolledCourseDef.relatedSubjectId === examRecord.subjectId && enrolledProgress.status === 'enrolled') {
+                                bonusAppliedToCourseId = enrolledCId;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (bonusAppliedToCourseId) {
+                        const courseProgressToUpdate = userCourseProgressMap.get(bonusAppliedToCourseId);
+                        if (courseProgressToUpdate) {
+                            const oldBonus = courseProgressToUpdate.testGenBonus || 0;
+                            const newTotalBonus = Math.min(oldBonus + bonusPoints, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE);
+                            courseProgressToUpdate.testGenBonus = newTotalBonus;
+                            
+                            // Recalculate overall mark and grade for the course
+                            courseProgressToUpdate.totalMark = calculateTotalMark(courseProgressToUpdate);
+                            courseProgressToUpdate.grade = getLetterGrade(courseProgressToUpdate.totalMark);
+
+                            await saveUserCourseProgress(currentUser.uid, bonusAppliedToCourseId, courseProgressToUpdate);
+                            updateUserCourseProgress(bonusAppliedToCourseId, courseProgressToUpdate); // Update local state
+                            
+                            const courseNameForBonus = globalCourseDataMap.get(bonusAppliedToCourseId)?.name || `Course ${bonusAppliedToCourseId}`;
+                            const toastContainer = document.createElement('div');
+                            toastContainer.innerHTML = `<div class="toast-notification toast-success animate-fade-in"><p>+${bonusPoints.toFixed(1)} TestGen Bonus applied to course: ${escapeHtml(courseNameForBonus)}!</p><p class="text-xs">New total TestGen bonus for course: ${newTotalBonus.toFixed(1)}/${MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE}</p></div>`;
+                            document.body.appendChild(toastContainer);
+                            setTimeout(() => toastContainer.remove(), 6000);
+                        }
+                    }
                 }
             }
-          };
-        </script>
-        <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/startup.js" id="mathjax-pdf-script"></script>
-    `;
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>${escapedTitle}</title>
-            <meta charset="UTF-8">
-            <style>${styles}</style>
-            ${mathJaxConfigAndScript}
-        </head>
-        <body style="color: #000000; background-color: #ffffff;">
-            <h1>${escapedTitle}</h1>
-            <div class="content" style="color: #000000;">${innerContentHtml}</div>
-        </body>
-        </html>
-    `;
-}
-
-export function generatePdfHtml(examId, questions) {
-    const placeholderText = '[Content Missing]';
-    let questionItemsHtml = '';
-    let solutionItemsHtml = '';
-    const examSpecificStyles = `
-        <style>
-            .pdf-subtitle { font-size: 16pt !important; font-weight: bold; margin-top: 1cm; margin-bottom: 0.4cm; text-align: center; border-bottom: 1.5px solid #333; padding-bottom: 0.2cm; }
-            .exam-details { font-size: 10pt !important; color: #222 !important; margin-bottom: 0.5cm; text-align: center; }
-            .question-list { list-style-type: decimal; padding-left: 1.6em; }
-            .question-item-wrapper { margin-bottom: 0.8cm; padding-bottom: 0.4cm; border-bottom: 1px solid #e0e0e0; }
-            .question-item-wrapper:last-child { border-bottom: none; }
-            .question-header { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-weight: bold; margin-bottom: 0.3cm; font-size: 13pt !important; color: #111 !important; }
-            .question-text { margin-bottom: 0.4cm; font-size: 11pt !important; line-height: 1.5 !important; text-align: left; }
-            .question-image-container { text-align: center; margin: 0.5cm 0; page-break-inside: avoid; }
-            .question-image { max-width: 85%; max-height: 240px; display: inline-block; border: 1px solid #ccc; padding: 2px; background-color: #fff; }
-            .options-list { list-style-type: none; padding-left: 0.5em; margin-top: 0.3cm; page-break-inside: avoid; }
-            .option-item { display: flex; align-items: flex-start; margin-bottom: 0.2cm; font-size: 11pt !important; }
-            .option-letter { font-family: Arial, Helvetica, sans-serif; font-weight: bold; margin-right: 0.5em; width: 1.6em; text-align: right; color: #004a7c !important; }
-            .option-text { flex-grow: 1; text-align: left; }
-            .solution-section { margin-top: 0.5cm; padding-top: 0.3cm; border-top: 1px solid #28a745; page-break-inside: avoid; }
-            .solution-label { font-family: Arial, Helvetica, sans-serif; font-weight: bold; color: #1e7e34 !important; font-size: 12pt !important; }
-            p, li, div, span { color: #000000 !important; } /* Catch-all for text color */
-        </style>`;
-
-    let imageBasePath = '';
-    if (window.currentSubject && window.currentSubject.courseDirName) {
-        const courseBasePath = (typeof window.COURSE_BASE_PATH === 'string' && window.COURSE_BASE_PATH !== "./courses") ? window.COURSE_BASE_PATH : "courses";
-        const subjectResourceFolder = typeof window.SUBJECT_RESOURCE_FOLDER === 'string' ? window.SUBJECT_RESOURCE_FOLDER : 'Problems';
-        imageBasePath = `${courseBasePath}/${window.currentSubject.courseDirName}/${subjectResourceFolder}/images/`;
-    } else { imageBasePath = 'assets/images/'; }
-
-    questions.forEach((q, index) => {
-        const questionNumber = index + 1;
-        let qTextForHtml = q.text || placeholderText;
-        let optionsForHtml = '';
-        let solutionAnswerText = q.isProblem ? 'Solution details vary.' : (q.correctAnswer ? escapeHtml(q.correctAnswer) : 'N/A');
-
-        if (!q.isProblem && q.options && q.options.length > 0) {
-            optionsForHtml = `<ol class="options-list">` +
-                (q.options || []).map(opt => {
-                    let optTextForHtml = opt.text || placeholderText;
-                    return `<li class="option-item"><span class="option-letter">${escapeHtml(opt.letter)}.</span><span class="option-text">${optTextForHtml}</span></li>`;
-                }).join('') + `</ol>`;
+            // --- END MODIFIED ---
         }
-        let imageSrc = null;
-        if (q.image && typeof q.image === 'string') {
-            let imageName = q.image;
-            if (imageName.startsWith('./images/')) imageName = imageName.substring(9);
-            else if (imageName.startsWith('images/')) imageName = imageName.substring(7);
-            else if (imageName.startsWith('./')) imageName = imageName.substring(2);
-            imageSrc = `${imageBasePath}${imageName.split('?')[0]}`;
-            imageSrc = imageSrc.replace(/\/{2,}/g, '/');
-        }
-        let imageHtml = imageSrc ? `<div class="question-image-container"><img src="${escapeHtml(imageSrc)}" alt="Image" class="question-image" crossorigin="anonymous"></div>` : '';
-
-        const questionItemContent = `
-            <div class="question-header">Question ${questionNumber}${q.chapter ? ` (Ch ${q.chapter})` : ''}${q.isProblem ? ' (Problem)' : ''}</div>
-            <div class="question-text">${qTextForHtml}</div> 
-            ${imageHtml}
-            ${optionsForHtml || ''}
-        `;
-        questionItemsHtml += `<li class="question-item-wrapper">${questionItemContent}</li>`;
-        solutionItemsHtml += `
-            <li class="question-item-wrapper">
-                ${questionItemContent}
-                <div class="solution-section"><span class="solution-label">Answer:</span> ${solutionAnswerText}</div>
-            </li>`;
-    });
-    const examHeaderHtml = `<div class="exam-details">Total Questions: ${questions.length}</div>`;
-    const questionListContent = `<div class="pdf-subtitle">Questions</div><ol class="question-list">${questionItemsHtml}</ol>`;
-    const solutionListContent = `<div class="pdf-subtitle">Solutions</div><ol class="question-list">${solutionItemsHtml}</ol>`;
-    const finalQuestionHtml = generatePdfBaseHtml(`Exam: ${examId}`, examHeaderHtml + questionListContent)
-        .replace('</head>', `${examSpecificStyles}</head>`);
-    const finalSolutionHtml = generatePdfBaseHtml(`Solutions: ${examId}`, examHeaderHtml + solutionListContent)
-        .replace('</head>', `${examSpecificStyles}</head>`);
-    return { questionHtml: finalQuestionHtml, solutionHtml: finalSolutionHtml };
-}
-
-export function generateNotePdfHtml(note) {
-    const noteTitle = note.title || '[Content Missing]';
-    let noteContent = note.content || '[Content Missing]';
-    const dateStr = note.timestamp ? new Date(note.timestamp).toLocaleString() : 'N/A';
-    const titleSuffix = note.filename ? ` (from file: ${escapeHtml(note.filename)})` : '';
-    const noteSpecificStyles = `<style> h1 {font-size: 18pt;} .note-meta { font-size: 9pt; color: #333; margin-bottom: 0.5cm; border-bottom: 1px solid #ccc; padding-bottom: 0.2cm; } </style>`;
-    let contentForPdf = '';
-    if (note.type === 'latex' || note.type === 'ai_review') contentForPdf = `<div>${noteContent}</div>`;
-    else contentForPdf = `<div>${escapeHtml(noteContent).replace(/\n/g, '<br>\n')}</div>`;
-    const innerHtml = `<div class="note-meta">Chapter ${note.chapterNum || 'N/A'} | Updated: ${dateStr}${titleSuffix}</div>${contentForPdf}`;
-    return generatePdfBaseHtml(`Note: ${noteTitle}`, innerHtml).replace('</head>', `${noteSpecificStyles}</head>`);
-}
-
-
-/**
- * Generates PDF by sending HTML content to a local Node.js server.
- * @param {string} htmlContent - The full HTML string to convert.
- * @param {string} baseFilename - The base filename for the downloaded PDF.
- */
-export async function generateAndDownloadPdfWithMathJax(htmlContent, baseFilename) {
-    showLoading(`Requesting PDF generation for: ${baseFilename}...`);
-    const PDF_SERVER_URL = 'http://localhost:3001/generate-pdf'; // Ensure this matches your server
-
-    try {
-        const response = await fetch(PDF_SERVER_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                htmlContent: htmlContent,
-                filename: `${baseFilename}.pdf`
-            }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`PDF server error: ${response.status} - ${errorText}`);
-        }
-
-        const pdfBlob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(pdfBlob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `${baseFilename}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(downloadUrl);
-        console.log(`[PDF Client] PDF '${baseFilename}.pdf' downloaded successfully.`);
-
+        setCurrentOnlineTestState(null);
     } catch (error) {
-        console.error(`[PDF Client] Error generating or downloading PDF for '${baseFilename}':`, error);
-        alert(`Failed to generate PDF: ${baseFilename}. Error: ${error.message}. Ensure the local PDF server is running and accessible.`);
+        console.error("Error finishing test:", error);
+        setCurrentOnlineTestState(null); alert("Error submitting test: " + error.message);
+        const isCourseActivityOnError = !!currentOnlineTestState?.courseContext?.isCourseActivity;
+        const courseIdOnError = currentOnlineTestState?.courseContext?.courseId;
+        if (isCourseActivityOnError && courseIdOnError) window.showCurrentAssignmentsExams?.(courseIdOnError);
+        else showTestGenerationDashboard();
     } finally {
         hideLoading();
     }
 }
 
+export async function displayOnlineTestResults(examRecord) {
+    clearContent();
+    if (!examRecord || !examRecord.markingResults) { displayContent('<p class="text-red-500 p-4">Error displaying results.</p>'); return; }
+    const examId = examRecord.id || examRecord.examId;
+    if (!examId) { displayContent('<p class="text-red-500 p-4">Error: Could not find exam identifier.</p>'); return; }
+    const { markingResults, courseContext, timestamp, type, subjectId, courseId } = examRecord;
+    const score = markingResults?.totalScore ?? 0; const maxScore = markingResults?.maxPossibleScore ?? 0;
+    const percentage = maxScore > 0 ? ((score / maxScore) * 100).toFixed(1) : 0;
+    const dateTimestamp = (timestamp?.toDate ? timestamp.toDate() : (typeof timestamp === 'number' ? new Date(timestamp) : new Date()));
+    const date = dateTimestamp.toLocaleString();
+    const durationMinutes = examRecord.durationMinutes; const isCourse = !!courseId; const isSkip = type === 'skip_exam';
+    const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name || courseId) : subjectId ? (window.data?.subjects?.[subjectId]?.name || subjectId) : (examRecord.isTestGen ? 'Standard TestGen' : 'General Test');
+    let passThreshold = PASSING_GRADE_PERCENT; if (isSkip) passThreshold = SKIP_EXAM_PASSING_PERCENT;
+    const isPassing = parseFloat(percentage) >= passThreshold;
+    const typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-export function generateTexSource(examId, questions) {
-    const placeholderText = '[Content Missing]';
-    const escapeLatex = (str) => {
-        if (str === null || typeof str === 'undefined') str = placeholderText;
-        str = String(str);
-        let mathSegments = [];
-        let placeholderCounter = 0;
-        const placeholderPrefix = "@@LATEX_PLACEHOLDER_";
-        const placeholderSuffix = "@@END_LATEX_PLACEHOLDER";
-        let processedStr = str.replace(
-            /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|(?<!\\)\$(?:[^\$\\]|\\.)*?\$|\\\(.*?\\\))/g,
-            (match) => {
-                const placeholder = `${placeholderPrefix}${placeholderCounter++}${placeholderSuffix}`;
-                mathSegments.push({ placeholder, math: match });
-                return placeholder;
+    // --- START MODIFIED: Added Download Feedback PDF button ---
+    const downloadFeedbackButtonHtml = `
+        <button onclick="window.downloadExamFeedbackPdfWrapper('${examId}')" class="btn-secondary">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+            Download Feedback PDF
+        </button>
+    `;
+    // --- END MODIFIED ---
+
+    const resultsHtml = `
+        <div class="space-y-6 animate-fade-in max-w-3xl mx-auto">
+            <div class="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border dark:border-gray-700">
+                <h2 class="text-2xl font-bold mb-2">Exam Results</h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Exam ID: ${escapeHtml(examId)}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">Context: ${escapeHtml(contextName)} (${isCourse ? 'Course' : 'Subject'}) | Type: ${escapeHtml(typeDisplay)}</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
+                <div class="text-5xl font-bold ${isPassing ? 'text-green-600' : 'text-red-600'} mb-2">${percentage}%</div>
+                <p class="text-lg text-gray-600 dark:text-gray-400 mb-2">${score.toFixed(1)} out of ${maxScore.toFixed(1)} points</p>
+                <p class="text-xl font-semibold ${isPassing ? 'text-green-600' : 'text-red-600'}">${isPassing ? 'PASS' : 'FAIL'} (Threshold: ${passThreshold}%)</p>
+                 ${isSkip && isPassing ? `<p class="text-sm text-green-600 mt-1">Chapter ${courseContext?.chapterNum || '?'} marked as studied!</p>` : ''}
+                 ${isSkip && !isPassing ? `<p class="text-sm text-red-600 mt-1">Needed ${passThreshold}% to pass skip exam.</p>` : ''}
+            </div>
+            ${markingResults.overallFeedback ? `<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md border dark:border-gray-700 overall-feedback-area"><h3 class="text-lg font-semibold mb-4">Overall AI Feedback</h3><div class="space-y-4 text-sm"><p class="text-gray-700 dark:text-gray-300">${escapeHtml(markingResults.overallFeedback.overall_feedback||'N/A')}</p><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><h4 class="font-medium text-green-600 mb-2">Strengths</h4><ul class="list-disc list-inside text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.strengths?.map(s=>`<li>${escapeHtml(s)}</li>`).join('')||'<li>N/A</li>'}</ul></div><div><h4 class="font-medium text-red-600 mb-2">Areas for Improvement</h4><ul class="list-disc list-inside text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.weaknesses?.map(w=>`<li>${escapeHtml(w)}</li>`).join('')||'<li>N/A</li>'}</ul></div></div>${markingResults.overallFeedback.study_recommendations?`<div class="mt-4"><h4 class="font-medium text-blue-600 mb-2">Study Recommendations</h4><ul class="list-disc list-inside text-gray-600 dark:text-gray-400">${markingResults.overallFeedback.study_recommendations.map(r=>`<li>${escapeHtml(r)}</li>`).join('')||'<li>N/A</li>'}</ul></div>`:''}</div></div>`:'<p class="text-muted italic text-center my-4">No overall feedback.</p>'}
+            <div class="flex justify-center gap-4 flex-wrap">
+                <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary">View Detailed Review</button>
+                ${downloadFeedbackButtonHtml} 
+                <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">${isCourse ? 'Back to Course Exams' : 'Back to TestGen Exams'}</button>
+                 ${!isCourse ? `<button onclick="window.showTestGenerationDashboard()" class="btn-secondary">Generate New Test</button>` : ''}
+            </div>
+        </div>`;
+    displayContent(resultsHtml, 'content');
+    setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'testgen-dropdown-content');
+    const overallFeedbackArea = document.querySelector('.overall-feedback-area');
+    if (overallFeedbackArea) await utilsRenderMathIn(overallFeedbackArea);
+}
+
+// --- MODIFIED: Wrapper for Download Feedback PDF ---
+window.downloadExamFeedbackPdfWrapper = async (examId) => {
+    if (!currentUser || !examId) {
+        alert("Cannot download feedback: User or Exam ID missing.");
+        return;
+    }
+    showLoading("Preparing Feedback PDF...");
+    try {
+        const examDetails = await getExamDetails(currentUser.uid, examId);
+        if (!examDetails) {
+            throw new Error("Could not load exam details for PDF generation.");
+        }
+
+        // Fetch AI explanations for each question (or use stored ones if available)
+        const feedbackDetails = {};
+        if (examDetails.questions && examDetails.markingResults?.questionResults) {
+            for (let i = 0; i < examDetails.questions.length; i++) {
+                const question = examDetails.questions[i];
+                const qId = question.id || `q-${i+1}`;
+                // This is a placeholder. In a real scenario, if explanations are generated
+                // on-demand and not stored with the exam, you might need to fetch/generate them here.
+                // For simplicity, assume explanations could be part of examDetails or fetched.
+                // If they are fetched on demand when viewing the review, then the PDF might not include them
+                // unless we regenerate them all here, which could be slow.
+                // For now, let's assume we pass an empty explanation or one from a hypothetical field.
+                feedbackDetails[qId] = {
+                    explanationHtml: examDetails.aiExplanations?.[qId] || "AI Explanation not available in this PDF version."
+                };
             }
-        );
-        processedStr = processedStr
-            .replace(/\\/g, '\\textbackslash{}') 
-            .replace(/~/g, '\\textasciitilde{}')
-            .replace(/\^/g, '\\textasciicircum{}')
-            .replace(/&/g, '\\&')
-            .replace(/%/g, '\\%')
-            .replace(/\$/g, '\\$') 
-            .replace(/#/g, '\\#')
-            .replace(/_/g, '\\_')
-            .replace(/{/g, '\\{')
-            .replace(/}/g, '\\}')
-            .replace(/>/g, '\\textgreater{}')
-            .replace(/</g, '\\textless{}')
-            .replace(/\n\n/g, '\\par\\medskip\n') 
-            .replace(/\n/g, '\\\\ \n');          
-        mathSegments.forEach(item => {
-            const regexSafePlaceholder = item.placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-            const regex = new RegExp(regexSafePlaceholder, 'g');
-            processedStr = processedStr.replace(regex, item.math);
-        });
-        return processedStr;
-    };
-
-    let questionsBody = '';
-    let solutionsBody = '';
-    const examIdTex = escapeLatex(examId || placeholderText);
-
-    questions.forEach((q, index) => {
-        const questionNumber = index + 1;
-        let qTextForTex = escapeLatex(q.text); 
-        let imageTex = '';
-        if (q.image) {
-             const safeImageFilename = q.image.replace(/[{}\\^%&#_ ]/g, '-').split('/').pop(); 
-             imageTex = `\\begin{center}\n\\includegraphics[width=0.6\\textwidth,keepaspectratio]{images/${safeImageFilename}}\n\\end{center}\n`;
         }
-        let optionsText = '';
-        let solutionAnswer = q.isProblem ? 'Solution details vary.' : escapeLatex(q.correctAnswer || 'N/A');
-        if (!q.isProblem && q.options && q.options.length > 0) {
-             optionsText = (q.options || []).map(opt => `\\item[${escapeLatex(opt.letter)}.] ${escapeLatex(opt.text)}`).join('\n      ');
-        }
-        let optionsBlock = optionsText ? `    \\begin{itemize}[labelwidth=!, labelindent=0pt, leftmargin=*, itemsep=0.2em]\n      ${optionsText}\n    \\end{itemize}\n` : '';
-        
-        questionsBody += `\\item ${qTextForTex}\n${imageTex}${optionsBlock}\n\\vspace{0.5cm}\n`;
-        solutionsBody += `\\item ${qTextForTex}\n${imageTex}${optionsBlock}\n    \\textbf{Answer: ${solutionAnswer}}\n\\vspace{0.5cm}\n`;
-    });
 
-    const fullDocumentPreamble = `${LATEX_DOCUMENT_CLASS}\n${LATEX_PACKAGES}\\usepackage{graphicx}\n\\graphicspath{{./images/}} \n\\title{Exam: ${examIdTex}}\n\\author{Lyceum}\n\\date{\\today}\n${LATEX_BEGIN_DOCUMENT}\n\\maketitle\n\\parindent0pt\n\\sloppy\n\n`; 
-    const questionsTex = `${fullDocumentPreamble}\\section*{Questions}\n\\begin{enumerate}[label=\\arabic*., itemsep=0.5cm, topsep=0.2cm]\n\n${questionsBody}\\end{enumerate}\n\n${LATEX_END_DOCUMENT}`;
-    const solutionsTex = `${fullDocumentPreamble}\\section*{Solutions}\n\\begin{enumerate}[label=\\arabic*., itemsep=0.5cm, topsep=0.2cm]\n\n${solutionsBody}\\end{enumerate}\n\n${LATEX_END_DOCUMENT}`;
-    return { questionsTex, solutionsTex };
-}
+        const htmlContent = generateExamFeedbackPdfHtml(examId, examDetails, feedbackDetails);
+        const filename = `Exam_Feedback_${examId}`;
+        await generateAndDownloadPdfWithMathJax(htmlContent, filename);
 
-export function downloadTexFile(filename, base64Content) {
-     try {
-         const decodedContent = atob(base64Content);
-         const utf8Encoder = new TextEncoder(); 
-         const utf8ByteArray = utf8Encoder.encode(decodedContent);
-         const blob = new Blob([utf8ByteArray], { type: "text/plain;charset=utf-8" });
-         const url = URL.createObjectURL(blob);
-         const a = document.createElement('a');
-         a.href = url;
-         a.download = filename;
-         document.body.appendChild(a);
-         a.click();
-         document.body.removeChild(a);
-         URL.revokeObjectURL(url);
-     } catch (e) {
-         console.error("Error creating/downloading .tex file:", e);
-         alert(`Failed to prepare the download file (${filename}). Error: ${e.message}. See console for details.`);
-     }
-}
-// --- END OF FILE ui_pdf_generation.js ---
+    } catch (error) {
+        console.error("Error generating feedback PDF:", error);
+        alert(`Failed to generate feedback PDF: ${error.message}`);
+    } finally {
+        hideLoading();
+    }
+};
+
+// --- END MODIFIED ---
+
+window.showExamReviewUI = showExamReviewUI;
+window.showIssueReportingModal = showIssueReportingModal;
+window.submitIssueReport = submitIssueReport;
+export { setCurrentOnlineTestState, deleteTestgenExam as deleteCompletedExamV2 };
+// --- END OF FILE ui_online_test.js ---

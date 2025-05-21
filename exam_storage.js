@@ -46,10 +46,25 @@ export async function storeExamResult(courseId, examState, examType) {
             isTestGen: isTestGenExam,
         };
 
-        if (isTestGenExam) {
+    if (isTestGenExam) {
             // Fields specific to TestGen exams
-            examRecordForFirestore.subjectId = examState.subjectId || null; // Can be null if not tied to a specific subject concept
-            examRecordForFirestore.courseId = null; // TestGen exams typically don't have a courseId unless it's context
+
+            // --- MODIFIED: Stricter check for subjectId ---
+            if (typeof examState.subjectId === 'string' && examState.subjectId.trim() !== '') {
+                examRecordForFirestore.subjectId = examState.subjectId;
+            } else {
+                // This signifies an issue upstream: a TestGen exam was started without a valid subject ID.
+                // The UI guards in ui_test_generation.js should ideally prevent this.
+                console.error("[storeExamResult] Critical Error: Attempting to store a TestGen exam without a valid string subjectId. examState.subjectId was:", examState.subjectId);
+                // Throwing an error here will make the problem immediately obvious during development/testing.
+                throw new Error("Internal Error: TestGen exam cannot be stored without a valid subject ID (a non-empty string is expected).");
+                // Alternative (less recommended as it masks upstream issues, but could be a temporary workaround):
+                // examRecordForFirestore.subjectId = "generic_testgen_subject"; // Assign a default non-null string
+                // console.warn("[storeExamResult] TestGen exam's subjectId was invalid or missing. Assigned a default: 'generic_testgen_subject'. This may violate security rules if 'generic_testgen_subject' is not a valid ID in your system.");
+            }
+            // --- END MODIFIED ---
+
+            examRecordForFirestore.courseId = null; // TestGen exams do not have a courseId in this context
             examRecordForFirestore.testGenConfig = examState.testGenConfig || {
                 textMcqCount: 0,
                 textProblemCount: 0,
@@ -58,23 +73,26 @@ export async function storeExamResult(courseId, examState, examType) {
                 timingOption: 'default',
                 // customDurationMinutes will be absent if not 'custom'
             };
+            // Ensure customDurationMinutes is only present if timingOption is 'custom'
             if (examRecordForFirestore.testGenConfig.timingOption === 'custom' && examState.testGenConfig?.customDurationMinutes) {
                 examRecordForFirestore.testGenConfig.customDurationMinutes = examState.testGenConfig.customDurationMinutes;
             } else {
-                delete examRecordForFirestore.testGenConfig.customDurationMinutes; // Remove if not custom timing
+                // Delete customDurationMinutes if not custom timing or if value is not set
+                delete examRecordForFirestore.testGenConfig.customDurationMinutes;
             }
 
-            // Ensure no 'examType' field for TestGen
+            // Ensure no 'examType' field is present for TestGen exams, as per your rule structure
+            // (The rule implicitly checks this by having 'examType' only in the non-TestGen branch of the 'keys().hasOnly()' check)
             delete examRecordForFirestore.examType;
         } else {
             // Fields specific to non-TestGen (course activity) exams
             if (!courseId || typeof courseId !== 'string') {
-                throw new Error("Invalid courseId for a non-TestGen exam. Must be a string.");
+                throw new Error("Invalid courseId for a non-TestGen exam. Must be a non-empty string.");
             }
             examRecordForFirestore.courseId = courseId;
             examRecordForFirestore.examType = examType; // e.g., "assignment", "weekly_exam"
 
-            // Ensure no 'subjectId' or 'testGenConfig' for non-TestGen
+            // Ensure no 'subjectId' or 'testGenConfig' for non-TestGen exams
             delete examRecordForFirestore.subjectId;
             delete examRecordForFirestore.testGenConfig;
         }
