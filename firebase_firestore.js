@@ -666,6 +666,11 @@ export async function loadGlobalCourseDefinitions() {
                     } else {
                         baseData.createdAt = new Date(); // Fallback
                     }
+                    // Initialize MEGA links to null for new FOP instance
+                    baseData.megaTranscriptionsFolderLink = null;
+                    baseData.megaPdfFolderLink = null;
+                    baseData.megaMcqFolderLink = null;
+                    baseData.megaTextbookFullPdfLink = null;
                     isNewFoPInstance = true;
                     console.log(`[FoP Processing] Preparing new FoP instance for course ID: ${courseId}`);
                 } else {
@@ -706,6 +711,13 @@ export async function loadGlobalCourseDefinitions() {
             if (!finalCourseData.createdAt) { // If still not set (e.g. old Firestore doc without it)
                 finalCourseData.createdAt = (typeof firebase !== 'undefined' && firebase.firestore && baseData.createdAt !== firebase.firestore.FieldValue.serverTimestamp()) ? firebase.firestore.FieldValue.serverTimestamp() : new Date();
             }
+
+            // --- MEGA Link Fields ---
+            finalCourseData.megaTranscriptionsFolderLink = baseData.megaTranscriptionsFolderLink || null;
+            finalCourseData.megaPdfFolderLink = baseData.megaPdfFolderLink || null;
+            finalCourseData.megaMcqFolderLink = baseData.megaMcqFolderLink || null;
+            finalCourseData.megaTextbookFullPdfLink = baseData.megaTextbookFullPdfLink || null;
+            // --- End MEGA Link Fields ---
             // --- End Core Fields Init ---
 
 
@@ -1674,6 +1686,14 @@ export async function updateCourseDefinition(courseId, updates) {
              mergedData.corequisites = Array.isArray(updatedDataFromFS.corequisites)
                                        ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string')
                                        : [];
+
+             // --- MEGA Link Fields for local cache update ---
+             mergedData.megaTranscriptionsFolderLink = updatedDataFromFS.megaTranscriptionsFolderLink || null;
+             mergedData.megaPdfFolderLink = updatedDataFromFS.megaPdfFolderLink || null;
+             mergedData.megaMcqFolderLink = updatedDataFromFS.megaMcqFolderLink || null;
+             mergedData.megaTextbookFullPdfLink = updatedDataFromFS.megaTextbookFullPdfLink || null;
+             // --- End MEGA Link Fields ---
+
              updateGlobalCourseData(courseId, mergedData); 
              console.log("Local course definition map updated after Firestore save.");
          } else {
@@ -1728,6 +1748,12 @@ export async function addCourseToFirestore(courseData) {
         corequisites: Array.isArray(courseData.corequisites)
                       ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) 
                       : [],
+        // --- MEGA Link Fields ---
+        megaTranscriptionsFolderLink: null,
+        megaPdfFolderLink: null,
+        megaMcqFolderLink: null,
+        megaTextbookFullPdfLink: null,
+        // --- End MEGA Link Fields ---
     };
 
     let finalTotalChapters = 0;

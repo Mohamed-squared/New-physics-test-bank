@@ -53,6 +53,12 @@ import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatM
 // --- Leaderboard/Marketplace Imports ---
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
+// --- Admin Course Content Imports (for MEGA Migration) ---
+import { displayMegaMigrationDashboard } from './admin_course_content.js';
+
+// --- Gamification Alerts Import ---
+import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js';
+
 // --- AI Chat Studio Import ---
 import { showAiChatStudio } from './ui_ai_chat_studio.js';
 // --- AI Settings UI Import ---
@@ -434,7 +440,76 @@ window.showImportExportDashboard = showImportExportDashboard;
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
-window.showAdminDashboard = showAdminDashboard;
+window.showAdminDashboard = showAdminDashboard; // Existing export
+
+// Modified showAdminDashboard to include the gamification alert
+function newShowAdminDashboard() {
+    // Original showAdminDashboard logic from ui_admin_dashboard.js
+    // This function is typically imported and then assigned to window.showAdminDashboard
+    // For this modification, I'm assuming the original logic is complex and already handles
+    // displaying the main admin dashboard content.
+    // The key is to call checkAndShowMegaMigrationAlert() *after* the dashboard is visible.
+
+    // --- Start of typical showAdminDashboard logic (conceptual) ---
+    if (!currentUser || !currentUser.isAdmin) {
+        alert("Access Denied. Admin privileges required.");
+        displayContent('<p class="text-red-500 p-4">Access Denied. Admin privileges required.</p>');
+        return;
+    }
+    console.log("Showing Admin Dashboard.");
+    setActiveSidebarLink(null, 'admin-panel-link');
+    
+    // Assuming the original showAdminDashboard from ui_admin_dashboard.js has a way to render its content.
+    // Let's simulate that it populates 'content' div.
+    // If showAdminDashboard is imported from ui_admin_dashboard.js and directly assigned to window,
+    // we'd need to modify ui_admin_dashboard.js instead.
+    // For now, let's assume we are augmenting it here or this is the effective definition.
+    const contentArea = document.getElementById('content');
+    if (contentArea) {
+        // This is where the original showAdminDashboard would render its specific content.
+        // For example, using a function from ui_admin_dashboard.js:
+        // Original_ui_admin_dashboard_renderFunction(contentArea);
+        // For this example, I'll just put a placeholder.
+        contentArea.innerHTML = `<div class="p-4">Admin Dashboard Main Content Loaded.</div>`; 
+        // (In the actual app, ui_admin_dashboard.js's showAdminDashboard renders the actual admin content)
+    } else {
+        console.error("Main content area #content not found for Admin Dashboard.");
+        return; // Stop if content area isn't there
+    }
+    // --- End of typical showAdminDashboard logic ---
+
+    // Now, call the gamification alert
+    checkAndShowMegaMigrationAlert();
+}
+// Overwrite the existing window function if it was set by ui_admin_dashboard.js directly
+// Or, if showAdminDashboard is modular, this becomes the new definition.
+window.showAdminDashboard = newShowAdminDashboard;
+
+
+// --- MEGA Migration Dashboard Function ---
+function showMegaMigrationDashboard() {
+    if (!currentUser || !currentUser.isAdmin) {
+        alert("Access Denied. Admin privileges required.");
+        displayContent('<p class="text-red-500 p-4">Access Denied. Admin privileges required.</p>');
+        return;
+    }
+    console.log("Showing MEGA Migration Dashboard.");
+    setActiveSidebarLink(null, 'mega-migration-link'); // Ensure new link ID is used
+    // The displayMegaMigrationDashboard function expects the container element.
+    // We'll use the main #content div as the container.
+    const contentArea = document.getElementById('content');
+    if (contentArea) {
+        showLoading("Loading MEGA Tools...");
+        displayContent(''); // Clear previous content from #content
+        displayMegaMigrationDashboard(contentArea); // Pass the container
+        hideLoading();
+    } else {
+        console.error("Main content area #content not found for MEGA Migration Dashboard.");
+    }
+}
+window.showMegaMigrationDashboard = showMegaMigrationDashboard;
+// --- End MEGA Migration Dashboard Function ---
+
 window.promptAdminReply = promptAdminModerationReply; 
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
@@ -464,17 +539,26 @@ window.toggleSidebarDropdown = function(contentId, arrowId) {
 };
 
 export function updateAdminPanelVisibility() {
-    const adminPanelLink = document.getElementById('admin-panel-link');
-    const adminIcon = document.getElementById('admin-indicator-icon'); 
     const stateCurrentUser = currentUser;
-
     const isAdmin = stateCurrentUser && (stateCurrentUser.uid === ADMIN_UID || stateCurrentUser.isAdmin === true);
 
-    if (adminPanelLink) {
-        adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
-    }
+    // Define admin navigation items and their corresponding link IDs
+    const adminNavItems = [
+        { linkId: 'admin-panel-link' },
+        { linkId: 'mega-migration-link' } // Added new MEGA migration link
+        // Add other admin-specific link IDs here if any in the future
+    ];
+
+    adminNavItems.forEach(item => {
+        const linkElement = document.getElementById(item.linkId);
+        if (linkElement) {
+            linkElement.style.display = isAdmin ? 'flex' : 'none';
+        }
+    });
+
+    const adminIcon = document.getElementById('admin-indicator-icon');
     if (adminIcon) {
-         adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
+        adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
 }
 

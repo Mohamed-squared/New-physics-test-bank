@@ -246,6 +246,12 @@
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                      Admin Panel
                  </a>
+                 <a href="#" id="mega-migration-link" onclick="window.showMegaMigrationDashboard(); return false;" class="sidebar-link" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 3.75 3.75 0 011.036 7.493M15 19.5v-2.25A2.25 2.25 0 0012.75 15H11.25" />
+                    </svg>
+                    MEGA Tools & Migration
+                 </a>
                  <a href="#" onclick="window.signOutUserWrapper(); return false;" class="sidebar-link !text-red-600 dark:!text-red-400 hover:!bg-red-50 dark:hover:!bg-red-900/50">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" /></svg>
                      Log Out
@@ -469,6 +475,47 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script type="module" src="script.js"></script>
 
+    <!-- MEGA Migration Gamified Alert Modal -->
+    <div id="mega-migration-alert-modal" style="display: none;" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4 transition-opacity duration-300 ease-in-out opacity-0">
+        <div class="bg-gradient-to-br from-yellow-50 via-amber-100 to-yellow-200 dark:from-gray-700 dark:via-gray-800 dark:to-slate-900 p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-lg border-4 border-amber-400 dark:border-amber-600 transform transition-all duration-300 ease-in-out scale-95 relative">
+            <button id="mega-alert-close-btn" class="absolute top-3 right-3 text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 transition-colors" aria-label="Close modal">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-7 h-7">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            
+            <div class="text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-amber-500 dark:text-amber-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 3.75 3.75 0 011.036 7.493M15 19.5v-2.25A2.25 2.25 0 0012.75 15H11.25" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5" />
+                </svg>
+                <h3 class="text-2xl font-bold text-amber-800 dark:text-amber-200 mb-2">Unlock the Archives!</h3>
+                <p class="text-lg text-amber-700 dark:text-amber-300 mb-4">Modernize Your Courses with MEGA Cloud Storage!</p>
+            </div>
+
+            <p class="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                Elevate your course materials by migrating them to secure and accessible MEGA cloud storage. This ensures durability, enables future collaborative features, and safeguards your valuable content.
+            </p>
+            
+            <div id="mega-migration-progress-text-container" class="my-5 p-3 bg-amber-100 dark:bg-gray-700 rounded-md border border-amber-300 dark:border-gray-600">
+                <p id="mega-migration-progress-text" class="text-center text-sm font-medium text-amber-700 dark:text-amber-300">
+                    Calculating migration status...
+                </p>
+                <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 mt-2">
+                    <div id="mega-migration-progress-bar" class="bg-primary-500 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 mt-6">
+                <button id="mega-alert-migrate-btn" class="w-full btn-primary flex items-center justify-center gap-2 group">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 group-hover:animate-pulse"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 3.75 3.75 0 011.036 7.493M15 19.5v-2.25A2.25 2.25 0 0012.75 15H11.25" /></svg>
+                    Begin Modernization
+                </button>
+                <button id="mega-alert-remind-btn" class="w-full btn-secondary">Remind Me Later</button>
+            </div>
+        </div>
+    </div>
+    <!-- End MEGA Migration Gamified Alert Modal -->
 </body>
 </html>
 <!-- END OF FILE index.html -->

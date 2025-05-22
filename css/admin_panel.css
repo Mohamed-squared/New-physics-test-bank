@@ -222,3 +222,19 @@
 
 
 /* --- END OF FILE admin_panel.css --- */
+
+/* Styles for MEGA Migration Alert Modal */
+#mega-migration-alert-modal {
+    /* display: none; is set inline in index.html and handled by JS */
+    /* fixed, inset-0, bg-gray-900, bg-opacity-75, flex, items-center, justify-center, z-50 
+       are handled by Tailwind classes in index.html.
+       Adding z-index here as a fallback or explicit override if needed. */
+    z-index: 1050; /* Ensure it's above other potential high-z-index elements like loading overlay */
+}
+
+/* Styling for the progress bar fill, if not fully covered by btn-primary or similar Tailwind class */
+#mega-migration-progress-bar {
+    /* bg-primary-500, h-2.5, rounded-full are set by Tailwind. 
+       Additional specific styling if needed can go here. */
+    transition: width 0.5s ease-out; /* Smooth width transition for the progress bar */
+}
