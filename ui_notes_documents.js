@@ -7,8 +7,8 @@ import { showLoading, hideLoading, escapeHtml } from './utils.js';
 import { saveUserNotes, loadUserNotes, loadSharedNotes, saveSharedNote } from './firebase_firestore.js';
 import { renderMathIn } from './utils.js';
 import { generateAndDownloadPdfWithMathJax, downloadTexFile } from './ui_pdf_generation.js'; // Added downloadTexFile
-// MODIFIED: Import AI functions - Removed extractTextFromImageAndConvertToLatex
-import { callGeminiTextAPI, reviewNoteWithAI, convertNoteToLatex, improveNoteWithAI, getAllPdfTextForAI } from './ai_integration.js'; // Removed extractTextFromImageAndConvertToLatex
+// MODIFIED: Import AI functions - Restored extractTextFromImageAndConvertToLatex
+import { callGeminiTextAPI, reviewNoteWithAI, convertNoteToLatex, improveNoteWithAI, getAllPdfTextForAI, extractTextFromImageAndConvertToLatex } from './ai_integration.js'; // Restored extractTextFromImageAndConvertToLatex
 // MODIFIED: Added imports for state and logic needed for target chapter
 import { determineTargetChapter } from './course_logic.js';
 // MODIFIED: Added import for setActiveSidebarLink and displayContent
@@ -31,6 +31,41 @@ const NOTE_TYPES = {
     AI_REVIEW: 'ai_review' // Special type for AI review results
 };
 
+/*
+// --- RECOMMENDATION FOR Formula Sheet & Chapter Summary Math Rendering ---
+// The functions `displayFormulaSheet(courseId, chapterNum)` and 
+// `displayChapterSummary(courseId, chapterNum)` are called from 
+// `showNotesDocumentsPanel` and are expected to load HTML content 
+// into the '#formula-sheet-area' and '#chapter-summary-area' divs respectively.
+//
+// If the content loaded by these functions contains LaTeX:
+// 1. Ensure MathJax is loaded on the page (it typically is via script.js).
+// 2. After injecting the HTML content into the respective div, you MUST call 
+//    `await window.renderMathIn(containerElement);` to process any LaTeX.
+//    Replace `containerElement` with the actual DOM element.
+//
+// Example for displayFormulaSheet:
+// async function displayFormulaSheet(courseId, chapterNum) {
+//     const formulaSheetArea = document.getElementById('formula-sheet-area');
+//     if (!formulaSheetArea) return;
+//     // ... logic to fetch and prepare formula_html_content ...
+//     formulaSheetArea.innerHTML = formula_html_content;
+//     formulaSheetArea.classList.remove('hidden');
+//     try {
+//         showLoading("Rendering math..."); // Optional
+//         await window.renderMathIn(formulaSheetArea);
+//     } catch (e) {
+//         console.error("Error rendering math in formula sheet:", e);
+//     } finally {
+//         hideLoading(); // Optional
+//     }
+// }
+//
+// Note: Styling for these IN-APP HTML views is controlled by the general site CSS
+// (e.g., base.css, components.css), NOT by `pdf_formula_sheet_styles.css`
+// which is intended for PDF generation via the server.
+*/
+
 /**
  * Triggered by the sidebar link. Displays the chapter list menu for notes.
  */
@@ -41,8 +76,6 @@ export async function showCurrentNotesDocuments() {
          window.showMyCoursesDashboard(); // Redirect if no active course
          return;
     }
-    // MODIFIED: Add warning message
-    alert("WARNING: The 'Notes & Documents' feature is highly experimental. Many features might not work as expected, especially file handling, AI actions on uploads, and PDF generation. Use with caution.");
     // MODIFIED: Calls the new menu display function
     await displayNotesContentMenu(activeCourseId);
 }
@@ -675,8 +708,11 @@ async function viewNote(noteId, isUserNote) {
     } else if (note.type === NOTE_TYPES.AI_REVIEW) {
         contentHtml = `<div class="prose prose-sm dark:prose-invert max-w-none">${note.content}</div>`; // Assume content is already HTML formatted
     } else if (note.type === NOTE_TYPES.LATEX) {
-         // Display LaTeX source within pre/code and add download .tex button
-         contentHtml = `<pre><code class="block whitespace-pre-wrap text-xs">${escapeHtml(note.content)}</code></pre>`;
+         // Display raw LaTeX content directly for MathJax processing.
+         // The content itself (e.g., "$$x^2$$") is not HTML escaped here,
+         // allowing MathJax to correctly find and process its delimiters.
+         // The surrounding div can be styled as needed.
+         contentHtml = `<div class="latex-content-for-mathjax prose prose-sm dark:prose-invert max-w-none">${note.content}</div>`;
          // NO AI Review for LaTeX content directly
     } else { // TEXT (could be original text or extracted from PDF/TXT/MD)
          const titleSuffix = note.filename ? ` (Text from: ${escapeHtml(note.filename)})` : '';
@@ -740,9 +776,9 @@ function findNoteById(noteId, searchUserNotes) {
 // Wrapper for AI Review
 async function reviewNoteWithAIUIAction(noteId) { // Renamed internal function
      const note = findNoteById(noteId, true); // Find in user notes
-     // MODIFIED: Allow review if type is TEXT or LATEX
-     if (!note || note.type === NOTE_TYPES.FILE || note.type === NOTE_TYPES.AI_REVIEW ) {
-         alert("Cannot review this note type (only TEXT or LaTeX notes) or note not found.");
+     // MODIFIED: Only allow review if type is TEXT
+     if (!note || note.type !== NOTE_TYPES.TEXT) {
+         alert("Cannot review this note type (only TEXT notes can be reviewed) or note not found.");
          return;
      }
       // Close view modal if open

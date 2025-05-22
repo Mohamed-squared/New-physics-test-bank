@@ -76,6 +76,16 @@ export function generatePdfBaseHtml(title, innerContentHtml) {
 }
 
 // --- Base HTML for Formula Sheets & Summaries (links to different CSS) ---
+// IMPORTANT STYLING NOTE:
+// The visual appearance of PDFs generated using this function heavily depends on an
+// external CSS file, expected to be 'pdf_formula_sheet_styles.css'.
+// This file is injected by the server during PDF generation.
+// If this CSS file is missing, not correctly linked by the server, or if the
+// class names used here (e.g., pdf-fs-main-content, pdf-fs-title, pdf-fs-body-text)
+// do not match those in the CSS, the resulting PDF may have significant styling issues
+// (e.g., incorrect layout, fonts, colors, margins).
+// Ensure 'pdf_formula_sheet_styles.css' exists, is correctly configured on the server-side
+// PDF generation endpoint, and targets the class names used in this HTML structure.
 export function generateFormulaSheetPdfBaseHtml(title, innerContentHtml) {
     const escapedTitle = escapeHtml(title);
     const styles = `

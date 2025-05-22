@@ -157,7 +157,12 @@ body {
     color: var(--color-gray-300);
 }
 
-img { max-width: 100%; height: auto; vertical-align: middle; }
+/* Responsive media - ensures embedded content scales nicely */
+img, video, iframe, svg { 
+    max-width: 100%; 
+    height: auto; /* Maintain aspect ratio */
+    vertical-align: middle; /* Retained from original img rule, generally good for inline-block behavior */
+}
 
 
 /* --- END OF FILE base.css --- */

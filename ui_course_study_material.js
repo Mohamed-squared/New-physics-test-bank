@@ -72,6 +72,84 @@ let currentTranscriptionExplanationHistory = [];
 // --- End Module State ---
 
 
+// --- NEW UI Toggling Logic ---
+function setupLessonToggles() {
+    const toggleButtons = document.querySelectorAll('#lesson-view-options-toolbar .lesson-toggle-btn');
+    toggleButtons.forEach(button => {
+        // Initialize button state based on current visibility (all visible by default)
+        const targetId = button.dataset.target;
+        const targetElement = document.getElementById(targetId);
+        if (targetElement && targetElement.classList.contains('hidden-component')) {
+            button.classList.remove('active');
+        } else {
+            button.classList.add('active'); // Default to active
+        }
+
+        button.addEventListener('click', function() {
+            const targetElement = document.getElementById(this.dataset.target);
+            if (targetElement) {
+                targetElement.classList.toggle('hidden-component');
+                this.classList.toggle('active');
+                // Optional: Save state to localStorage
+                // localStorage.setItem(this.dataset.target + '_visible', !targetElement.classList.contains('hidden-component'));
+                checkColumnVisibility(); // New function to adjust grid if a column is empty
+            }
+        });
+    });
+
+    // Optional: Load initial states from localStorage
+    // toggleButtons.forEach(button => {
+    //     const targetId = button.dataset.target;
+    //     const isVisible = localStorage.getItem(targetId + '_visible');
+    //     if (isVisible === 'false') {
+    //         document.getElementById(targetId)?.classList.add('hidden-component');
+    //         button.classList.remove('active');
+    //     }
+    // });
+    checkColumnVisibility(); // Initial check
+}
+
+function checkColumnVisibility() {
+    const leftColumn = document.getElementById('lesson-left-column');
+    const rightColumn = document.getElementById('lesson-right-column');
+    const mainGrid = leftColumn?.parentElement; // Assuming grid is the parent
+
+    if (!leftColumn || !rightColumn || !mainGrid) return;
+
+    // Check if all direct children that are component wrappers are hidden
+    const isLeftColumnEffectivelyHidden = Array.from(leftColumn.children)
+        .filter(child => child.classList.contains('component-wrapper'))
+        .every(child => child.classList.contains('hidden-component'));
+
+    const isRightColumnEffectivelyHidden = Array.from(rightColumn.children)
+        .filter(child => child.classList.contains('component-wrapper'))
+        .every(child => child.classList.contains('hidden-component'));
+
+    leftColumn.classList.toggle('hidden-component', isLeftColumnEffectivelyHidden);
+    rightColumn.classList.toggle('hidden-component', isRightColumnEffectivelyHidden);
+    
+    if (isLeftColumnEffectivelyHidden && !isRightColumnEffectivelyHidden) {
+        mainGrid.classList.remove('lg:grid-cols-2');
+        mainGrid.classList.add('lg:grid-cols-1');
+        rightColumn.classList.remove('lg:col-span-1'); 
+    } else if (!isLeftColumnEffectivelyHidden && isRightColumnEffectivelyHidden) {
+        mainGrid.classList.remove('lg:grid-cols-2');
+        mainGrid.classList.add('lg:grid-cols-1');
+        leftColumn.classList.remove('lg:col-span-1');
+    } else if (!isLeftColumnEffectivelyHidden && !isRightColumnEffectivelyHidden) {
+        mainGrid.classList.add('lg:grid-cols-2');
+        mainGrid.classList.remove('lg:grid-cols-1');
+        leftColumn.classList.add('lg:col-span-1'); 
+        rightColumn.classList.add('lg:col-span-1');
+    } else { // Both hidden (or both visible initially before toggles affect component-wrappers)
+         mainGrid.classList.add('lg:grid-cols-2'); 
+         mainGrid.classList.remove('lg:grid-cols-1');
+         // If both columns become hidden, the grid itself could be hidden, or show a message.
+         // For now, defaulting to 2-cols allows them to reappear correctly.
+    }
+}
+
+
 // --- Helper Functions ---
 
 // Function to fetch and parse SRT file with timestamps
@@ -1739,6 +1817,38 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
      const skipExamThreshold = courseDef.skipExamPassingPercent || SKIP_EXAM_PASSING_PERCENT;
      const skipExamButtonHtml = !isViewer ? `<button id="skip-exam-btn" onclick="window.triggerSkipExamGenerationWrapper('${courseId}', ${chapterNum})" class="btn-warning-small text-xs" title="Attempt to skip this chapter (Requires ${skipExamThreshold}%)">Take Skip Exam</button>` : '';
 
+    // New HTML Structure
+    const videoWrapperHtml = `<div id="lesson-video-wrapper" class="component-wrapper space-y-4">${videoHtml}</div>`;
+    const transcriptionWrapperHtml = `<div id="lesson-transcription-wrapper" class="component-wrapper">${transcriptionHtml}</div>`;
+    const leftColumnHtml = `<div id="lesson-left-column" class="space-y-4">${videoWrapperHtml}${transcriptionWrapperHtml}</div>`;
+
+    const pdfWrapperHtml = `<div id="lesson-pdf-wrapper" class="component-wrapper space-y-4">${pdfHtml}</div>`;
+    
+    // Original Chapter Tools HTML structure
+    const chapterToolsHtmlOriginal = `
+        <h4 class="text-md font-medium mb-2 text-gray-800 dark:text-gray-300">Chapter Tools</h4>
+        <div class="flex flex-wrap gap-2">
+            <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
+            <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
+            <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI Generated)">Formulas</button>
+            <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI Generated)">Summary</button>
+        </div>
+    `;
+    const toolsWrapperHtml = `<div id="lesson-tools-wrapper" class="component-wrapper border-t pt-4 dark:border-gray-700">${chapterToolsHtmlOriginal}</div>`;
+    
+    const rightColumnHtml = `<div id="lesson-right-column" class="space-y-4">${pdfWrapperHtml}${toolsWrapperHtml}</div>`;
+
+    const lessonViewOptionsToolbar = `
+        <div id="lesson-view-options-toolbar" class="my-4 p-2 bg-gray-100 dark:bg-gray-700 rounded-md shadow flex flex-wrap gap-2 items-center text-sm">
+            <span class="font-medium mr-2 text-gray-700 dark:text-gray-300">Toggle Panels:</span>
+            <button data-target="lesson-video-wrapper" class="lesson-toggle-btn active">Video</button>
+            <button data-target="lesson-transcription-wrapper" class="lesson-toggle-btn active">Transcription</button>
+            <button data-target="lesson-pdf-wrapper" class="lesson-toggle-btn active">PDF</button>
+            <button data-target="lesson-tools-wrapper" class="lesson-toggle-btn active">Tools</button>
+            <!-- Placeholder for Whiteboard toggle -->
+        </div>
+    `;
+
      contentArea.innerHTML = `
         <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
              <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200" title="Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}">Chapter ${chapterNum}: ${escapeHtml(chapterTitle)}</h2>
@@ -1747,19 +1857,13 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                  <button onclick="window.showCurrentCourseDashboardWrapper('${courseId}')" class="btn-secondary-small text-xs">Back to Menu</button>
             </div>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-             <div class="space-y-4"> ${videoHtml} ${transcriptionHtml} </div>
-             <div class="space-y-4"> ${pdfHtml}
-                  <div class="border-t pt-4 dark:border-gray-700">
-                      <h4 class="text-md font-medium mb-2 text-gray-800 dark:text-gray-300">Chapter Tools</h4>
-                      <div class="flex flex-wrap gap-2">
-                           <button onclick="window.handleExplainSelection('transcription')" class="btn-secondary-small text-xs" title="Explain selected text from transcription">Explain Selection</button>
-                           <button onclick="window.askQuestionAboutTranscription()" class="btn-secondary-small text-xs" title="Ask AI about the video transcription">Ask AI (Transcript)</button>
-                           <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Formula Sheet (AI Generated)">Formulas</button>
-                           <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum})" class="btn-secondary-small text-xs" title="View Chapter Summary (AI Generated)">Summary</button>
-                      </div>
-                  </div>
-                  <div id="formula-sheet-area" class="border-t pt-4 dark:border-gray-700 hidden">
+        ${lessonViewOptionsToolbar}
+        <div class="grid lg:grid-cols-2 gap-6">
+            ${leftColumnHtml}
+            ${rightColumnHtml}
+        </div>
+        <div class="mt-6 space-y-4"> <!-- Formula Sheet and Summary moved below the main grid -->
+            <div id="formula-sheet-area" class="border-t pt-4 dark:border-gray-700 hidden">
                        <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
                            <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Formula Sheet</h4>
                            <div class="flex gap-2">
@@ -1767,18 +1871,24 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
                                <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-primary-small text-xs hidden" title="Download Formula Sheet as PDF">PDF</button>
                            </div>
                        </div>
-                       <div id="formula-sheet-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
-                  </div>
-                  <div id="chapter-summary-area" class="border-t pt-4 dark:border-gray-700 hidden">
-                       <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
-                            <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Chapter Summary</h4>
-                            <div class="flex gap-2">
-                                <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Chapter Summary">Regen</button>
-                                <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-primary-small text-xs hidden" title="Download Summary as PDF">PDF</button>
-                            </div>
-                       </div>
-                       <div id="chapter-summary-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
-                  </div>
+                <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Formula Sheet</h4>
+                    <div class="flex gap-2">
+                        <button onclick="window.displayFormulaSheetWrapper('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Formula Sheet">Regen</button>
+                        <button id="download-formula-pdf-btn" onclick="window.downloadFormulaSheetPdf()" class="btn-primary-small text-xs hidden" title="Download Formula Sheet as PDF">PDF</button>
+                    </div>
+                </div>
+                <div id="formula-sheet-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
+            </div>
+            <div id="chapter-summary-area" class="border-t pt-4 dark:border-gray-700 hidden">
+                <div class="flex justify-between items-center mb-2 flex-wrap gap-1">
+                    <h4 class="text-md font-medium text-gray-800 dark:text-gray-300">Chapter Summary</h4>
+                    <div class="flex gap-2">
+                        <button onclick="window.displayChapterSummaryWrapper('${courseId}', ${chapterNum}, true)" class="btn-secondary-small text-xs" title="Regenerate Chapter Summary">Regen</button>
+                        <button id="download-summary-pdf-btn" onclick="window.downloadChapterSummaryPdf()" class="btn-primary-small text-xs hidden" title="Download Summary as PDF">PDF</button>
+                    </div>
+                </div>
+                <div id="chapter-summary-content" class="text-sm prose prose-sm dark:prose-invert max-w-none p-3 bg-gray-50 dark:bg-gray-700/50 rounded border dark:border-gray-600 max-h-96 overflow-y-auto">Loading...</div>
             </div>
         </div>
         ${aiExplanationHtml}
@@ -1798,6 +1908,7 @@ export async function showCourseStudyMaterial(courseId, chapterNum, initialVideo
          hideLoading();
      }
      checkAndMarkChapterStudied(courseId, chapterNum);
+     setupLessonToggles(); // Call the new setup function
 }
 window.showCourseStudyMaterialWrapper = (courseId, chapterNum, initialVideoIndex = 0) => showCourseStudyMaterial(courseId, chapterNum, initialVideoIndex);
 window.handlePdfSnapshotForAI = handlePdfSnapshotForAI;

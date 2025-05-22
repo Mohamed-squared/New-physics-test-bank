@@ -178,3 +178,15 @@ hr {
 .dark .prose code:not(pre code) { background-color: var(--color-gray-700); border-color: var(--border-color-dark); }
 
 /* --- END OF FILE typography.css --- */
+
+/* === NEW GENERAL TEXT OVERFLOW RULES === */
+p, li, dd, dt, span, label, blockquote {
+    overflow-wrap: break-word; /* Standard property */
+    word-wrap: break-word;     /* Older alias for broader compatibility */
+}
+
+/* For elements that might be flex children and contain text */
+/* This helps them shrink properly if they have a min-width default other than 0 */
+.flex-child-can-shrink-with-text {
+    min-width: 0;
+}
