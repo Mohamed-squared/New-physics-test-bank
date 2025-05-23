@@ -1,9 +1,8 @@
-const { Storage } = require('megajs');
-const fs = require('fs');
+import { Storage } from 'https://unpkg.com/megajs@1.3.7/dist/main.browser-es.mjs';
 
 let megaStorage;
 
-async function initialize(email, password) {
+export async function initialize(email, password) {
   try {
     console.log('Initializing MEGA service...');
     megaStorage = new Storage({
@@ -21,7 +20,7 @@ async function initialize(email, password) {
   }
 }
 
-async function findFolder(folderName, parentNode = megaStorage.root) {
+export async function findFolder(folderName, parentNode = megaStorage.root) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
@@ -44,7 +43,7 @@ async function findFolder(folderName, parentNode = megaStorage.root) {
   return null;
 }
 
-async function createFolder(folderName, parentNode = megaStorage.root) {
+export async function createFolder(folderName, parentNode = megaStorage.root) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
@@ -77,7 +76,7 @@ async function createFolder(folderName, parentNode = megaStorage.root) {
   }
 }
 
-async function uploadFile(localFilePath, remoteFileName, targetFolderNode) {
+export async function uploadFile(fileObject, remoteFileName, targetFolderNode) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
@@ -85,19 +84,33 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderNode) {
     console.error('Target folder node is undefined. Cannot upload file.');
     throw new Error('Target folder node is required for uploading a file.');
   }
+  if (!fileObject) {
+    console.error('File object is undefined. Cannot upload file.');
+    throw new Error('File object is required for uploading a file.');
+  }
 
-  console.log(`Starting upload of "${localFilePath}" as "${remoteFileName}" to folder "${targetFolderNode.name || 'root'}"`);
+  const actualRemoteFileName = remoteFileName || fileObject.name;
+  const fileSize = fileObject.size;
+
+  console.log(`Starting upload of "${actualRemoteFileName}" (size: ${fileSize} bytes) to folder "${targetFolderNode.name || 'root'}"`);
 
   try {
-    const stats = fs.statSync(localFilePath);
-    const fileSize = stats.size;
-    console.log(`File size: ${fileSize} bytes`);
-
-    const stream = fs.createReadStream(localFilePath);
+    // For browser compatibility, pass the File object directly.
+    // megajs should handle stream creation internally.
+    // The upload method might vary; common patterns are:
+    // 1. targetFolderNode.upload(name, data, [options])
+    // 2. targetFolderNode.upload({ name, size }, data)
+    // Based on documentation: storage.upload('file.txt', 'data').complete
+    // So, targetFolderNode.upload(actualRemoteFileName, fileObject) seems plausible.
+    // We also need to provide the size for progress tracking if the API supports it in this form.
+    // Let's try the more structured approach first if available, or fall back.
+    // The existing code used: targetFolderNode.upload({ name: remoteFileName, size: fileSize }, stream);
+    // So, we'll adapt that to: targetFolderNode.upload({ name: actualRemoteFileName, size: fileSize }, fileObject);
+    // This seems like a robust way if the library supports passing a File object as data.
     const upload = targetFolderNode.upload({
-      name: remoteFileName,
+      name: actualRemoteFileName,
       size: fileSize, // Providing size is good for progress tracking
-    }, stream);
+    }, fileObject); // Pass the File object directly
 
     // Optional: Log progress
     let lastLoggedProgress = 0;
@@ -130,7 +143,7 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderNode) {
   }
 }
 
-async function downloadFile(fileOrLink, localPath) {
+export async function downloadFile(fileOrLink, desiredFileName) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
@@ -159,81 +172,89 @@ async function downloadFile(fileOrLink, localPath) {
       throw new Error('Unable to process the provided file or link for download.');
   }
 
-  console.log(`Starting download of "${fileToDownload.name}" to "${localPath}"`);
+  const downloadName = desiredFileName || fileToDownload.name;
+  console.log(`Starting download of "${downloadName}"`);
 
   try {
-    const stream = fileToDownload.download(); // This returns a readable stream
-    const writable = fs.createWriteStream(localPath);
+    // For browser environment, download the file data as a buffer/blob
+    // The mega.js documentation suggests file.downloadBuffer()
+    // This method might also support progress events directly, or we might need to adapt.
 
-    // Pipe the download stream to a file
-    stream.pipe(writable);
+    // It's not entirely clear from the docs if downloadBuffer() itself emits progress,
+    // or if we need to use file.download() and collect chunks.
+    // Let's assume file.download() returns a stream that can be used for progress,
+    // and then we collect the data. If downloadBuffer() is more direct and supports progress,
+    // that would be simpler. The quick start guide for browser download shows:
+    // const data = await file.downloadBuffer();
+    // This implies it's a direct operation. Progress events are usually on stream objects.
+    // Let's try to get the stream first for progress, then collect data.
+
+    // If file.download() returns a Node.js-style stream, it won't work directly in browser
+    // for piping to a file. But it *is* used for progress in the current code.
+    // The `megajs` library might provide a browser-compatible stream or a way to get data directly.
+    // Let's check if file.download() in browser context returns something different
+    // or if downloadBuffer() is the way. The current code uses `fileToDownload.download()`.
+    // This returns a stream. We need to consume this stream and build a Blob.
+
+    const dataChunks = [];
+    let downloadedBytes = 0;
+    const stream = fileToDownload.download(); // This should still return a stream-like object
 
     // Optional: Log progress
     let lastLoggedProgress = 0;
     stream.on('progress', (progress) => {
+      downloadedBytes = progress.bytesLoaded;
       const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
       if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
-        console.log(`Downloading "${fileToDownload.name}": ${currentProgress}%`);
+        console.log(`Downloading "${downloadName}": ${currentProgress}%`);
         lastLoggedProgress = currentProgress;
       }
     });
 
+    stream.on('data', (chunk) => {
+      dataChunks.push(chunk);
+    });
+
     return new Promise((resolve, reject) => {
       stream.on('end', () => {
-        console.log(`File "${fileToDownload.name}" downloaded successfully to "${localPath}".`);
+        const blobData = new Blob(dataChunks);
+        const url = URL.createObjectURL(blobData);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = downloadName;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        console.log(`File "${downloadName}" download initiated in browser.`);
         resolve({
-          name: fileToDownload.name,
-          path: localPath,
-          size: fileToDownload.size,
+          name: downloadName,
+          size: downloadedBytes, // or fileToDownload.size, but downloadedBytes is from actual transfer
         });
       });
+
       stream.on('error', (error) => {
-        console.error(`Error downloading file "${fileToDownload.name}":`, error);
-        // Clean up partially downloaded file
-        if (fs.existsSync(localPath)) {
-          fs.unlinkSync(localPath);
-        }
-        reject(error);
-      });
-      writable.on('error', (error) => { // Also handle errors on the writable stream
-        console.error(`Error writing file to "${localPath}":`, error);
-        // Clean up partially downloaded file
-        if (fs.existsSync(localPath)) {
-          fs.unlinkSync(localPath);
-        }
+        console.error(`Error downloading file "${downloadName}":`, error);
         reject(error);
       });
     });
 
   } catch (error) {
-    console.error(`Error initiating download for "${fileToDownload.name || 'unknown file'}":`, error);
+    console.error(`Error initiating download for "${downloadName || 'unknown file'}":`, error);
     throw error;
   }
 }
 
-module.exports = {
-  initialize,
-  findFolder,
-  createFolder,
-  uploadFile,
-  downloadFile,
-  get megaStorage() { // Expose megaStorage through a getter
-    return megaStorage;
-  },
-  getFolderContents, // Add new function to exports
-};
+export function getMegaStorage() { // Expose megaStorage through a getter
+  return megaStorage;
+}
 
-export  {
-  initialize,
-  findFolder,
-  createFolder,
-  uploadFile,
-  downloadFile,
-  megaStorage,
-  getFolderContents, // Add new function to exports
-};
-
-async function getFolderContents(folderNodeOrLink) {
+export async function getFolderContents(folderNodeOrLink) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
   }

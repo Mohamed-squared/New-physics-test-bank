@@ -8,7 +8,7 @@ import {
     findFolder as megaFindFolder, 
     uploadFile as megaUploadFile,
     getFolderContents, 
-    megaStorage 
+    getMegaStorage
 } from './mega_service.js';
 
 // Helper to create a placeholder file object (Blob) for client-side uploads
@@ -308,7 +308,7 @@ export async function handleMegaFileUpload(event) {
         let currentFolderLink = null;
         if (currentMegaExplorerPath.length > 0) {
             currentFolderLink = currentMegaExplorerPath[currentMegaExplorerPath.length - 1].link;
-        } else if (currentMegaExplorerNode && currentMegaExplorerNode.nodeId === megaStorage.root.nodeId) {
+        } else if (currentMegaExplorerNode && getMegaStorage() && currentMegaExplorerNode.nodeId === getMegaStorage().root.nodeId) {
              currentFolderLink = null; 
         }
         renderMegaFolderContents(currentMegaExplorerNode, currentFolderLink);
@@ -340,7 +340,8 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
         currentMegaExplorerNode = folderNode; 
         const contents = await getFolderContents(folderNode); 
 
-        const currentFolderIsRoot = folderNode.nodeId === (megaStorage && megaStorage.root ? megaStorage.root.nodeId : '---nevermatch---');
+        const activeMegaStorage = getMegaStorage();
+        const currentFolderIsRoot = folderNode.nodeId === (activeMegaStorage && activeMegaStorage.root ? activeMegaStorage.root.nodeId : '---nevermatch---');
 
         if (!currentMegaExplorerPath.find(p => p.nodeId === folderNode.nodeId)) {
              const linkToUse = folderLinkForPath !== undefined ? folderLinkForPath : (typeof folderNode.link === 'function' ? await folderNode.link({key:folderNode.key}) : folderNode.link);
@@ -405,7 +406,8 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
 
 export async function loadMegaFolderByLink(folderLink, folderName = null, folderNodeId = null) {
     const feedbackEl = document.getElementById('mega-explorer-feedback');
-    if (!megaStorage || !megaStorage.root) {
+    const activeMegaStorage = getMegaStorage();
+    if (!activeMegaStorage || !activeMegaStorage.root) {
         const megaEmail = prompt("Enter MEGA Starbase email credentials:");
         if (!megaEmail) { alert("MEGA email is required for Starbase access."); return; }
         const megaPassword = prompt("Enter MEGA Starbase password:");
@@ -421,7 +423,7 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
         }
     }
 
-    if (!folderLink && !(megaStorage && megaStorage.root)) {
+    if (!folderLink && !(activeMegaStorage && activeMegaStorage.root)) {
         alert("Target sector link missing and Starbase root uncharted."); return;
     }
     
@@ -430,14 +432,18 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
 
     if (!folderLink || folderLink === 'null') { 
         console.log("[Explorer] No sector link, defaulting to Starbase Root.");
-        targetNode = megaStorage.root;
+        if (!activeMegaStorage || !activeMegaStorage.root) {
+             alert("MEGA service not initialized. Cannot default to root."); return;
+        }
+        targetNode = activeMegaStorage.root;
         currentMegaExplorerPath = []; 
         linkToUseForPath = null; 
     } else {
         console.log(`[Explorer] Charting course to sector: ${folderLink}`);
         if (feedbackEl) feedbackEl.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Charting course to sector...</p>`;
         try {
-            targetNode = megaStorage.File.fromURL(folderLink);
+            if (!activeMegaStorage) throw new Error("MEGA Storage not available for URL parsing.");
+            targetNode = activeMegaStorage.File.fromURL(folderLink);
             if (targetNode && typeof targetNode.loadAttributes === 'function') {
                 await targetNode.loadAttributes(); 
             }
@@ -473,7 +479,7 @@ export function navigateToMegaPathIndex(index) {
     
     if (link && link !== 'null') {
         loadMegaFolderByLink(link, name, nodeId);
-    } else if (nodeId === (megaStorage && megaStorage.root ? megaStorage.root.nodeId : '---nevermatch---')) {
+    } else if (nodeId === (getMegaStorage() && getMegaStorage().root ? getMegaStorage().root.nodeId : '---nevermatch---')) {
         loadMegaFolderByLink(null); 
     } else {
         alert("Cannot navigate to this sector (coordinates missing and not Starbase Root).");
@@ -486,7 +492,7 @@ export function navigateToMegaParentFolder() {
         const parent = currentMegaExplorerPath.pop(); 
         if (parent.link && parent.link !== 'null') {
             loadMegaFolderByLink(parent.link, parent.name, parent.nodeId);
-        } else if (parent.nodeId === (megaStorage && megaStorage.root ? megaStorage.root.nodeId : '---nevermatch---')) {
+        } else if (parent.nodeId === (getMegaStorage() && getMegaStorage().root ? getMegaStorage().root.nodeId : '---nevermatch---')) {
              loadMegaFolderByLink(null); 
         } else {
             console.warn("[Explorer] Parent sector has no link and is not Starbase Root. Defaulting to Root.");
@@ -555,9 +561,10 @@ export function displayMegaFileExplorer(containerElement, initialFolderLink = nu
         currentMegaExplorerPath = []; 
         loadMegaFolderByLink(initialFolderLink);
     } else {
-         if (megaStorage && megaStorage.root) { 
+         const activeMegaStorage = getMegaStorage();
+         if (activeMegaStorage && activeMegaStorage.root) { 
             currentMegaExplorerPath = [];
-            renderMegaFolderContents(megaStorage.root, null);
+            renderMegaFolderContents(activeMegaStorage.root, null);
          } else { 
             document.getElementById('mega-file-list').innerHTML = '<p class="text-gray-500 dark:text-gray-400 p-3">Initialize MEGA by providing credentials (e.g., via Migration tool) or enter a folder link to start browsing.</p>';
          }
