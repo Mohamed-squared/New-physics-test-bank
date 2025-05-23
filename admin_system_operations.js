@@ -219,66 +219,7 @@ export async function saveChatAutoDeleteSettingAdmin() {
 }
 
 // --- START MODIFICATION: Course Exam Defaults Configuration UI and Logic ---
-function displayCourseExamDefaultsSection(containerElement) {
-    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
-    const currentDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG; // Use state or fallback
-
-    let sectionHtml = `
-        <section class="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30 mt-8">
-            <h4 class="text-lg font-medium mb-3">Course Exam Defaults Configuration</h4>
-            <p class="text-sm text-muted mb-4">
-                Set default parameters for various course exam types (Assignments, Weekly Exams, Midcourses, Finals).
-                MCQ Ratio (0-1) determines the proportion of MCQs. Text Source Ratio (0-1) determines proportion from Text-based sources (vs. Lecture-based).
-                <strong>Only Primary Admin can save these global defaults.</strong>
-            </p>
-            <form id="course-exam-defaults-form" class="space-y-6">
-    `;
-
-    for (const examType in FALLBACK_EXAM_CONFIG) {
-        const config = currentDefaults[examType] || FALLBACK_EXAM_CONFIG[examType];
-        const typeLabel = examType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        sectionHtml += `
-            <fieldset class="border dark:border-gray-600 p-3 rounded-md bg-white dark:bg-gray-800 shadow-sm">
-                <legend class="text-md font-semibold px-2 text-gray-700 dark:text-gray-300">${typeLabel}</legend>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 mt-2">
-                    <div>
-                        <label for="${examType}-questions" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Questions</label>
-                        <input type="number" id="${examType}-questions" value="${config.questions}" min="1" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
-                    </div>
-                    <div>
-                        <label for="${examType}-duration" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Duration (min)</label>
-                        <input type="number" id="${examType}-duration" value="${config.durationMinutes}" min="5" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
-                    </div>
-                    <div>
-                        <label for="${examType}-mcqRatio" class="block text-xs font-medium text-gray-600 dark:text-gray-400">MCQ Ratio (0-1)</label>
-                        <input type="number" id="${examType}-mcqRatio" value="${config.mcqRatio.toFixed(2)}" min="0" max="1" step="0.05" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
-                    </div>
-                    <div>
-                        <label for="${examType}-textSourceRatio" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Text Source Ratio (0-1)</label>
-                        <input type="number" id="${examType}-textSourceRatio" value="${config.textSourceRatio.toFixed(2)}" min="0" max="1" step="0.05" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
-                    </div>
-                </div>
-            </fieldset>
-        `;
-    }
-
-    sectionHtml += `
-                <div class="mt-6 text-right">
-                    <button type="button" onclick="window.handleSaveCourseExamDefaults()" class="btn-primary" ${!isPrimaryAdmin ? 'disabled' : ''}>Save Exam Defaults</button>
-                </div>
-            </form>
-        </section>
-    `;
-    
-    const systemOpsMainContainer = containerElement.querySelector('.space-y-8');
-    if (systemOpsMainContainer) {
-        systemOpsMainContainer.insertAdjacentHTML('beforeend', sectionHtml);
-    } else {
-        containerElement.innerHTML += sectionHtml; // Fallback if specific inner container isn't found
-    }
-}
-
-window.handleSaveCourseExamDefaults = async () => {
+async function handleSaveCourseExamDefaults() {
     if (!currentUser || currentUser.uid !== ADMIN_UID) {
         alert("Permission Denied: Only Primary Admin can save course exam defaults."); return;
     }
@@ -325,7 +266,72 @@ window.handleSaveCourseExamDefaults = async () => {
         }
         // saveCourseExamDefaults shows its own error alert if Firestore save fails.
     }
-};
+}
+
+function displayCourseExamDefaultsSection(containerElement) {
+    const isPrimaryAdmin = currentUser && currentUser.uid === ADMIN_UID;
+    const currentDefaults = courseExamDefaults || FALLBACK_EXAM_CONFIG; // Use state or fallback
+
+    let sectionHtml = `
+        <section class="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30 mt-8">
+            <h4 class="text-lg font-medium mb-3">Course Exam Defaults Configuration</h4>
+            <p class="text-sm text-muted mb-4">
+                Set default parameters for various course exam types (Assignments, Weekly Exams, Midcourses, Finals).
+                MCQ Ratio (0-1) determines the proportion of MCQs. Text Source Ratio (0-1) determines proportion from Text-based sources (vs. Lecture-based).
+                <strong>Only Primary Admin can save these global defaults.</strong>
+            </p>
+            <form id="course-exam-defaults-form" class="space-y-6">
+    `;
+
+    for (const examType in FALLBACK_EXAM_CONFIG) {
+        const config = currentDefaults[examType] || FALLBACK_EXAM_CONFIG[examType];
+        const typeLabel = examType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        sectionHtml += `
+            <fieldset class="border dark:border-gray-600 p-3 rounded-md bg-white dark:bg-gray-800 shadow-sm">
+                <legend class="text-md font-semibold px-2 text-gray-700 dark:text-gray-300">${typeLabel}</legend>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-3 mt-2">
+                    <div>
+                        <label for="${examType}-questions" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Questions</label>
+                        <input type="number" id="${examType}-questions" value="${config.questions}" min="1" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
+                    </div>
+                    <div>
+                        <label for="${examType}-duration" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Duration (min)</label>
+                        <input type="number" id="${examType}-duration" value="${config.durationMinutes}" min="5" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
+                    </div>
+                    <div>
+                        <label for="${examType}-mcqRatio" class="block text-xs font-medium text-gray-600 dark:text-gray-400">MCQ Ratio (0-1)</label>
+                        <input type="number" id="${examType}-mcqRatio" value="${config.mcqRatio.toFixed(2)}" min="0" max="1" step="0.05" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
+                    </div>
+                    <div>
+                        <label for="${examType}-textSourceRatio" class="block text-xs font-medium text-gray-600 dark:text-gray-400">Text Source Ratio (0-1)</label>
+                        <input type="number" id="${examType}-textSourceRatio" value="${config.textSourceRatio.toFixed(2)}" min="0" max="1" step="0.05" class="form-control text-sm mt-1" ${!isPrimaryAdmin ? 'readonly' : ''}>
+                    </div>
+                </div>
+            </fieldset>
+        `;
+    }
+
+    sectionHtml += `
+                <div class="mt-6 text-right">
+                    <button type="button" id="save-course-exam-defaults-btn" class="btn-primary" ${!isPrimaryAdmin ? 'disabled' : ''}>Save Exam Defaults</button>
+                </div>
+            </form>
+        </section>
+    `;
+    
+    const systemOpsMainContainer = containerElement.querySelector('.space-y-8');
+    if (systemOpsMainContainer) {
+        systemOpsMainContainer.insertAdjacentHTML('beforeend', sectionHtml);
+    } else {
+        containerElement.innerHTML += sectionHtml; // Fallback if specific inner container isn't found
+    }
+    // Attach event listener programmatically
+    const saveButton = document.getElementById('save-course-exam-defaults-btn');
+    if (saveButton) {
+        saveButton.addEventListener('click', handleSaveCourseExamDefaults);
+    }
+}
+
 // --- END MODIFICATION ---
 
 
@@ -421,4 +427,6 @@ export function displaySystemOperationsSection(containerElement) {
          console.error("Could not find inner container to append Course Exam Defaults section.");
     }
 }
+
+export { handleSaveCourseExamDefaults }; // Add to exports
 // --- END OF FILE admin_system_operations.js ---

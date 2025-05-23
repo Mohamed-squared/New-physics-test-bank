@@ -116,7 +116,7 @@ export async function getAllPdfTextForAI(pdfDataOrPath) {
         return null;
     }
 }
-window.getAllPdfTextForAI = getAllPdfTextForAI;
+// window.getAllPdfTextForAI = getAllPdfTextForAI; // ES Exported
 
 
 // --- API Call Helpers ---

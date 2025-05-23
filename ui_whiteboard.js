@@ -168,19 +168,41 @@ class SimpleWhiteboard {
 }
 
 // --- Public Functions ---
-export function initializeWhiteboard(canvasId, containerId) {
+export function initializeWhiteboard(canvasId, containerId, toolbarConfig = null) {
     if (currentWhiteboardInstance) {
         currentWhiteboardInstance.destroy();
     }
     try {
         currentWhiteboardInstance = new SimpleWhiteboard(canvasId, containerId);
+        
         // Listen for window resize to adjust canvas
+        // This specific global event listener is fine as it pertains to a global event.
         window.addEventListener('resize', () => {
             if (currentWhiteboardInstance) {
                 currentWhiteboardInstance.resizeCanvas();
                 currentWhiteboardInstance.redrawAll();
             }
         });
+
+        if (toolbarConfig) {
+            const clearBtn = document.getElementById(toolbarConfig.clearButtonId);
+            if (clearBtn) clearBtn.addEventListener('click', () => clearWhiteboard(canvasId));
+
+            document.querySelectorAll(toolbarConfig.colorButtonSelector).forEach(btn => {
+                btn.addEventListener('click', () => setWhiteboardColor(btn.dataset.color));
+            });
+
+            document.querySelectorAll(toolbarConfig.lineWidthSelector).forEach(btn => {
+                btn.addEventListener('click', () => setWhiteboardLineWidth(btn.dataset.width));
+            });
+
+            const undoBtn = document.getElementById(toolbarConfig.undoButtonId);
+            if (undoBtn) undoBtn.addEventListener('click', () => undoWhiteboardLastAction(canvasId));
+
+            const downloadBtn = document.getElementById(toolbarConfig.downloadPdfButtonId);
+            if (downloadBtn) downloadBtn.addEventListener('click', () => downloadWhiteboardAsPdf(canvasId));
+        }
+
     } catch (e) {
         console.error("Failed to initialize whiteboard:", e);
     }
@@ -243,11 +265,11 @@ export async function downloadWhiteboardAsPdf(canvasId, filename = "whiteboard_d
 }
 
 // Global assignments
-window.initializeWhiteboard = initializeWhiteboard;
-window.clearWhiteboard = clearWhiteboard;
-window.setWhiteboardColor = setWhiteboardColor;
-window.setWhiteboardLineWidth = setWhiteboardLineWidth;
-window.undoWhiteboardLastAction = undoWhiteboardLastAction;
-window.downloadWhiteboardAsPdf = downloadWhiteboardAsPdf;
+// window.initializeWhiteboard = initializeWhiteboard; // Now ES exported, global assignment (if needed) should be in script.js
+// window.clearWhiteboard = clearWhiteboard; // Now ES exported, to be called via event listeners or imported
+// window.setWhiteboardColor = setWhiteboardColor; // Now ES exported
+// window.setWhiteboardLineWidth = setWhiteboardLineWidth; // Now ES exported
+// window.undoWhiteboardLastAction = undoWhiteboardLastAction; // Now ES exported
+// window.downloadWhiteboardAsPdf = downloadWhiteboardAsPdf; // Now ES exported
 
 // --- END OF FILE ui_whiteboard.js ---

@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile, megaStorage } = require('./mega_service.js');
 const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js');
-const { getAllPdfTextForAI, generateTextContentResponse } = require('./ai_integration.js');
+import { getAllPdfTextForAI, callGeminiTextAPI as generateTextContentResponse } from './ai_integration.js'; // MODIFIED for ES Import and aliasing
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 

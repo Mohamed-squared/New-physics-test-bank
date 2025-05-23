@@ -100,7 +100,7 @@ export function showSettingsPanel() {
     renderSettingsTabContent(currentSettingsTab);
     window.playUiSound?.('navigation');
 }
-window.showSettingsPanel = showSettingsPanel;
+// window.showSettingsPanel = showSettingsPanel; // ES Exported
 
 function renderSettingsPanelShell() {
     const html = `
@@ -108,13 +108,10 @@ function renderSettingsPanelShell() {
             <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Settings</h2>
             <div class="flex border-b border-gray-200 dark:border-gray-700 mb-6" role="tablist">
                 <button role="tab" aria-selected="${currentSettingsTab === 'profile'}" id="tab-profile-settings"
-                        onclick="window.renderSettingsTabContent('profile')"
                         class="settings-tab-btn">Profile & Account</button>
                 <button role="tab" aria-selected="${currentSettingsTab === 'backgrounds'}" id="tab-background-settings"
-                        onclick="window.renderSettingsTabContent('backgrounds')"
                         class="settings-tab-btn">Appearance</button>
                 <button role="tab" aria-selected="${currentSettingsTab === 'experimental'}" id="tab-experimental-settings"
-                        onclick="window.renderSettingsTabContent('experimental')"
                         class="settings-tab-btn">Experimental Features</button>
             </div>
             <div id="settings-tab-content" class="content-card">
@@ -123,9 +120,12 @@ function renderSettingsPanelShell() {
         </div>
     `;
     displayContent(html);
+    document.getElementById('tab-profile-settings')?.addEventListener('click', () => renderSettingsTabContent('profile'));
+    document.getElementById('tab-background-settings')?.addEventListener('click', () => renderSettingsTabContent('backgrounds'));
+    document.getElementById('tab-experimental-settings')?.addEventListener('click', () => renderSettingsTabContent('experimental'));
 }
 
-window.renderSettingsTabContent = function(tabName) {
+function renderSettingsTabContent(tabName) {
     currentSettingsTab = tabName;
     const contentArea = document.getElementById('settings-tab-content');
     if (!contentArea) {
@@ -182,33 +182,41 @@ function renderProfileSettingsTab(container) {
                         <input type="text" id="settingsDisplayNameInput" value="${escapeHtml(displayName)}" class="form-control mt-1" required placeholder="Your Name">
                     </div>
                 </div>
-                 <button onclick="window.handleSaveDisplayNameAndPic()" class="btn-primary-small">Save Name/Avatar</button>
+                 <button id="save-display-name-pic-btn" class="btn-primary-small">Save Name/Avatar</button>
             </div>
             <div class="p-4 border dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50">
                 <h4 class="text-md font-semibold mb-3">Account Management</h4>
                  <div class="space-y-3">
                      <div>
                         <p class="text-sm font-medium">Username: <span class="font-normal text-gray-600 dark:text-gray-400">@${escapeHtml(username)}</span></p>
-                        <button onclick="window.promptChangeUsername()" class="btn-secondary-small text-xs mt-1">Change Username</button>
+                        <button id="prompt-change-username-btn" class="btn-secondary-small text-xs mt-1">Change Username</button>
                      </div>
                      <div>
                         <p class="text-sm font-medium">Email: <span class="font-normal text-gray-600 dark:text-gray-400">${escapeHtml(email)}</span></p>
-                        <button onclick="window.promptChangeEmail()" class="btn-secondary-small text-xs mt-1">Change Email</button>
+                        <button id="prompt-change-email-btn" class="btn-secondary-small text-xs mt-1">Change Email</button>
                      </div>
-                     <button onclick="window.promptChangePassword()" class="btn-secondary-small text-sm">Change Password</button>
+                     <button id="prompt-change-password-btn" class="btn-secondary-small text-sm">Change Password</button>
                  </div>
             </div>
 
             <div class="p-4 border border-red-300 dark:border-red-700 rounded-md bg-red-50 dark:bg-red-900/30">
                 <h4 class="text-md font-semibold mb-3 text-red-700 dark:text-red-300">Danger Zone</h4>
                 <div class="flex flex-col sm:flex-row gap-3">
-                    <button onclick="window.signOutUserWrapper()" class="btn-warning flex-1">Log Out</button>
-                    <button onclick="window.confirmSelfDeleteAccountSettings()" class="btn-danger flex-1">Delete My Account</button>
+                    <button id="sign-out-btn-settings" class="btn-warning flex-1">Log Out</button>
+                    <button id="confirm-self-delete-btn-settings" class="btn-danger flex-1">Delete My Account</button>
                 </div>
             </div>
         </div>
     `;
     container.innerHTML = html;
+
+    document.getElementById('save-display-name-pic-btn')?.addEventListener('click', handleSaveDisplayNameAndPic);
+    document.getElementById('prompt-change-username-btn')?.addEventListener('click', promptChangeUsername);
+    document.getElementById('prompt-change-email-btn')?.addEventListener('click', promptChangeEmail);
+    document.getElementById('prompt-change-password-btn')?.addEventListener('click', promptChangePassword);
+    document.getElementById('sign-out-btn-settings')?.addEventListener('click', signOutUserWrapper); // Assuming signOutUserWrapper is available
+    document.getElementById('confirm-self-delete-btn-settings')?.addEventListener('click', confirmSelfDeleteAccountSettings);
+
 
     const fileInput = document.getElementById('settingsProfilePicInput');
     if (fileInput) {
@@ -224,7 +232,7 @@ function renderProfileSettingsTab(container) {
     }
 }
 
-window.handleSaveDisplayNameAndPic = async () => {
+async function handleSaveDisplayNameAndPic() {
     if (!currentUser || !auth) {
         console.error("handleSaveDisplayNameAndPic: currentUser or auth is null.");
         alert("Error: Not logged in or authentication service unavailable. Cannot save profile.");
@@ -336,7 +344,7 @@ window.handleSaveDisplayNameAndPic = async () => {
     }
 };
 
-window.promptChangeUsername = () => {
+function promptChangeUsername() {
     if (!currentUser) return;
     const currentUsername = currentUser.username || '';
     const newUsername = prompt(`Enter new username (current: @${currentUsername}).\n3-20 letters, numbers, or underscores:`, currentUsername);
@@ -347,6 +355,7 @@ window.promptChangeUsername = () => {
     handleChangeUsername(trimmedUsername, currentUsername);
 };
 
+// This is an internal helper, does not need to be on window or exported if only called by promptChangeUsername
 async function handleChangeUsername(newUsername, oldUsername) {
     showLoading("Changing username...");
     try {
@@ -371,7 +380,7 @@ async function handleChangeUsername(newUsername, oldUsername) {
     finally { hideLoading(); }
 }
 
-window.promptChangeEmail = async () => {
+async function promptChangeEmail() {
     if (!currentUser) return;
     const currentPassword = prompt("For security, please re-enter your current password to change your email:");
     if (currentPassword === null) return; // User cancelled
@@ -400,7 +409,7 @@ window.promptChangeEmail = async () => {
     }
 };
 
-window.promptChangePassword = async () => {
+async function promptChangePassword() {
     if (!currentUser) return;
     const currentPassword = prompt("Enter CURRENT password:");
     if (currentPassword === null) return; if (!currentPassword) { alert("Current password required."); return; }
@@ -417,13 +426,13 @@ window.promptChangePassword = async () => {
     finally { hideLoading(); }
 };
 
-window.confirmSelfDeleteAccountSettings = () => {
-    window.confirmSelfDeleteAccount();
+function confirmSelfDeleteAccountSettings() {
+    window.confirmSelfDeleteAccount(); // This needs to be available on window or imported if script.js defines it
 };
 
 function renderBackgroundSettingsTab(container) {
     let predefinedImagesHtml = PREDEFINED_BACKGROUND_IMAGES.map(img => `
-        <button onclick="window.settingsPanelApplyPredefinedBackground('${escapeHtml(img.filename)}')" class="aspect-video rounded-md border-2 border-transparent hover:border-primary-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-300 transition-all outline-none" title="Apply ${escapeHtml(img.name)}">
+        <button data-filename="${escapeHtml(img.filename)}" class="settings-predefined-bg-btn aspect-video rounded-md border-2 border-transparent hover:border-primary-500 focus:border-primary-500 focus:ring-2 focus:ring-primary-300 transition-all outline-none" title="Apply ${escapeHtml(img.name)}">
             <img src="${PREDEFINED_BACKGROUNDS_PATH}${escapeHtml(img.filename)}" alt="${escapeHtml(img.name)}" class="w-full h-full object-cover rounded">
         </button>
     `).join('');
@@ -489,11 +498,12 @@ function renderExperimentalFeaturesTab(container) {
                     <label class="switch"><input type="checkbox" id="toggle-${f.key}" ${features[f.key] ? 'checked' : ''}><span class="slider round"></span></label>
                 </div>`).join('')}
         </div>
-        <button onclick="window.saveExperimentalFeatures()" class="btn-primary mt-6">Save Feature Settings</button>`;
+        <button id="save-experimental-features-btn" class="btn-primary mt-6">Save Feature Settings</button>`;
     container.innerHTML = html;
+    document.getElementById('save-experimental-features-btn')?.addEventListener('click', saveExperimentalFeatures);
 }
 
-window.settingsPanelApplyPredefinedBackground = (filename) => {
+function settingsPanelApplyPredefinedBackground(filename) {
     const imageUrl = `${PREDEFINED_BACKGROUNDS_PATH}${filename}`;
     applyBackground(document.getElementById(APP_BACKGROUND_LAYER_ID), 'image_url', imageUrl);
     saveBackgroundPreference('image_url', imageUrl);
@@ -501,18 +511,18 @@ window.settingsPanelApplyPredefinedBackground = (filename) => {
     if (preview) { preview.style.backgroundImage = `url('${imageUrl}')`; preview.style.backgroundColor = ''; preview.textContent = ''; }
     window.playUiSound?.('toggle_on');
 };
-window.settingsPanelHandleBackgroundImageUpload = (event) => {
+function settingsPanelHandleBackgroundImageUpload(event) {
     const file = event.target.files?.[0]; if (!file) return; if (!file.type.startsWith('image/')) { alert('Select image file.'); return; } if (file.size > 3*1024*1024) { alert(`Max 3MB.`); return; }
     const reader = new FileReader();
     reader.onload = (e) => { const imageDataUrl = e.target?.result; if (imageDataUrl) { applyBackground(document.getElementById(APP_BACKGROUND_LAYER_ID),'image_data', imageDataUrl); saveBackgroundPreference('image_data', imageDataUrl); const preview = document.getElementById('background-image-preview'); if (preview) { preview.style.backgroundImage = `url('${imageDataUrl}')`; preview.style.backgroundColor = ''; preview.textContent = ''; } window.playUiSound?.('toggle_on'); } else alert('Failed to read image.'); };
     reader.onerror = () => { alert('Error reading image.'); }; reader.readAsDataURL(file);
 };
-window.settingsPanelHandleBackgroundColorChange = (event) => {
+function settingsPanelHandleBackgroundColorChange(event) {
     const color = event.target.value; applyBackground(document.getElementById(APP_BACKGROUND_LAYER_ID),'color', color); saveBackgroundPreference('color', color);
     const preview = document.getElementById('background-image-preview'); if (preview) { preview.style.backgroundImage = 'none'; preview.style.backgroundColor = color; preview.textContent = `Color: ${color}`; }
     window.playUiSound?.('toggle_on');
 };
-window.settingsPanelResetToDefaultAppearance = () => {
+function settingsPanelResetToDefaultAppearance() {
     applyBackground(document.getElementById(APP_BACKGROUND_LAYER_ID),'default'); saveBackgroundPreference('default');
     const preview = document.getElementById('background-image-preview');
     if (preview) { preview.style.backgroundImage = `url('${DEFAULT_APP_BACKGROUND_IMAGE_URL}')`; preview.style.backgroundSize = 'cover'; preview.style.backgroundPosition = 'center'; preview.style.backgroundColor = ''; preview.textContent = ''; preview.className = 'w-full h-32 sm:h-40 md:h-48 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700'; const img = new Image(); img.src = DEFAULT_APP_BACKGROUND_IMAGE_URL; img.onerror = () => { if(preview === document.getElementById('background-image-preview')) {preview.style.backgroundImage = 'none'; preview.textContent = 'Default (Theme Fallback)';}}; }
@@ -521,12 +531,12 @@ window.settingsPanelResetToDefaultAppearance = () => {
     if (slider) slider.value = DEFAULT_CARD_OPACITY; if (displaySpan) displaySpan.textContent = `${Math.round(DEFAULT_CARD_OPACITY * 100)}%`;
     window.playUiSound?.('button_click');
 };
-window.settingsPanelHandleCardOpacityChange = (event) => {
+function settingsPanelHandleCardOpacityChange(event) {
     const opacityValue = parseFloat(event.target.value); applyCardOpacity(opacityValue); saveCardOpacityPreference(opacityValue);
     const displaySpan = document.getElementById('card-opacity-value'); if (displaySpan) displaySpan.textContent = `${Math.round(opacityValue * 100)}%`;
 };
 
-window.saveExperimentalFeatures = async () => {
+async function saveExperimentalFeatures() {
     if (!currentUser) return;
     const newSettings = {
         globalChat: document.getElementById('toggle-globalChat')?.checked || false,

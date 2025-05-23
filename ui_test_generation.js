@@ -92,11 +92,11 @@ export function showTestGenerationDashboard() {
             <h2 class="text-xl font-semibold mb-4 text-primary-600 dark:text-primary-400">Generate New Test</h2>
             <p class="text-gray-600 dark:text-gray-400 mb-6">Choose the scope of your test for subject: <strong>${escapeHtml(currentSubject.name || 'Unnamed Subject')}</strong></p>
             <div class="space-y-3">
-                <button onclick="window.promptTestType('studied')" class="w-full btn-primary">
+                <button id="test-studied-btn" class="w-full btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 16c1.255 0 2.443-.29 3.5-.804V4.804zM14.5 4c1.255 0 2.443.29 3.5.804v10A7.969 7.969 0 0114.5 16c-1.255 0-2.443-.29-3.5-.804V4.804A7.968 7.968 0 0114.5 4z"/></svg>
                     Test Studied Chapters Only
                 </button>
-                <button onclick="window.promptChapterSelectionForTest()" class="w-full btn-secondary">
+                <button id="test-specific-chapters-btn" class="w-full btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 15.25Z" clip-rule="evenodd" /></svg>
                     Test Specific Chapters
                 </button>
@@ -104,10 +104,12 @@ export function showTestGenerationDashboard() {
         </div>
     `;
     displayContent(html);
+    document.getElementById('test-studied-btn')?.addEventListener('click', () => promptTestType('studied'));
+    document.getElementById('test-specific-chapters-btn')?.addEventListener('click', promptChapterSelectionForTest);
     setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
-export async function promptChapterSelectionForTest() { 
+async function promptChapterSelectionForTest() { 
     if (!currentSubject || !currentSubject.chapters) {
         showTestGenerationDashboard(); 
         return;
@@ -188,22 +190,24 @@ export async function promptChapterSelectionForTest() {
             <div class="space-y-2 mb-6 max-h-72 overflow-y-auto p-2 border dark:border-gray-600 rounded bg-white dark:bg-gray-800">
                 ${chapterOptionsHtml}
             </div>
-            <button onclick="window.getSelectedChaptersAndPromptTestType()" class="w-full btn-primary">
+            <button id="continue-chapter-selection-btn" class="w-full btn-primary">
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
                 Continue
             </button>
-             <button onclick="window.showTestGenerationDashboard()" class="w-full btn-secondary mt-2">
+             <button id="back-to-testgen-dashboard-btn" class="w-full btn-secondary mt-2">
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
                  Back
              </button>
         </div>
     `;
     displayContent(html);
+    document.getElementById('continue-chapter-selection-btn')?.addEventListener('click', getSelectedChaptersAndPromptTestType);
+    document.getElementById('back-to-testgen-dashboard-btn')?.addEventListener('click', showTestGenerationDashboard);
     setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
 
-export function getSelectedChaptersAndPromptTestType() {
+function getSelectedChaptersAndPromptTestType() {
     const selectedChapters = [];
     const checkboxes = document.querySelectorAll('input[id^="test-chap-"]:checked');
     checkboxes.forEach(cb => selectedChapters.push(cb.value));
@@ -398,15 +402,26 @@ export async function promptTestType(mode, selectedChapters = null) {
                 </div>
 
                 <div class="mt-6 flex space-x-3">
-                    <button type="button" onclick='window.collectAndStartTestGeneration(${JSON.stringify(mode)}, ${JSON.stringify(chaptersInScopeNumbers)}, "online")' class="btn-primary flex-1">Start Online Test</button>
-                    <button type="button" onclick='window.collectAndStartTestGeneration(${JSON.stringify(mode)}, ${JSON.stringify(chaptersInScopeNumbers)}, "pdf")' class="btn-primary flex-1">Generate PDF Test</button>
+                    <button type="button" id="start-online-test-btn" class="btn-primary flex-1">Start Online Test</button>
+                    <button type="button" id="generate-pdf-test-btn" class="btn-primary flex-1">Generate PDF Test</button>
                 </div>
             </form>
-            <button onclick="${mode === 'specific' ? 'window.promptChapterSelectionForTest()' : 'window.showTestGenerationDashboard()'}" class="w-full btn-secondary mt-4">Back</button>
+            <button id="back-to-chapter-or-dashboard-btn" class="w-full btn-secondary mt-4">Back</button>
         </div>
     `;
     hideLoading();
     displayContent(html);
+
+    document.getElementById('start-online-test-btn')?.addEventListener('click', () => collectAndStartTestGeneration(mode, chaptersInScopeNumbers, "online"));
+    document.getElementById('generate-pdf-test-btn')?.addEventListener('click', () => collectAndStartTestGeneration(mode, chaptersInScopeNumbers, "pdf"));
+    document.getElementById('back-to-chapter-or-dashboard-btn')?.addEventListener('click', () => {
+        if (mode === 'specific') {
+            promptChapterSelectionForTest();
+        } else {
+            showTestGenerationDashboard();
+        }
+    });
+
     document.querySelectorAll('input[name="timingOption"]').forEach(radio => {
         radio.addEventListener('change', (e) => {
             const customInput = document.getElementById('custom-duration-minutes');
@@ -427,7 +442,7 @@ export async function promptTestType(mode, selectedChapters = null) {
  * @param {Array<string>|null} selectedChapters - Array of chapter numbers if mode is 'specific'
  * @param {string} testFormat - 'online' or 'pdf'
  */
-window.collectAndStartTestGeneration = function(mode, selectedChapters, testFormat) {
+function collectAndStartTestGeneration(mode, selectedChapters, testFormat) {
     const form = document.getElementById('test-config-form');
     if (!form) {
         alert("Error: Test configuration form not found.");
@@ -506,7 +521,7 @@ The test will be generated with ${sumOfSpecificRequests} questions, as auto-fill
 
 
     // Call the main test generation logic
-    window.startTestGeneration(mode, selectedChapters, testFormat, testGenConfig, targetTotalQuestions);
+    startTestGeneration(mode, selectedChapters, testFormat, testGenConfig, targetTotalQuestions);
 };
 
 async function fetchContentForSource(filePath, sourceNameForLog) {
@@ -888,9 +903,9 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
              <div class="space-y-3">
                  <button id="download-pdf-q-server" class="w-full btn-primary">Download Questions PDF (via Server)</button>
                  <button id="download-pdf-s-server" class="w-full btn-primary">Download Solutions PDF (via Server)</button>
-                 <button onclick="window.downloadTexFileWrapper('${escapeHtml(baseFilename)}_Questions.tex', \`${btoa(unescape(encodeURIComponent(questionsTex)))}\`)" class="w-full btn-secondary">Download Questions .tex</button>
-                 <button onclick="window.downloadTexFileWrapper('${escapeHtml(baseFilename)}_Solutions.tex', \`${btoa(unescape(encodeURIComponent(solutionsTex)))}\`)" class="w-full btn-secondary">Download Solutions .tex</button>
-                 <button onclick="window.showExamsDashboard()" class="w-full btn-secondary mt-4">Go to Exams Dashboard</button>
+                 <button id="download-tex-q-btn" class="w-full btn-secondary">Download Questions .tex</button>
+                 <button id="download-tex-s-btn" class="w-full btn-secondary">Download Solutions .tex</button>
+                 <button id="go-to-exams-dashboard-btn" class="w-full btn-secondary mt-4">Go to Exams Dashboard</button>
              </div>
              <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">This exam is now pending. Remember to run your local PDF server. Enter results manually via the Exams Dashboard.</p>
          `);
@@ -902,12 +917,15 @@ export async function startTestGeneration(mode, selectedChapters, testType, test
         document.getElementById('download-pdf-s-server')?.addEventListener('click', () => 
             generateAndDownloadPdfWithMathJax(solutionHtml, `${baseFilename}_Solutions`) 
         );
+        document.getElementById('download-tex-q-btn')?.addEventListener('click', () => downloadTexFileWrapper(`${escapeHtml(baseFilename)}_Questions.tex`, btoa(unescape(encodeURIComponent(questionsTex)))));
+        document.getElementById('download-tex-s-btn')?.addEventListener('click', () => downloadTexFileWrapper(`${escapeHtml(baseFilename)}_Solutions.tex`, btoa(unescape(encodeURIComponent(solutionsTex)))));
+        document.getElementById('go-to-exams-dashboard-btn')?.addEventListener('click', showExamsDashboard);
         hideLoading();
     }
 }
 
 
-window.downloadTexFileWrapper = (filename, base64Content) => {
+function downloadTexFileWrapper(filename, base64Content) {
      try {
          downloadTexFile(filename, base64Content); 
      } catch (e) {

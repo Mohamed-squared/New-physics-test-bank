@@ -582,7 +582,7 @@ export function updateExperimentalFeaturesSidebarVisibility() {
     const musicLink = document.getElementById('sidebar-music-link');
     if (musicLink) musicLink.style.display = features.musicAndSounds ? 'flex' : 'none';
 }
-window.updateExperimentalFeaturesSidebarVisibility = updateExperimentalFeaturesSidebarVisibility; // Make it globally callable
+// window.updateExperimentalFeaturesSidebarVisibility = updateExperimentalFeaturesSidebarVisibility; // ES Exported
 // --- END MODIFIED ---
 
 

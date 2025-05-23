@@ -169,7 +169,7 @@ export async function renderMathIn(element) {
         }
     }
 }
-window.renderMathIn = renderMathIn; // Make it globally accessible if not already (e.g. for script.js)
+// window.renderMathIn = renderMathIn; // ES Exported. Made global in script.js if needed there.
 
 // --- General Utilities ---
 
