@@ -19,6 +19,8 @@ import { displayDatabaseManagementSection } from './admin_database_management.js
 // --- NEW: Import Admin Music Management ---
 import { displayMusicManagementSection } from './admin_music_management.js';
 // --- END NEW ---
+import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js';
+import { displayMegaMigrationDashboard } from './admin_mega_service.js';
 
 
 // --- Main Admin Dashboard UI ---
@@ -104,6 +106,12 @@ export function showAdminDashboard() {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                     Testing Aids
                 </a>
+                <a href="#" onclick="window.showAdminSection('megaTools'); return false;" data-section="megaTools" class="admin-nav-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 3.75 3.75 0 011.036 7.493M15 19.5v-2.25A2.25 2.25 0 0012.75 15H11.25" />
+                    </svg>
+                    MEGA Tools
+                </a>
             </nav>
         </aside>
         <main id="admin-panel-content-area" class="flex-1 p-6 rounded-lg shadow-md overflow-y-auto custom-scrollbar"
@@ -115,6 +123,7 @@ export function showAdminDashboard() {
     displayContent(adminPanelHtml);
     updateAdminPanelBackgroundRGBs();
     showAdminSection(currentAdminSection);
+    checkAndShowMegaMigrationAlert();
 
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle && !themeToggle.dataset.adminBgListener) {
@@ -196,6 +205,9 @@ export async function showAdminSection(sectionName) {
             break;
         case 'testingAids':
             displayTestingAidsSection(contentArea);
+            break;
+        case 'megaTools':
+            displayMegaMigrationDashboard(contentArea);
             break;
         default:
             contentArea.innerHTML = `<p class="text-red-500 p-4">Error: Unknown admin section "${sectionName}".</p>`;
