@@ -10,7 +10,7 @@ import {
     courseExamDefaults, setCourseExamDefaults,
     // --- NEW: Import for global subject defs map ---
     globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition,
-    
+    globalCourseDataMap, // Added for getCourseDetails
     
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
