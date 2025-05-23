@@ -418,43 +418,6 @@ export async function updateLatexPreview(questionId) { // Changed to export
 // ...
 // };
 
-    if (!textarea || !previewDiv) {
-        console.warn("Textarea or preview div not found for LaTeX preview for QID:", questionId);
-        
-    }
-
-    const latexText = textarea.value;
-    
-    // Set raw LaTeX as the content for MathJax to process.
-    // MathJax looks for its delimiters ($...$, $$...$$, etc.) within this raw text.
-    previewDiv.innerHTML = latexText; 
-    
-    if (window.latexPreviewTimeouts[questionId]) {
-        clearTimeout(window.latexPreviewTimeouts[questionId]);
-    }
-
-    window.latexPreviewTimeouts[questionId] = setTimeout(async () => {
-        console.log(`[updateLatexPreview] Debounced: Rendering MathJax for preview of QID: ${questionId}`);
-        try {
-            if (typeof renderMathIn === 'function') { // Use imported renderMathIn
-                await renderMathIn(previewDiv); 
-            } else {
-                console.error("renderMathIn function is not available (not imported correctly or not exported).");
-                previewDiv.innerHTML += '<p class="text-red-500 text-xs">Math rendering library error.</p>';
-            }
-        } catch (e) {
-            console.error("Error rendering MathJax in preview for QID " + questionId + ":", e);
-            // Avoid overwriting the raw LaTeX if rendering fails, just append error.
-            const errorMsgElement = document.createElement('p');
-            errorMsgElement.className = 'text-red-500 text-xs mathjax-render-error-msg';
-            errorMsgElement.textContent = ' [MathJax Error]';
-            if (!previewDiv.querySelector('.mathjax-render-error-msg')) { // Append error only once
-                previewDiv.appendChild(errorMsgElement);
-            }
-        }
-    }, 250); // Slightly shorter debounce for better responsiveness
-
-
 export function navigateQuestion(direction) {
     if (!currentOnlineTestState) return;
     const newIndex = currentOnlineTestState.currentQuestionIndex + direction;
