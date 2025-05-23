@@ -10,6 +10,7 @@ import {
     courseExamDefaults, setCourseExamDefaults,
     // --- NEW: Import for global subject defs map ---
     globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition,
+    globalCourseDataMap, // Added for getCourseDetails
     
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
@@ -3401,6 +3402,50 @@ export async function adminDeleteGlobalSubject(subjectId) {
     // Potentially trigger a re-merge for current user's `data.subjects`
 }
 
+// --- NEW FUNCTION: Get Course Details ---
+/**
+ * Fetches course details, first from global map, then from Firestore.
+ * @param {string} courseId - The ID of the course to fetch.
+ * @returns {Promise<object|null>} - Course data object or null if not found.
+ */
+export async function getCourseDetails(courseId) {
+    if (!courseId) {
+        console.warn("[getCourseDetails] Course ID is missing.");
+        return null;
+    }
+
+    // 1. Check globalCourseDataMap first
+    if (globalCourseDataMap && globalCourseDataMap.has(courseId)) {
+        console.log(`[getCourseDetails] Found course ${courseId} in globalCourseDataMap.`);
+        return globalCourseDataMap.get(courseId);
+    }
+
+    // 2. If not in map, fetch from Firestore
+    if (!db) {
+        console.error("[getCourseDetails] Firestore DB not initialized.");
+        return null;
+    }
+    console.log(`[getCourseDetails] Course ${courseId} not in map, fetching from Firestore...`);
+    const courseRef = db.collection('courses').doc(courseId);
+
+    try {
+        const docSnap = await courseRef.get();
+        if (docSnap.exists) {
+            console.log(`[getCourseDetails] Successfully fetched course ${courseId} from Firestore.`);
+            const courseData = docSnap.data();
+            // Optionally, update the global map (though loadGlobalCourseDefinitions should handle this)
+            // updateGlobalCourseData(courseId, { id: courseId, ...courseData });
+            return { id: courseId, ...courseData }; // Ensure ID is part of the returned object
+        } else {
+            console.warn(`[getCourseDetails] Course document ${courseId} not found in Firestore.`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[getCourseDetails] Error fetching course ${courseId} from Firestore:`, error);
+        return null;
+    }
+}
+// --- END NEW FUNCTION ---
 
 export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSenderId) {
     if (!db || !currentUser || !currentUser.isAdmin) {
