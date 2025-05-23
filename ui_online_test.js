@@ -8,7 +8,7 @@ import { showLoading, hideLoading, escapeHtml, getFormattedDate, renderMathIn } 
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
-import { showCurrentAssignmentsExams } from './ui_course_assignments_exams.js'; // Added for button event listener
+import { showCurrentAssignmentsExams } from './ui_course_dashboard.js'
 import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT, MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE } from './config.js'; // Added MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 import { generateLatexToolbar } from './ui_latex_toolbar.js';
@@ -420,7 +420,7 @@ export async function updateLatexPreview(questionId) { // Changed to export
 
     if (!textarea || !previewDiv) {
         console.warn("Textarea or preview div not found for LaTeX preview for QID:", questionId);
-        return;
+        
     }
 
     const latexText = textarea.value;
@@ -453,7 +453,7 @@ export async function updateLatexPreview(questionId) { // Changed to export
             }
         }
     }, 250); // Slightly shorter debounce for better responsiveness
-};
+
 
 export function navigateQuestion(direction) {
     if (!currentOnlineTestState) return;

@@ -111,6 +111,7 @@ function displayCourseManagementSection(containerElement) {
 
 // Exports that are still needed by ui_admin_dashboard.js
 export { 
+    displayMegaMigrationDashboard,
     displayCourseManagementSection,
     loadCoursesForAdmin // Keep if ui_admin_dashboard.js still imports and uses it
 };
@@ -119,11 +120,11 @@ export {
 // or their internal event handlers are set up within their respective modules.
 // The Mega File Explorer helper functions (handleMegaFileDownload, etc.) were moved to admin_mega_service.js
 // and are exported from there if needed, or used via event listeners set up in displayMegaFileExplorer.```
-File `admin_course_content.js` overwritten successfully.
+/* File `admin_course_content.js` overwritten successfully.
 ```
 
 **Step 3: Verify Imports in `ui_admin_dashboard.js`**
 
 I need to ensure that `ui_admin_dashboard.js` correctly imports `displayCourseManagementSection` and `loadCoursesForAdmin` (if still used) from the refactored `admin_course_content.js`.
 
-Let's read `ui_admin_dashboard.js`.
+Let's read `ui_admin_dashboard.js`.*/

@@ -109,7 +109,7 @@ export function showTestGenerationDashboard() {
     setActiveSidebarLink('showTestGenerationDashboard', 'testgen-dropdown-content');
 }
 
-async function promptChapterSelectionForTest() { 
+export async function promptChapterSelectionForTest() { 
     if (!currentSubject || !currentSubject.chapters) {
         showTestGenerationDashboard(); 
         return;
@@ -207,7 +207,7 @@ async function promptChapterSelectionForTest() {
 }
 
 
-function getSelectedChaptersAndPromptTestType() {
+export function getSelectedChaptersAndPromptTestType() {
     const selectedChapters = [];
     const checkboxes = document.querySelectorAll('input[id^="test-chap-"]:checked');
     checkboxes.forEach(cb => selectedChapters.push(cb.value));

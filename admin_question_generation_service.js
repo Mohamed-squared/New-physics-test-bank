@@ -1,7 +1,13 @@
 // admin_question_generation_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
-import { showLoading, hideLoading, escapeHtml, unescape } from './utils.js'; // Added unescape
+import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added unescape
 // Note: No direct Firestore writes in these functions, they call a backend service.
+
+function unescape(htmlStr) {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = htmlStr;
+    return textarea.value;
+}
 
 // --- PDF MCQ & Problem Generator ---
 export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapterPdfMegaLink, chapterTitle) {
