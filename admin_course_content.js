@@ -998,14 +998,14 @@ function displayLectureMcqProblemGenerator(containerElement) {
 
 // Exports
 export { 
-    displayMegaMigrationDashboard, loadCoursesForMegaMigration, startMegaMigration,
+    displayMegaMigrationDashboard, loadCoursesForMegaMigration as loadCoursesForAdmin, startMegaMigration,
     displayLectureTranscriptionAutomator, startLectureTranscription,
     displayTextbookPdfProcessor, startPdfProcessing,
     displayPdfMcqProblemGenerator, startPdfMcqProblemGeneration,
     displayLectureMcqProblemGenerator, startLectureMcqProblemGeneration, 
     displayMegaFileExplorer,
     displayCourseManagementSection, // Added new function
-    loadCoursesForAdmin // Added new function
+     // Added new function
 };
 
 // Make functions globally accessible
@@ -1114,5 +1114,5 @@ function displayCourseManagementSection(containerElement) {
 // Make functions globally accessible
 window.displayMegaMigrationDashboard = displayMegaMigrationDashboard;
 window.displayCourseManagementSection = displayCourseManagementSection; // Added new function
-window.loadCoursesForAdmin = loadCoursesForAdmin; // Added new function
+// window.loadCoursesForAdmin = loadCoursesForAdmin; // REMOVED: Already exported via ES6 modules
 // Explorer helper functions are set on window inside displayMegaFileExplorer
