@@ -1004,7 +1004,8 @@ export {
     displayPdfMcqProblemGenerator, startPdfMcqProblemGeneration,
     displayLectureMcqProblemGenerator, startLectureMcqProblemGeneration, 
     displayMegaFileExplorer,
-    displayCourseManagementSection // Added new function
+    displayCourseManagementSection, // Added new function
+    loadCoursesForAdmin // Added new function
 };
 
 // Make functions globally accessible
@@ -1113,4 +1114,5 @@ function displayCourseManagementSection(containerElement) {
 // Make functions globally accessible
 window.displayMegaMigrationDashboard = displayMegaMigrationDashboard;
 window.displayCourseManagementSection = displayCourseManagementSection; // Added new function
+window.loadCoursesForAdmin = loadCoursesForAdmin; // Added new function
 // Explorer helper functions are set on window inside displayMegaFileExplorer
