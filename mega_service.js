@@ -223,6 +223,17 @@ module.exports = {
   getFolderContents, // Add new function to exports
 };
 
+export {
+  initialize,
+  findFolder,
+  createFolder,
+  uploadFile,
+  downloadFile,
+  megaStorage,
+  
+  getFolderContents, // Add new function to exports
+};
+
 async function getFolderContents(folderNodeOrLink) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
