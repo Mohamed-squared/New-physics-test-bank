@@ -4,9 +4,29 @@ const puppeteer = require('puppeteer');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const fs = require('fs'); // Import the 'fs' module for file reading
+const fs = require('fs-extra'); // Use fs-extra for potential cleanup convenience
+const { transcribeLecture } = require('./lecture_transcription_service.js'); // Added for transcription
+const { processTextbookPdf } = require('./pdf_processing_service.js'); // Added for PDF processing
+const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.js'); // Added for QGen
+const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js'); // Added for Lecture QGen
+const multer = require('multer'); // For handling file uploads
 
 const app = express();
+
+// Configure Multer for temporary file uploads
+const TEMP_UPLOAD_DIR = path.join(__dirname, 'temp_uploads');
+fs.ensureDirSync(TEMP_UPLOAD_DIR); // Ensure directory exists
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, TEMP_UPLOAD_DIR);
+    },
+    filename: function (req, file, cb) {
+        // Use a unique filename to avoid conflicts, keep original extension
+        cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+const upload = multer({ storage: storage });
 const port = 3001;
 
 app.use(cors());
@@ -215,5 +235,219 @@ process.on('SIGINT', async () => {
         await browserInstance.close();
     }
     process.exit(0);
+});
+
+// --- Lecture Transcription Endpoint ---
+app.post('/transcribe-lecture', async (req, res) => {
+    console.log('[SERVER] Received /transcribe-lecture request.');
+    const { 
+        youtubeUrl, 
+        courseId, 
+        chapterId, 
+        assemblyAiApiKey, 
+        megaEmail, 
+        megaPassword 
+    } = req.body;
+
+    if (!youtubeUrl || !courseId || !chapterId || !assemblyAiApiKey || !megaEmail || !megaPassword) {
+        console.error('[SERVER /transcribe-lecture] Missing one or more required parameters in request body.');
+        return res.status(400).json({ 
+            success: false, 
+            message: 'Missing required parameters: youtubeUrl, courseId, chapterId, assemblyAiApiKey, megaEmail, megaPassword.' 
+        });
+    }
+
+    try {
+        console.log(`[SERVER /transcribe-lecture] Calling transcribeLecture for YouTube URL: ${youtubeUrl}, Course: ${courseId}, Chapter: ${chapterId}`);
+        const result = await transcribeLecture(
+            youtubeUrl,
+            courseId,
+            chapterId,
+            assemblyAiApiKey,
+            megaEmail,
+            megaPassword
+        );
+        
+        console.log('[SERVER /transcribe-lecture] Transcription service call completed. Result:', result);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            // If transcribeLecture handled the error and returned success:false, send a 500
+            // If it threw an error, it would be caught by the catch block below.
+            res.status(500).json(result);
+        }
+    } catch (error) {
+        console.error('[SERVER /transcribe-lecture] Unexpected error calling transcribeLecture:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: `Server error during transcription: ${error.message}`,
+            error: error.stack 
+        });
+    }
+});
+
+// --- Textbook PDF Processing Endpoint ---
+app.post('/process-textbook-pdf', upload.single('pdfFile'), async (req, res) => {
+    console.log('[SERVER] Received /process-textbook-pdf request.');
+    const {
+        courseId,
+        actualFirstPageNumber,
+        megaEmail,
+        megaPassword,
+        geminiApiKey
+    } = req.body;
+
+    const pdfFile = req.file;
+
+    if (!pdfFile) {
+        console.error('[SERVER /process-textbook-pdf] No PDF file uploaded.');
+        return res.status(400).json({ success: false, message: 'No PDF file uploaded.' });
+    }
+
+    if (!courseId || !actualFirstPageNumber || !megaEmail || !megaPassword || !geminiApiKey) {
+        console.error('[SERVER /process-textbook-pdf] Missing one or more required text parameters.');
+        // Clean up uploaded file if other params are missing
+        if (pdfFile && pdfFile.path) {
+            await fs.unlink(pdfFile.path).catch(err => console.error(`[SERVER] Error unlinking orphaned file: ${err.message}`));
+        }
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required parameters: courseId, actualFirstPageNumber, megaEmail, megaPassword, geminiApiKey.'
+        });
+    }
+
+    let result;
+    try {
+        console.log(`[SERVER /process-textbook-pdf] Calling processTextbookPdf for Course: ${courseId}, File: ${pdfFile.path}`);
+        result = await processTextbookPdf(
+            pdfFile.path,
+            courseId,
+            actualFirstPageNumber,
+            megaEmail,
+            megaPassword,
+            geminiApiKey
+        );
+        
+        console.log('[SERVER /process-textbook-pdf] PDF processing service call completed. Result:', result);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(500).json(result); // Service handled error, returned success:false
+        }
+    } catch (error) {
+        console.error('[SERVER /process-textbook-pdf] Unexpected error calling processTextbookPdf:', error);
+        res.status(500).json({
+            success: false,
+            message: `Server error during PDF processing: ${error.message}`,
+            error: error.stack
+        });
+    } finally {
+        // Cleanup the temporary uploaded file
+        if (pdfFile && pdfFile.path) {
+            try {
+                await fs.unlink(pdfFile.path);
+                console.log(`[SERVER /process-textbook-pdf] Temporary PDF file deleted: ${pdfFile.path}`);
+            } catch (unlinkError) {
+                console.error(`[SERVER /process-textbook-pdf] Error deleting temporary PDF file ${pdfFile.path}:`, unlinkError);
+            }
+        }
+    }
+});
+
+// --- PDF Question Generation Endpoint ---
+app.post('/generate-questions-from-pdf', async (req, res) => {
+    console.log('[SERVER] Received /generate-questions-from-pdf request.');
+    const {
+        courseId,
+        chapterKey,
+        chapterPdfMegaLink,
+        chapterTitle,
+        megaEmail,
+        megaPassword,
+        geminiApiKey
+    } = req.body;
+
+    if (!courseId || !chapterKey || !chapterPdfMegaLink || !chapterTitle || !megaEmail || !megaPassword || !geminiApiKey) {
+        console.error('[SERVER /generate-questions-from-pdf] Missing one or more required parameters.');
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required parameters: courseId, chapterKey, chapterPdfMegaLink, chapterTitle, megaEmail, megaPassword, geminiApiKey.'
+        });
+    }
+
+    try {
+        console.log(`[SERVER /generate-questions-from-pdf] Calling generateQuestionsFromPdf for Course: ${courseId}, Chapter: ${chapterTitle} (Key: ${chapterKey})`);
+        const result = await generateQuestionsFromPdf(
+            courseId,
+            chapterKey,
+            chapterPdfMegaLink,
+            chapterTitle,
+            megaEmail,
+            megaPassword,
+            geminiApiKey
+        );
+        
+        console.log('[SERVER /generate-questions-from-pdf] Question generation service call completed. Result:', result);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(500).json(result); // Service handled error, returned success:false
+        }
+    } catch (error) {
+        console.error('[SERVER /generate-questions-from-pdf] Unexpected error calling generateQuestionsFromPdf:', error);
+        res.status(500).json({
+            success: false,
+            message: `Server error during question generation: ${error.message}`,
+            error: error.stack
+        });
+    }
+});
+
+// --- Lecture Question Generation Endpoint ---
+app.post('/generate-questions-from-lectures', async (req, res) => {
+    console.log('[SERVER] Received /generate-questions-from-lectures request.');
+    const {
+        courseId,
+        selectedLectures, // Array of { title: "Lecture Title", megaSrtLink: "..." }
+        chapterNameForLectures,
+        megaEmail,
+        megaPassword,
+        geminiApiKey
+    } = req.body;
+
+    if (!courseId || !selectedLectures || !Array.isArray(selectedLectures) || selectedLectures.length === 0 || 
+        !chapterNameForLectures || !megaEmail || !megaPassword || !geminiApiKey) {
+        console.error('[SERVER /generate-questions-from-lectures] Missing one or more required parameters or invalid selectedLectures format.');
+        return res.status(400).json({
+            success: false,
+            message: 'Missing or invalid required parameters. Ensure selectedLectures is a non-empty array.'
+        });
+    }
+
+    try {
+        console.log(`[SERVER /generate-questions-from-lectures] Calling generateQuestionsFromLectures for Course: ${courseId}, Topic: ${chapterNameForLectures}`);
+        const result = await generateQuestionsFromLectures(
+            courseId,
+            selectedLectures,
+            chapterNameForLectures,
+            megaEmail,
+            megaPassword,
+            geminiApiKey
+        );
+        
+        console.log('[SERVER /generate-questions-from-lectures] Lecture question generation service call completed. Result:', result);
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(500).json(result); // Service handled error, returned success:false
+        }
+    } catch (error) {
+        console.error('[SERVER /generate-questions-from-lectures] Unexpected error calling generateQuestionsFromLectures:', error);
+        res.status(500).json({
+            success: false,
+            message: `Server error during lecture question generation: ${error.message}`,
+            error: error.stack
+        });
+    }
 });
 // --- END OF FILE pdf-server.js ---

@@ -1,180 +1,298 @@
-// mega_service.js
-// This module provides a service for interacting with the MEGA API using the megajs library.
+const { Storage } = require('megajs');
+const fs = require('fs');
 
-import { Storage, File } from 'megajs'; // File is not directly used in stubs but kept for consistency
-import fs from 'fs'; // Import the 'fs' module for file system operations (not used in stubs)
+let megaStorage;
 
-// Storage object for authenticated MEGA session
-let storage; // This will be our simulated storage object upon initialization
-
-/**
- * Initializes the MEGA service by authenticating with the provided credentials.
- * @param {string} email - The MEGA account email.
- * @param {string} password - The MEGA account password.
- * @returns {Promise<object|null>} - A promise that resolves with the storage object on success, or null on failure.
- */
 async function initialize(email, password) {
-  console.log(`[MEGA_SERVICE_STUB] Initializing with Email: ${email}, Password: ${password.substring(0, 2)}...`);
   try {
-    // Simulate successful authentication and storage object readiness
-    storage = { 
-      email: email, 
-      loggedIn: true, 
-      root: { // Simulate a root node object for the findFolder/createFolder logic
-        name: 'Root',
-        id: 'root_node_mega',
-        directory: true,
-        link: 'mega://root_folder'
-      } 
-    }; 
-    await new Promise(resolve => setTimeout(resolve, 200)); // Simulate async operation
-    console.log('[MEGA_SERVICE_STUB] MEGA service initialized successfully. Simulated storage object created.');
-    return storage; // Return the simulated storage object
+    console.log('Initializing MEGA service...');
+    megaStorage = new Storage({
+      email,
+      password,
+      userAgent: 'MegaService/1.0.0', // Optional: Set a user agent
+    });
+
+    await megaStorage.ready; // Wait for the storage to be ready (authenticated)
+    console.log('MEGA service initialized successfully.');
+    return megaStorage;
   } catch (error) {
-    console.error('[MEGA_SERVICE_STUB] Error initializing MEGA service:', error);
-    return null; // Indicate failure
+    console.error('Error initializing MEGA service:', error);
+    throw error; // Re-throw the error to be handled by the caller
   }
 }
 
-/**
- * Uploads a file to MEGA.
- * @param {string} filePath - The local path to the file (simulated).
- * @param {string} fileName - The desired name for the file on MEGA.
- * @param {object} targetFolderNode - The megajs Node object representing the target folder on MEGA (simulated).
- * @returns {Promise<object|null>} - A promise that resolves with an object containing file name and link, or null on failure.
- */
-async function uploadFile(filePath, fileName, targetFolderNode) {
-  if (!storage || !storage.loggedIn) {
-    console.error('[MEGA_SERVICE_STUB] MEGA service not initialized. Call initialize() first.');
-    throw new Error('MEGA service not initialized.');
+async function findFolder(folderName, parentNode = megaStorage.root) {
+  if (!megaStorage) {
+    throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
-  console.log(`[MEGA_SERVICE_STUB] Uploading file: ${fileName} from local path: ${filePath} to MEGA folder: ${targetFolderNode.name} (ID: ${targetFolderNode.id})`);
+  if (!parentNode) {
+    console.warn(`Parent node is undefined, defaulting to root.`);
+    parentNode = megaStorage.root;
+  }
+  console.log(`Searching for folder "${folderName}" in parent: ${parentNode.name || 'root'}`);
+
+  // Ensure parentNode.children is iterable, handling cases where it might be undefined
+  const children = parentNode.children || [];
+  for (const node of children) {
+    if (node.name === folderName && node.directory) {
+      console.log(`Folder "${folderName}" found.`);
+      return node;
+    }
+  }
+
+  console.log(`Folder "${folderName}" not found.`);
+  return null;
+}
+
+async function createFolder(folderName, parentNode = megaStorage.root) {
+  if (!megaStorage) {
+    throw new Error('MEGA service not initialized. Please call initialize() first.');
+  }
+  if (!parentNode) {
+    console.warn(`Parent node is undefined, defaulting to root.`);
+    parentNode = megaStorage.root;
+  }
+
+  console.log(`Attempting to create folder "${folderName}" in parent: ${parentNode.name || 'root'}`);
+
+  // Check if folder already exists
+  const existingFolder = await findFolder(folderName, parentNode);
+  if (existingFolder) {
+    console.log(`Folder "${folderName}" already exists.`);
+    return existingFolder;
+  }
+
   try {
-    await new Promise(resolve => setTimeout(resolve, 150)); // Simulate async file upload
-    const simulatedUploadedFile = { 
-      name: fileName, 
-      link: `mega://simulated_content_link_for_${fileName.replace(/\s+/g, '_')}` 
-    };
-    console.log(`[MEGA_SERVICE_STUB] File ${fileName} uploaded successfully. Link: ${simulatedUploadedFile.link}`);
-    return simulatedUploadedFile;
-  } catch (error) {
-    console.error(`[MEGA_SERVICE_STUB] Error uploading file ${fileName}:`, error);
-    return null;
-  }
-}
-
-/**
- * Downloads a file from MEGA. (Basic stub)
- * @param {object} fileNode - The megajs File object representing the file on MEGA.
- * @param {string} downloadPath - The local path to save the downloaded file.
- * @returns {Promise<void>} - A promise that resolves when the file is downloaded successfully.
- */
-async function downloadFile(fileNode, downloadPath) {
-  if (!storage || !storage.loggedIn) { throw new Error('MEGA service not initialized.'); }
-  console.log(`[MEGA_SERVICE_STUB] Downloading file ${fileNode.name} from MEGA to ${downloadPath}...`);
-  await new Promise(resolve => setTimeout(resolve, 100));
-  console.log(`[MEGA_SERVICE_STUB] File ${fileNode.name} downloaded successfully (simulated).`);
-}
-
-/**
- * Creates a new folder on MEGA.
- * @param {string} folderName - The name for the new folder.
- * @param {object} parentNode - The megajs Node object representing the parent folder (simulated).
- * @returns {Promise<object|null>} - A promise that resolves with the created folder Node object, or null on failure.
- */
-async function createFolder(folderName, parentNode) {
-  if (!storage || !storage.loggedIn) {
-    console.error('[MEGA_SERVICE_STUB] MEGA service not initialized. Call initialize() first.');
-    throw new Error('MEGA service not initialized.');
-  }
-  console.log(`[MEGA_SERVICE_STUB] Creating folder: "${folderName}" inside parent: "${parentNode.name}" (ID: ${parentNode.id})`);
-  try {
-    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate async folder creation
-    const newFolderNode = {
+    // megaStorage.root.upload is a versatile method, it creates a folder if a name is provided without data
+    const newFolder = await parentNode.upload({
       name: folderName,
-      directory: true,
-      id: `node_${folderName.replace(/\s+/g, '_')}_${Date.now()}`, // Unique ID for the new folder
-      link: `mega://simulated_folder_link_for_${folderName.replace(/\s+/g, '_')}`,
-      parent: parentNode.id // Keep track of parent for simulation
-    };
-    console.log(`[MEGA_SERVICE_STUB] Folder "${folderName}" created successfully. ID: ${newFolderNode.id}, Link: ${newFolderNode.link}`);
-    return newFolderNode;
+      attributes: {}, // Folders don't have data, but attributes can be set if needed
+      directory: true, // Explicitly state this is a directory, though `megajs` usually infers
+    }).complete; // Ensure the operation is complete
+    console.log(`Folder "${folderName}" created successfully.`);
+    return newFolder;
   } catch (error) {
-    console.error(`[MEGA_SERVICE_STUB] Error creating folder "${folderName}":`, error);
-    return null;
+    console.error(`Error creating folder "${folderName}":`, error);
+    throw error;
   }
 }
 
-/**
- * Deletes a file or folder from MEGA. (Basic stub)
- * @param {object} itemNode - The megajs Node or File object representing the item to delete.
- * @returns {Promise<void>} - A promise that resolves when the item is deleted successfully.
- */
-async function deleteItem(itemNode) {
-  if (!storage || !storage.loggedIn) { throw new Error('MEGA service not initialized.'); }
-  console.log(`[MEGA_SERVICE_STUB] Deleting item ${itemNode.name} from MEGA...`);
-  await new Promise(resolve => setTimeout(resolve, 100));
-  console.log(`[MEGA_SERVICE_STUB] Item ${itemNode.name} deleted successfully (simulated).`);
-}
-
-/**
- * Lists the contents (files and folders) of a given folder on MEGA. (Basic stub)
- * @param {object} folderNode - The megajs Node object representing the folder.
- * @returns {Promise<Array<object>>} - A promise that resolves with an array of megajs Node/File objects.
- */
-async function getFolderContents(folderNode) {
-  if (!storage || !storage.loggedIn) { throw new Error('MEGA service not initialized.'); }
-  console.log(`[MEGA_SERVICE_STUB] Listing contents of folder ${folderNode.name} on MEGA...`);
-  await new Promise(resolve => setTimeout(resolve, 100));
-  const simulatedContents = [
-    { name: 'simulated_file1.txt', directory: false, parent: folderNode.id },
-    { name: 'simulated_subfolder', directory: true, parent: folderNode.id, id: `node_sim_sub_${Date.now()}` },
-  ];
-  console.log(`[MEGA_SERVICE_STUB] Contents of folder ${folderNode.name} listed successfully (simulated).`);
-  return simulatedContents;
-}
-
-/**
- * Searches for a file within a folder and its subfolders on MEGA. (Basic stub - not recursive)
- * @param {string} fileName - The name of the file to search for.
- * @param {object} folderNode - The megajs Node object representing the folder to search within.
- * @returns {Promise<object|null>} - A promise that resolves with the megajs File object if found, otherwise null.
- */
-async function findFile(fileName, folderNode) {
-  if (!storage || !storage.loggedIn) { throw new Error('MEGA service not initialized.'); }
-  console.log(`[MEGA_SERVICE_STUB] Searching for file ${fileName} in folder ${folderNode.name} on MEGA...`);
-  await new Promise(resolve => setTimeout(resolve, 50));
-  // For this simulation, assume file not found to trigger upload path
-  console.log(`[MEGA_SERVICE_STUB] File ${fileName} not found in folder ${folderNode.name} (simulated for upload testing).`);
-  return null;
-}
-
-/**
- * Searches for a folder within a parent folder on MEGA.
- * @param {string} folderName - The name of the folder to search for.
- * @param {object} parentNode - The megajs Node object representing the parent folder to search within.
- * @returns {Promise<object|null>} - A promise that resolves with the megajs Node object if found, otherwise null.
- */
-async function findFolder(folderName, parentNode) {
-  if (!storage || !storage.loggedIn) {
-    console.error('[MEGA_SERVICE_STUB] MEGA service not initialized. Call initialize() first.');
-    throw new Error('MEGA service not initialized.');
+async function uploadFile(localFilePath, remoteFileName, targetFolderNode) {
+  if (!megaStorage) {
+    throw new Error('MEGA service not initialized. Please call initialize() first.');
   }
-  console.log(`[MEGA_SERVICE_STUB] Searching for folder: "${folderName}" in parent: "${parentNode.name}" (ID: ${parentNode.id})`);
-  await new Promise(resolve => setTimeout(resolve, 50));
-  // Simulate folder not found to always trigger creation in the migration script
-  console.log(`[MEGA_SERVICE_STUB] Folder "${folderName}" not found in parent "${parentNode.name}" (simulated to trigger creation).`);
-  return null;
+  if (!targetFolderNode) {
+    console.error('Target folder node is undefined. Cannot upload file.');
+    throw new Error('Target folder node is required for uploading a file.');
+  }
+
+  console.log(`Starting upload of "${localFilePath}" as "${remoteFileName}" to folder "${targetFolderNode.name || 'root'}"`);
+
+  try {
+    const stats = fs.statSync(localFilePath);
+    const fileSize = stats.size;
+    console.log(`File size: ${fileSize} bytes`);
+
+    const stream = fs.createReadStream(localFilePath);
+    const upload = targetFolderNode.upload({
+      name: remoteFileName,
+      size: fileSize, // Providing size is good for progress tracking
+    }, stream);
+
+    // Optional: Log progress
+    let lastLoggedProgress = 0;
+    upload.on('progress', (progress) => {
+      const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
+      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
+        console.log(`Uploading "${remoteFileName}": ${currentProgress}%`);
+        lastLoggedProgress = currentProgress;
+      }
+    });
+
+    const file = await upload.complete; // Wait for the upload to complete
+    const link = await file.link(false); // Get a public link to the file (false means no decryption key in URL)
+    
+    console.log(`File "${remoteFileName}" uploaded successfully.`);
+    console.log(`File link: ${link}`);
+    
+    return {
+      name: file.name,
+      link: link,
+      size: file.size,
+      nodeId: file.nodeId, // Useful for other operations
+    };
+  } catch (error) {
+    console.error(`Error uploading file "${remoteFileName}":`, error);
+    if (error.message && error.message.includes('EENT')) {
+        console.error('This might be due to the file already existing or a name conflict.');
+    }
+    throw error;
+  }
 }
 
-export {
+async function downloadFile(fileOrLink, localPath) {
+  if (!megaStorage) {
+    throw new Error('MEGA service not initialized. Please call initialize() first.');
+  }
+
+  let fileToDownload;
+  if (typeof fileOrLink === 'string') {
+    // If it's a string, assume it's a file link
+    console.log(`Attempting to download from link: ${fileOrLink}`);
+    try {
+      fileToDownload = megaStorage.File.fromURL(fileOrLink);
+    } catch (error) {
+      console.error('Error parsing MEGA link:', error);
+      throw new Error('Invalid MEGA file link provided.');
+    }
+  } else if (fileOrLink && typeof fileOrLink.download === 'function') {
+    // If it's a megajs file object
+    fileToDownload = fileOrLink;
+  } else {
+    console.error('Invalid argument: fileOrLink must be a MEGA file object or a valid MEGA file link.');
+    throw new Error('Invalid file object or link for download.');
+  }
+  
+  // Ensure fileToDownload is valid and has necessary properties
+  if (!fileToDownload || !fileToDownload.name || typeof fileToDownload.download !== 'function') {
+      console.error('Could not derive a valid file to download from the input:', fileOrLink);
+      throw new Error('Unable to process the provided file or link for download.');
+  }
+
+  console.log(`Starting download of "${fileToDownload.name}" to "${localPath}"`);
+
+  try {
+    const stream = fileToDownload.download(); // This returns a readable stream
+    const writable = fs.createWriteStream(localPath);
+
+    // Pipe the download stream to a file
+    stream.pipe(writable);
+
+    // Optional: Log progress
+    let lastLoggedProgress = 0;
+    stream.on('progress', (progress) => {
+      const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
+      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
+        console.log(`Downloading "${fileToDownload.name}": ${currentProgress}%`);
+        lastLoggedProgress = currentProgress;
+      }
+    });
+
+    return new Promise((resolve, reject) => {
+      stream.on('end', () => {
+        console.log(`File "${fileToDownload.name}" downloaded successfully to "${localPath}".`);
+        resolve({
+          name: fileToDownload.name,
+          path: localPath,
+          size: fileToDownload.size,
+        });
+      });
+      stream.on('error', (error) => {
+        console.error(`Error downloading file "${fileToDownload.name}":`, error);
+        // Clean up partially downloaded file
+        if (fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+        }
+        reject(error);
+      });
+      writable.on('error', (error) => { // Also handle errors on the writable stream
+        console.error(`Error writing file to "${localPath}":`, error);
+        // Clean up partially downloaded file
+        if (fs.existsSync(localPath)) {
+          fs.unlinkSync(localPath);
+        }
+        reject(error);
+      });
+    });
+
+  } catch (error) {
+    console.error(`Error initiating download for "${fileToDownload.name || 'unknown file'}":`, error);
+    throw error;
+  }
+}
+
+module.exports = {
   initialize,
+  findFolder,
+  createFolder,
   uploadFile,
   downloadFile,
-  createFolder,
-  deleteItem,
-  getFolderContents,
-  findFile,
-  findFolder,
-  storage as megaStorage // Exporting the simulated storage for potential inspection
+  get megaStorage() { // Expose megaStorage through a getter
+    return megaStorage;
+  },
+  getFolderContents, // Add new function to exports
 };
+
+async function getFolderContents(folderNodeOrLink) {
+  if (!megaStorage) {
+    throw new Error('MEGA service not initialized. Please call initialize() first.');
+  }
+
+  let folderNode;
+  try {
+    if (typeof folderNodeOrLink === 'string') {
+      console.log(`[getFolderContents] Input is a string link: ${folderNodeOrLink}. Attempting to derive node.`);
+      folderNode = megaStorage.File.fromURL(folderNodeOrLink);
+      // Wait for the node attributes to load if it's just a URL-derived object.
+      // This might involve checking if children are loaded or calling a specific load method.
+      // For megajs, often accessing .children triggers a load if needed, or .loadAttributes()
+      if (folderNode && typeof folderNode.loadAttributes === 'function') {
+         await folderNode.loadAttributes(); // Ensure attributes and children are loaded
+      }
+    } else if (folderNodeOrLink && folderNodeOrLink.directory !== undefined) { // Check if it's a node-like object
+      folderNode = folderNodeOrLink;
+      // If it's a node passed directly, assume it's sufficiently loaded if it has .children
+      // However, ensure its children are loaded if they are not.
+      if (folderNode.children === undefined && typeof folderNode.loadAttributes === 'function') {
+          console.log(`[getFolderContents] Input node's children are undefined. Loading attributes for node: ${folderNode.name}`);
+          await folderNode.loadAttributes();
+      }
+    } else {
+      throw new Error('Invalid input: Must be a MEGA folder node object or a valid MEGA folder link.');
+    }
+
+    if (!folderNode) {
+        throw new Error('Could not derive a valid folder node from the input.');
+    }
+    if (!folderNode.directory) {
+      throw new Error(`The provided item "${folderNode.name || 'Unnamed'}" is not a folder.`);
+    }
+    
+    console.log(`[getFolderContents] Listing contents for folder: "${folderNode.name || 'Unnamed Folder'}" (ID: ${folderNode.nodeId})`);
+
+    const children = folderNode.children || [];
+    if (children.length === 0) {
+      console.log(`[getFolderContents] Folder "${folderNode.name}" is empty.`);
+      return [];
+    }
+
+    const contents = [];
+    for (const child of children) {
+      // Ensure child attributes are loaded before trying to get a link
+      if (child.key === undefined && typeof child.loadAttributes === 'function') { // .key is often needed for links
+          await child.loadAttributes();
+      }
+      const childLink = await child.link({ key: child.key }).catch(err => { // Explicitly pass key for robustness
+          console.warn(`[getFolderContents] Could not generate link for child ${child.name}: ${err.message}`);
+          return null; // Or some placeholder
+      });
+
+      contents.push({
+        name: child.name,
+        type: child.directory ? 'folder' : 'file',
+        size: child.size,
+        nodeId: child.nodeId,
+        // M: child.M, // Master key, might be useful for client-side operations if needed directly
+        // key: child.key, // Decryption key for the node
+        link: childLink,
+        // parent: folderNode.nodeId // Adding parent ID for easier navigation if needed
+      });
+    }
+    console.log(`[getFolderContents] Found ${contents.length} items in folder "${folderNode.name}".`);
+    return contents;
+
+  } catch (error) {
+    console.error(`[getFolderContents] Error getting folder contents: `, error);
+    throw error; // Re-throw to be handled by the caller
+  }
+}
