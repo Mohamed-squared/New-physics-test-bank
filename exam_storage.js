@@ -7,7 +7,7 @@ import { showProgressDashboard } from './ui_progress_dashboard.js';
 import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
 import { generatePdfHtml, generateAndDownloadPdfWithMathJax, generateExamFeedbackPdfHtml } from './ui_pdf_generation.js';
-import { generateExplanation } from './ai_exam_marking.js'; // Ensure this is present
+
 
 // --- Exam Storage and Retrieval Functions ---
 
