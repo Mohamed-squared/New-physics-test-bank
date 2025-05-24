@@ -34,7 +34,7 @@ export function displayMegaMigrationDashboard(containerElement) {
         <div class="content-card">
             <h2 class="text-2xl font-bold text-primary-700 dark:text-primary-300 mb-6 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0v6m0-6h6m-6 0H6"></path></svg> <!-- Placeholder Icon -->
-                MEGA Cloud Command Center
+                MEGA Cloud Management
             </h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Oversee course migration to MEGA and explore cloud-stored resources.</p>
             
@@ -44,7 +44,7 @@ export function displayMegaMigrationDashboard(containerElement) {
                 <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-3">Course Migration Status</h3>
                 <div class="flex justify-between items-center mb-4">
                     <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Review courses and initiate their voyage to the MEGA Cloud.
+                        Review courses and start their migration to MEGA Cloud.
                     </p>
                     <button 
                         id="load-courses-mega-migration-btn"
@@ -108,16 +108,16 @@ export function loadCoursesForMegaMigration() {
             statusText = `Fully Migrated to MEGA Cloud`;
             statusColorClass = "text-green-600 dark:text-green-400";
         } else if (course.megaTranscriptionsFolderLink || course.megaPdfFolderLink || course.megaMcqFolderLink || course.megaTextbookFullPdfLink || course.megaCourseRootFolderLink) {
-            statusText = `Partially Anchored on MEGA`;
+            statusText = `Partially Migrated`;
             statusColorClass = "text-yellow-600 dark:text-yellow-400";
             unmigratedCoursesCount++;
         } else {
-            statusText = `Awaiting Maiden Voyage (Local Only)`;
+            statusText = `Not Migrated (Local Only)`;
             statusColorClass = "text-red-600 dark:text-red-400";
             unmigratedCoursesCount++;
         }
 
-        let buttonText = isFullyMigrated ? 'Explore Course Vault' : 'Initiate MEGA Voyage';
+        let buttonText = isFullyMigrated ? 'Explore Course Vault' : 'Start Migration';
         let buttonDisabled = isFullyMigrated && !course.megaCourseRootFolderLink;
 
         courseElement.innerHTML = `
@@ -178,7 +178,7 @@ export function loadCoursesForMegaMigration() {
         gamifiedAlertContainer.innerHTML = `
             <div class="p-4 mb-4 text-sm text-blue-700 bg-blue-100 rounded-lg dark:bg-blue-200 dark:text-blue-800 flex items-center" role="alert">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v1.586M12 12.253v1.586M12 18.253v1.586M7.5 12.253h1.586M13.5 12.253h1.586M16.732 7.96a4.5 4.5 0 010 6.364M5.268 7.96a4.5 4.5 0 000 6.364m11.464-6.364a4.5 4.5 0 00-6.364 0m6.364 0a4.5 4.5 0 010 6.364m-6.364-6.364L12 12.253" /></svg> <!-- Rocket Icon -->
-                <span class="font-medium">Mission Control Update!</span> ${unmigratedCoursesCount} course(s) are awaiting their voyage to the MEGA Cloud. Launch them for unparalleled access and durability!
+                <span class="font-medium">Action Required:</span> ${unmigratedCoursesCount} course(s) are pending migration to the MEGA Cloud. Start migration for unparalleled access and durability!
             </div>
         `;
     }
@@ -193,24 +193,21 @@ export async function startMegaMigration(courseId) {
     const migrateButton = document.getElementById(`migrate-btn-${courseId}`);
 
     try {
-        const megaEmail = prompt("Enter your MEGA email for this voyage:");
-        if (!megaEmail) { alert("MEGA email is required."); return; }
-        const megaPassword = prompt("Enter your MEGA password:");
-        if (!megaPassword) { alert("MEGA password is required."); return; }
+        // Removed megaEmail and megaPassword prompts
 
-        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Contacting MEGA Starbase...</p>`;
+        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Connecting to MEGA...</p>`;
         if (migrateButton) migrateButton.disabled = true;
 
-        const megaInstance = await megaInitialize(megaEmail, megaPassword);
+        const megaInstance = await megaInitialize(); // Call without arguments
         if (!megaInstance || !megaInstance.root) {
-            throw new Error("MEGA Starbase connection failed or root directory uncharted.");
+            throw new Error("MEGA connection failed or root directory not found.");
         }
-        console.log("[Migration] Connection to MEGA Starbase established. Root:", megaInstance.root.name);
+        console.log("[Migration] Connection to MEGA established. Root:", megaInstance.root.name);
 
         const course = globalCourseDataMap.get(courseId);
-        if (!course) throw new Error(`Course log for ID ${courseId} not found.`);
+        if (!course) throw new Error(`Course data for ID ${courseId} not found.`);
         
-        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Preparing ${course.name} for hyperspace jump...</p>`;
+        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Preparing ${course.name} for migration...</p>`;
 
         const lyceumRootFolderName = "LyceumCourses_Test";
         const courseMegaFolderName = course.courseDirName || `course_${course.id.replace(/\s+/g, '_')}`;
@@ -220,14 +217,14 @@ export async function startMegaMigration(courseId) {
 
         let lyceumRootNode = await megaFindFolder(lyceumRootFolderName, megaInstance.root);
         if (!lyceumRootNode) lyceumRootNode = await megaCreateFolder(lyceumRootFolderName, megaInstance.root);
-        if (!lyceumRootNode) throw new Error(`Failed to chart Lyceum Quadrant: ${lyceumRootFolderName}`);
+        if (!lyceumRootNode) throw new Error(`Failed to create Lyceum root folder: ${lyceumRootFolderName}`);
 
         let courseMainNode = await megaFindFolder(courseMegaFolderName, lyceumRootNode);
         if (!courseMainNode) courseMainNode = await megaCreateFolder(courseMegaFolderName, lyceumRootNode);
-        if (!courseMainNode) throw new Error(`Failed to establish course sector: ${courseMegaFolderName}`);
+        if (!courseMainNode) throw new Error(`Failed to create course folder: ${courseMegaFolderName}`);
         const courseRootLink = await courseMainNode.link({ key: courseMainNode.key });
 
-        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Course sector secured. Deploying standard data modules...</p>`;
+        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Course folder created. Creating standard folders...</p>`;
         const placeholderContent = `This data module was established during automated course deployment on ${new Date().toISOString()}.\nAll relevant data for this category will be archived here.`;
         const placeholderFileName = "README_Archive_Log.txt";
 
@@ -244,7 +241,7 @@ export async function startMegaMigration(courseId) {
         const pdfsFolderLink = await createAndUploadPlaceholderLocal(textbookPdfsFolderName, courseMainNode);
         const mcqsFolderLink = await createAndUploadPlaceholderLocal(generatedQuestionsFolderName, courseMainNode);
 
-        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Data modules deployed. Updating star charts (Firestore)...</p>`;
+        if (statusContainer) statusContainer.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Standard folders created. Updating database...</p>`;
         const updates = {
             megaCourseRootFolderLink: courseRootLink,
             megaTranscriptionsFolderLink: transcriptionsFolderLink,
@@ -256,16 +253,16 @@ export async function startMegaMigration(courseId) {
         if (success) {
             const updatedCourseData = { ...globalCourseDataMap.get(courseId), ...updates };
             globalCourseDataMap.set(courseId, updatedCourseData);
-            if (statusContainer) statusContainer.innerHTML = `<p class="text-green-600 dark:text-green-400">🚀 Mission Accomplished! Course '${course.name}' has successfully journeyed to the MEGAverse!</p>`;
+            if (statusContainer) statusContainer.innerHTML = `<p class="text-green-600 dark:text-green-400">Migration Complete: Course '${course.name}' successfully migrated.</p>`;
             loadCoursesForMegaMigration(); 
         } else {
-            throw new Error("Failed to update star charts (Firestore course definition).");
+            throw new Error("Failed to update database (Firestore course definition).");
         }
     } catch (error) {
         console.error(`[Migration] Error for course ${courseId}:`, error);
-        if (statusContainer) statusContainer.innerHTML = `<p class="text-red-600 dark:text-red-400">🛑 Mission Aborted: ${error.message}</p>`;
+        if (statusContainer) statusContainer.innerHTML = `<p class="text-red-600 dark:text-red-400">Migration Failed: ${error.message}</p>`;
         if (migrateButton) migrateButton.disabled = false; 
-        alert(`Migration voyage for course ${courseId} failed: ${error.message}`);
+        alert(`Migration for course ${courseId} failed: ${error.message}`);
     }
 }
 
@@ -274,15 +271,15 @@ let currentMegaExplorerPath = [];
 let currentMegaExplorerNode = null; 
 
 export async function handleMegaFileDownload(fileName, fileLink) {
-    if (!fileLink) { alert("File link unavailable. Cannot initiate download warp sequence."); return; }
-    console.log(`[Explorer] Transmitting download coordinates for: ${fileName} from ${fileLink}`);
-    showLoading(`Preparing ${fileName} for teleportation...`);
+    if (!fileLink) { alert("File link unavailable. Cannot start download."); return; }
+    console.log(`[Explorer] Initiating download for: ${fileName} from ${fileLink}`);
+    showLoading(`Preparing ${fileName} for download...`);
     try {
         window.open(fileLink + (fileLink.includes('?') ? '&d=1' : '?d=1'), '_blank'); 
-        alert(`Teleportation of "${fileName}" initiated. Your system will receive the data stream.`);
+        alert(`Download for "${fileName}" initiated. Your system will receive the data stream.`);
     } catch (error) {
-        console.error(`[Explorer] Download teleportation failed for ${fileName}:`, error);
-        alert(`Teleportation error: ${error.message}`);
+        console.error(`[Explorer] Download failed for ${fileName}:`, error);
+        alert(`Download error: ${error.message}`);
     } finally {
         hideLoading();
     }
@@ -291,20 +288,20 @@ export async function handleMegaFileDownload(fileName, fileLink) {
 export async function handleMegaFileUpload(event) { 
     const fileInput = event.target;
     const file = fileInput.files[0];
-    if (!file) { alert("No data packet selected for transmission."); return; }
+    if (!file) { alert("No file selected for upload."); return; }
     if (!currentMegaExplorerNode) { 
-        alert("Target MEGA sector not identified. Transmission aborted."); return;
+        alert("Target MEGA folder not specified. Transmission aborted."); return;
     }
 
-    console.log(`[Explorer] Transmitting data packet "${file.name}" to MEGA sector "${currentMegaExplorerNode.name}"`);
-    showLoading(`Transmitting ${file.name}...`);
+    console.log(`[Explorer] Uploading file "${file.name}" to folder "${currentMegaExplorerNode.name}"`);
+    showLoading(`Uploading ${file.name}...`);
     const feedbackEl = document.getElementById('mega-explorer-feedback');
-    if (feedbackEl) feedbackEl.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Transmitting ${file.name} to sector ${currentMegaExplorerNode.name}...</p>`;
+    if (feedbackEl) feedbackEl.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Uploading ${file.name} to folder ${currentMegaExplorerNode.name}...</p>`;
 
     try {
         const uploadedFile = await megaUploadFile(file, file.name, currentMegaExplorerNode); 
-        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-green-600 dark:text-green-400">Data packet "${uploadedFile.name}" successfully docked at ${currentMegaExplorerNode.name}.</p>`;
-        console.log(`[Explorer] File transmission complete:`, uploadedFile);
+        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-green-600 dark:text-green-400">File "${uploadedFile.name}" successfully uploaded to ${currentMegaExplorerNode.name}.</p>`;
+        console.log(`[Explorer] Upload complete:`, uploadedFile);
         let currentFolderLink = null;
         if (currentMegaExplorerPath.length > 0) {
             currentFolderLink = currentMegaExplorerPath[currentMegaExplorerPath.length - 1].link;
@@ -313,9 +310,9 @@ export async function handleMegaFileUpload(event) {
         }
         renderMegaFolderContents(currentMegaExplorerNode, currentFolderLink);
     } catch (error) {
-        console.error(`[Explorer] Transmission error:`, error);
-        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">Transmission error: ${error.message}</p>`;
-        alert(`Data packet transmission failed: ${error.message}`);
+        console.error(`[Explorer] Upload error:`, error);
+        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">Upload error: ${error.message}</p>`;
+        alert(`File upload failed: ${error.message}`);
     } finally {
         hideLoading();
         fileInput.value = null; 
@@ -333,8 +330,8 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
         console.error("[Explorer] Core navigation or display modules are offline."); return;
     }
     
-    fileListDiv.innerHTML = `<p class="text-gray-500 dark:text-gray-400 p-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Scanning sector contents...</p>`;
-    showLoading("Scanning MEGA sector...");
+    fileListDiv.innerHTML = `<p class="text-gray-500 dark:text-gray-400 p-3"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Loading folder contents...</p>`;
+    showLoading("Loading folder contents...");
 
     try {
         currentMegaExplorerNode = folderNode; 
@@ -361,7 +358,7 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
         parentFolderButton.addEventListener('click', navigateToMegaParentFolder);
         
         if (contents.length === 0) {
-            fileListDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 p-3 italic">Sector is clear. No objects detected.</p>';
+            fileListDiv.innerHTML = '<p class="text-gray-500 dark:text-gray-400 p-3 italic">Folder is empty.</p>';
         } else {
             fileListDiv.innerHTML = `<ul class="divide-y divide-gray-200 dark:divide-gray-700">
                 ${contents.map(item => `
@@ -394,10 +391,10 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
         uploadButton.addEventListener('click', () => handleMegaFileUpload({ target: fileUploadInput }));
 
         uploadSection.classList.remove('hidden');
-        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-green-600 dark:text-green-400">Sector scan complete. Displaying contents of "${folderNode.name || (currentFolderIsRoot ? 'Cloud Root' : 'Sector')}".</p>`;
+        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-green-600 dark:text-green-400">Loaded contents of "${folderNode.name || (currentFolderIsRoot ? 'Cloud Root' : 'Sector')}".</p>`;
     } catch (error) {
-        console.error("[Explorer] Error rendering sector contents:", error);
-        fileListDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 p-3">Critical error scanning sector: ${error.message}</p>`;
+        console.error("[Explorer] Error rendering folder contents:", error);
+        fileListDiv.innerHTML = `<p class="text-red-600 dark:text-red-400 p-3">Error loading folder contents: ${error.message}</p>`;
         if (feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: ${error.message}</p>`;
     } finally {
         hideLoading();
@@ -406,32 +403,34 @@ async function renderMegaFolderContents(folderNode, folderLinkForPath) {
 
 export async function loadMegaFolderByLink(folderLink, folderName = null, folderNodeId = null) {
     const feedbackEl = document.getElementById('mega-explorer-feedback');
-    const activeMegaStorage = getMegaStorage();
+    let activeMegaStorage = getMegaStorage(); // Use let as it might be reassigned
     if (!activeMegaStorage || !activeMegaStorage.root) {
-        const megaEmail = prompt("Enter MEGA Starbase email credentials:");
-        if (!megaEmail) { alert("MEGA email is required for Starbase access."); return; }
-        const megaPassword = prompt("Enter MEGA Starbase password:");
-        if (!megaPassword) { alert("MEGA password is required."); return; }
+        // Removed megaEmail and megaPassword prompts
         try {
-            showLoading("Establishing connection to MEGA Starbase...");
-            await megaInitialize(megaEmail, megaPassword);
+            showLoading("Establishing connection to MEGA...");
+            activeMegaStorage = await megaInitialize(); // Call without arguments and reassign
             hideLoading();
         } catch (initError) {
             hideLoading();
-            if(feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">Starbase Connection Failed: ${initError.message}</p>`;
-            alert(`Starbase Connection Failed: ${initError.message}`); return;
+            if(feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">MEGA Connection Failed: ${initError.message}</p>`;
+            alert(`MEGA Connection Failed: ${initError.message}`); return;
         }
     }
+    // Ensure activeMegaStorage is referenced correctly after potential re-initialization
+    if (!activeMegaStorage || !activeMegaStorage.root) { // Add this check
+        alert("MEGA service could not be initialized. Cannot proceed."); return;
+    }
+
 
     if (!folderLink && !(activeMegaStorage && activeMegaStorage.root)) {
-        alert("Target sector link missing and Starbase root uncharted."); return;
+        alert("Folder link missing and MEGA root not initialized."); return;
     }
     
     let targetNode;
     let linkToUseForPath = folderLink;
 
     if (!folderLink || folderLink === 'null') { 
-        console.log("[Explorer] No sector link, defaulting to Starbase Root.");
+        console.log("[Explorer] No folder link, defaulting to MEGA Root.");
         if (!activeMegaStorage || !activeMegaStorage.root) {
              alert("MEGA service not initialized. Cannot default to root."); return;
         }
@@ -439,8 +438,8 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
         currentMegaExplorerPath = []; 
         linkToUseForPath = null; 
     } else {
-        console.log(`[Explorer] Charting course to sector: ${folderLink}`);
-        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Charting course to sector...</p>`;
+        console.log(`[Explorer] Loading folder: ${folderLink}`);
+        if (feedbackEl) feedbackEl.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Loading folder...</p>`;
         try {
             if (!activeMegaStorage) throw new Error("MEGA Storage not available for URL parsing.");
             targetNode = activeMegaStorage.File.fromURL(folderLink);
@@ -448,7 +447,7 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
                 await targetNode.loadAttributes(); 
             }
             if (!targetNode || !targetNode.directory) {
-                 throw new Error("The provided coordinates do not lead to a known sector (folder).");
+                 throw new Error("The provided link is not a valid folder.");
             }
             
             const existingPathIndex = currentMegaExplorerPath.findIndex(p => p.nodeId === targetNode.nodeId);
@@ -460,10 +459,10 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
                  currentMegaExplorerPath = [];
             }
         } catch (error) {
-            console.error(`[Explorer] Navigation error to sector ${folderLink}:`, error);
+            console.error(`[Explorer] Error loading folder ${folderLink}:`, error);
             if(feedbackEl) feedbackEl.innerHTML = `<p class="text-red-600 dark:text-red-400">Navigation failed: ${error.message}</p>`;
-            alert(`Navigation error: ${error.message}`);
-            document.getElementById('mega-file-list').innerHTML = `<p class="text-red-600 dark:text-red-400 p-3">Navigation error: ${error.message}</p>`;
+            alert(`Error loading folder: ${error.message}`);
+            document.getElementById('mega-file-list').innerHTML = `<p class="text-red-600 dark:text-red-400 p-3">Error loading folder: ${error.message}</p>`;
             return;
         }
     }
@@ -472,7 +471,7 @@ export async function loadMegaFolderByLink(folderLink, folderName = null, folder
 
 export function navigateToMegaPathIndex(index) {
     if (index < 0 || index >= currentMegaExplorerPath.length) {
-        console.warn("[Explorer] Invalid jump coordinates in path history:", index); return;
+        console.warn("[Explorer] Invalid path index:", index); return;
     }
     const { link, name, nodeId } = currentMegaExplorerPath[index];
     currentMegaExplorerPath = currentMegaExplorerPath.slice(0, index); 
@@ -482,7 +481,7 @@ export function navigateToMegaPathIndex(index) {
     } else if (nodeId === (getMegaStorage() && getMegaStorage().root ? getMegaStorage().root.nodeId : '---nevermatch---')) {
         loadMegaFolderByLink(null); 
     } else {
-        alert("Cannot navigate to this sector (coordinates missing and not Starbase Root).");
+        alert("Cannot navigate to this folder (link missing and not MEGA Root).");
     }
 }
 
@@ -495,11 +494,11 @@ export function navigateToMegaParentFolder() {
         } else if (parent.nodeId === (getMegaStorage() && getMegaStorage().root ? getMegaStorage().root.nodeId : '---nevermatch---')) {
              loadMegaFolderByLink(null); 
         } else {
-            console.warn("[Explorer] Parent sector has no link and is not Starbase Root. Defaulting to Root.");
+            console.warn("[Explorer] Parent folder has no link and is not MEGA Root. Defaulting to Root.");
             loadMegaFolderByLink(null);
         }
     } else { 
-        console.log("[Explorer] At Starbase Root or cannot go further up. Loading Root.");
+        console.log("[Explorer] At MEGA Root or cannot go further up. Loading Root.");
         loadMegaFolderByLink(null);
     }
 }
@@ -509,36 +508,36 @@ export function displayMegaFileExplorer(containerElement, initialFolderLink = nu
         <div class="content-card p-6 mt-6">
             <h3 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4 flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H5a2 2 0 00-2 2v5a2 2 0 002 2z"></path></svg> <!-- Folder Icon -->
-                MEGA Cloud Navigator
+                MEGA File Explorer
             </h3>
             <div class="space-y-4">
                 <div>
-                    <label for="mega-folder-link-input" class="label">Navigation Coordinates (MEGA Folder Link or Blank for Root):</label>
+                    <label for="mega-folder-link-input" class="label">MEGA Folder Link (or leave blank for root):</label>
                     <div class="flex space-x-2 mt-1">
                         <input type="text" id="mega-folder-link-input" class="input-field flex-grow" placeholder="Enter MEGA folder link or leave blank for root" value="${initialFolderLink || ''}">
                         <button id="load-mega-folder-btn" class="btn-primary flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg> <!-- Search Icon -->
-                            Load Sector
+                            Load Folder
                         </button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between py-2">
                     <button id="mega-parent-folder-btn" class="btn-secondary-small hidden flex items-center">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10v10a2 2 0 002 2h14a2 2 0 002-2V10M3 10l9-9 9 9m-9 9v-4"></path></svg> <!-- Home/Up Icon -->
-                        Warp Upstream
+                        Parent Folder
                     </button>
-                    <div id="mega-current-path" class="text-sm text-gray-500 dark:text-gray-400 truncate flex-grow ml-2">Current Sector: /</div>
+                    <div id="mega-current-path" class="text-sm text-gray-500 dark:text-gray-400 truncate flex-grow ml-2">Current Path: /</div>
                 </div>
                 <div id="mega-file-list" class="min-h-[200px] max-h-[450px] overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-3 bg-gray-50 dark:bg-gray-700/50 shadow-inner">
-                    <p class="text-gray-500 dark:text-gray-400 p-3">Enter coordinates or connect to Starbase to view sectors.</p>
+                    <p class="text-gray-500 dark:text-gray-400 p-3">Enter a folder link or initialize MEGA to browse files.</p>
                 </div>
                 <div id="mega-upload-section" class="pt-4 border-t border-gray-200 dark:border-gray-600 hidden">
-                    <label for="mega-file-upload-input" class="label mb-1">Transmit Data Packet to Current Sector:</label>
+                    <label for="mega-file-upload-input" class="label mb-1">Upload File to Current Folder:</label>
                     <div class="flex space-x-2">
                         <input type="file" id="mega-file-upload-input" class="input-field file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-700 file:text-primary-700 dark:file:text-primary-100 hover:file:bg-primary-100 dark:hover:file:bg-primary-600 flex-grow">
                         <button id="mega-upload-button" class="btn-primary-small flex items-center">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> <!-- Upload Icon -->
-                            Transmit
+                            Upload
                         </button>
                     </div>
                 </div>

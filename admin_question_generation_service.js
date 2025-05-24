@@ -1,6 +1,7 @@
 // admin_question_generation_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
 import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added unescape
+import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js'; // Added import
 // Note: No direct Firestore writes in these functions, they call a backend service.
 
 function unescape(htmlStr) {
@@ -18,10 +19,7 @@ export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapter
     if (!courseId || !chapterKey || !chapterPdfMegaLink || !chapterTitle) {
         feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: Course, Chapter, Chapter Title, and PDF Link must be available.</p>`; return;
     }
-    const megaEmail = prompt("Enter your MEGA Email (The Archivist's Seal):");
-    if (!megaEmail) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Email is required.</p>`; return; }
-    const megaPassword = prompt("Enter your MEGA Password (The Vault Key):");
-    if (!megaPassword) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Password is required.</p>`; return; }
+    // Removed MEGA Email and Password prompts
     const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
@@ -31,13 +29,21 @@ export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapter
     try {
         const response = await fetch('http://localhost:3001/generate-questions-from-pdf', {
             method: 'POST', headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify({ courseId, chapterKey, chapterPdfMegaLink, chapterTitle, megaEmail, megaPassword, geminiApiKey }),
+            body: JSON.stringify({ 
+                courseId, 
+                chapterKey, 
+                chapterPdfMegaLink, 
+                chapterTitle, 
+                megaEmail: MEGA_EMAIL, // Using imported constant
+                megaPassword: MEGA_PASSWORD, // Using imported constant
+                geminiApiKey 
+            }),
         });
         hideLoading();
         const result = await response.json();
         if (response.ok && result.success) {
             feedbackArea.innerHTML = `
-                <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>✨ Wisdom Extracted!</p>
+                <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>📚 Wisdom Extracted!</p>
                 <p class="ml-8"><strong>Chapter:</strong> ${chapterTitle}</p>
                 ${result.mcqMegaLink ? `<p class="ml-8"><strong>MCQ Scroll:</strong> <a href="${result.mcqMegaLink}" target="_blank" class="link">${result.mcqMegaLink}</a></p>` : '<p class="ml-8">MCQ Scroll: Not forged or link missing.</p>'}
                 ${result.problemsMegaLink ? `<p class="ml-8"><strong>Problem Parchment:</strong> <a href="${result.problemsMegaLink}" target="_blank" class="link">${result.problemsMegaLink}</a></p>` : '<p class="ml-8">Problem Parchment: Not forged or link missing.</p>'}
@@ -144,10 +150,7 @@ export async function startLectureMcqProblemGeneration(courseId, selectedLecture
     if (!courseId || !selectedLectures || selectedLectures.length === 0 || !chapterNameForLectures) {
         feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: Course, "Chapter Name/Topic", and at least one lecture must be selected.</p>`; return;
     }
-    const megaEmail = prompt("Enter your MEGA Email (The Archivist's Seal):");
-    if (!megaEmail) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Email is required.</p>`; return; }
-    const megaPassword = prompt("Enter your MEGA Password (The Vault Key):");
-    if (!megaPassword) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Password is required.</p>`; return; }
+    // Removed MEGA Email and Password prompts
     const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
@@ -157,7 +160,14 @@ export async function startLectureMcqProblemGeneration(courseId, selectedLecture
     try {
         const response = await fetch('http://localhost:3001/generate-questions-from-lectures', {
             method: 'POST', headers: { 'Content-Type': 'application/json', },
-            body: JSON.stringify({ courseId, selectedLectures, chapterNameForLectures, megaEmail, megaPassword, geminiApiKey }),
+            body: JSON.stringify({ 
+                courseId, 
+                selectedLectures, 
+                chapterNameForLectures, 
+                megaEmail: MEGA_EMAIL, // Using imported constant
+                megaPassword: MEGA_PASSWORD, // Using imported constant
+                geminiApiKey 
+            }),
         });
         hideLoading();
         const result = await response.json();

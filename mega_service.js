@@ -1,14 +1,17 @@
 import { Storage } from 'https://unpkg.com/megajs@1.3.7/dist/main.browser-es.mjs';
 
+const MEGA_EMAIL = 'lyceum.website@gmail.com';
+const MEGA_PASSWORD = 'I_LOVE_PHY';
+
 let megaStorage;
 
-export async function initialize(email, password) {
+export async function initialize() {
   try {
     console.log('Initializing MEGA service...');
     megaStorage = new Storage({
-      email,
-      password,
-      userAgent: 'MegaService/1.0.0', // Optional: Set a user agent
+      email: MEGA_EMAIL,
+      password: MEGA_PASSWORD,
+      userAgent: 'MegaService/1.0.0', 
     });
 
     await megaStorage.ready; // Wait for the storage to be ready (authenticated)
@@ -327,3 +330,5 @@ export async function getFolderContents(folderNodeOrLink) {
     throw error; // Re-throw to be handled by the caller
   }
 }
+
+export { MEGA_EMAIL, MEGA_PASSWORD };

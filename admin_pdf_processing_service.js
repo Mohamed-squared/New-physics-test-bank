@@ -1,6 +1,7 @@
 // admin_pdf_processing_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
+import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js'; // Added import
 // Note: No direct Firestore writes in these functions, they call a backend service.
 
 export async function startPdfProcessing(file, courseId, actualFirstPageNumber) {
@@ -14,10 +15,7 @@ export async function startPdfProcessing(file, courseId, actualFirstPageNumber) 
     if (parseInt(actualFirstPageNumber, 10) < 1) {
         feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: "Actual Page 1 Number" must be 1 or greater.</p>`; return;
     }
-    const megaEmail = prompt("Enter your MEGA Email (The Archivist's Seal):");
-    if (!megaEmail) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Email is required.</p>`; return; }
-    const megaPassword = prompt("Enter your MEGA Password (The Vault Key):");
-    if (!megaPassword) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">MEGA Password is required.</p>`; return; }
+    // Removed MEGA Email and Password prompts
     const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token for ToC):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
@@ -28,8 +26,8 @@ export async function startPdfProcessing(file, courseId, actualFirstPageNumber) 
     formData.append('pdfFile', file);
     formData.append('courseId', courseId);
     formData.append('actualFirstPageNumber', actualFirstPageNumber);
-    formData.append('megaEmail', megaEmail);
-    formData.append('megaPassword', megaPassword);
+    formData.append('megaEmail', MEGA_EMAIL); // Using imported constant
+    formData.append('megaPassword', MEGA_PASSWORD); // Using imported constant
     formData.append('geminiApiKey', geminiApiKey);
     try {
         const response = await fetch('http://localhost:3001/process-textbook-pdf', { method: 'POST', body: formData });
