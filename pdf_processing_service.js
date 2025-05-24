@@ -3,9 +3,11 @@ const fs = require('fs-extra'); // Use fs-extra for convenience
 const path = require('path');
 const PdfImage = require('pdf-image').PDFImage; // For converting PDF pages to images
 
-const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js');
-const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js');
-const { generateImageContentResponse, generateTextContentResponse } = require('./ai_integration.js'); // Assuming Gemini function can handle image paths or buffers
+// const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js');
+const serverMega = require('./mega_service_server.js'); // MODIFIED: Using new server-side Mega service
+// const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled
+// const { generateImageContentResponse, generateTextContentResponse } = require('./ai_integration.js'); // Assuming Gemini function can handle image paths or buffers
+const aiServer = require('./ai_integration_server.js'); // MODIFIED: Using new server-side AI integration
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_pdf_processing');
 
@@ -37,43 +39,46 @@ async function processTextbookPdf(
 
         // --- 1. Initialize MEGA and Get Course Details ---
         console.log('[PDFProcess] Initializing MEGA service...');
-        const mega = await megaInitialize(megaEmail, megaPassword);
-        if (!mega || !mega.root) throw new Error('MEGA initialization failed or root directory not accessible.');
+        // const mega = await megaInitialize(megaEmail, megaPassword); // OLD
+        await serverMega.initialize(megaEmail, megaPassword); // NEW
+        const megaStorage = serverMega.getMegaStorage(); // NEW
+        if (!megaStorage || !megaStorage.root) throw new Error('MEGA initialization failed or root directory not accessible.');
         console.log('[PDFProcess] MEGA service initialized.');
 
-        console.log(`[PDFProcess] Fetching course details for Course ID: ${courseId}`);
-        const courseDetails = await getCourseDetails(courseId);
-        if (!courseDetails) throw new Error(`Course details not found for ID: ${courseId}`);
-        const courseDirName = courseDetails.courseDirName;
-        if (!courseDirName) throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`);
-        console.log(`[PDFProcess] Course directory name: ${courseDirName}`);
+        // console.log(`[PDFProcess] Fetching course details for Course ID: ${courseId}`); // Firestore disabled
+        // const courseDetails = await getCourseDetails(courseId); // Firestore disabled
+        // if (!courseDetails) throw new Error(`Course details not found for ID: ${courseId}`); // Firestore disabled
+        // const courseDirName = courseDetails.courseDirName; // Firestore disabled
+        const courseDirName = `CourseDir_${courseId}`; // Placeholder after commenting out Firestore
+        // if (!courseDirName) throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`); // Firestore disabled
+        console.log(`[PDFProcess] Course directory name (placeholder): ${courseDirName}`);
 
         const lyceumRootFolderName = "LyceumCourses_Test";
         const textbookFullFolderName = "Textbook_Full";
         const textbookChaptersFolderName = "Textbook_Chapters";
 
-        let lyceumRootNode = await megaFindFolder(lyceumRootFolderName, mega.root);
-        if (!lyceumRootNode) lyceumRootNode = await megaCreateFolder(lyceumRootFolderName, mega.root);
+        let lyceumRootNode = await serverMega.findFolder(lyceumRootFolderName, megaStorage.root); // MODIFIED
+        if (!lyceumRootNode) lyceumRootNode = await serverMega.createFolder(lyceumRootFolderName, megaStorage.root); // MODIFIED
         if (!lyceumRootNode) throw new Error(`Failed to find or create Lyceum root folder: ${lyceumRootFolderName}`);
 
-        let courseMegaFolderNode = await megaFindFolder(courseDirName, lyceumRootNode);
-        if (!courseMegaFolderNode) courseMegaFolderNode = await megaCreateFolder(courseDirName, lyceumRootNode);
+        let courseMegaFolderNode = await serverMega.findFolder(courseDirName, lyceumRootNode); // MODIFIED
+        if (!courseMegaFolderNode) courseMegaFolderNode = await serverMega.createFolder(courseDirName, lyceumRootNode); // MODIFIED
         if (!courseMegaFolderNode) throw new Error(`Failed to find or create course folder: ${courseDirName}`);
 
         // --- 2. Upload Full PDF to MEGA ---
         console.log('[PDFProcess] Uploading full textbook PDF to MEGA...');
-        let fullTextbookMegaFolderNode = await megaFindFolder(textbookFullFolderName, courseMegaFolderNode);
-        if (!fullTextbookMegaFolderNode) fullTextbookMegaFolderNode = await megaCreateFolder(textbookFullFolderName, courseMegaFolderNode);
+        let fullTextbookMegaFolderNode = await serverMega.findFolder(textbookFullFolderName, courseMegaFolderNode); // MODIFIED
+        if (!fullTextbookMegaFolderNode) fullTextbookMegaFolderNode = await serverMega.createFolder(textbookFullFolderName, courseMegaFolderNode); // MODIFIED
         if (!fullTextbookMegaFolderNode) throw new Error(`Failed to create MEGA folder for full textbook: ${textbookFullFolderName}`);
 
         const fullPdfFileNameOnMega = `textbook_full_${sanitizeFilename(path.basename(pdfFilePath, path.extname(pdfFilePath)))}.pdf`;
-        const uploadedFullPdf = await megaUploadFile(pdfFilePath, fullPdfFileNameOnMega, fullTextbookMegaFolderNode);
+        const uploadedFullPdf = await serverMega.uploadFile(pdfFilePath, fullPdfFileNameOnMega, fullTextbookMegaFolderNode); // MODIFIED
         if (!uploadedFullPdf || !uploadedFullPdf.link) throw new Error('Failed to upload full PDF to MEGA or link not returned.');
         fullPdfMegaPath = uploadedFullPdf.link;
         console.log(`[PDFProcess] Full textbook PDF uploaded to MEGA: ${fullPdfMegaPath}`);
 
-        await updateCourseDefinition(courseId, { megaTextbookFullPdfLink: fullPdfMegaPath });
-        console.log(`[PDFProcess] Firestore updated with full textbook MEGA link for course ${courseId}.`);
+        // await updateCourseDefinition(courseId, { megaTextbookFullPdfLink: fullPdfMegaPath }); // Firestore disabled
+        console.log(`[PDFProcess] Firestore update for full textbook link SKIPPED for course ${courseId}.`);
 
         // --- 3. AI Table of Contents Analysis ---
         console.log('[PDFProcess] Starting Table of Contents (ToC) analysis...');
@@ -122,12 +127,18 @@ async function processTextbookPdf(
         `;
         
         // Assuming generateImageContentResponse can take an array of image paths
-        const aiResponseTocRaw = await generateImageContentResponse(tocImagePaths, tocPrompt, geminiApiKey);
-        let aiResponseToc = JSON.parse(aiResponseTocRaw.replace(/```json\n?|```/g, '').trim());
-        console.log('[PDFProcess] AI ToC analysis response received:', JSON.stringify(aiResponseToc, null, 2));
+        // const aiResponseTocRaw = await generateImageContentResponse(tocImagePaths, tocPrompt, geminiApiKey); // MODIFIED: AI Vision call disabled
+        // let aiResponseToc = JSON.parse(aiResponseTocRaw.replace(/```json\n?|```/g, '').trim()); // MODIFIED: AI Vision call disabled
+        console.warn("[PDFProcess] AI ToC generation via vision (generateImageContentResponse) is temporarily disabled as it's not available in ai_integration_server.js. Using placeholder ToC.");
+        let aiResponseToc = [
+            { "chapter_title": "Chapter 1: Placeholder Title from Server Refactor", "toc_page_number": 1 },
+            { "chapter_title": "Chapter 2: Another Placeholder from Server Refactor", "toc_page_number": 10 },
+            { "chapter_title": "Chapter 3: Final Placeholder from Server Refactor", "toc_page_number": 20 }
+        ];
+        console.log('[PDFProcess] AI ToC analysis (placeholder) response:', JSON.stringify(aiResponseToc, null, 2));
 
         if (!Array.isArray(aiResponseToc) || aiResponseToc.some(ch => typeof ch.chapter_title !== 'string' || typeof ch.toc_page_number !== 'number')) {
-            console.error("[PDFProcess] Invalid ToC format from AI:", aiResponseToc);
+            console.error("[PDFProcess] Invalid ToC format from AI (placeholder check):", aiResponseToc); // Should still validate placeholder
             throw new Error("AI returned an invalid format for the Table of Contents. Expected an array of {chapter_title: string, toc_page_number: number}.");
         }
         
@@ -143,8 +154,8 @@ async function processTextbookPdf(
 
         // --- 5. Split PDF into Chapters ---
         console.log('[PDFProcess] Splitting PDF into chapters...');
-        let chapterMegaFolderNode = await megaFindFolder(textbookChaptersFolderName, courseMegaFolderNode);
-        if (!chapterMegaFolderNode) chapterMegaFolderNode = await megaCreateFolder(textbookChaptersFolderName, courseMegaFolderNode);
+        let chapterMegaFolderNode = await serverMega.findFolder(textbookChaptersFolderName, courseMegaFolderNode); // MODIFIED
+        if (!chapterMegaFolderNode) chapterMegaFolderNode = await serverMega.createFolder(textbookChaptersFolderName, courseMegaFolderNode); // MODIFIED
         if (!chapterMegaFolderNode) throw new Error(`Failed to create MEGA folder for chapter PDFs: ${textbookChaptersFolderName}`);
 
         const originalPdfBytes = fs.readFileSync(pdfFilePath); // Load once for splitting
@@ -189,7 +200,7 @@ async function processTextbookPdf(
             console.log(`[PDFProcess] Chapter PDF saved locally: ${chapterTempPath}`);
 
             // --- 6. Upload Chapter PDF to MEGA ---
-            const uploadedChapterPdf = await megaUploadFile(chapterTempPath, chapterFileName, chapterMegaFolderNode);
+            const uploadedChapterPdf = await serverMega.uploadFile(chapterTempPath, chapterFileName, chapterMegaFolderNode); // MODIFIED
             if (!uploadedChapterPdf || !uploadedChapterPdf.link) {
                 console.warn(`[PDFProcess] Failed to upload chapter PDF "${chapterFileName}" to MEGA. Skipping this chapter's Firestore update.`);
                 continue;
@@ -210,8 +221,9 @@ async function processTextbookPdf(
         // --- 7. Update Firestore with Chapter Details ---
         if (chapterFirestoreData.length > 0) {
             // Fetch existing course data to merge, or create new structure
-            const existingCourseData = await getCourseDetails(courseId);
-            const existingChapterResources = existingCourseData.chapterResources || {};
+            // const existingCourseData = await getCourseDetails(courseId); // Firestore disabled
+            const existingCourseData = null; // Placeholder since getCourseDetails is disabled
+            const existingChapterResources = existingCourseData?.chapterResources || {}; // MODIFIED: Safe access
             
             chapterFirestoreData.forEach(chData => {
                 // This assumes chapter IDs are like "chapter_1", "chapter_2"
@@ -243,8 +255,8 @@ async function processTextbookPdf(
                 });
             });
 
-            await updateCourseDefinition(courseId, { chapterResources: existingChapterResources });
-            console.log(`[PDFProcess] Firestore updated with chapter PDF details for course ${courseId}.`);
+            // await updateCourseDefinition(courseId, { chapterResources: existingChapterResources }); // Firestore disabled
+            console.log(`[PDFProcess] Firestore update for chapter PDF details SKIPPED for course ${courseId}.`);
         } else {
             console.warn("[PDFProcess] No chapters were successfully processed and uploaded. Firestore not updated with chapter details.");
         }

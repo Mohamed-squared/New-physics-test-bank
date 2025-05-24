@@ -2,8 +2,9 @@ const ytdl = require('ytdl-core');
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js'); // Assuming mega_service.js is in the same directory
-const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // Assuming firebase_firestore.js
+// const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js'); // Assuming mega_service.js is in the same directory
+const serverMega = require('./mega_service_server.js'); // Using the new server-side Mega service
+// const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // Assuming firebase_firestore.js
 
 const ASSEMBLYAI_API_BASE_URL = 'https://api.assemblyai.com/v2';
 const TEMP_AUDIO_DIR = path.join(__dirname, 'temp_audio'); // __dirname might not be available in all environments (e.g. Firebase Cloud Functions). For local, it's fine.
@@ -141,101 +142,106 @@ async function transcribeLecture(youtubeUrl, courseId, chapterId, assemblyAiApiK
 
         // 4. MEGA Integration
         console.log(`[MEGA] Initializing MEGA service with email: ${megaEmail}`);
-        const mega = await megaInitialize(megaEmail, megaPassword);
-        if (!mega || !mega.root) { // Check if mega.root is available
+        // const mega = await megaInitialize(megaEmail, megaPassword); // Old call
+        await serverMega.initialize(megaEmail, megaPassword); // New call
+        const megaStorage = serverMega.getMegaStorage(); // Get storage instance
+
+        if (!megaStorage || !megaStorage.root) { // Check if megaStorage.root is available
             throw new Error('MEGA initialization failed or root directory not accessible.');
         }
         console.log('[MEGA] MEGA service initialized successfully.');
 
-        console.log(`[Firestore] Fetching course details for Course ID: ${courseId}`);
-        const courseDetails = await getCourseDetails(courseId);
-        if (!courseDetails) {
-            throw new Error(`Course details not found for ID: ${courseId}`);
-        }
-        const courseDirName = courseDetails.courseDirName;
-        if (!courseDirName) {
-            throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`);
-        }
-        console.log(`[Firestore] Course directory name: ${courseDirName}`);
+        // console.log(`[Firestore] Fetching course details for Course ID: ${courseId}`);
+        // const courseDetails = await getCourseDetails(courseId);
+        // if (!courseDetails) {
+        //     throw new Error(`Course details not found for ID: ${courseId}`);
+        // }
+        // const courseDirName = courseDetails.courseDirName;
+        const courseDirName = `CourseDir_${courseId}`; // Placeholder after commenting out Firestore
+        // if (!courseDirName) {
+        //     throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`);
+        // }
+        console.log(`[Placeholder] Course directory name set to: ${courseDirName}`);
 
         const lyceumRootFolderName = "LyceumCourses_Test";
         const transcriptionsFolderName = "Transcriptions";
         
-        let lyceumRootNode = await megaFindFolder(lyceumRootFolderName, mega.root);
+        let lyceumRootNode = await serverMega.findFolder(lyceumRootFolderName, megaStorage.root);
         if (!lyceumRootNode) {
             console.log(`[MEGA] Creating Lyceum root folder: ${lyceumRootFolderName}`);
-            lyceumRootNode = await megaCreateFolder(lyceumRootFolderName, mega.root);
+            lyceumRootNode = await serverMega.createFolder(lyceumRootFolderName, megaStorage.root);
         }
         if (!lyceumRootNode) throw new Error(`Failed to find or create Lyceum root folder on MEGA: ${lyceumRootFolderName}`);
 
-        let courseMegaFolderNode = await megaFindFolder(courseDirName, lyceumRootNode);
+        let courseMegaFolderNode = await serverMega.findFolder(courseDirName, lyceumRootNode);
         if (!courseMegaFolderNode) {
             console.log(`[MEGA] Creating course folder: ${courseDirName} in ${lyceumRootNode.name}`);
-            courseMegaFolderNode = await megaCreateFolder(courseDirName, lyceumRootNode);
+            courseMegaFolderNode = await serverMega.createFolder(courseDirName, lyceumRootNode);
         }
         if (!courseMegaFolderNode) throw new Error(`Failed to find or create course folder on MEGA: ${courseDirName}`);
 
-        let transcriptionsMegaFolderNode = await megaFindFolder(transcriptionsFolderName, courseMegaFolderNode);
+        let transcriptionsMegaFolderNode = await serverMega.findFolder(transcriptionsFolderName, courseMegaFolderNode);
         if (!transcriptionsMegaFolderNode) {
             console.log(`[MEGA] Creating Transcriptions folder in: ${courseMegaFolderNode.name}`);
-            transcriptionsMegaFolderNode = await megaCreateFolder(transcriptionsFolderName, courseMegaFolderNode);
+            transcriptionsMegaFolderNode = await serverMega.createFolder(transcriptionsFolderName, courseMegaFolderNode);
         }
         if (!transcriptionsMegaFolderNode) throw new Error(`Failed to find or create Transcriptions folder on MEGA.`);
         
-        console.log(`[MEGA] Target MEGA folder: ${transcriptionsMegaFolderNode.name} (ID: ${transcriptionsMegaFolderNode.id})`);
+        console.log(`[MEGA] Target MEGA folder: ${transcriptionsMegaFolderNode.name} (ID: ${transcriptionsMegaFolderNode.nodeId})`); // .id to .nodeId if that's what new service uses
         const srtFileNameOnMega = `${videoTitle}_${transcriptId}.srt`;
         console.log(`[MEGA] Uploading SRT file "${srtFileNameOnMega}" to MEGA...`);
-        const uploadedSrtFile = await megaUploadFile(srtFilePath, srtFileNameOnMega, transcriptionsMegaFolderNode);
+        const uploadedSrtFile = await serverMega.uploadFile(srtFilePath, srtFileNameOnMega, transcriptionsMegaFolderNode);
         if (!uploadedSrtFile || !uploadedSrtFile.link) {
             throw new Error('Failed to upload SRT file to MEGA or link not returned.');
         }
         console.log(`[MEGA] SRT file uploaded successfully. Link: ${uploadedSrtFile.link}`);
 
-        // 5. Update Firestore
-        console.log(`[Firestore] Updating course definition for Course ID: ${courseId}, Chapter ID: ${chapterId}`);
-        const existingCourseData = await getCourseDetails(courseId); // Re-fetch to ensure latest data
-        if (!existingCourseData) throw new Error(`Failed to re-fetch course data for ${courseId} before update.`);
+        // 5. Update Firestore (Temporarily Commented Out)
+        console.log(`[Firestore] Skipping Firestore update for Course ID: ${courseId}, Chapter ID: ${chapterId}`);
+        // const existingCourseData = await getCourseDetails(courseId); // Re-fetch to ensure latest data
+        // if (!existingCourseData) throw new Error(`Failed to re-fetch course data for ${courseId} before update.`);
 
-        const chapterResources = existingCourseData.chapterResources || {};
-        const chapterSpecificResources = chapterResources[chapterId] || { lectureUrls: [], otherResources: [] };
+        // const chapterResources = existingCourseData.chapterResources || {};
+        // const chapterSpecificResources = chapterResources[chapterId] || { lectureUrls: [], otherResources: [] };
         
-        // Avoid duplicate entries based on URL
-        const newLectureResource = {
-            title: videoTitle,
-            url: uploadedSrtFile.link,
-            type: "transcription",
-            sourceUrl: youtubeUrl, // Store original YouTube URL for reference
-            transcriptId: transcriptId, // Store AssemblyAI transcript ID
-            uploadedAt: new Date().toISOString()
-        };
+        // // Avoid duplicate entries based on URL
+        // const newLectureResource = {
+        //     title: videoTitle,
+        //     url: uploadedSrtFile.link,
+        //     type: "transcription",
+        //     sourceUrl: youtubeUrl, // Store original YouTube URL for reference
+        //     transcriptId: transcriptId, // Store AssemblyAI transcript ID
+        //     uploadedAt: new Date().toISOString()
+        // };
 
-        const existingLectureIndex = chapterSpecificResources.lectureUrls.findIndex(lec => lec.url === newLectureResource.url || (lec.sourceUrl === youtubeUrl && lec.type === "transcription"));
-        if (existingLectureIndex !== -1) {
-            console.log(`[Firestore] Updating existing transcription entry for chapter ${chapterId}.`);
-            chapterSpecificResources.lectureUrls[existingLectureIndex] = newLectureResource;
-        } else {
-            console.log(`[Firestore] Adding new transcription entry for chapter ${chapterId}.`);
-            chapterSpecificResources.lectureUrls.push(newLectureResource);
-        }
+        // const existingLectureIndex = chapterSpecificResources.lectureUrls.findIndex(lec => lec.url === newLectureResource.url || (lec.sourceUrl === youtubeUrl && lec.type === "transcription"));
+        // if (existingLectureIndex !== -1) {
+        //     console.log(`[Firestore] Updating existing transcription entry for chapter ${chapterId}.`);
+        //     chapterSpecificResources.lectureUrls[existingLectureIndex] = newLectureResource;
+        // } else {
+        //     console.log(`[Firestore] Adding new transcription entry for chapter ${chapterId}.`);
+        //     chapterSpecificResources.lectureUrls.push(newLectureResource);
+        // }
         
-        chapterResources[chapterId] = chapterSpecificResources;
+        // chapterResources[chapterId] = chapterSpecificResources;
 
-        const firestoreUpdateSuccess = await updateCourseDefinition(courseId, { chapterResources });
-        if (!firestoreUpdateSuccess) {
-            // This might be an issue if updateCourseDefinition doesn't return a clear boolean
-            // For now, assume it does or that an error would be thrown by it.
-            console.warn(`[Firestore] Update to course definition for ${courseId} might not have been successful (updateCourseDefinition returned falsy).`);
-        }
-        console.log(`[Firestore] Course definition updated successfully for Course ID: ${courseId}.`);
+        // const firestoreUpdateSuccess = await updateCourseDefinition(courseId, { chapterResources });
+        // if (!firestoreUpdateSuccess) {
+        //     // This might be an issue if updateCourseDefinition doesn't return a clear boolean
+        //     // For now, assume it does or that an error would be thrown by it.
+        //     console.warn(`[Firestore] Update to course definition for ${courseId} might not have been successful (updateCourseDefinition returned falsy).`);
+        // }
+        // console.log(`[Firestore] Course definition updated successfully for Course ID: ${courseId}.`);
+        const firestoreUpdateSuccess = "SKIPPED"; // Placeholder
 
         return {
             success: true,
-            message: "Transcription process completed successfully.",
+            message: "Transcription process completed successfully (Firestore update skipped).",
             videoTitle: videoTitle,
             srtFileName: srtFileNameOnMega,
             srtMegaLink: uploadedSrtFile.link,
             transcriptId: transcriptId,
-            firestoreUpdateStatus: firestoreUpdateSuccess ? "Success" : "Check logs/status",
+            firestoreUpdateStatus: firestoreUpdateSuccess,
         };
 
     } catch (error) {
@@ -287,8 +293,8 @@ async function testTranscription() {
     }
     
     // Mock firebase_firestore for local testing if not fully set up
-    // global.getCourseDetails = async (courseId) => ({ courseDirName: `CourseDir_${courseId}`, chapterResources: {} });
-    // global.updateCourseDefinition = async (courseId, updates) => { console.log("Mock updateCourseDefinition called:", courseId, updates); return true; };
+    // global.getCourseDetails = async (courseId) => ({ courseDirName: `CourseDir_${courseId}`, chapterResources: {} }); // Keep for testing if needed
+    // global.updateCourseDefinition = async (courseId, updates) => { console.log("Mock updateCourseDefinition called:", courseId, updates); return true; }; // Keep for testing
 
 
     console.log("Starting test transcription...");

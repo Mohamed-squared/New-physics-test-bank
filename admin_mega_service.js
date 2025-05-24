@@ -70,7 +70,111 @@ export function displayMegaMigrationDashboard(containerElement) {
     
     loadCoursesForMegaMigration();
     displayMegaFileExplorer(document.getElementById('mega-file-explorer-dynamic-container')); 
+    setupCourseAssetSelection(); // Initialize the new section
 }
+
+function setupCourseAssetSelection() {
+    const loadButton = document.getElementById('load-mega-folder-for-assets-btn');
+    const useAssetsButton = document.getElementById('use-selected-mega-assets-btn');
+    const folderLinkInput = document.getElementById('mega-course-assets-folder-link');
+    const emailInput = document.getElementById('mega-course-assets-email');
+    const passwordInput = document.getElementById('mega-course-assets-password');
+    const displayArea = document.getElementById('mega-course-assets-display-area');
+    const feedbackArea = document.getElementById('mega-course-assets-feedback');
+
+    if (!loadButton || !useAssetsButton || !folderLinkInput || !emailInput || !passwordInput || !displayArea || !feedbackArea) {
+        console.error("[CourseAssets] One or more UI elements for course asset selection are missing.");
+        return;
+    }
+
+    loadButton.addEventListener('click', async () => {
+        const megaFolderLink = folderLinkInput.value.trim();
+        const megaEmail = emailInput.value.trim();
+        const megaPassword = passwordInput.value.trim();
+
+        if (!megaFolderLink || !megaEmail || !megaPassword) {
+            feedbackArea.innerHTML = `<p class="text-red-500">Please provide Mega Folder Link, Email, and Password.</p>`;
+            return;
+        }
+
+        feedbackArea.innerHTML = '';
+        displayArea.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Loading folder contents...</p>';
+        showLoading('Fetching Mega folder contents...');
+
+        try {
+            const response = await fetch('http://localhost:3001/list-mega-folder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ megaFolderLink, megaEmail, megaPassword })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || `Server responded with status ${response.status}`);
+            }
+
+            if (data.contents && data.contents.length > 0) {
+                displayArea.innerHTML = `
+                    <h4 class="text-md font-semibold mb-2 text-gray-700 dark:text-gray-300">Select files to use as course assets:</h4>
+                    <ul class="space-y-2 max-h-96 overflow-y-auto border border-gray-300 dark:border-gray-600 p-3 rounded-md">
+                        ${data.contents.map(item => `
+                            <li class="flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+                                <input type="checkbox" 
+                                       id="mega-asset-${item.nodeId}" 
+                                       name="mega-asset-select" 
+                                       class="form-checkbox h-5 w-5 text-primary-600 dark:text-primary-500 rounded mr-3 focus:ring-primary-500"
+                                       data-link="${item.link}"
+                                       data-name="${item.name}"
+                                       data-type="${item.type}"
+                                       data-size="${item.size || 0}">
+                                <label for="mega-asset-${item.nodeId}" class="flex-grow text-sm text-gray-800 dark:text-gray-200 cursor-pointer">
+                                    ${item.type === 'folder' ? '📁' : '📄'} ${item.name} 
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">(${(item.size || 0) / 1024 < 1 ? (item.size || 0) + ' B' : ((item.size || 0) / 1024).toFixed(2) + ' KB'})</span>
+                                </label>
+                            </li>
+                        `).join('')}
+                    </ul>`;
+            } else {
+                displayArea.innerHTML = '<p class="text-gray-500 dark:text-gray-400">Folder is empty or no contents found.</p>';
+            }
+            feedbackArea.innerHTML = `<p class="text-green-500">Folder loaded successfully. ${data.contents?.length || 0} items found.</p>`;
+
+        } catch (error) {
+            console.error('[CourseAssets] Error loading Mega folder for assets:', error);
+            displayArea.innerHTML = `<p class="text-red-500">Error loading folder: ${error.message}</p>`;
+            feedbackArea.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+        } finally {
+            hideLoading();
+        }
+    });
+
+    useAssetsButton.addEventListener('click', () => {
+        const selectedAssets = [];
+        const checkboxes = displayArea.querySelectorAll('input[name="mega-asset-select"]:checked');
+        
+        checkboxes.forEach(checkbox => {
+            selectedAssets.push({
+                link: checkbox.dataset.link,
+                name: checkbox.dataset.name,
+                type: checkbox.dataset.type,
+                size: checkbox.dataset.size
+            });
+        });
+
+        if (selectedAssets.length === 0) {
+            feedbackArea.innerHTML = `<p class="text-yellow-500">No assets selected.</p>`;
+            alert("No assets selected.");
+            return;
+        }
+
+        console.log("[CourseAssets] Selected Mega Assets:", selectedAssets);
+        feedbackArea.innerHTML = `<p class="text-green-500">${selectedAssets.length} asset(s) selected and logged to console. Further course creation steps are pending.</p>`;
+        alert(`Selected ${selectedAssets.length} asset(s). Details logged to console. Course creation from these assets is the next step (not yet implemented).`);
+        // Future: Pass selectedAssets to a course creation setup function
+    });
+}
+
 
 export function loadCoursesForMegaMigration() {
     if (!currentUser || !currentUser.isAdmin) {

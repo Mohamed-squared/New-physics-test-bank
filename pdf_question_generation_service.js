@@ -1,8 +1,10 @@
 const fs = require('fs-extra');
 const path = require('path');
-const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile, megaStorage } = require('./mega_service.js');
-const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js');
-import { getAllPdfTextForAI, callGeminiTextAPI as generateTextContentResponse } from './ai_integration.js'; // MODIFIED for ES Import and aliasing
+// const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile, megaStorage } = require('./mega_service.js');
+const serverMega = require('./mega_service_server.js'); // MODIFIED for server-side
+// const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled
+// import { getAllPdfTextForAI, callGeminiTextAPI as generateTextContentResponse } from './ai_integration.js'; // MODIFIED for ES Import and aliasing
+const aiServer = require('./ai_integration_server.js'); // MODIFIED for server-side
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 
@@ -32,21 +34,25 @@ async function generateQuestionsFromPdf(
 
         // --- 1. Download Chapter PDF from MEGA ---
         console.log(`[QGenService] Initializing MEGA service for PDF download...`);
-        const mega = await megaInitialize(megaEmail, megaPassword); // Ensure megaStorage is ready
-        if (!mega || !mega.root) throw new Error('MEGA initialization failed or root directory not accessible.');
+        // const mega = await megaInitialize(megaEmail, megaPassword); // OLD
+        // if (!mega || !mega.root) throw new Error('MEGA initialization failed or root directory not accessible.'); // OLD
+        await serverMega.initialize(megaEmail, megaPassword); // NEW
+        const megaStorage = serverMega.getMegaStorage(); // Ensure this is called after initialize // NEW
+        if (!megaStorage || !megaStorage.root) throw new Error('MEGA service initialization failed or root directory not accessible.'); // NEW
         
         console.log(`[QGenService] Downloading PDF from MEGA link: ${chapterPdfMegaLink}`);
-        const file = megaStorage.File.fromURL(chapterPdfMegaLink);
-        const pdfFileName = sanitizeFilename(file.name || `${chapterKey}_temp.pdf`); // Sanitize original name or create one
-        downloadedPdfPath = path.join(TEMP_PROCESSING_DIR, pdfFileName);
-        
-        const data = await file.downloadBuffer(); // Download to buffer first
-        await fs.writeFile(downloadedPdfPath, data); // Then write to file
+        // const file = megaStorage.File.fromURL(chapterPdfMegaLink); // OLD - megaStorage here is from old import
+        // const pdfFileName = sanitizeFilename(file.name || `${chapterKey}_temp.pdf`); // OLD
+        // downloadedPdfPath = path.join(TEMP_PROCESSING_DIR, pdfFileName); // OLD
+        // const data = await file.downloadBuffer(); // OLD
+        // await fs.writeFile(downloadedPdfPath, data); // OLD
+        const tempPdfName = sanitizeFilename(`${chapterKey}_temp.pdf`); // Construct a temporary name // NEW
+        downloadedPdfPath = await serverMega.downloadFile(chapterPdfMegaLink, TEMP_PROCESSING_DIR, tempPdfName); // NEW
         console.log(`[QGenService] Chapter PDF downloaded to: ${downloadedPdfPath}`);
 
         // --- 2. Extract Text from PDF ---
         console.log(`[QGenService] Extracting text from PDF: ${downloadedPdfPath}`);
-        const extractedPdfText = await getAllPdfTextForAI(downloadedPdfPath);
+        const extractedPdfText = await aiServer.getAllPdfTextForAI(downloadedPdfPath); // MODIFIED for server-side AI
         if (!extractedPdfText || extractedPdfText.trim().length < 100) { // Basic check for meaningful content
             throw new Error(`Extracted text from PDF is too short or empty. Min 100 chars required. Length: ${extractedPdfText.trim().length}`);
         }
@@ -78,7 +84,8 @@ ${extractedPdfText}
 
 Generate the MCQs now.
 `;
-        const mcqContent = await generateTextContentResponse([{ text: mcqPrompt }], geminiApiKey); // Assuming generateTextContentResponse takes an array of parts
+        // const mcqContent = await generateTextContentResponse([{ text: mcqPrompt }], geminiApiKey); // OLD AI call
+        const mcqContent = await aiServer.callGeminiTextAPI(geminiApiKey, mcqPrompt); // MODIFIED for server-side AI
         const tempMcqPath = path.join(TEMP_PROCESSING_DIR, 'TextMCQ.md');
         await fs.writeFile(tempMcqPath, mcqContent);
         generatedFilesToUpload.push({ path: tempMcqPath, name: 'TextMCQ.md', type: 'generated_mcq_markdown' });
@@ -110,44 +117,47 @@ ${extractedPdfText}
 
 Generate the problems now.
 `;
-        const problemsContent = await generateTextContentResponse([{ text: problemsPrompt }], geminiApiKey);
+        // const problemsContent = await generateTextContentResponse([{ text: problemsPrompt }], geminiApiKey); // OLD AI call
+        const problemsContent = await aiServer.callGeminiTextAPI(geminiApiKey, problemsPrompt); // MODIFIED for server-side AI
         const tempProblemsPath = path.join(TEMP_PROCESSING_DIR, 'TextProblems.md');
         await fs.writeFile(tempProblemsPath, problemsContent);
         generatedFilesToUpload.push({ path: tempProblemsPath, name: 'TextProblems.md', type: 'generated_problems_markdown' });
         console.log(`[QGenService] TextProblems.md generated and saved to: ${tempProblemsPath}`);
         
         // --- 5. Upload Markdown Files to MEGA ---
-        console.log(`[QGenService] Fetching course details for MEGA upload path...`);
-        const courseDetails = await getCourseDetails(courseId);
-        if (!courseDetails) throw new Error(`Course details not found for ID: ${courseId} during MEGA upload phase.`);
-        const courseDirName = courseDetails.courseDirName;
-        if (!courseDirName) throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`);
+        // console.log(`[QGenService] Fetching course details for MEGA upload path...`); // Firestore disabled
+        // const courseDetails = await getCourseDetails(courseId); // Firestore disabled
+        // if (!courseDetails) throw new Error(`Course details not found for ID: ${courseId} during MEGA upload phase.`); // Firestore disabled
+        // const courseDirName = courseDetails.courseDirName; // Firestore disabled
+        const courseDirName = `CourseDir_${courseId}`; // Placeholder after commenting out Firestore
+        // if (!courseDirName) throw new Error(`courseDirName not found for Course ID: ${courseId}. Cannot determine MEGA path.`); // Firestore disabled
+        console.log(`[QGenService] Using placeholder courseDirName for MEGA upload: ${courseDirName}`);
 
         const lyceumRootFolderName = "LyceumCourses_Test";
         const generatedQuestionsFolderName = "Generated_Questions"; // Top-level folder for all generated questions for a course
         // chapterKey is already descriptive, e.g., "textbook_chapter_1"
 
-        let lyceumRootNode = await megaFindFolder(lyceumRootFolderName, mega.root);
-        if (!lyceumRootNode) lyceumRootNode = await megaCreateFolder(lyceumRootFolderName, mega.root);
+        let lyceumRootNode = await serverMega.findFolder(lyceumRootFolderName, megaStorage.root); // MODIFIED
+        if (!lyceumRootNode) lyceumRootNode = await serverMega.createFolder(lyceumRootFolderName, megaStorage.root); // MODIFIED
         if (!lyceumRootNode) throw new Error(`Failed to find/create Lyceum root folder: ${lyceumRootFolderName}`);
 
-        let courseMegaFolderNode = await megaFindFolder(courseDirName, lyceumRootNode);
-        if (!courseMegaFolderNode) courseMegaFolderNode = await megaCreateFolder(courseDirName, lyceumRootNode);
+        let courseMegaFolderNode = await serverMega.findFolder(courseDirName, lyceumRootNode); // MODIFIED
+        if (!courseMegaFolderNode) courseMegaFolderNode = await serverMega.createFolder(courseDirName, lyceumRootNode); // MODIFIED
         if (!courseMegaFolderNode) throw new Error(`Failed to find/create course folder: ${courseDirName}`);
         
-        let genQuestionsCourseNode = await megaFindFolder(generatedQuestionsFolderName, courseMegaFolderNode);
-        if(!genQuestionsCourseNode) genQuestionsCourseNode = await megaCreateFolder(generatedQuestionsFolderName, courseMegaFolderNode);
+        let genQuestionsCourseNode = await serverMega.findFolder(generatedQuestionsFolderName, courseMegaFolderNode); // MODIFIED
+        if(!genQuestionsCourseNode) genQuestionsCourseNode = await serverMega.createFolder(generatedQuestionsFolderName, courseMegaFolderNode); // MODIFIED
         if(!genQuestionsCourseNode) throw new Error(`Failed to find/create Generated_Questions folder for course: ${generatedQuestionsFolderName}`);
 
-        let chapterQuestionsNode = await megaFindFolder(chapterKey, genQuestionsCourseNode); // Use chapterKey as the folder name
-        if (!chapterQuestionsNode) chapterQuestionsNode = await megaCreateFolder(chapterKey, genQuestionsCourseNode);
+        let chapterQuestionsNode = await serverMega.findFolder(chapterKey, genQuestionsCourseNode); // Use chapterKey as the folder name // MODIFIED
+        if (!chapterQuestionsNode) chapterQuestionsNode = await serverMega.createFolder(chapterKey, genQuestionsCourseNode); // MODIFIED
         if (!chapterQuestionsNode) throw new Error(`Failed to find/create chapter-specific questions folder: ${chapterKey}`);
         
         const uploadedFileLinks = {};
 
         for (const fileToUpload of generatedFilesToUpload) {
             console.log(`[QGenService] Uploading ${fileToUpload.name} to MEGA folder: ${chapterQuestionsNode.name}`);
-            const uploadedFile = await megaUploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode);
+            const uploadedFile = await serverMega.uploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode); // MODIFIED
             if (!uploadedFile || !uploadedFile.link) {
                 throw new Error(`Failed to upload ${fileToUpload.name} to MEGA or link not returned.`);
             }
@@ -156,20 +166,22 @@ Generate the problems now.
         }
 
         // --- 6. Update Firestore ---
-        console.log(`[QGenService] Updating Firestore for course ${courseId}, chapter key ${chapterKey}...`);
-        const existingCourseDataForUpdate = await getCourseDetails(courseId);
-        if (!existingCourseDataForUpdate) throw new Error(`Failed to re-fetch course data for ${courseId} before Firestore update.`);
+        console.log(`[QGenService] Firestore update SKIPPED for course ${courseId}, chapter key ${chapterKey}.`);
+        // const existingCourseDataForUpdate = await getCourseDetails(courseId); // Firestore disabled
+        // if (!existingCourseDataForUpdate) throw new Error(`Failed to re-fetch course data for ${courseId} before Firestore update.`); // Firestore disabled
 
-        const chapterResources = existingCourseDataForUpdate.chapterResources || {};
+        // const chapterResources = existingCourseDataForUpdate.chapterResources || {}; // Firestore disabled
+        const chapterResources = {}; // Placeholder since Firestore is disabled
         if (!chapterResources[chapterKey]) {
-            console.warn(`[QGenService] Chapter key "${chapterKey}" not found in chapterResources for course ${courseId}. Initializing.`);
-            chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] };
+            console.warn(`[QGenService] Chapter key "${chapterKey}" not found in placeholder chapterResources. Initializing.`);
+            chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] }; // This will be on the placeholder
         }
-        if (!chapterResources[chapterKey].otherResources) {
-            chapterResources[chapterKey].otherResources = [];
+        if (!chapterResources[chapterKey].otherResources) { // Should be set by above if it was missing
+            chapterResources[chapterKey].otherResources = []; // Should be set by above if it was missing
         }
 
         // Remove old entries of the same types for this chapterKey before adding new ones
+        // This logic would apply to the placeholder `chapterResources` if it were populated
         chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources.filter(
             res => !(res.type === 'generated_mcq_markdown' || res.type === 'generated_problems_markdown')
         );
@@ -191,12 +203,12 @@ Generate the problems now.
             });
         }
 
-        await updateCourseDefinition(courseId, { chapterResources });
-        console.log(`[QGenService] Firestore updated successfully for course ${courseId}, chapter ${chapterKey}.`);
+        // await updateCourseDefinition(courseId, { chapterResources }); // Firestore disabled
+        // console.log(`[QGenService] Firestore updated successfully for course ${courseId}, chapter ${chapterKey}.`); // Firestore disabled
 
         return {
             success: true,
-            message: `MCQs and Problems generated and saved for chapter: ${chapterTitle}`,
+            message: `MCQs and Problems generated and saved for chapter: ${chapterTitle} (Firestore update skipped).`,
             mcqMegaLink: uploadedFileLinks['generated_mcq_markdown'] || null,
             problemsMegaLink: uploadedFileLinks['generated_problems_markdown'] || null,
         };

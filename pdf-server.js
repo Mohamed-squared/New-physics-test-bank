@@ -9,6 +9,8 @@ const { transcribeLecture } = require('./lecture_transcription_service.js'); // 
 const { processTextbookPdf } = require('./pdf_processing_service.js'); // Added for PDF processing
 const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.js'); // Added for QGen
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js'); // Added for Lecture QGen
+const serverMega = require('./mega_service_server.js'); // Added for Mega folder listing
+const courseAutomationService = require('./course_automation_service.js'); // Added for Full Course Automation
 const multer = require('multer'); // For handling file uploads
 
 const app = express();
@@ -27,6 +29,13 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+
+// New Multer configuration for course automation endpoint
+const courseAutomationUpload = multer({ storage: storage }).fields([
+    { name: 'textbookPdf', maxCount: 1 },
+    { name: 'lectureFiles', maxCount: 20 } // Allow up to 20 lecture files
+]);
+
 const port = 3001;
 
 app.use(cors());
@@ -286,6 +295,62 @@ app.post('/transcribe-lecture', async (req, res) => {
     }
 });
 
+// --- List Mega Folder Contents Endpoint ---
+app.post('/list-mega-folder', async (req, res) => {
+    console.log('[SERVER] Received /list-mega-folder request.');
+    const { megaFolderLink, megaEmail, megaPassword } = req.body;
+
+    if (!megaFolderLink || !megaEmail || !megaPassword) {
+        console.error('[SERVER /list-mega-folder] Missing required parameters.');
+        return res.status(400).json({
+            success: false,
+            message: 'Missing required parameters: megaFolderLink, megaEmail, megaPassword.'
+        });
+    }
+
+    try {
+        await serverMega.initialize(megaEmail, megaPassword);
+        console.log(`[SERVER /list-mega-folder] Initialized Mega for folder link: ${megaFolderLink}`);
+        
+        const contents = await serverMega.getFolderContents(megaFolderLink);
+        console.log(`[SERVER /list-mega-folder] Successfully fetched contents for: ${megaFolderLink}. Found ${contents.length} items.`);
+        res.status(200).json({ success: true, contents: contents });
+
+    } catch (error) {
+        console.error(`[SERVER /list-mega-folder] Error processing folder link ${megaFolderLink}:`, error);
+        let statusCode = 500;
+        let message = `Server error while processing Mega folder: ${error.message}`;
+
+        // Specific error messages from mega_service_server.js or megajs library
+        if (error.message) {
+            const lowerErrorMessage = error.message.toLowerCase();
+            if (lowerErrorMessage.includes('invalid input: must be a mega folder node') || 
+                lowerErrorMessage.includes('the provided node/link is not a folder') ||
+                lowerErrorMessage.includes('invalid url') || // from Storage.File.fromURL
+                lowerErrorMessage.includes('file or folder not found')) { // from fromURL if link is dead
+                statusCode = 400;
+                message = "Invalid Mega link: The provided link does not appear to be a valid folder or is inaccessible.";
+            } else if (lowerErrorMessage.includes('eagain') || lowerErrorMessage.includes('failed to fetch')) { // Common Mega.js error for network issues or general fetch failures
+                statusCode = 503; // Service Unavailable
+                message = "Mega.nz service temporarily unavailable or network issue. Please try again later.";
+            } else if (lowerErrorMessage.includes('access denied') || lowerErrorMessage.includes('permission denied')) {
+                statusCode = 403; // Forbidden
+                message = "Access denied: Insufficient permissions to access the Mega folder or link.";
+            } else if (lowerErrorMessage.includes('mega storage is not initialized')) {
+                // This might indicate an issue with the megaEmail/megaPassword or the initialization step itself
+                statusCode = 401; // Unauthorized (though it could be bad credentials or service issue)
+                message = "Mega authentication failed. Please check credentials or Mega service status.";
+            }
+        }
+        
+        res.status(statusCode).json({
+            success: false,
+            message: message,
+            // error: error.stack // Consider removing for production for security
+        });
+    }
+});
+
 // --- Textbook PDF Processing Endpoint ---
 app.post('/process-textbook-pdf', upload.single('pdfFile'), async (req, res) => {
     console.log('[SERVER] Received /process-textbook-pdf request.');
@@ -448,6 +513,124 @@ app.post('/generate-questions-from-lectures', async (req, res) => {
             message: `Server error during lecture question generation: ${error.message}`,
             error: error.stack
         });
+    }
+});
+
+// --- Automated Full Course Creation Endpoint ---
+app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
+    console.log('[SERVER] Received /automate-full-course request.');
+    const uploadedFilePaths = []; // To keep track of files for cleanup
+
+    try {
+        // Extract files
+        const textbookPdfFile = (req.files && req.files['textbookPdf'] && req.files['textbookPdf'][0]) ? req.files['textbookPdf'][0] : null;
+        const lectureFiles = (req.files && req.files['lectureFiles']) ? req.files['lectureFiles'] : [];
+
+        if (textbookPdfFile) {
+            uploadedFilePaths.push(textbookPdfFile.path);
+        }
+        lectureFiles.forEach(file => uploadedFilePaths.push(file.path));
+
+        // Extract body parameters
+        const {
+            courseTitle,
+            trueFirstPageNumber,
+            lecturesMetadata, // JSON string
+            majorTag,
+            subjectTag,
+            megaEmail,
+            megaPassword,
+            geminiApiKey,
+            assemblyAiApiKey
+        } = req.body;
+
+        // Validate required parameters
+        if (!courseTitle || !textbookPdfFile || !trueFirstPageNumber || !megaEmail || !megaPassword || !geminiApiKey || !assemblyAiApiKey || !majorTag || !subjectTag) {
+            console.error('[SERVER /automate-full-course] Missing one or more required parameters.');
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required parameters. Ensure courseTitle, textbookPdf, trueFirstPageNumber, megaEmail, megaPassword, geminiApiKey, assemblyAiApiKey, majorTag, and subjectTag are provided.'
+            });
+        }
+
+        // Parse lecturesMetadata
+        let lecturesInfo = [];
+        if (lecturesMetadata) {
+            try {
+                lecturesInfo = JSON.parse(lecturesMetadata);
+                if (!Array.isArray(lecturesInfo)) {
+                    throw new Error("lecturesMetadata should be an array.");
+                }
+            } catch (e) {
+                console.error('[SERVER /automate-full-course] Invalid lecturesMetadata format:', e.message);
+                return res.status(400).json({ success: false, message: `Invalid lecturesMetadata format: ${e.message}` });
+            }
+        }
+
+        // Map uploaded lecture files to their metadata
+        if (lectureFiles.length > 0) {
+            lectureFiles.forEach(file => {
+                const lectureMeta = lecturesInfo.find(l => l.originalFileName === file.originalname);
+                if (lectureMeta) {
+                    lectureMeta.filePath = file.path; // Add server path of uploaded file
+                } else {
+                    // If client doesn't send metadata for an uploaded file, create a basic entry
+                    console.warn(`[SERVER /automate-full-course] Uploaded lecture file ${file.originalname} has no matching metadata. Creating a fallback entry.`);
+                    lecturesInfo.push({ 
+                        title: file.originalname, // Use original filename as title
+                        filePath: file.path, 
+                        associatedChapterKey: 'default_chapter_key_for_uploaded_file' // Default or derive as needed
+                        // Other fields like youtubeUrl, megaLink, srtMegaLink would be null/undefined
+                    });
+                }
+            });
+        }
+        
+        // Construct params for the service
+        const serviceParams = {
+            courseTitle,
+            textbookPdfPath: textbookPdfFile.path,
+            textbookPdfOriginalName: textbookPdfFile.originalname,
+            trueFirstPageNumber,
+            lectures: lecturesInfo, // This now includes filePaths for uploaded files
+            majorTag,
+            subjectTag,
+            megaEmail,
+            megaPassword,
+            geminiApiKey,
+            assemblyAiApiKey
+        };
+
+        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}"`);
+        const result = await courseAutomationService.automateNewCourseCreation(serviceParams);
+
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            // Use a 500 status code for server-side errors from the automation service
+            res.status(500).json(result);
+        }
+
+    } catch (error) {
+        console.error('[SERVER /automate-full-course] Unexpected error:', error);
+        res.status(500).json({
+            success: false,
+            message: `Server error during course automation: ${error.message}`,
+            error: error.stack // Optional: include stack for debugging
+        });
+    } finally {
+        // Cleanup uploaded files
+        console.log('[SERVER /automate-full-course] Cleaning up temporary files:', uploadedFilePaths);
+        for (const filePath of uploadedFilePaths) {
+            if (fs.existsSync(filePath)) {
+                try {
+                    await fs.unlink(filePath);
+                    console.log(`[SERVER /automate-full-course] Deleted temporary file: ${filePath}`);
+                } catch (unlinkError) {
+                    console.error(`[SERVER /automate-full-course] Error deleting temporary file ${filePath}:`, unlinkError);
+                }
+            }
+        }
     }
 });
 // --- END OF FILE pdf-server.js ---
