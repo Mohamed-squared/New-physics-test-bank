@@ -94,7 +94,7 @@ export {
     displayMegaMigrationDashboard,
     displayCourseManagementSection,
     loadCoursesForAdmin, // Keep if ui_admin_dashboard.js still imports and uses it
-    displayFullCourseAutomationForm // Export the new function
+    
 };
 
 // --- Full Course Automation Form ---
@@ -228,7 +228,7 @@ export function displayFullCourseAutomationForm(containerElement) {
         // showLoading('Starting full course automation...'); // Assuming showLoading is available globally or imported
 
         const formData = new FormData();
-        const requiredTextFields = ['courseTitle', 'trueFirstPageNumber', 'majorTag', 'subjectTag', 'megaEmail', 'megaPassword'];
+        const requiredTextFields = ['courseTitle', 'trueFirstPageNumber', 'majorTag', 'subjectTag', 'megaEmail', 'megaPassword', 'assemblyAiApiKey', 'geminiApiKey'];
         let allRequiredFilled = true;
 
         requiredTextFields.forEach(fieldName => {
@@ -257,9 +257,18 @@ export function displayFullCourseAutomationForm(containerElement) {
             // Decided to make textbook PDF optional if Mega link is provided (though link feature is future)
             // Server will validate if at least one textbook source is present
         }
+
+        
+        const textbookMegaLinkInput = form.querySelector('#textbookMegaLink');
+        if (textbookPdfInput.files.length === 0 && !textbookMegaLinkInput.value.trim()) {
+            allRequiredFilled = false;
+            // It's good practice to also provide specific feedback for this, 
+            // but the main error message update is in the next plan step.
+            // For now, just ensuring allRequiredFilled is correctly set is sufficient for this step.
+        }
         
         if (!allRequiredFilled) {
-            feedbackDiv.innerHTML = '<p class="text-red-500">Please fill in all required fields (Course Title, True First Page, Major/Subject Tags, Mega Credentials).</p>';
+            feedbackDiv.innerHTML = '<p class="text-red-500">Please fill in all required fields: Course Title, Textbook PDF (or Mega Link), True First Page Number, Major Tag, Subject Tag, Mega Email, Mega Password, AssemblyAI API Key, and Gemini API Key.</p>';
             // hideLoading();
             return;
         }

@@ -35,8 +35,9 @@ async function initialize(email, password) {
  * @throws {Error} If storage is not initialized.
  */
 function getMegaStorage() {
-  if (!megaStorage || !megaStorage.ready.fulfilled) {
-    throw new Error('Mega storage is not initialized. Please call initialize() first.');
+  if (!megaStorage) { // If initialize() was successful, megaStorage will be set.
+                    // The megaStorage.ready promise was already awaited in initialize().
+    throw new Error('Mega storage is not initialized or initialization failed. Please call initialize() first.');
   }
   return megaStorage;
 }

@@ -28,6 +28,7 @@
     "playwright": "^1.52.0"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.9.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
@@ -37,6 +38,7 @@
     "multer": "^2.0.0",
     "pdf-image": "^2.0.0",
     "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
     "puppeteer": "^24.8.2",
     "sharp": "^0.34.2",
     "uuid": "^11.1.0",
