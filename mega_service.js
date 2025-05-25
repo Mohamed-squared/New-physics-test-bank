@@ -1,6 +1,11 @@
 import { Storage } from 'https://unpkg.com/megajs@1.3.7/dist/main.browser-es.mjs';
 
-const MEGA_EMAIL = 'lyceum.website@gmail.com';
+// Configurable delay for upload throttling
+const UPLOAD_DELAY_MS = 5000; // 5 seconds
+let isProcessingQueue = false;
+const uploadQueue = []; // Stores objects like { fileObject, remoteFileName, targetFolderNode, resolve, reject }
+
+const MEGA_EMAIL = 'mohphy21@gmail.com';
 const MEGA_PASSWORD = 'I_LOVE_PHY';
 
 let megaStorage;
@@ -79,6 +84,68 @@ export async function createFolder(folderName, parentNode = megaStorage.root) {
   }
 }
 
+async function processUploadQueue() {
+    if (uploadQueue.length === 0) {
+        isProcessingQueue = false;
+        return;
+    }
+    // Do not return if isProcessingQueue is true,
+    // as this function is called recursively and needs to continue
+    // if it was the one that set isProcessingQueue to true.
+    // The guard against multiple concurrent executions is at the call site of processUploadQueue.
+
+    isProcessingQueue = true; // Set flag that processing is happening
+
+    const { fileObject, remoteFileName, targetFolderNode, resolve, reject } = uploadQueue.shift();
+    const actualRemoteFileName = remoteFileName || fileObject.name;
+    const fileSize = fileObject.size;
+
+    console.log(`[Queue] Starting upload of "${actualRemoteFileName}" (size: ${fileSize} bytes) to folder "${targetFolderNode.name || 'root'}"`);
+
+    try {
+        const upload = targetFolderNode.upload({
+            name: actualRemoteFileName,
+            size: fileSize,
+        }, fileObject);
+
+        let lastLoggedProgress = 0;
+        upload.on('progress', (progress) => {
+            const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
+            if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) {
+                console.log(`[Queue] Uploading "${actualRemoteFileName}": ${currentProgress}%`);
+                lastLoggedProgress = currentProgress;
+            }
+        });
+
+        const file = await upload.complete;
+        const link = await file.link(false);
+
+        console.log(`[Queue] File "${actualRemoteFileName}" uploaded successfully.`);
+        console.log(`[Queue] File link: ${link}`);
+        
+        resolve({
+            name: file.name,
+            link: link,
+            size: file.size,
+            nodeId: file.nodeId,
+        });
+    } catch (error) {
+        console.error(`[Queue] Error uploading file "${actualRemoteFileName}":`, error);
+        if (error.message && error.message.includes('EENT')) {
+            console.error('[Queue] This might be due to the file already existing or a name conflict.');
+        }
+        reject(error);
+    } finally {
+        console.log(`[Queue] Waiting for ${UPLOAD_DELAY_MS}ms before next upload.`);
+        await new Promise(res => setTimeout(res, UPLOAD_DELAY_MS));
+        
+        // isProcessingQueue will be set to false before the next call if queue is empty,
+        // or the next processUploadQueue call will manage it.
+        // No need to set isProcessingQueue = false here if we call processUploadQueue immediately.
+        processUploadQueue(); // Process next item
+    }
+}
+
 export async function uploadFile(fileObject, remoteFileName, targetFolderNode) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
@@ -92,58 +159,19 @@ export async function uploadFile(fileObject, remoteFileName, targetFolderNode) {
     throw new Error('File object is required for uploading a file.');
   }
 
-  const actualRemoteFileName = remoteFileName || fileObject.name;
-  const fileSize = fileObject.size;
-
-  console.log(`Starting upload of "${actualRemoteFileName}" (size: ${fileSize} bytes) to folder "${targetFolderNode.name || 'root'}"`);
-
-  try {
-    // For browser compatibility, pass the File object directly.
-    // megajs should handle stream creation internally.
-    // The upload method might vary; common patterns are:
-    // 1. targetFolderNode.upload(name, data, [options])
-    // 2. targetFolderNode.upload({ name, size }, data)
-    // Based on documentation: storage.upload('file.txt', 'data').complete
-    // So, targetFolderNode.upload(actualRemoteFileName, fileObject) seems plausible.
-    // We also need to provide the size for progress tracking if the API supports it in this form.
-    // Let's try the more structured approach first if available, or fall back.
-    // The existing code used: targetFolderNode.upload({ name: remoteFileName, size: fileSize }, stream);
-    // So, we'll adapt that to: targetFolderNode.upload({ name: actualRemoteFileName, size: fileSize }, fileObject);
-    // This seems like a robust way if the library supports passing a File object as data.
-    const upload = targetFolderNode.upload({
-      name: actualRemoteFileName,
-      size: fileSize, // Providing size is good for progress tracking
-    }, fileObject); // Pass the File object directly
-
-    // Optional: Log progress
-    let lastLoggedProgress = 0;
-    upload.on('progress', (progress) => {
-      const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
-      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
-        console.log(`Uploading "${remoteFileName}": ${currentProgress}%`);
-        lastLoggedProgress = currentProgress;
-      }
-    });
-
-    const file = await upload.complete; // Wait for the upload to complete
-    const link = await file.link(false); // Get a public link to the file (false means no decryption key in URL)
+  return new Promise((resolve, reject) => {
+    console.log(`Queueing upload for "${remoteFileName || fileObject.name}"`);
+    uploadQueue.push({ fileObject, remoteFileName, targetFolderNode, resolve, reject });
     
-    console.log(`File "${remoteFileName}" uploaded successfully.`);
-    console.log(`File link: ${link}`);
-    
-    return {
-      name: file.name,
-      link: link,
-      size: file.size,
-      nodeId: file.nodeId, // Useful for other operations
-    };
-  } catch (error) {
-    console.error(`Error uploading file "${remoteFileName}":`, error);
-    if (error.message && error.message.includes('EENT')) {
-        console.error('This might be due to the file already existing or a name conflict.');
+    if (!isProcessingQueue) { 
+      // Start processing only if not already processing.
+      // This ensures that processUploadQueue is started only once
+      // when the first item is added, or after it has stopped.
+      processUploadQueue();
+    } else {
+      console.log(`Upload queue is currently being processed. "${remoteFileName || fileObject.name}" will be handled in turn.`);
     }
-    throw error;
-  }
+  });
 }
 
 export async function downloadFile(fileOrLink, desiredFileName) {
