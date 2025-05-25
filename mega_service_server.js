@@ -84,35 +84,41 @@ async function findFolder(folderName, parentNode = null) {
  * @returns {Promise<object>} The new or existing folder node.
  */
 async function createFolder(folderName, parentNode = null) {
-  const storage = getMegaStorage();
+  const storage = getMegaStorage(); // Ensures storage is initialized and available
   const targetParentNode = parentNode || storage.root;
   console.log(`Attempting to create or find folder "${folderName}" in "${targetParentNode.name || 'root'}"...`);
 
   try {
-    const existingFolder = await findFolder(folderName, targetParentNode);
+    const existingFolder = await findFolder(folderName, targetParentNode); // findFolder is assumed to be correct
     if (existingFolder) {
       console.log(`Folder "${folderName}" already exists.`);
       return existingFolder;
     }
 
     console.log(`Creating new folder "${folderName}" in "${targetParentNode.name || 'root'}"...`);
-    // The createFolder method in megajs might differ or might be `upload` with type directory
-    // Based on typical API patterns, it's often `createFolder` on a parent node.
-    // megajs documentation: parentNode.createFolder(name, callback)
-    // Since we are using async/await, we can promisify it or check if it returns a promise.
-    // The `megajs` library uses a callback style for `createFolder`.
-    // We need to wrap it in a Promise.
-    const newFolder = await new Promise((resolve, reject) => {
-      targetParentNode.createFolder(folderName, (err, node) => {
-        if (err) return reject(err);
-        resolve(node);
+    
+    const newFolderNode = await new Promise((resolve, reject) => {
+      const uploadProcess = targetParentNode.upload({
+        name: folderName,
+        directory: true,
+        // attributes: {}, // Optional: set attributes if needed
+      });
+
+      uploadProcess.on('complete', (fileNode) => { // 'fileNode' here is the newly created folder node
+        console.log(`Folder "${folderName}" created successfully. Node ID: ${fileNode.nodeId}`);
+        resolve(fileNode);
+      });
+
+      uploadProcess.on('error', (err) => {
+        console.error(`Error during folder creation process for "${folderName}":`, err);
+        reject(err);
       });
     });
 
-    console.log(`Folder "${folderName}" created successfully with ID: ${newFolder.nodeId}`);
-    return newFolder;
+    return newFolderNode;
   } catch (error) {
-    console.error(`Error creating folder "${folderName}":`, error);
+    // Catch errors from findFolder or the Promise wrapper itself
+    console.error(`Error in createFolder function for "${folderName}":`, error);
     throw error;
   }
 }
