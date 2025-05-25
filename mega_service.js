@@ -1,6 +1,11 @@
 import { Storage } from 'https://unpkg.com/megajs@1.3.7/dist/main.browser-es.mjs';
 
-const MEGA_EMAIL = 'lyceum.website@gmail.com';
+// Configurable delay for upload throttling
+const UPLOAD_DELAY_MS = 5000; // 5 seconds
+let isProcessingQueue = false;
+const uploadQueue = []; // Stores objects like { fileObject, remoteFileName, targetFolderNode, resolve, reject }
+
+const MEGA_EMAIL = 'mohphy21@gmail.com';
 const MEGA_PASSWORD = 'I_LOVE_PHY';
 
 let megaStorage;
@@ -79,6 +84,62 @@ export async function createFolder(folderName, parentNode = megaStorage.root) {
   }
 }
 
+async function processUploadQueue() {
+    if (uploadQueue.length === 0) {
+        isProcessingQueue = false;
+        return;
+    }
+    // Do not return if isProcessingQueue is true,
+    // as this function is called recursively and needs to continue
+    // if it was the one that set isProcessingQueue to true.
+    // The guard against multiple concurrent executions is at the call site of processUploadQueue.
+
+    isProcessingQueue = true; // Set flag that processing is happening
+
+    const { fileObject, remoteFileName, targetFolderNode, resolve, reject } = uploadQueue.shift();
+    const actualRemoteFileName = remoteFileName || fileObject.name;
+    const fileSize = fileObject.size;
+
+    console.log(`[Queue] Processing upload for: "${actualRemoteFileName}"`); // Kept one log for queue processing start
+
+    try {
+        const upload = targetFolderNode.upload({
+            name: actualRemoteFileName,
+            size: fileSize,
+        }, fileObject);
+
+        let lastLoggedProgress = 0;
+        upload.on('progress', (progress) => {
+            const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
+            if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
+                console.log(`Uploading "${actualRemoteFileName}": ${currentProgress}%`);
+                lastLoggedProgress = currentProgress;
+            }
+        });
+
+        const file = await upload.complete;
+        const link = await file.link(false); // Get a public link to the file (false means no decryption key in URL)
+        
+        console.log(`File "${actualRemoteFileName}" uploaded successfully. Link: ${link}`);
+        resolve({
+            name: file.name,
+            link: link,
+            size: file.size,
+            nodeId: file.nodeId, // Useful for other operations
+        });
+    } catch (error) {
+        console.error(`Error uploading file "${actualRemoteFileName}":`, error);
+        if (error.message && error.message.includes('EENT')) {
+            console.error('This might be due to the file already existing or a name conflict.');
+        }
+        reject(error);
+    } finally {
+        // Wait for UPLOAD_DELAY_MS before processing the next item
+        await new Promise(res => setTimeout(res, UPLOAD_DELAY_MS));
+        processUploadQueue(); // Process next item in the queue
+    }
+}
+
 export async function uploadFile(fileObject, remoteFileName, targetFolderNode) {
   if (!megaStorage) {
     throw new Error('MEGA service not initialized. Please call initialize() first.');
@@ -92,58 +153,16 @@ export async function uploadFile(fileObject, remoteFileName, targetFolderNode) {
     throw new Error('File object is required for uploading a file.');
   }
 
-  const actualRemoteFileName = remoteFileName || fileObject.name;
-  const fileSize = fileObject.size;
-
-  console.log(`Starting upload of "${actualRemoteFileName}" (size: ${fileSize} bytes) to folder "${targetFolderNode.name || 'root'}"`);
-
-  try {
-    // For browser compatibility, pass the File object directly.
-    // megajs should handle stream creation internally.
-    // The upload method might vary; common patterns are:
-    // 1. targetFolderNode.upload(name, data, [options])
-    // 2. targetFolderNode.upload({ name, size }, data)
-    // Based on documentation: storage.upload('file.txt', 'data').complete
-    // So, targetFolderNode.upload(actualRemoteFileName, fileObject) seems plausible.
-    // We also need to provide the size for progress tracking if the API supports it in this form.
-    // Let's try the more structured approach first if available, or fall back.
-    // The existing code used: targetFolderNode.upload({ name: remoteFileName, size: fileSize }, stream);
-    // So, we'll adapt that to: targetFolderNode.upload({ name: actualRemoteFileName, size: fileSize }, fileObject);
-    // This seems like a robust way if the library supports passing a File object as data.
-    const upload = targetFolderNode.upload({
-      name: actualRemoteFileName,
-      size: fileSize, // Providing size is good for progress tracking
-    }, fileObject); // Pass the File object directly
-
-    // Optional: Log progress
-    let lastLoggedProgress = 0;
-    upload.on('progress', (progress) => {
-      const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
-      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
-        console.log(`Uploading "${remoteFileName}": ${currentProgress}%`);
-        lastLoggedProgress = currentProgress;
-      }
-    });
-
-    const file = await upload.complete; // Wait for the upload to complete
-    const link = await file.link(false); // Get a public link to the file (false means no decryption key in URL)
+  return new Promise((resolve, reject) => {
+    uploadQueue.push({ fileObject, remoteFileName, targetFolderNode, resolve, reject });
+    console.log(`File "${remoteFileName || fileObject.name}" added to upload queue. Queue size: ${uploadQueue.length}`);
     
-    console.log(`File "${remoteFileName}" uploaded successfully.`);
-    console.log(`File link: ${link}`);
-    
-    return {
-      name: file.name,
-      link: link,
-      size: file.size,
-      nodeId: file.nodeId, // Useful for other operations
-    };
-  } catch (error) {
-    console.error(`Error uploading file "${remoteFileName}":`, error);
-    if (error.message && error.message.includes('EENT')) {
-        console.error('This might be due to the file already existing or a name conflict.');
+    if (!isProcessingQueue) {
+      processUploadQueue();
+    } else {
+      console.log(`Upload queue is currently being processed. File will be handled in turn.`);
     }
-    throw error;
-  }
+  });
 }
 
 export async function downloadFile(fileOrLink, desiredFileName) {
@@ -179,36 +198,15 @@ export async function downloadFile(fileOrLink, desiredFileName) {
   console.log(`Starting download of "${downloadName}"`);
 
   try {
-    // For browser environment, download the file data as a buffer/blob
-    // The mega.js documentation suggests file.downloadBuffer()
-    // This method might also support progress events directly, or we might need to adapt.
-
-    // It's not entirely clear from the docs if downloadBuffer() itself emits progress,
-    // or if we need to use file.download() and collect chunks.
-    // Let's assume file.download() returns a stream that can be used for progress,
-    // and then we collect the data. If downloadBuffer() is more direct and supports progress,
-    // that would be simpler. The quick start guide for browser download shows:
-    // const data = await file.downloadBuffer();
-    // This implies it's a direct operation. Progress events are usually on stream objects.
-    // Let's try to get the stream first for progress, then collect data.
-
-    // If file.download() returns a Node.js-style stream, it won't work directly in browser
-    // for piping to a file. But it *is* used for progress in the current code.
-    // The `megajs` library might provide a browser-compatible stream or a way to get data directly.
-    // Let's check if file.download() in browser context returns something different
-    // or if downloadBuffer() is the way. The current code uses `fileToDownload.download()`.
-    // This returns a stream. We need to consume this stream and build a Blob.
-
     const dataChunks = [];
     let downloadedBytes = 0;
-    const stream = fileToDownload.download(); // This should still return a stream-like object
+    const stream = fileToDownload.download(); 
 
-    // Optional: Log progress
     let lastLoggedProgress = 0;
     stream.on('progress', (progress) => {
       downloadedBytes = progress.bytesLoaded;
       const currentProgress = Math.round(progress.bytesLoaded / progress.bytesTotal * 100);
-      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { // Log every 10% or at 100%
+      if (currentProgress >= lastLoggedProgress + 10 || currentProgress === 100) { 
         console.log(`Downloading "${downloadName}": ${currentProgress}%`);
         lastLoggedProgress = currentProgress;
       }
@@ -230,14 +228,13 @@ export async function downloadFile(fileOrLink, desiredFileName) {
         document.body.appendChild(a);
         a.click();
         
-        // Cleanup
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
         
         console.log(`File "${downloadName}" download initiated in browser.`);
         resolve({
           name: downloadName,
-          size: downloadedBytes, // or fileToDownload.size, but downloadedBytes is from actual transfer
+          size: downloadedBytes, 
         });
       });
 
@@ -253,7 +250,7 @@ export async function downloadFile(fileOrLink, desiredFileName) {
   }
 }
 
-export function getMegaStorage() { // Expose megaStorage through a getter
+export function getMegaStorage() { 
   return megaStorage;
 }
 
@@ -267,16 +264,11 @@ export async function getFolderContents(folderNodeOrLink) {
     if (typeof folderNodeOrLink === 'string') {
       console.log(`[getFolderContents] Input is a string link: ${folderNodeOrLink}. Attempting to derive node.`);
       folderNode = megaStorage.File.fromURL(folderNodeOrLink);
-      // Wait for the node attributes to load if it's just a URL-derived object.
-      // This might involve checking if children are loaded or calling a specific load method.
-      // For megajs, often accessing .children triggers a load if needed, or .loadAttributes()
       if (folderNode && typeof folderNode.loadAttributes === 'function') {
-         await folderNode.loadAttributes(); // Ensure attributes and children are loaded
+         await folderNode.loadAttributes(); 
       }
-    } else if (folderNodeOrLink && folderNodeOrLink.directory !== undefined) { // Check if it's a node-like object
+    } else if (folderNodeOrLink && folderNodeOrLink.directory !== undefined) { 
       folderNode = folderNodeOrLink;
-      // If it's a node passed directly, assume it's sufficiently loaded if it has .children
-      // However, ensure its children are loaded if they are not.
       if (folderNode.children === undefined && typeof folderNode.loadAttributes === 'function') {
           console.log(`[getFolderContents] Input node's children are undefined. Loading attributes for node: ${folderNode.name}`);
           await folderNode.loadAttributes();
@@ -302,13 +294,12 @@ export async function getFolderContents(folderNodeOrLink) {
 
     const contents = [];
     for (const child of children) {
-      // Ensure child attributes are loaded before trying to get a link
-      if (child.key === undefined && typeof child.loadAttributes === 'function') { // .key is often needed for links
+      if (child.key === undefined && typeof child.loadAttributes === 'function') { 
           await child.loadAttributes();
       }
-      const childLink = await child.link({ key: child.key }).catch(err => { // Explicitly pass key for robustness
+      const childLink = await child.link({ key: child.key }).catch(err => { 
           console.warn(`[getFolderContents] Could not generate link for child ${child.name}: ${err.message}`);
-          return null; // Or some placeholder
+          return null; 
       });
 
       contents.push({
@@ -316,10 +307,7 @@ export async function getFolderContents(folderNodeOrLink) {
         type: child.directory ? 'folder' : 'file',
         size: child.size,
         nodeId: child.nodeId,
-        // M: child.M, // Master key, might be useful for client-side operations if needed directly
-        // key: child.key, // Decryption key for the node
         link: childLink,
-        // parent: folderNode.nodeId // Adding parent ID for easier navigation if needed
       });
     }
     console.log(`[getFolderContents] Found ${contents.length} items in folder "${folderNode.name}".`);
@@ -327,7 +315,7 @@ export async function getFolderContents(folderNodeOrLink) {
 
   } catch (error) {
     console.error(`[getFolderContents] Error getting folder contents: `, error);
-    throw error; // Re-throw to be handled by the caller
+    throw error; 
   }
 }
 

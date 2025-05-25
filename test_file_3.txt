@@ -1,0 +1,1 @@
+Test content for file 3. The last small test file.
