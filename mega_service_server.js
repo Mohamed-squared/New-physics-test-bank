@@ -95,32 +95,12 @@ async function createFolder(folderName, parentNode = null) {
       return existingFolder;
     }
 
-    if (targetParentNode !== storage.root) {
-      console.log(`Explicitly loading attributes for parent node "${targetParentNode.name}" before creating subfolder "${folderName}"...`);
-      await targetParentNode.loadAttributes();
-    }
+    // The if block that called targetParentNode.loadAttributes() was here and is now removed.
 
-    console.log(`Creating new folder "${folderName}" in "${targetParentNode.name || 'root'}"...`);
-    
-    const newFolderNode = await new Promise((resolve, reject) => {
-      const uploadProcess = targetParentNode.upload({
-        name: folderName,
-        directory: true,
-        size: 0, // Add this line
-        // attributes: {}, // Optional: set attributes if needed
-      });
-
-      uploadProcess.on('complete', (fileNode) => { // 'fileNode' here is the newly created folder node
-        console.log(`Folder "${folderName}" created successfully. Node ID: ${fileNode.nodeId}`);
-        resolve(fileNode);
-      });
-
-      uploadProcess.on('error', (err) => {
-        console.error(`Error during folder creation process for "${folderName}":`, err);
-        reject(err);
-      });
-    });
-
+    console.log(`Creating new folder "${folderName}" in "${targetParentNode.name || 'root'}" using mkdir...`);
+    // Ensure targetParentNode is a File object representing a directory, or storage.root
+    const newFolderNode = await targetParentNode.mkdir({ name: folderName });
+    console.log(`Folder "${folderName}" created successfully with mkdir. Node ID: ${newFolderNode.nodeId}`);
     return newFolderNode;
   } catch (error) {
     // Catch errors from findFolder or the Promise wrapper itself

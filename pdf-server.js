@@ -47,6 +47,8 @@ console.log(`[SERVER] Serving static files from: ${__dirname}`);
 
 let browserInstance = null;
 
+console.log("Node.js process PATH:", process.env.PATH);
+
 async function getBrowserInstance() {
     if (!browserInstance || !browserInstance.isConnected()) {
         console.log("[SERVER] Launching new Puppeteer browser instance...");

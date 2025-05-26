@@ -1,7 +1,8 @@
 const { PDFDocument } = require('pdf-lib');
 const fs = require('fs-extra'); // Use fs-extra for convenience
 const path = require('path');
-const PdfImage = require('pdf-image').PDFImage; // For converting PDF pages to images
+// const PdfImage = require('pdf-image').PDFImage; // For converting PDF pages to images
+const gm = require('gm').subClass({ imageMagick: true });
 
 // const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js');
 const serverMega = require('./mega_service_server.js'); // MODIFIED: Using new server-side Mega service
@@ -82,34 +83,47 @@ async function processTextbookPdf(
 
         // --- 3. AI Table of Contents Analysis ---
         console.log('[PDFProcess] Starting Table of Contents (ToC) analysis...');
-        const pdfImage = new PdfImage(pdfFilePath, {
-            pdfFileBaseName: path.basename(pdfFilePath, path.extname(pdfFilePath)),
-            outputDirectory: TEMP_PROCESSING_DIR,
-            graphicsMagick: false, // Use ImageMagick's convert by default. Set true for GM.
-        });
 
         const originalPdfDocForPageCount = await PDFDocument.load(fs.readFileSync(pdfFilePath));
         const totalPdfPages = originalPdfDocForPageCount.getPageCount();
         
-        // Determine ToC pages to extract (e.g., first 5-20 pages, but not exceeding total pages)
-        // Let's try to extract pages that are likely to contain ToC.
-        // Consider actualFirstPageNumber. If it's large, ToC might be just before it.
-        // For simplicity, extracting first ~15 pages, or up to actualFirstPageNumber if it's early.
         const tocPageExtractionEnd = Math.min(Math.max(15, actualFirstPageNumber + 5), totalPdfPages);
-        const tocPageExtractionStart = 1; // PDF pages are 1-indexed for pdf-image conversion
+        const tocPageExtractionStart = 1; // PDF pages are 1-indexed for user understanding
         
         let tocImagePaths = [];
         console.log(`[PDFProcess] Extracting ToC images from PDF page ${tocPageExtractionStart} to ${tocPageExtractionEnd}. Total PDF pages: ${totalPdfPages}`);
 
         for (let i = tocPageExtractionStart; i <= tocPageExtractionEnd; i++) {
+            const pageIndexForGm = i - 1; // gm uses 0-indexed pages from PDF path specification
+            const outputImageName = `toc_page_${i}.png`;
+            const outputImagePath = path.join(TEMP_PROCESSING_DIR, outputImageName);
+
             try {
-                // pdf-image converts 0-indexed pages, so page `i` is `i-1`
-                const imagePath = await pdfImage.convertPage(i - 1); 
-                tocImagePaths.push(imagePath);
-                console.log(`[PDFProcess] Converted PDF page ${i} to image: ${imagePath}`);
+                await new Promise((resolve, reject) => {
+                    gm(pdfFilePath + '[' + pageIndexForGm + ']') // Specify page number for multipage PDF
+                        .density(300, 300) // Set DPI for good quality
+                        .quality(90)       // Set image quality
+                        .write(outputImagePath, (err) => {
+                            if (err) {
+                                // Try to get more detailed error from gm
+                                let errMsg = err.message;
+                                if (err.code === 'ENOENT') {
+                                    errMsg = 'ImageMagick or Ghostscript not found. Ensure they are installed and in PATH.';
+                                } else if (err.message && err.message.toLowerCase().includes('failed to load module')) {
+                                     errMsg = 'ImageMagick delegate (e.g., for PDF) might be missing or misconfigured: ' + err.message;
+                                } else if (err.message && err.message.toLowerCase().includes('permission denied')) {
+                                     errMsg = 'Permission denied. Check file permissions or ImageMagick security policies (policy.xml). ' + err.message;
+                                }
+                                console.error(`[PDFProcess] gm Error for page ${i}:`, err);
+                                return reject(new Error(`Failed to convert page ${i} to image: ${errMsg}`));
+                            }
+                            tocImagePaths.push(outputImagePath);
+                            console.log(`[PDFProcess] Converted PDF page ${i} to image: ${outputImagePath}`);
+                            resolve();
+                        });
+                });
             } catch (imgErr) {
                 console.warn(`[PDFProcess] Warning: Could not convert PDF page ${i} to image: ${imgErr.message}. Skipping this page for ToC.`);
-                // If a few pages fail, Gemini might still work with the rest.
             }
         }
         
