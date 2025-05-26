@@ -1,8 +1,9 @@
 const { PDFDocument } = require('pdf-lib');
 const fs = require('fs-extra'); // Use fs-extra for convenience
 const path = require('path');
+const { spawn } = require('child_process'); // Added spawn
 // const PdfImage = require('pdf-image').PDFImage; // For converting PDF pages to images
-const gm = require('gm').subClass({ imageMagick: true });
+const gm = require('gm').subClass({ imageMagick: true }); // gm is still used elsewhere or can be removed if no longer needed
 
 // const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile } = require('./mega_service.js');
 const serverMega = require('./mega_service_server.js'); // MODIFIED: Using new server-side Mega service
@@ -25,6 +26,7 @@ async function processTextbookPdf(
     megaPassword,
     geminiApiKey
 ) {
+    console.log('[PDFProcess] CONFIRMING CODE UPDATE - Version ABC'); // New line
     const processingTimestamp = Date.now();
     const TEMP_PROCESSING_DIR = path.join(TEMP_PROCESSING_DIR_BASE, `${courseId}_${processingTimestamp}`);
     console.log(`[PDFProcess] Starting textbook PDF processing for course ${courseId}. Temp dir: ${TEMP_PROCESSING_DIR}`);
@@ -100,27 +102,42 @@ async function processTextbookPdf(
 
             try {
                 await new Promise((resolve, reject) => {
-                    gm(pdfFilePath + '[' + pageIndexForGm + ']') // Specify page number for multipage PDF
-                        .density(300, 300) // Set DPI for good quality
-                        .quality(90)       // Set image quality
-                        .write(outputImagePath, (err) => {
-                            if (err) {
-                                // Try to get more detailed error from gm
-                                let errMsg = err.message;
-                                if (err.code === 'ENOENT') {
-                                    errMsg = 'ImageMagick or Ghostscript not found. Ensure they are installed and in PATH.';
-                                } else if (err.message && err.message.toLowerCase().includes('failed to load module')) {
-                                     errMsg = 'ImageMagick delegate (e.g., for PDF) might be missing or misconfigured: ' + err.message;
-                                } else if (err.message && err.message.toLowerCase().includes('permission denied')) {
-                                     errMsg = 'Permission denied. Check file permissions or ImageMagick security policies (policy.xml). ' + err.message;
-                                }
-                                console.error(`[PDFProcess] gm Error for page ${i}:`, err);
-                                return reject(new Error(`Failed to convert page ${i} to image: ${errMsg}`));
-                            }
+                    const magickArgs = [
+                        '-density', '300',
+                        `${pdfFilePath}[${pageIndexForGm}]`, // Input: PDF_path[page_index]
+                        outputImagePath                      // Output: image_path.png
+                    ];
+
+                    console.log(`[PDFProcess] Attempting to execute: magick convert ${magickArgs.join(' ')}`);
+
+                    const magickProcess = spawn('magick', ['convert', ...magickArgs]);
+
+                    let stdoutData = '';
+                    let stderrData = '';
+                    magickProcess.stdout.on('data', (data) => {
+                        stdoutData += data.toString();
+                    });
+                    magickProcess.stderr.on('data', (data) => {
+                        stderrData += data.toString();
+                    });
+
+                    magickProcess.on('error', (err) => {
+                        console.error(`[PDFProcess] Failed to start magick process for page ${i}:`, err);
+                        return reject(new Error(`Failed to start magick process for page ${i}: ${err.message}`));
+                    });
+
+                    magickProcess.on('exit', (code) => {
+                        if (code === 0) {
                             tocImagePaths.push(outputImagePath);
-                            console.log(`[PDFProcess] Converted PDF page ${i} to image: ${outputImagePath}`);
+                            console.log(`[PDFProcess] Converted PDF page ${i} to image: ${outputImagePath} (stdout: ${stdoutData})`);
                             resolve();
-                        });
+                        } else {
+                            console.error(`[PDFProcess] magick process for page ${i} exited with code ${code}.`);
+                            console.error(`[PDFProcess] stderr for page ${i}: ${stderrData}`);
+                            console.error(`[PDFProcess] stdout for page ${i}: ${stdoutData}`); // Log stdout as well, it might contain info
+                            reject(new Error(`magick process for page ${i} exited with code ${code}. Stderr: ${stderrData.trim()}`));
+                        }
+                    });
                 });
             } catch (imgErr) {
                 console.warn(`[PDFProcess] Warning: Could not convert PDF page ${i} to image: ${imgErr.message}. Skipping this page for ToC.`);
