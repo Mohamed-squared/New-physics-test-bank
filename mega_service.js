@@ -6,7 +6,7 @@ let isProcessingQueue = false;
 const uploadQueue = []; // Stores objects like { fileObject, remoteFileName, targetFolderNode, resolve, reject }
 
 const MEGA_EMAIL = 'mohphy21@gmail.com';
-const MEGA_PASSWORD = 'I_LOVE_PHY';
+const MEGA_PASSWORD = 'LyceumData';
 
 let megaStorage;
 

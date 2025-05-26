@@ -57,9 +57,9 @@ async function findFolder(folderName, parentNode = null) {
     // mega.js children are available after `loadAttributes` or `ready`
     // If searchNode is storage.root, its children are loaded by megaStorage.ready
     // If it's a different node, we might need to load its children explicitly
-    if (searchNode !== storage.root && (!searchNode.children || searchNode.children.length === 0)) {
-        await searchNode.loadAttributes(); // This loads children as well
-    }
+    // Conditional block for searchNode.loadAttributes() removed.
+    // We rely on mega.js to lazy-load children when searchNode.children is accessed,
+    // or for children to be present on nodes returned from createFolder.
 
     const children = searchNode.children || [];
     const foundFolder = children.find(node => node.name === folderName && node.type === 'd'); // 'd' for directory/folder
@@ -95,12 +95,18 @@ async function createFolder(folderName, parentNode = null) {
       return existingFolder;
     }
 
+    if (targetParentNode !== storage.root) {
+      console.log(`Explicitly loading attributes for parent node "${targetParentNode.name}" before creating subfolder "${folderName}"...`);
+      await targetParentNode.loadAttributes();
+    }
+
     console.log(`Creating new folder "${folderName}" in "${targetParentNode.name || 'root'}"...`);
     
     const newFolderNode = await new Promise((resolve, reject) => {
       const uploadProcess = targetParentNode.upload({
         name: folderName,
         directory: true,
+        size: 0, // Add this line
         // attributes: {}, // Optional: set attributes if needed
       });
 
