@@ -23,10 +23,49 @@ async function initialize(email, password) {
     await megaStorage.ready; // Wait for the storage to be ready
     console.log('Mega storage initialized successfully.');
   } catch (error) {
-    console.error('Error initializing Mega storage:', error);
+    console.error(`Mega storage initialization failed: ${error.message}`, error);
     megaStorage = null; // Reset on failure
-    throw error; // Re-throw the error to be handled by the caller
+    // Initialization is critical, retrying might hide persistent config issues.
+    // Let the caller decide how to handle a failed initialization.
+    throw new Error(`Mega storage initialization failed: ${error.message}`);
   }
+}
+
+/**
+ * Checks if a Mega API error is likely retryable.
+ * @param {Error} error - The error object.
+ * @returns {boolean} True if the error is likely retryable, false otherwise.
+ */
+function isRetryableMegaError(error) {
+    if (!error) return false;
+    const msg = error.message ? error.message.toLowerCase() : "";
+    const code = error.code || (error.cause ? error.cause.code : "");
+
+    const retryableMessages = [
+        'fetch failed', 'eagain', 'timeout', 'econnreset', 
+        'network error', 'server error', 'esockettimedout', 
+        'etimedout', 'und_err_socket', 'und_err_connect_timeout'
+    ];
+    const retryableCodes = [
+        'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNRESET', 'EAGAIN', 
+        'UND_ERR_SOCKET', 'UND_ERR_CONNECT_TIMEOUT'
+        // Consider adding specific HTTP status codes if Mega API errors include them directly
+        // e.g., 500, 502, 503, 504, but megajs might wrap these.
+    ];
+
+    if (retryableCodes.includes(code)) {
+        return true;
+    }
+    for (const retryMsg of retryableMessages) {
+        if (msg.includes(retryMsg)) {
+            return true;
+        }
+    }
+    // Specific megajs error numbers if known (e.g., -2 for transient error, -3 for EAGAIN)
+    // This requires deeper knowledge of megajs internal error codes.
+    // Example: if (error.errno === -3 || error.errno === -2) return true;
+    
+    return false;
 }
 
 /**
@@ -53,28 +92,49 @@ async function findFolder(folderName, parentNode = null) {
   const searchNode = parentNode || storage.root;
   console.log(`Searching for folder "${folderName}" in node "${searchNode.name || 'root'}"...`);
 
-  try {
-    // mega.js children are available after `loadAttributes` or `ready`
-    // If searchNode is storage.root, its children are loaded by megaStorage.ready
-    // If it's a different node, we might need to load its children explicitly
-    // Conditional block for searchNode.loadAttributes() removed.
-    // We rely on mega.js to lazy-load children when searchNode.children is accessed,
-    // or for children to be present on nodes returned from createFolder.
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 1500; // Increased delay slightly
 
-    const children = searchNode.children || [];
-    const foundFolder = children.find(node => node.name === folderName && node.type === 'd'); // 'd' for directory/folder
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      attempts++;
+      // Accessing .children might trigger an API call if not already loaded.
+      // megajs typically loads children when a folder node is instantiated or loadAttributes is called.
+      // If searchNode is storage.root, children are loaded by megaStorage.ready.
+      // For other nodes, ensure they are "complete" (attributes loaded).
+      // If `searchNode` might be incomplete, `await searchNode.loadAttributes()` could be called here,
+      // but that also needs its own retry logic. Assuming `searchNode` is usually ready.
+      
+      // Ensure children are loaded if the node is not the root and might be incomplete
+      if (searchNode !== storage.root && (!searchNode.children || searchNode.children.length === 0) && searchNode.numfiles > 0) {
+          console.log(`[MegaService] Node "${searchNode.name}" seems to have items but children array is empty/missing. Attempting loadAttributes.`);
+          await searchNode.loadAttributes(); // This itself can fail and should ideally have retries.
+                                           // For simplicity in this step, assuming it succeeds or fails fast.
+      }
 
-    if (foundFolder) {
-      console.log(`Folder "${folderName}" found with ID: ${foundFolder.nodeId}`);
-      return foundFolder;
-    } else {
-      console.log(`Folder "${folderName}" not found in "${searchNode.name || 'root'}".`);
-      return null;
+      const children = searchNode.children || [];
+      const foundFolder = children.find(node => node.name === folderName && node.type === 'd'); // 'd' for directory/folder
+
+      if (foundFolder) {
+        console.log(`[MegaService] Folder "${folderName}" found with ID: ${foundFolder.nodeId} on attempt ${attempts}.`);
+        return foundFolder;
+      } else {
+        console.log(`[MegaService] Folder "${folderName}" not found in "${searchNode.name || 'root'}" on attempt ${attempts}.`);
+        return null; // Not an error, folder just doesn't exist.
+      }
+    } catch (error) {
+      console.warn(`[MegaService] Attempt ${attempts} failed for findFolder "${folderName}": ${error.message}`);
+      if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+        console.error(`[MegaService] findFolder "${folderName}" failed after ${attempts} attempts or due to non-retryable error. Last error: ${error.message}`);
+        throw error;
+      }
+      console.log(`[MegaService] Retrying findFolder "${folderName}" in ${RETRY_DELAY_MS * attempts}ms...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
     }
-  } catch (error) {
-    console.error(`Error finding folder "${folderName}":`, error);
-    throw error;
   }
+  // Should not be reached if MAX_ATTEMPTS > 0, as loop will throw or return.
+  return null;
 }
 
 /**
@@ -88,25 +148,40 @@ async function createFolder(folderName, parentNode = null) {
   const targetParentNode = parentNode || storage.root;
   console.log(`Attempting to create or find folder "${folderName}" in "${targetParentNode.name || 'root'}"...`);
 
-  try {
-    const existingFolder = await findFolder(folderName, targetParentNode); // findFolder is assumed to be correct
-    if (existingFolder) {
-      console.log(`Folder "${folderName}" already exists.`);
-      return existingFolder;
-    }
-
-    // The if block that called targetParentNode.loadAttributes() was here and is now removed.
-
-    console.log(`Creating new folder "${folderName}" in "${targetParentNode.name || 'root'}" using mkdir...`);
-    // Ensure targetParentNode is a File object representing a directory, or storage.root
-    const newFolderNode = await targetParentNode.mkdir({ name: folderName });
-    console.log(`Folder "${folderName}" created successfully with mkdir. Node ID: ${newFolderNode.nodeId}`);
-    return newFolderNode;
-  } catch (error) {
-    // Catch errors from findFolder or the Promise wrapper itself
-    console.error(`Error in createFolder function for "${folderName}":`, error);
-    throw error;
+  // First, try to find the folder. findFolder already has retries.
+  const existingFolder = await findFolder(folderName, targetParentNode);
+  if (existingFolder) {
+    console.log(`[MegaService] Folder "${folderName}" already exists.`);
+    return existingFolder;
   }
+
+  // If not found, proceed to create it with retries for mkdir.
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 2000; // Slightly longer delay for creation operations
+
+  console.log(`[MegaService] Folder "${folderName}" not found. Proceeding to create in "${targetParentNode.name || 'root'}".`);
+
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      attempts++;
+      console.log(`[MegaService] Attempt ${attempts} to create new folder "${folderName}" using mkdir...`);
+      // Ensure targetParentNode is a File object representing a directory, or storage.root
+      const newFolderNode = await targetParentNode.mkdir({ name: folderName });
+      console.log(`[MegaService] Folder "${folderName}" created successfully with mkdir on attempt ${attempts}. Node ID: ${newFolderNode.nodeId}`);
+      return newFolderNode;
+    } catch (error) {
+      console.warn(`[MegaService] Attempt ${attempts} failed for createFolder "${folderName}" (mkdir): ${error.message}`);
+      if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+         console.error(`[MegaService] createFolder "${folderName}" (mkdir) failed after ${attempts} attempts or due to non-retryable error. Last error: ${error.message}`);
+        throw error;
+      }
+      console.log(`[MegaService] Retrying createFolder "${folderName}" (mkdir) in ${RETRY_DELAY_MS * attempts}ms...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+    }
+  }
+  // Should not be reached.
+  throw new Error(`[MegaService] createFolder "${folderName}" failed after all retry attempts.`);
 }
 
 /**
@@ -222,22 +297,60 @@ async function downloadFile(fileOrLink, localDirectoryPath, desiredFileName = nu
 
   try {
     let fileNode;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 1500;
+
     if (typeof fileOrLink === 'string') {
-      console.log(`Downloading from URL: ${fileOrLink}`);
-      fileNode = File.fromURL(fileOrLink); 
+      console.log(`[MegaService] Preparing to download from URL: ${fileOrLink}`);
+      while(attempts < MAX_ATTEMPTS) {
+        try {
+          attempts++;
+          fileNode = File.fromURL(fileOrLink); // This can make an API call to resolve the link
+          console.log(`[MegaService] File.fromURL resolved on attempt ${attempts}. Node name (pre-attributes): ${fileNode.name || 'N/A'}`);
+          break; // Success
+        } catch (error) {
+          console.warn(`[MegaService] Attempt ${attempts} failed for File.fromURL("${fileOrLink}"): ${error.message}`);
+          if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+            console.error(`[MegaService] File.fromURL("${fileOrLink}") failed after ${attempts} attempts or non-retryable error.`);
+            throw error;
+          }
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+        }
+      }
+      if (!fileNode) throw new Error(`[MegaService] Failed to resolve file from URL ${fileOrLink} after retries.`);
     } else {
       fileNode = fileOrLink;
-      console.log(`Downloading from file node: ${fileNode.name}`);
+      console.log(`[MegaService] Downloading from provided file node: ${fileNode.name || fileNode.nodeId}`);
     }
 
     // Ensure attributes are loaded to get name and size
-    if (!fileNode.name || !fileNode.size) {
-        await new Promise((resolve, reject) => {
-            fileNode.loadAttributes((err, node) => {
-                if (err) return reject(err);
-                resolve(node);
-            });
-        });
+    attempts = 0; // Reset attempts for loadAttributes
+    if (!fileNode.name || typeof fileNode.size === 'undefined') { // Check size specifically as 0 is a valid size
+        console.log(`[MegaService] File node attributes (name/size) missing. Attempting to load for node: ${fileNode.nodeId || fileNode.name}`);
+        while(attempts < MAX_ATTEMPTS) {
+            try {
+                attempts++;
+                await new Promise((resolve, reject) => { // Promisify loadAttributes
+                    fileNode.loadAttributes((err, node) => {
+                        if (err) return reject(err);
+                        console.log(`[MegaService] fileNode.loadAttributes successful on attempt ${attempts} for node ${node.nodeId}. Name: ${node.name}, Size: ${node.size}`);
+                        resolve(node);
+                    });
+                });
+                break; // Success
+            } catch (error) {
+                console.warn(`[MegaService] Attempt ${attempts} failed for fileNode.loadAttributes() for node ${fileNode.nodeId || fileNode.name}: ${error.message}`);
+                if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+                    console.error(`[MegaService] fileNode.loadAttributes() failed after ${attempts} attempts or non-retryable error for node ${fileNode.nodeId || fileNode.name}.`);
+                    throw error;
+                }
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+            }
+        }
+         if (!fileNode.name || typeof fileNode.size === 'undefined') {
+            throw new Error(`[MegaService] Critical: Failed to load file attributes (name/size) for node ${fileNode.nodeId || fileNode.name} after retries.`);
+        }
     }
     
     const finalFileName = desiredFileName || fileNode.name;
@@ -305,52 +418,105 @@ async function getFolderContents(folderNodeOrLink) {
 
   try {
     let folderNode;
+    let attempts = 0;
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 1500;
+
     if (typeof folderNodeOrLink === 'string') {
-      console.log(`Fetching contents for folder link: ${folderNodeOrLink}`);
-      folderNode = File.fromURL(folderNodeOrLink); 
+      console.log(`[MegaService] Fetching contents for folder link: ${folderNodeOrLink}`);
+      while(attempts < MAX_ATTEMPTS) {
+        try {
+          attempts++;
+          folderNode = File.fromURL(folderNodeOrLink); // API call
+          console.log(`[MegaService] File.fromURL for folder link resolved on attempt ${attempts}. Node name (pre-attributes): ${folderNode.name || 'N/A'}`);
+          break; 
+        } catch (error) {
+          console.warn(`[MegaService] Attempt ${attempts} failed for File.fromURL (folder link "${folderNodeOrLink}"): ${error.message}`);
+          if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+            console.error(`[MegaService] File.fromURL (folder link "${folderNodeOrLink}") failed after ${attempts} attempts or non-retryable error.`);
+            throw error;
+          }
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+        }
+      }
+      if(!folderNode) throw new Error(`[MegaService] Failed to resolve folder from URL ${folderNodeOrLink} after retries.`);
     } else {
       folderNode = folderNodeOrLink;
-      console.log(`Fetching contents for folder node: ${folderNode.name || folderNode.nodeId}`);
+      console.log(`[MegaService] Fetching contents for provided folder node: ${folderNode.name || folderNode.nodeId}`);
     }
 
     // Load attributes and children
-    // The callback style of loadAttributes needs to be promisified.
-    await new Promise((resolve, reject) => {
-        folderNode.loadAttributes((err, node) => {
-            if (err) {
-                console.error('Error loading folder attributes:', err);
-                return reject(err);
+    attempts = 0; // Reset attempts
+    console.log(`[MegaService] Attempting to load attributes for folder: ${folderNode.name || folderNode.nodeId}`);
+    while(attempts < MAX_ATTEMPTS) {
+        try {
+            attempts++;
+            await new Promise((resolve, reject) => { // Promisify loadAttributes
+                folderNode.loadAttributes((err, node) => {
+                    if (err) return reject(err);
+                    console.log(`[MegaService] folderNode.loadAttributes successful for "${node.name || node.nodeId}" on attempt ${attempts}.`);
+                    resolve(node);
+                });
+            });
+            break; // Success
+        } catch (error) {
+            console.warn(`[MegaService] Attempt ${attempts} failed for folderNode.loadAttributes() for "${folderNode.name || folderNode.nodeId}": ${error.message}`);
+            if (attempts >= MAX_ATTEMPTS || !isRetryableMegaError(error)) {
+                console.error(`[MegaService] folderNode.loadAttributes() failed for "${folderNode.name || folderNode.nodeId}" after ${attempts} attempts or non-retryable error.`);
+                throw error;
             }
-            resolve(node);
-        });
-    });
-    
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempts));
+        }
+    }
+    // After retries, check if attributes actually loaded (e.g. children property might now exist)
+     if (typeof folderNode.type === 'undefined' && attempts >= MAX_ATTEMPTS) { // Check a common attribute
+        throw new Error(`[MegaService] Critical: Failed to load folder attributes for ${folderNode.name || folderNode.nodeId} after retries, cannot determine type or children.`);
+    }
+
     if (folderNode.type !== 'd' && folderNode.type !== 1) { // 'd' or 1 for directory
-      throw new Error(`The provided node/link is not a folder. Type: ${folderNode.type}`);
+      throw new Error(`[MegaService] The provided node/link is not a folder. Type: ${folderNode.type}, Name: ${folderNode.name || folderNode.nodeId}`);
     }
 
     const contents = [];
     if (folderNode.children) {
       for (const child of folderNode.children) {
-        // child.link() is async and needs to be awaited
-        const link = await new Promise((resolve, reject) => {
-            child.link({noKey: false}, (err, l) => {
-                if(err) return reject(err);
-                resolve(l);
-            });
-        });
+        let childLink = `Error retrieving link for ${child.name}`;
+        let linkAttempts = 0;
+        const MAX_LINK_ATTEMPTS_CHILD = 2; // Fewer retries for individual child links to avoid long hangs
+        const RETRY_DELAY_CHILD_LINK_MS = 1000;
 
+        while(linkAttempts < MAX_LINK_ATTEMPTS_CHILD) {
+            try {
+                linkAttempts++;
+                childLink = await new Promise((resolve, reject) => { // Promisify child.link
+                    child.link({noKey: false}, (err, l) => {
+                        if(err) return reject(err);
+                        resolve(l);
+                    });
+                });
+                break; // Success
+            } catch (error) {
+                console.warn(`[MegaService] Attempt ${linkAttempts} to get link for child "${child.name}" failed: ${error.message}`);
+                if (linkAttempts >= MAX_LINK_ATTEMPTS_CHILD || !isRetryableMegaError(error)) {
+                    childLink = `Error retrieving link: ${error.message.substring(0,50)}`;
+                    console.error(`[MegaService] Failed to get link for child "${child.name}" after ${linkAttempts} attempts or non-retryable error. Link set to error string.`);
+                    break; 
+                }
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_CHILD_LINK_MS * linkAttempts));
+            }
+        }
+        
         contents.push({
           name: child.name,
           type: (child.type === 'd' || child.type === 1) ? 'folder' : 'file',
           size: child.size,
           nodeId: child.nodeId,
-          link: link
+          link: childLink
         });
       }
     }
 
-    console.log(`Found ${contents.length} items in folder "${folderNode.name || folderNode.nodeId}".`);
+    console.log(`[MegaService] Found ${contents.length} items in folder "${folderNode.name || folderNode.nodeId}".`);
     return contents;
   } catch (error) {
     console.error('Error getting folder contents:', error);

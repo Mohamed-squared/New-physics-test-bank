@@ -8,10 +8,54 @@ const aiServer = require('./ai_integration_server.js'); // MODIFIED for server-s
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 
+const MAX_CHAR_PER_CHUNK = 12000; // Max characters per chunk for AI processing
+const OVERLAP_CHAR_COUNT = 500;   // Overlap characters between chunks
+
 // Helper function to sanitize filenames (though for TextMCQ.md and TextProblems.md, names are fixed)
 // function sanitizeFilename(name) {
 //     return name.replace(/[^\w\s.-]/g, '_').replace(/\s+/g, '_');
 // }
+
+/**
+ * Splits a large text into smaller chunks with overlap.
+ * @param {string} text The text to split.
+ * @param {number} maxChars The maximum number of characters per chunk.
+ * @param {number} overlap The number of characters to overlap between chunks.
+ * @returns {string[]} An array of text chunks.
+ */
+function splitTextIntoChunks(text, maxChars, overlap) {
+    const chunks = [];
+    let startIndex = 0;
+
+    if (!text || text.length === 0) {
+        return [];
+    }
+    if (text.length <= maxChars) {
+        return [text];
+    }
+
+    while (startIndex < text.length) {
+        let endIndex = startIndex + maxChars;
+        if (endIndex >= text.length) {
+            chunks.push(text.substring(startIndex));
+            break;
+        }
+
+        // Find a natural break point (e.g., end of sentence or paragraph) near endIndex to avoid cutting mid-sentence
+        // For simplicity, we'll just cut at maxChars for now, but this could be improved.
+        // Let's try to find a space to break at, to not cut words.
+        let actualEndIndex = text.lastIndexOf(' ', endIndex);
+        if (actualEndIndex <= startIndex + overlap) { // If no space found or too close to start, just cut at maxChars
+            actualEndIndex = endIndex;
+        }
+        
+        chunks.push(text.substring(startIndex, actualEndIndex));
+        startIndex = actualEndIndex - overlap;
+        if (startIndex < 0) startIndex = 0; // Should not happen with typical overlap
+    }
+    return chunks;
+}
+
 
 async function generateQuestionsFromPdf(
     courseId,
@@ -58,71 +102,92 @@ async function generateQuestionsFromPdf(
         }
         console.log(`[QGenService] Text extracted successfully. Length: ${extractedPdfText.length} characters.`);
 
-        // --- 3. Generate TextMCQ.md ---
-        console.log(`[QGenService] Generating TextMCQ.md...`);
+        // --- 3. Chunk Text and Generate TextMCQ.md ---
+        console.log(`[QGenService] Splitting extracted text into chunks. Max chars: ${MAX_CHAR_PER_CHUNK}, Overlap: ${OVERLAP_CHAR_COUNT}`);
+        const textChunks = splitTextIntoChunks(extractedPdfText, MAX_CHAR_PER_CHUNK, OVERLAP_CHAR_COUNT);
+        console.log(`[QGenService] Text split into ${textChunks.length} chunks.`);
+
+        let allMcqContent = "";
         const exampleMcqSyntax = await fs.readFile('example_TextMCQ.md', 'utf-8');
-        const mcqPrompt = `
-You are an expert in creating educational materials. Based on the following textbook chapter content, please generate a comprehensive set of Multiple Choice Questions (MCQs).
-The chapter title is "${chapterTitle}".
-The MCQs should cover various aspects of the text, including definitions, concepts, applications, and analyses.
+
+        for (let i = 0; i < textChunks.length; i++) {
+            const chunk = textChunks[i];
+            console.log(`[QGenService] Generating MCQs for chunk ${i + 1} of ${textChunks.length}...`);
+            
+            const mcqPrompt = `
+You are an expert in creating educational materials. This is chunk ${i + 1} of ${textChunks.length} from the chapter titled "${chapterTitle}". 
+Please generate a comprehensive set of Multiple Choice Questions (MCQs) based *only* on the content of this specific chunk.
+The MCQs should cover various aspects of the text in this chunk, including definitions, concepts, applications, and analyses.
 Ensure the questions have clear correct answers and plausible distractors.
 Follow this Markdown syntax strictly for each question:
 --- Start of Example Syntax ---
 ${exampleMcqSyntax}
 --- End of Example Syntax ---
 
-Ensure you replace placeholder content like "[Chapter Title]", "[Concept A]", etc., with actual relevant content derived from the provided text.
+Ensure you replace placeholder content like "[Chapter Title]", "[Concept A]", etc., with actual relevant content derived from the provided text in this chunk.
 Provide a variety of difficulty levels (Easy, Medium, Hard).
 Include explanations for why the correct answer is correct.
 List relevant keywords for each question.
-If applicable, include a "Textbook Page Reference (Optional):" field, but since you don't have the actual page numbers of this PDF, you can either try to infer relative locations or omit this field.
+If applicable, include a "Textbook Page Reference (Optional):" field, but since you don't have the actual page numbers of this PDF, you can either try to infer relative locations within this chunk or omit this field.
 
-Here is the extracted text from the chapter PDF:
---- Start of Chapter Text ---
-${extractedPdfText}
---- End of Chapter Text ---
+Here is the text for this chunk:
+--- Start of Chunk Text ---
+${chunk}
+--- End of Chunk Text ---
 
-Generate the MCQs now.
+Generate the MCQs now based *only* on the text provided in this chunk.
 `;
-        // const mcqContent = await generateTextContentResponse([{ text: mcqPrompt }], geminiApiKey); // OLD AI call
-        const mcqContent = await aiServer.callGeminiTextAPI(geminiApiKey, mcqPrompt); // MODIFIED for server-side AI
+            const chunkMcqContent = await aiServer.callGeminiTextAPI(geminiApiKey, mcqPrompt);
+            allMcqContent += (allMcqContent ? "\n\n---\n\n" : "") + chunkMcqContent; // Add separator for clarity between chunk outputs
+            console.log(`[QGenService] MCQs generated for chunk ${i + 1}. Length: ${chunkMcqContent.length}`);
+        }
+        
         const tempMcqPath = path.join(TEMP_PROCESSING_DIR, 'TextMCQ.md');
-        await fs.writeFile(tempMcqPath, mcqContent);
+        await fs.writeFile(tempMcqPath, allMcqContent);
         generatedFilesToUpload.push({ path: tempMcqPath, name: 'TextMCQ.md', type: 'generated_mcq_markdown' });
-        console.log(`[QGenService] TextMCQ.md generated and saved to: ${tempMcqPath}`);
+        console.log(`[QGenService] Aggregated TextMCQ.md generated and saved to: ${tempMcqPath}. Total length: ${allMcqContent.length}`);
 
-        // --- 4. Generate TextProblems.md ---
-        console.log(`[QGenService] Generating TextProblems.md...`);
+        // --- 4. Generate TextProblems.md (using the same chunks) ---
+        console.log(`[QGenService] Generating TextProblems.md using text chunks...`);
+        let allProblemsContent = "";
         const exampleProblemsSyntax = await fs.readFile('example_TextProblems.md', 'utf-8');
-        const problemsPrompt = `
-You are an expert in creating educational problem sets. Based on the following textbook chapter content, please generate a diverse set of problems.
-The chapter title is "${chapterTitle}".
-The problems should range from foundational calculations and explanations to more advanced application and design tasks.
+
+        for (let i = 0; i < textChunks.length; i++) {
+            const chunk = textChunks[i];
+            console.log(`[QGenService] Generating Problems for chunk ${i + 1} of ${textChunks.length}...`);
+
+            const problemsPrompt = `
+You are an expert in creating educational problem sets. This is chunk ${i + 1} of ${textChunks.length} from the chapter titled "${chapterTitle}". 
+Please generate a diverse set of problems based *only* on the content of this specific chunk.
+The problems should range from foundational calculations and explanations to more advanced application and design tasks relevant to this chunk.
 Follow this Markdown syntax strictly for each problem:
 --- Start of Example Syntax ---
 ${exampleProblemsSyntax}
 --- End of Example Syntax ---
 
-Ensure you replace placeholder content like "[Chapter Title]", "[Initial Condition A]", etc., with actual relevant content derived from the provided text.
+Ensure you replace placeholder content like "[Chapter Title]", "[Initial Condition A]", etc., with actual relevant content derived from the provided text in this chunk.
 Provide a variety of difficulty levels (Easy, Medium, Hard).
-Include a "Solution Approach" for each problem, outlining the steps or concepts required.
-Provide an "Expected Answer" where applicable (e.g., for calculation problems or specific conceptual explanations).
-List relevant keywords for each problem.
-If applicable, include a "Textbook Page Reference (Optional):" field, but as before, you can infer relative locations or omit this.
+Include a "Solution Approach" for each problem, outlining the steps or concepts required from this chunk.
+Provide an "Expected Answer" where applicable (e.g., for calculation problems or specific conceptual explanations from this chunk).
+List relevant keywords for each problem from this chunk.
+If applicable, include a "Textbook Page Reference (Optional):" field, but as before, you can infer relative locations within this chunk or omit this.
 
-Here is the extracted text from the chapter PDF:
---- Start of Chapter Text ---
-${extractedPdfText}
---- End of Chapter Text ---
+Here is the text for this chunk:
+--- Start of Chunk Text ---
+${chunk}
+--- End of Chunk Text ---
 
-Generate the problems now.
+Generate the problems now based *only* on the text provided in this chunk.
 `;
-        // const problemsContent = await generateTextContentResponse([{ text: problemsPrompt }], geminiApiKey); // OLD AI call
-        const problemsContent = await aiServer.callGeminiTextAPI(geminiApiKey, problemsPrompt); // MODIFIED for server-side AI
+            const chunkProblemsContent = await aiServer.callGeminiTextAPI(geminiApiKey, problemsPrompt);
+            allProblemsContent += (allProblemsContent ? "\n\n---\n\n" : "") + chunkProblemsContent; // Add separator
+            console.log(`[QGenService] Problems generated for chunk ${i + 1}. Length: ${chunkProblemsContent.length}`);
+        }
+
         const tempProblemsPath = path.join(TEMP_PROCESSING_DIR, 'TextProblems.md');
-        await fs.writeFile(tempProblemsPath, problemsContent);
+        await fs.writeFile(tempProblemsPath, allProblemsContent);
         generatedFilesToUpload.push({ path: tempProblemsPath, name: 'TextProblems.md', type: 'generated_problems_markdown' });
-        console.log(`[QGenService] TextProblems.md generated and saved to: ${tempProblemsPath}`);
+        console.log(`[QGenService] Aggregated TextProblems.md generated and saved to: ${tempProblemsPath}. Total length: ${allProblemsContent.length}`);
         
         // --- 5. Upload Markdown Files to MEGA ---
         // console.log(`[QGenService] Fetching course details for MEGA upload path...`); // Firestore disabled

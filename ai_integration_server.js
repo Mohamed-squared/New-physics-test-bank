@@ -50,17 +50,27 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
   let effectiveApiKey;
   if (typeof apiKey === 'string' && apiKey.trim() !== '') {
     effectiveApiKey = apiKey.trim();
-    console.log("[AI Service] Using provided API key.");
+    console.log("[AI Service] Using provided API key for text API.");
   } else {
     effectiveApiKey = DEFAULT_API_KEY;
-    if (apiKey !== null && apiKey !== undefined) { // apiKey was provided but invalid
-      console.log(`[AI Service] Provided API key is not a valid string or is empty. Type: ${typeof apiKey}. Falling back to default API key.`);
-    } else { // apiKey was null or undefined
-      console.log("[AI Service] API key not provided. Falling back to default API key.");
+    let providedApiKeyLog = apiKey;
+    if (typeof apiKey === 'object' && apiKey !== null) {
+        try {
+            providedApiKeyLog = JSON.stringify(apiKey).substring(0, 150) + (JSON.stringify(apiKey).length > 150 ? "..." : "");
+        } catch (e) {
+            providedApiKeyLog = "[complex object, could not stringify]";
+        }
+    } else if (typeof apiKey === 'string' && apiKey.length > 100) {
+        providedApiKeyLog = apiKey.substring(0,100) + "... [long string]";
+    }
+    if (apiKey !== null && apiKey !== undefined && apiKey !== '') { // apiKey was provided but invalid or empty string
+      console.warn(`[AI Service] Provided API key for text API is not a valid non-empty string. Type: ${typeof apiKey}, Value: '${providedApiKeyLog}'. Falling back to default API key.`);
+    } else { // apiKey was null, undefined or an empty string that was caught by the initial check
+      console.warn("[AI Service] API key for text API not provided or is empty. Falling back to default API key.");
     }
   }
 
-  console.log(`Calling Gemini API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}..."`);
+  console.log(`Calling Gemini text API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}..."`);
 
   if (!effectiveApiKey) {
     console.error('Google AI API Key is missing.');
@@ -83,7 +93,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
 
     const generationConfig = {
       temperature: 0.6,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 4096, // Increased from 2048
       // topK, topP can also be set here if needed
     };
 
@@ -132,17 +142,31 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
     
     if (response.candidates && response.candidates.length > 0 &&
         response.candidates[0].content && response.candidates[0].content.parts &&
-        response.candidates[0].content.parts.length > 0) {
+        response.candidates[0].content.parts.length > 0 &&
+        response.candidates[0].content.parts[0].text // Ensure text part exists
+        ) {
       const textResponse = response.candidates[0].content.parts[0].text;
-      console.log(`Gemini API call successful. Response length: ${textResponse.length}`);
+      console.log(`[AI Service] Gemini Text API call successful. Response length: ${textResponse.length}`);
+      if (response.usageMetadata) {
+        console.log("[AI Service] Gemini Text API Usage Metadata: ", response.usageMetadata);
+      } else {
+        console.log("[AI Service] Gemini Text API Usage Metadata: Not available in response.");
+      }
       return textResponse;
     } else {
-      console.error('Gemini API call failed: No text content in response.', response);
+      console.error('Gemini Text API call failed: No valid text content in response.', response);
        // Check for block reason in candidate if available
       if (response.candidates && response.candidates[0] && response.candidates[0].finishReason) {
-        throw new Error(`Gemini API call failed: No text content. Finish reason: ${response.candidates[0].finishReason}. Safety ratings: ${JSON.stringify(response.candidates[0].safetyRatings)}`);
+        const finishReason = response.candidates[0].finishReason;
+        const safetyRatings = JSON.stringify(response.candidates[0].safetyRatings);
+        const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
+
+        if (finishReason === 'MAX_TOKENS') {
+          throw new Error(`Gemini API call failed: The response was truncated because the maximum output token limit was reached (MAX_TOKENS). Consider adjusting input length or output token settings. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
+        }
+        throw new Error(`Gemini API call failed: No text content. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
       }
-      throw new Error('Gemini API call failed: No text content in the response.');
+      throw new Error('Gemini API call failed: No text content in the response and no specific finish reason found.');
     }
 
   } catch (error) {
@@ -207,10 +231,21 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
     console.log("[AI Service] Using provided API key for Vision API.");
   } else {
     effectiveApiKey = DEFAULT_API_KEY;
-    if (apiKey !== null && apiKey !== undefined) { // apiKey was provided but invalid
-      console.log(`[AI Service] Provided API key for Vision API is not a valid string or is empty. Type: ${typeof apiKey}. Falling back to default API key.`);
-    } else { // apiKey was null or undefined
-      console.log("[AI Service] API key for Vision API not provided. Falling back to default API key.");
+    let providedApiKeyLog = apiKey;
+    if (typeof apiKey === 'object' && apiKey !== null) {
+        try {
+            providedApiKeyLog = JSON.stringify(apiKey).substring(0, 150) + (JSON.stringify(apiKey).length > 150 ? "..." : "");
+        } catch (e) {
+            providedApiKeyLog = "[complex object, could not stringify]";
+        }
+    } else if (typeof apiKey === 'string' && apiKey.length > 100) {
+        providedApiKeyLog = apiKey.substring(0,100) + "... [long string]";
+    }
+
+    if (apiKey !== null && apiKey !== undefined && apiKey !== '') { // apiKey was provided but invalid or empty string
+      console.warn(`[AI Service] Provided API key for Vision API is not a valid non-empty string. Type: ${typeof apiKey}, Value: '${providedApiKeyLog}'. Falling back to default API key.`);
+    } else { // apiKey was null, undefined, or an empty string
+      console.warn("[AI Service] API key for Vision API not provided or is empty. Falling back to default API key.");
     }
   }
 
@@ -302,18 +337,29 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
         response.candidates[0].content.parts.length > 0 &&
         response.candidates[0].content.parts[0].text) {
       const textResponse = response.candidates[0].content.parts[0].text;
-      console.log(`Gemini Vision API call successful. Response length: ${textResponse.length}`);
+      console.log(`[AI Service] Gemini Vision API call successful. Response length: ${textResponse.length}`);
+      if (response.usageMetadata) {
+        console.log("[AI Service] Gemini Vision API Usage Metadata: ", response.usageMetadata);
+      } else {
+        console.log("[AI Service] Gemini Vision API Usage Metadata: Not available in response.");
+      }
       return textResponse;
     } else {
-      console.error('Gemini Vision API call failed: No text content in response.', response);
+      console.error('Gemini Vision API call failed: No valid text content in response.', response);
+      const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
       if (response.candidates && response.candidates[0] && response.candidates[0].finishReason) {
-        throw new Error(`Gemini Vision API call failed: No text content. Finish reason: ${response.candidates[0].finishReason}. Safety ratings: ${JSON.stringify(response.candidates[0].safetyRatings)}`);
+        const finishReason = response.candidates[0].finishReason;
+        const safetyRatings = JSON.stringify(response.candidates[0].safetyRatings);
+         if (finishReason === 'MAX_TOKENS') { // Though less common for vision if input is fixed size image
+            throw new Error(`Gemini Vision API call failed: The response was truncated because MAX_TOKENS was reached. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
+        }
+        throw new Error(`Gemini Vision API call failed: No text content. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
       }
       // If promptFeedback exists and indicates blocking, prioritize that message
       if (response.promptFeedback && response.promptFeedback.blockReason) {
-        throw new Error(`Gemini Vision API call failed: Request blocked due to prompt content: ${response.promptFeedback.blockReason}. Full feedback: ${JSON.stringify(response.promptFeedback)}`);
+        throw new Error(`Gemini Vision API call failed: Request blocked due to prompt content: ${response.promptFeedback.blockReason}. Full feedback: ${JSON.stringify(response.promptFeedback)}. Usage: ${usageMetadataString}`);
       }
-      throw new Error('Gemini Vision API call failed: No text content in the response or other unknown error.');
+      throw new Error(`Gemini Vision API call failed: No text content in the response or other unknown error. Usage: ${usageMetadataString}`);
     }
 
   } catch (error) {

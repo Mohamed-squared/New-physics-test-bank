@@ -542,16 +542,63 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
             subjectTag,
             megaEmail,
             megaPassword,
-            geminiApiKey,
+            // geminiApiKey, // We will handle this with more care below
             assemblyAiApiKey
         } = req.body;
 
-        // Validate required parameters
-        if (!courseTitle || !textbookPdfFile || !trueFirstPageNumber || !megaEmail || !megaPassword || !geminiApiKey || !assemblyAiApiKey || !majorTag || !subjectTag) {
-            console.error('[SERVER /automate-full-course] Missing one or more required parameters.');
+        let geminiApiKey = req.body.geminiApiKey; // Keep the original reference for logging if needed
+
+        // Validate required parameters (excluding geminiApiKey for now, will validate its processed form)
+        if (!courseTitle || !textbookPdfFile || !trueFirstPageNumber || !megaEmail || !megaPassword /* !geminiApiKey - validated below */ || !assemblyAiApiKey || !majorTag || !subjectTag) {
+            console.error('[SERVER /automate-full-course] Missing one or more basic required parameters (geminiApiKey checked separately).');
+            // Clean up files if basic params are missing
+            if (textbookPdfFile && textbookPdfFile.path) await fs.unlink(textbookPdfFile.path).catch(err => console.error(`Error unlinking textbook on param fail: ${err.message}`));
+            lectureFiles.forEach(async file => { if (file && file.path) await fs.unlink(file.path).catch(err => console.error(`Error unlinking lecture file on param fail: ${err.message}`)); });
+            
             return res.status(400).json({
                 success: false,
-                message: 'Missing required parameters. Ensure courseTitle, textbookPdf, trueFirstPageNumber, megaEmail, megaPassword, geminiApiKey, assemblyAiApiKey, majorTag, and subjectTag are provided.'
+                message: 'Missing required parameters. Ensure courseTitle, textbookPdf, trueFirstPageNumber, megaEmail, megaPassword, assemblyAiApiKey, majorTag, and subjectTag are provided. Gemini API Key is also required but validated separately.'
+            });
+        }
+        
+        let effectiveGeminiApiKey;
+        if (typeof geminiApiKey === 'string') {
+            effectiveGeminiApiKey = geminiApiKey.trim();
+            console.log('[SERVER /automate-full-course] Using Gemini API Key as string.');
+        } else if (typeof geminiApiKey === 'object' && geminiApiKey !== null) {
+            console.warn(`[SERVER /automate-full-course] geminiApiKey was an object. Attempting to extract key. Object received:`, JSON.stringify(geminiApiKey, null, 2));
+            // Try common nested key names
+            if (typeof geminiApiKey.key === 'string') {
+                effectiveGeminiApiKey = geminiApiKey.key.trim();
+            } else if (typeof geminiApiKey.apiKey === 'string') {
+                effectiveGeminiApiKey = geminiApiKey.apiKey.trim();
+            } else if (typeof geminiApiKey.value === 'string') {
+                effectiveGeminiApiKey = geminiApiKey.value.trim();
+            } else {
+                console.error('[SERVER /automate-full-course] Could not extract a string API key from the geminiApiKey object. Structure was:', JSON.stringify(geminiApiKey));
+                // No fallback defined here, but this is where one would be implemented or an error thrown.
+                // For now, it will pass the original object which will fail downstream.
+                effectiveGeminiApiKey = geminiApiKey; // Pass the original object to see downstream error
+            }
+        } else if (geminiApiKey === null || geminiApiKey === undefined || geminiApiKey === '') {
+             console.error('[SERVER /automate-full-course] Gemini API Key is missing or empty.');
+             // No specific fallback here, but this is a critical missing parameter.
+        } else {
+            console.error(`[SERVER /automate-full-course] geminiApiKey was an unexpected type: ${typeof geminiApiKey}. Value:`, geminiApiKey);
+            // No fallback, pass as is to see downstream error.
+            effectiveGeminiApiKey = geminiApiKey;
+        }
+
+        // Now validate the effectiveGeminiApiKey
+        if (!effectiveGeminiApiKey || (typeof effectiveGeminiApiKey !== 'string' && typeof effectiveGeminiApiKey !== 'object') /* allow object to pass for downstream check if needed */ || (typeof effectiveGeminiApiKey === 'string' && effectiveGeminiApiKey.trim() === '')) {
+            console.error('[SERVER /automate-full-course] Critical: Gemini API Key is missing, empty, or could not be processed into a usable string. Please check input.');
+             // Clean up files as API key is crucial
+            if (textbookPdfFile && textbookPdfFile.path) await fs.unlink(textbookPdfFile.path).catch(err => console.error(`Error unlinking textbook on API key fail: ${err.message}`));
+            lectureFiles.forEach(async file => { if (file && file.path) await fs.unlink(file.path).catch(err => console.error(`Error unlinking lecture file on API key fail: ${err.message}`)); });
+
+            return res.status(400).json({
+                success: false,
+                message: 'Gemini API Key is missing, empty, or provided in an unusable format. A valid string API key is required.'
             });
         }
 
@@ -599,11 +646,11 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
             subjectTag,
             megaEmail,
             megaPassword,
-            geminiApiKey,
+            geminiApiKey: effectiveGeminiApiKey, // Pass the processed key
             assemblyAiApiKey
         };
 
-        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}"`);
+        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}" with processed Gemini API key.`);
         const result = await courseAutomationService.automateNewCourseCreation(serviceParams);
 
         if (result.success) {

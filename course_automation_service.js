@@ -238,13 +238,59 @@ Highlight the key learning outcomes and what students will gain from this course
         console.log(`[AutomationService] Lecture question generation completed. ${results.megaLinks.lectureQuestions.length} sets generated.`);
 
         // --- 6. Result Aggregation & Firestore Data Preparation ---
+        console.log('[AutomationService] Preparing Firestore data preview. This may involve final Mega link generations.');
+        
+        let mainFolderLink = 'N/A';
+        if (courseMegaNode && typeof courseMegaNode.link === 'function') {
+            let linkSuccess = false;
+            let linkAttempts = 0;
+            const MAX_LINK_ATTEMPTS = 3; // Specific retries for this operation
+            const LINK_RETRY_DELAY_MS = 2500;
+
+            while (!linkSuccess && linkAttempts < MAX_LINK_ATTEMPTS) {
+                linkAttempts++;
+                try {
+                    console.log(`[AutomationService] Attempt ${linkAttempts} to get link for main course folder on Mega (Node ID: ${courseMegaNode.id || 'N/A'})...`);
+                    // The key for a folder is usually its ID or handle.
+                    // The megajs library's node.link() method for folders does not require a key if the node is already loaded with its key.
+                    // However, if a specific key format is needed (like for shared links), it would be {key: node.key}
+                    // For a simple folder node, node.key might be undefined if not explicitly set/decrypted.
+                    // Let's try without passing a key first if it's a standard folder node.
+                    // If courseMegaNode.key is indeed available and required, it can be added.
+                    // The error "Retried 4 times" from the original log suggests an internal retry mechanism in megajs is already active.
+                    // This custom retry is an additional layer.
+                    mainFolderLink = await courseMegaNode.link(); // Default link method for a folder node
+                    linkSuccess = true;
+                    console.log(`[AutomationService] Successfully obtained main course folder link on attempt ${linkAttempts}: ${mainFolderLink}`);
+                } catch (e) {
+                    console.warn(`[AutomationService] Error on attempt ${linkAttempts} to get link for main course folder: ${e.message}`);
+                    if (linkAttempts >= MAX_LINK_ATTEMPTS) {
+                        console.error(`[AutomationService] Failed to get main course folder link after ${MAX_LINK_ATTEMPTS} attempts. Last error: ${e.message}. Setting link to "Error retrieving link".`);
+                        mainFolderLink = `Error retrieving link (Last error: ${e.message.substring(0, 100)})`; // Store error indication
+                    } else if (e.message && (e.message.includes('EAGAIN') || e.message.includes('ERATE'))) { // Check for retryable errors
+                        console.log(`[AutomationService] Retrying folder link retrieval in ${LINK_RETRY_DELAY_MS * linkAttempts}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, LINK_RETRY_DELAY_MS * linkAttempts));
+                    } else {
+                        console.error(`[AutomationService] Non-retryable error getting main course folder link: ${e.message}. Setting link to "Error retrieving link".`);
+                        mainFolderLink = `Error retrieving link (Non-retryable: ${e.message.substring(0,100)})`;
+                        break; // Break from retry loop for non-retryable errors
+                    }
+                }
+            }
+        } else if (courseMegaNode && courseMegaNode.link) { // If .link is a direct property (less likely for folders from megajs unless custom added)
+             mainFolderLink = courseMegaNode.link;
+             console.log('[AutomationService] Main course folder link obtained from direct .link property.');
+        } else {
+            console.warn('[AutomationService] Main course folder node is missing or does not have a link method/property. Link will be N/A.');
+        }
+
         results.firestoreDataPreview = {
             courseTitle: params.courseTitle,
             courseDirName: courseIdPlaceholder,
             aiGeneratedDescription: results.aiGeneratedDescription,
             majorTag: params.majorTag,
             subjectTag: params.subjectTag,
-            megaMainFolderLink: courseMegaNode.link ? await courseMegaNode.link({key: courseMegaNode.key}) : 'N/A', // Assuming link method exists
+            megaMainFolderLink: mainFolderLink,
             megaTextbookFullPdfLink: results.megaLinks.originalTextbook,
             // These would be more complex objects in a real Firestore schema
             chapters: results.megaLinks.processedChapters.map(pc => ({
