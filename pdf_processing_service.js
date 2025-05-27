@@ -158,6 +158,12 @@ async function processTextbookPdf(
         `;
         
         console.log('[PDFProcess] Attempting actual AI ToC generation...'); // Added log
+        // Conditional logging based on geminiApiKey presence
+        if (geminiApiKey) {
+            console.log('[PDFProcess] Attempting AI ToC generation using UI-provided API key.');
+        } else {
+            console.log('[PDFProcess] Attempting AI ToC generation. No UI-provided API key; AI service will use its default API key.');
+        }
         const aiResponseTocRaw = await aiServer.generateImageContentResponse(tocImagePaths, tocPrompt, geminiApiKey);
         if (!aiResponseTocRaw) { // Add a check for undefined/null response from AI
             throw new Error("AI ToC generation returned no response.");

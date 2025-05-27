@@ -1,6 +1,6 @@
 // mega_service_server.js
 
-const { Storage } = require('megajs');
+const { Storage, File } = require('megajs');
 const fs = require('fs');
 const path = require('path');
 
@@ -124,53 +124,89 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderNode) {
     throw new Error(`Local file not found: ${localFilePath}`);
   }
 
-  try {
-    const fileSize = fs.statSync(localFilePath).size;
-    const stream = fs.createReadStream(localFilePath);
-    
-    // The upload method in megajs: targetFolderNode.upload(options, stream, callback)
-    // Promisifying it:
-    const file = await new Promise((resolve, reject) => {
-      const upload = targetFolderNode.upload({ name: remoteFileName, size: fileSize }, stream);
+  const MAX_UPLOAD_ATTEMPTS = 3;
+  const UPLOAD_RETRY_DELAY_MS = 5000;
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= MAX_UPLOAD_ATTEMPTS; attempt++) {
+    try {
+      console.log(`Upload attempt ${attempt}/${MAX_UPLOAD_ATTEMPTS} for "${remoteFileName}"...`);
+      const fileSize = fs.statSync(localFilePath).size;
+      // Create a new stream for each attempt
+      const stream = fs.createReadStream(localFilePath); 
       
-      upload.on('progress', (progress) => {
-        // progress object contains bytesLoaded and bytesTotal
-        const percent = Math.round((progress.bytesLoaded / progress.bytesTotal) * 100);
-        // Log progress less frequently to avoid spamming logs, e.g., every 10%
-        if (percent % 10 === 0 || percent === 100) {
-            console.log(`Upload progress for "${remoteFileName}": ${percent}% (${progress.bytesLoaded}/${progress.bytesTotal} bytes)`);
-        }
-      });
-      
-      upload.on('complete', (fileNode) => {
-        console.log(`File "${remoteFileName}" uploaded successfully. Node ID: ${fileNode.nodeId}`);
-        resolve(fileNode);
-      });
-      
-      upload.on('error', (err) => {
-        console.error(`Error uploading file "${remoteFileName}":`, err);
-        reject(err);
+      const fileNode = await new Promise((resolve, reject) => {
+        const upload = targetFolderNode.upload({ name: remoteFileName, size: fileSize }, stream);
+        
+        upload.on('progress', (progress) => {
+          const percent = Math.round((progress.bytesLoaded / progress.bytesTotal) * 100);
+          if (percent % 10 === 0 || percent === 100) {
+              console.log(`Upload progress for "${remoteFileName}" (Attempt ${attempt}): ${percent}% (${progress.bytesLoaded}/${progress.bytesTotal} bytes)`);
+          }
+        });
+        
+        upload.on('complete', (completedFileNode) => {
+          console.log(`File "${remoteFileName}" (Attempt ${attempt}) uploaded successfully. Node ID: ${completedFileNode.nodeId}`);
+          resolve(completedFileNode);
+        });
+        
+        upload.on('error', (err) => {
+          // console.error(`Error during upload stream for "${remoteFileName}" (Attempt ${attempt}):`, err); // More specific log
+          reject(err); // Reject the promise with the error
+        });
+
+        stream.on('error', (err) => { 
+          // console.error(`Error with read stream for "${localFilePath}" (Attempt ${attempt}):`, err); // More specific log
+          reject(err); // Reject the promise with the error
+        });
       });
 
-      stream.on('error', (err) => { // Also handle stream errors
-        console.error(`Error with read stream for "${localFilePath}":`, err);
-        reject(err);
-      });
-    });
+      const link = await fileNode.link({ noKey: false }); 
 
-    const link = await file.link({ noKey: false }); // Get public link with key
+      return {
+        name: fileNode.name,
+        link: link,
+        size: fileNode.size,
+        nodeId: fileNode.nodeId,
+        type: 'file'
+      }; // Success, return and exit function
 
-    return {
-      name: file.name,
-      link: link,
-      size: file.size,
-      nodeId: file.nodeId,
-      type: 'file'
-    };
-  } catch (error) {
-    console.error(`Failed to upload file "${remoteFileName}":`, error);
-    throw error;
+    } catch (error) {
+      lastError = error;
+      // Log the error message directly from the caught error.
+      console.error(`Error during upload attempt ${attempt} for "${remoteFileName}":`, error.message);
+      // Additionally log the full error object if it might contain more details like 'cause'
+      if (attempt === MAX_UPLOAD_ATTEMPTS) console.error("Full error object on final attempt:", error);
+
+
+      const errorMessage = error.message || "";
+      const errorCauseCode = error.cause && error.cause.code;
+
+      const isRetryable = errorMessage.includes("fetch failed") || 
+                          errorMessage.includes("ConnectTimeoutError") ||
+                          errorCauseCode === 'UND_ERR_CONNECT_TIMEOUT' || 
+                          errorMessage.includes("EAGAIN");
+
+      if (isRetryable && attempt < MAX_UPLOAD_ATTEMPTS) {
+        console.warn(`Retryable error on attempt ${attempt} for "${remoteFileName}": ${errorMessage}. Retrying in ${UPLOAD_RETRY_DELAY_MS / 1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, UPLOAD_RETRY_DELAY_MS));
+      } else {
+        console.error(`Upload for "${remoteFileName}" failed after ${attempt} attempts or due to non-retryable error.`);
+        // Optional: Log the full lastError if it's the final attempt and different from current error
+        // if (attempt === MAX_UPLOAD_ATTEMPTS && lastError !== error) console.error("Last error was:", lastError);
+        throw lastError; 
+      }
+    }
   }
+  // This part should ideally not be reached if MAX_UPLOAD_ATTEMPTS > 0,
+  // as the loop's final else block will throw.
+  // However, as a safeguard or if MAX_UPLOAD_ATTEMPTS could be 0 (though not per current constants):
+  if (lastError) {
+    console.error(`Exiting upload function for "${remoteFileName}" after all attempts, rethrowing last recorded error.`);
+    throw lastError;
+  }
+  // Fallback for an unexpected scenario where loop finishes without success or error thrown
+  throw new Error(`Upload failed for "${remoteFileName}" after ${MAX_UPLOAD_ATTEMPTS} attempts. Unknown error state.`);
 }
 
 /**
@@ -188,7 +224,7 @@ async function downloadFile(fileOrLink, localDirectoryPath, desiredFileName = nu
     let fileNode;
     if (typeof fileOrLink === 'string') {
       console.log(`Downloading from URL: ${fileOrLink}`);
-      fileNode = Storage.File.fromURL(fileOrLink, storage); // Pass storage to fromURL
+      fileNode = File.fromURL(fileOrLink); 
     } else {
       fileNode = fileOrLink;
       console.log(`Downloading from file node: ${fileNode.name}`);
@@ -271,7 +307,7 @@ async function getFolderContents(folderNodeOrLink) {
     let folderNode;
     if (typeof folderNodeOrLink === 'string') {
       console.log(`Fetching contents for folder link: ${folderNodeOrLink}`);
-      folderNode = Storage.File.fromURL(folderNodeOrLink, storage); // Pass storage
+      folderNode = File.fromURL(folderNodeOrLink); 
     } else {
       folderNode = folderNodeOrLink;
       console.log(`Fetching contents for folder node: ${folderNode.name || folderNode.nodeId}`);
