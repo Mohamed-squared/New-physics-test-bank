@@ -47,33 +47,88 @@ async function getAllPdfTextForAI(pdfPath) {
  * @throws {Error} If the API call fails or content is blocked.
  */
 async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstruction = null, modelName = 'gemini-2.5-flash-preview-05-20') {
-  let effectiveApiKey;
-  if (typeof apiKey === 'string' && apiKey.trim() !== '') {
-    effectiveApiKey = apiKey.trim();
-    console.log("[AI Service] Using provided API key for text API.");
-  } else {
-    effectiveApiKey = DEFAULT_API_KEY;
-    let providedApiKeyLog = apiKey;
-    if (typeof apiKey === 'object' && apiKey !== null) {
-        try {
-            providedApiKeyLog = JSON.stringify(apiKey).substring(0, 150) + (JSON.stringify(apiKey).length > 150 ? "..." : "");
-        } catch (e) {
-            providedApiKeyLog = "[complex object, could not stringify]";
+  let processedApiKey = apiKey; // Start with the input
+  let logReasonForDefault = "API key not provided or empty after processing.";
+
+  const originalApiKeyType = typeof apiKey;
+  const originalApiKeySnippet = typeof apiKey === 'string' ? apiKey.substring(0, 70) + (apiKey.length > 70 ? '...' : '') : JSON.stringify(apiKey, null, 2);
+  console.log(`[AI Service - Text API] Received raw API key. Type: ${originalApiKeyType}, Snippet: ${originalApiKeySnippet}`);
+
+  if (typeof processedApiKey === 'string' && processedApiKey.startsWith('[') && processedApiKey.endsWith(']')) {
+    try {
+      const parsedArray = JSON.parse(processedApiKey);
+      if (Array.isArray(parsedArray)) {
+        console.log(`[AI Service - Text API] API key was a stringified array. Parsed: ${JSON.stringify(parsedArray)}`);
+        const firstStringKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
+        if (firstStringKey) {
+          processedApiKey = firstStringKey.trim();
+          console.log(`[AI Service - Text API] Extracted key from stringified array: ${processedApiKey.substring(0,15)}...`);
+        } else {
+          logReasonForDefault = "Stringified array API key did not contain a valid string key.";
+          processedApiKey = null; 
         }
-    } else if (typeof apiKey === 'string' && apiKey.length > 100) {
-        providedApiKeyLog = apiKey.substring(0,100) + "... [long string]";
-    }
-    if (apiKey !== null && apiKey !== undefined && apiKey !== '') { // apiKey was provided but invalid or empty string
-      console.warn(`[AI Service] Provided API key for text API is not a valid non-empty string. Type: ${typeof apiKey}, Value: '${providedApiKeyLog}'. Falling back to default API key.`);
-    } else { // apiKey was null, undefined or an empty string that was caught by the initial check
-      console.warn("[AI Service] API key for text API not provided or is empty. Falling back to default API key.");
+      }
+    } catch (e) {
+      console.warn(`[AI Service - Text API] Failed to parse stringified array-like API key, will use string directly if valid: ${e.message}`);
+      // If parsing fails, it might be a key that happens to start/end with brackets.
+      // The existing string check below will handle it.
     }
   }
+  
+  // Fallback for other non-string types or if stringified array processing resulted in null
+  if (typeof processedApiKey !== 'string' || processedApiKey.trim() === '') {
+    if (Array.isArray(processedApiKey)) {
+        console.log(`[AI Service - Text API] API key is an array: ${JSON.stringify(processedApiKey)}`);
+        const firstStringKeyFromArray = processedApiKey.find(k => typeof k === 'string' && k.trim() !== '');
+        if (firstStringKeyFromArray) {
+            processedApiKey = firstStringKeyFromArray.trim();
+            console.log(`[AI Service - Text API] Extracted key from array: ${processedApiKey.substring(0,15)}...`);
+        } else {
+            logReasonForDefault = "Array API key did not contain a valid string key.";
+            processedApiKey = null;
+        }
+    } else if (typeof processedApiKey === 'object' && processedApiKey !== null) {
+        console.log(`[AI Service - Text API] API key is an object: ${JSON.stringify(processedApiKey)}`);
+        const commonKeys = ['key', 'apiKey', 'value'];
+        let foundKey = null;
+        for (const k of commonKeys) {
+            if (typeof processedApiKey[k] === 'string' && processedApiKey[k].trim() !== '') {
+                foundKey = processedApiKey[k].trim();
+                break;
+            }
+        }
+        if (foundKey) {
+            processedApiKey = foundKey;
+            console.log(`[AI Service - Text API] Extracted key from object: ${processedApiKey.substring(0,15)}...`);
+        } else {
+            logReasonForDefault = "Object API key did not contain a valid string key under common properties.";
+            processedApiKey = null;
+        }
+    } else if (processedApiKey) { // It was some other non-empty, non-string type
+        logReasonForDefault = `API key was of unexpected type: ${typeof processedApiKey}.`;
+        processedApiKey = null;
+    }
+  } else { // It was a string, trim it.
+      processedApiKey = processedApiKey.trim();
+      if(processedApiKey === '') {
+          logReasonForDefault = "API key was an empty string after trimming.";
+          processedApiKey = null;
+      }
+  }
 
+  let effectiveApiKey;
+  if (processedApiKey) {
+    effectiveApiKey = processedApiKey;
+    console.log(`[AI Service - Text API] Using processed API key: ${effectiveApiKey.substring(0,15)}...`);
+  } else {
+    effectiveApiKey = DEFAULT_API_KEY;
+    console.warn(`[AI Service - Text API] ${logReasonForDefault} Falling back to default API key for text API.`);
+  }
+  
   console.log(`Calling Gemini text API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}..."`);
 
-  if (!effectiveApiKey) {
-    console.error('Google AI API Key is missing.');
+  if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check on effectiveApiKey
+    console.error('[AI Service - Text API] CRITICAL: Effective API Key is missing or empty even after processing and fallback attempts. Throwing error.');
     throw new Error('Google AI API Key is required.');
   }
 
@@ -93,7 +148,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
 
     const generationConfig = {
       temperature: 0.6,
-      maxOutputTokens: 4096, // Increased from 2048
+      maxOutputTokens: 2048, // Reduced back from 4096
       // topK, topP can also be set here if needed
     };
 
@@ -225,34 +280,85 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
   }
 
   let effectiveApiKey;
-  // apiKey is the third parameter for generateImageContentResponse
-  if (typeof apiKey === 'string' && apiKey.trim() !== '') {
-    effectiveApiKey = apiKey.trim();
-    console.log("[AI Service] Using provided API key for Vision API.");
+  let processedApiKey = apiKey; // Start with the input
+  let logReasonForDefault = "API key not provided or empty after processing.";
+
+  const originalApiKeyType = typeof apiKey;
+  const originalApiKeySnippet = typeof apiKey === 'string' ? apiKey.substring(0, 70) + (apiKey.length > 70 ? '...' : '') : JSON.stringify(apiKey, null, 2);
+  console.log(`[AI Service - Vision API] Received raw API key. Type: ${originalApiKeyType}, Snippet: ${originalApiKeySnippet}`);
+
+  if (typeof processedApiKey === 'string' && processedApiKey.startsWith('[') && processedApiKey.endsWith(']')) {
+    try {
+      const parsedArray = JSON.parse(processedApiKey);
+      if (Array.isArray(parsedArray)) {
+        console.log(`[AI Service - Vision API] API key was a stringified array. Parsed: ${JSON.stringify(parsedArray)}`);
+        const firstStringKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
+        if (firstStringKey) {
+          processedApiKey = firstStringKey.trim();
+          console.log(`[AI Service - Vision API] Extracted key from stringified array: ${processedApiKey.substring(0,15)}...`);
+        } else {
+          logReasonForDefault = "Stringified array API key did not contain a valid string key.";
+          processedApiKey = null;
+        }
+      }
+    } catch (e) {
+      console.warn(`[AI Service - Vision API] Failed to parse stringified array-like API key, will use string directly if valid: ${e.message}`);
+    }
+  }
+
+  if (typeof processedApiKey !== 'string' || processedApiKey.trim() === '') {
+    if (Array.isArray(processedApiKey)) {
+        console.log(`[AI Service - Vision API] API key is an array: ${JSON.stringify(processedApiKey)}`);
+        const firstStringKeyFromArray = processedApiKey.find(k => typeof k === 'string' && k.trim() !== '');
+        if (firstStringKeyFromArray) {
+            processedApiKey = firstStringKeyFromArray.trim();
+            console.log(`[AI Service - Vision API] Extracted key from array: ${processedApiKey.substring(0,15)}...`);
+        } else {
+            logReasonForDefault = "Array API key did not contain a valid string key.";
+            processedApiKey = null;
+        }
+    } else if (typeof processedApiKey === 'object' && processedApiKey !== null) {
+        console.log(`[AI Service - Vision API] API key is an object: ${JSON.stringify(processedApiKey)}`);
+        const commonKeys = ['key', 'apiKey', 'value'];
+        let foundKey = null;
+        for (const k of commonKeys) {
+            if (typeof processedApiKey[k] === 'string' && processedApiKey[k].trim() !== '') {
+                foundKey = processedApiKey[k].trim();
+                break;
+            }
+        }
+        if (foundKey) {
+            processedApiKey = foundKey;
+            console.log(`[AI Service - Vision API] Extracted key from object: ${processedApiKey.substring(0,15)}...`);
+        } else {
+            logReasonForDefault = "Object API key did not contain a valid string key under common properties.";
+            processedApiKey = null;
+        }
+    } else if (processedApiKey) { 
+        logReasonForDefault = `API key was of unexpected type: ${typeof processedApiKey}.`;
+        processedApiKey = null;
+    }
+  } else { // It was a string, trim it.
+      processedApiKey = processedApiKey.trim();
+      if(processedApiKey === '') {
+          logReasonForDefault = "API key was an empty string after trimming.";
+          processedApiKey = null;
+      }
+  }
+  
+  let effectiveApiKey;
+  if (processedApiKey) {
+    effectiveApiKey = processedApiKey;
+    console.log(`[AI Service - Vision API] Using processed API key: ${effectiveApiKey.substring(0,15)}...`);
   } else {
     effectiveApiKey = DEFAULT_API_KEY;
-    let providedApiKeyLog = apiKey;
-    if (typeof apiKey === 'object' && apiKey !== null) {
-        try {
-            providedApiKeyLog = JSON.stringify(apiKey).substring(0, 150) + (JSON.stringify(apiKey).length > 150 ? "..." : "");
-        } catch (e) {
-            providedApiKeyLog = "[complex object, could not stringify]";
-        }
-    } else if (typeof apiKey === 'string' && apiKey.length > 100) {
-        providedApiKeyLog = apiKey.substring(0,100) + "... [long string]";
-    }
-
-    if (apiKey !== null && apiKey !== undefined && apiKey !== '') { // apiKey was provided but invalid or empty string
-      console.warn(`[AI Service] Provided API key for Vision API is not a valid non-empty string. Type: ${typeof apiKey}, Value: '${providedApiKeyLog}'. Falling back to default API key.`);
-    } else { // apiKey was null, undefined, or an empty string
-      console.warn("[AI Service] API key for Vision API not provided or is empty. Falling back to default API key.");
-    }
+    console.warn(`[AI Service - Vision API] ${logReasonForDefault} Falling back to default API key for vision API.`);
   }
 
   console.log(`Calling Gemini Vision API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}...", Images: ${imagePaths.join(', ')}`);
 
-  if (!effectiveApiKey) {
-    console.error('Google AI API Key is missing.');
+  if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check
+    console.error('[AI Service - Vision API] CRITICAL: Effective API Key is missing or empty even after processing and fallback attempts. Throwing error.');
     throw new Error('Google AI API Key is required.');
   }
   if (!imagePaths || imagePaths.length === 0) {

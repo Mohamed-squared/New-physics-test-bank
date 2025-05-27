@@ -561,44 +561,63 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
             });
         }
         
-        let effectiveGeminiApiKey;
-        if (typeof geminiApiKey === 'string') {
-            effectiveGeminiApiKey = geminiApiKey.trim();
-            console.log('[SERVER /automate-full-course] Using Gemini API Key as string.');
-        } else if (typeof geminiApiKey === 'object' && geminiApiKey !== null) {
-            console.warn(`[SERVER /automate-full-course] geminiApiKey was an object. Attempting to extract key. Object received:`, JSON.stringify(geminiApiKey, null, 2));
-            // Try common nested key names
-            if (typeof geminiApiKey.key === 'string') {
-                effectiveGeminiApiKey = geminiApiKey.key.trim();
-            } else if (typeof geminiApiKey.apiKey === 'string') {
-                effectiveGeminiApiKey = geminiApiKey.apiKey.trim();
-            } else if (typeof geminiApiKey.value === 'string') {
-                effectiveGeminiApiKey = geminiApiKey.value.trim();
+        let rawGeminiApiKey = req.body.geminiApiKey;
+        let effectiveGeminiApiKey = null;
+        const originalApiKeyType = typeof rawGeminiApiKey;
+        const originalApiKeySnippet = typeof rawGeminiApiKey === 'string' ? rawGeminiApiKey.substring(0, 50) + '...' : JSON.stringify(rawGeminiApiKey, null, 2);
+        
+        console.log(`[SERVER /automate-full-course] Received raw Gemini API Key. Type: ${originalApiKeyType}, Snippet: ${originalApiKeySnippet}`);
+
+        if (typeof rawGeminiApiKey === 'string' && rawGeminiApiKey.trim() !== '') {
+            // Check if it's a stringified array like '["key1","key2"]'
+            if (rawGeminiApiKey.startsWith('[') && rawGeminiApiKey.endsWith(']')) {
+                try {
+                    const parsedArray = JSON.parse(rawGeminiApiKey);
+                    if (Array.isArray(parsedArray)) {
+                        console.log('[SERVER /automate-full-course] Raw Gemini API key is a stringified array. Parsed:', parsedArray);
+                        effectiveGeminiApiKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
+                        if (effectiveGeminiApiKey) effectiveGeminiApiKey = effectiveGeminiApiKey.trim();
+                    }
+                } catch (e) {
+                    console.warn('[SERVER /automate-full-course] Failed to parse stringified array-like API key, using string directly if valid:', e.message);
+                    // If parsing fails, it might be a key that happens to start/end with brackets.
+                    effectiveGeminiApiKey = rawGeminiApiKey.trim(); 
+                }
             } else {
-                console.error('[SERVER /automate-full-course] Could not extract a string API key from the geminiApiKey object. Structure was:', JSON.stringify(geminiApiKey));
-                // No fallback defined here, but this is where one would be implemented or an error thrown.
-                // For now, it will pass the original object which will fail downstream.
-                effectiveGeminiApiKey = geminiApiKey; // Pass the original object to see downstream error
+                 effectiveGeminiApiKey = rawGeminiApiKey.trim();
             }
-        } else if (geminiApiKey === null || geminiApiKey === undefined || geminiApiKey === '') {
-             console.error('[SERVER /automate-full-course] Gemini API Key is missing or empty.');
-             // No specific fallback here, but this is a critical missing parameter.
-        } else {
-            console.error(`[SERVER /automate-full-course] geminiApiKey was an unexpected type: ${typeof geminiApiKey}. Value:`, geminiApiKey);
-            // No fallback, pass as is to see downstream error.
-            effectiveGeminiApiKey = geminiApiKey;
+        } else if (Array.isArray(rawGeminiApiKey)) {
+            console.log('[SERVER /automate-full-course] Raw Gemini API key is an array:', rawGeminiApiKey);
+            effectiveGeminiApiKey = rawGeminiApiKey.find(k => typeof k === 'string' && k.trim() !== '');
+            if (effectiveGeminiApiKey) effectiveGeminiApiKey = effectiveGeminiApiKey.trim();
+        } else if (typeof rawGeminiApiKey === 'object' && rawGeminiApiKey !== null) {
+            console.log('[SERVER /automate-full-course] Raw Gemini API key is an object:', rawGeminiApiKey);
+            const commonKeys = ['key', 'apiKey', 'value'];
+            for (const k of commonKeys) {
+                if (typeof rawGeminiApiKey[k] === 'string' && rawGeminiApiKey[k].trim() !== '') {
+                    effectiveGeminiApiKey = rawGeminiApiKey[k].trim();
+                    break;
+                }
+            }
         }
 
-        // Now validate the effectiveGeminiApiKey
-        if (!effectiveGeminiApiKey || (typeof effectiveGeminiApiKey !== 'string' && typeof effectiveGeminiApiKey !== 'object') /* allow object to pass for downstream check if needed */ || (typeof effectiveGeminiApiKey === 'string' && effectiveGeminiApiKey.trim() === '')) {
-            console.error('[SERVER /automate-full-course] Critical: Gemini API Key is missing, empty, or could not be processed into a usable string. Please check input.');
-             // Clean up files as API key is crucial
-            if (textbookPdfFile && textbookPdfFile.path) await fs.unlink(textbookPdfFile.path).catch(err => console.error(`Error unlinking textbook on API key fail: ${err.message}`));
-            lectureFiles.forEach(async file => { if (file && file.path) await fs.unlink(file.path).catch(err => console.error(`Error unlinking lecture file on API key fail: ${err.message}`)); });
+        if (effectiveGeminiApiKey) {
+            console.log(`[SERVER /automate-full-course] Extracted Gemini API Key: ${effectiveGeminiApiKey.substring(0,15)}...`);
+        } else {
+            console.error(`[SERVER /automate-full-course] CRITICAL: Could not extract a valid string Gemini API Key from the provided input. Original type: ${originalApiKeyType}, Original value snippet: ${originalApiKeySnippet}. Aborting course automation for this request.`);
+            // Clean up uploaded files as API key is crucial and not found/resolved
+            if (textbookPdfFile && textbookPdfFile.path) {
+                await fs.unlink(textbookPdfFile.path).catch(err => console.error(`[SERVER /automate-full-course] Error unlinking textbook on API key extraction failure: ${err.message}`));
+            }
+            lectureFiles.forEach(async file => {
+                if (file && file.path) {
+                    await fs.unlink(file.path).catch(err => console.error(`[SERVER /automate-full-course] Error unlinking lecture file on API key extraction failure: ${err.message}`));
+                }
+            });
 
             return res.status(400).json({
                 success: false,
-                message: 'Gemini API Key is missing, empty, or provided in an unusable format. A valid string API key is required.'
+                message: 'Gemini API Key is missing, empty, or provided in an unusable format. A valid string API key could not be extracted.'
             });
         }
 
@@ -646,11 +665,11 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
             subjectTag,
             megaEmail,
             megaPassword,
-            geminiApiKey: effectiveGeminiApiKey, // Pass the processed key
+            geminiApiKey: effectiveGeminiApiKey, // Pass the VALIDATED and extracted key
             assemblyAiApiKey
         };
 
-        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}" with processed Gemini API key.`);
+        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}" with validated Gemini API key.`);
         const result = await courseAutomationService.automateNewCourseCreation(serviceParams);
 
         if (result.success) {

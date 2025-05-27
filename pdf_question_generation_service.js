@@ -8,7 +8,7 @@ const aiServer = require('./ai_integration_server.js'); // MODIFIED for server-s
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 
-const MAX_CHAR_PER_CHUNK = 12000; // Max characters per chunk for AI processing
+const MAX_CHAR_PER_CHUNK = 8000; // Max characters per chunk for AI processing (Reduced from 12000)
 const OVERLAP_CHAR_COUNT = 500;   // Overlap characters between chunks
 
 // Helper function to sanitize filenames (though for TextMCQ.md and TextProblems.md, names are fixed)
@@ -115,27 +115,18 @@ async function generateQuestionsFromPdf(
             console.log(`[QGenService] Generating MCQs for chunk ${i + 1} of ${textChunks.length}...`);
             
             const mcqPrompt = `
-You are an expert in creating educational materials. This is chunk ${i + 1} of ${textChunks.length} from the chapter titled "${chapterTitle}". 
-Please generate a comprehensive set of Multiple Choice Questions (MCQs) based *only* on the content of this specific chunk.
-The MCQs should cover various aspects of the text in this chunk, including definitions, concepts, applications, and analyses.
-Ensure the questions have clear correct answers and plausible distractors.
-Follow this Markdown syntax strictly for each question:
---- Start of Example Syntax ---
+Generate Multiple Choice Questions (MCQs) based *only* on the following text segment from chunk ${i + 1}/${textChunks.length} of chapter "${chapterTitle}".
+Adhere strictly to this Markdown format for each MCQ:
+--- Example MCQ Format ---
 ${exampleMcqSyntax}
---- End of Example Syntax ---
+--- End Example MCQ Format ---
+Focus on definitions, concepts, and applications from the text. Include difficulty (Easy, Medium, Hard), explanations, and keywords.
 
-Ensure you replace placeholder content like "[Chapter Title]", "[Concept A]", etc., with actual relevant content derived from the provided text in this chunk.
-Provide a variety of difficulty levels (Easy, Medium, Hard).
-Include explanations for why the correct answer is correct.
-List relevant keywords for each question.
-If applicable, include a "Textbook Page Reference (Optional):" field, but since you don't have the actual page numbers of this PDF, you can either try to infer relative locations within this chunk or omit this field.
-
-Here is the text for this chunk:
---- Start of Chunk Text ---
+Text segment:
+--- Text ---
 ${chunk}
---- End of Chunk Text ---
-
-Generate the MCQs now based *only* on the text provided in this chunk.
+--- End Text ---
+Generate MCQs now.
 `;
             const chunkMcqContent = await aiServer.callGeminiTextAPI(geminiApiKey, mcqPrompt);
             allMcqContent += (allMcqContent ? "\n\n---\n\n" : "") + chunkMcqContent; // Add separator for clarity between chunk outputs
@@ -157,27 +148,18 @@ Generate the MCQs now based *only* on the text provided in this chunk.
             console.log(`[QGenService] Generating Problems for chunk ${i + 1} of ${textChunks.length}...`);
 
             const problemsPrompt = `
-You are an expert in creating educational problem sets. This is chunk ${i + 1} of ${textChunks.length} from the chapter titled "${chapterTitle}". 
-Please generate a diverse set of problems based *only* on the content of this specific chunk.
-The problems should range from foundational calculations and explanations to more advanced application and design tasks relevant to this chunk.
-Follow this Markdown syntax strictly for each problem:
---- Start of Example Syntax ---
+Generate diverse problems based *only* on the following text segment from chunk ${i + 1}/${textChunks.length} of chapter "${chapterTitle}".
+Adhere strictly to this Markdown format for each problem:
+--- Example Problem Format ---
 ${exampleProblemsSyntax}
---- End of Example Syntax ---
+--- End Example Problem Format ---
+Include difficulty (Easy, Medium, Hard), solution approach, expected answer, and keywords.
 
-Ensure you replace placeholder content like "[Chapter Title]", "[Initial Condition A]", etc., with actual relevant content derived from the provided text in this chunk.
-Provide a variety of difficulty levels (Easy, Medium, Hard).
-Include a "Solution Approach" for each problem, outlining the steps or concepts required from this chunk.
-Provide an "Expected Answer" where applicable (e.g., for calculation problems or specific conceptual explanations from this chunk).
-List relevant keywords for each problem from this chunk.
-If applicable, include a "Textbook Page Reference (Optional):" field, but as before, you can infer relative locations within this chunk or omit this.
-
-Here is the text for this chunk:
---- Start of Chunk Text ---
+Text segment:
+--- Text ---
 ${chunk}
---- End of Chunk Text ---
-
-Generate the problems now based *only* on the text provided in this chunk.
+--- End Text ---
+Generate problems now.
 `;
             const chunkProblemsContent = await aiServer.callGeminiTextAPI(geminiApiKey, problemsPrompt);
             allProblemsContent += (allProblemsContent ? "\n\n---\n\n" : "") + chunkProblemsContent; // Add separator

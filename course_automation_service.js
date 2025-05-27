@@ -48,7 +48,62 @@ async function automateNewCourseCreation(params) {
     const courseIdPlaceholder = sanitizeCourseTitleForDirName(courseTitle); // Using sanitized title as a unique course identifier for now
     console.log(`[AutomationService] Starting automated course creation for: "${courseTitle}" (ID Placeholder: ${courseIdPlaceholder})`);
 
-    const finalApiKey = geminiApiKey || GEMINI_API_KEY; // Use passed-in key first
+    // --- Gemini API Key Validation and Processing ---
+    let processedGeminiApiKey = null;
+    const originalGeminiApiKeyType = typeof geminiApiKey;
+    const originalGeminiApiKeySnippet = typeof geminiApiKey === 'string' ? geminiApiKey.substring(0, 50) + '...' : JSON.stringify(geminiApiKey, null, 2);
+    console.log(`[AutomationService] Received Gemini API Key for course "${courseTitle}". Original Type: ${originalGeminiApiKeyType}, Original Snippet: ${originalGeminiApiKeySnippet}`);
+
+    if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
+        if (geminiApiKey.startsWith('[') && geminiApiKey.endsWith(']')) {
+            try {
+                const parsedArray = JSON.parse(geminiApiKey);
+                if (Array.isArray(parsedArray)) {
+                    console.log('[AutomationService] Received Gemini API key is a stringified array. Parsed:', parsedArray);
+                    processedGeminiApiKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
+                    if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
+                }
+            } catch (e) {
+                console.warn('[AutomationService] Failed to parse stringified array-like API key, using string directly if valid:', e.message);
+                processedGeminiApiKey = geminiApiKey.trim();
+            }
+        } else {
+            processedGeminiApiKey = geminiApiKey.trim();
+        }
+    } else if (Array.isArray(geminiApiKey)) {
+        console.log('[AutomationService] Received Gemini API key is an array:', geminiApiKey);
+        processedGeminiApiKey = geminiApiKey.find(k => typeof k === 'string' && k.trim() !== '');
+        if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
+    } else if (typeof geminiApiKey === 'object' && geminiApiKey !== null) {
+        console.log('[AutomationService] Received Gemini API key is an object:', geminiApiKey);
+        const commonKeys = ['key', 'apiKey', 'value'];
+        for (const k of commonKeys) {
+            if (typeof geminiApiKey[k] === 'string' && geminiApiKey[k].trim() !== '') {
+                processedGeminiApiKey = geminiApiKey[k].trim();
+                break;
+            }
+        }
+    }
+
+    if (!processedGeminiApiKey) {
+        // Fallback to a globally defined default key IF ONE IS CONFIGURED AND ACCEPTABLE.
+        // For this service, a key is critical. If it's not resolved here, it will fail in ai_integration_server.js,
+        // but it's better to catch it early.
+        console.warn(`[AutomationService] Could not extract a valid string Gemini API Key for course "${courseTitle}" from provided input (Original type: ${originalGeminiApiKeyType}). Attempting to use global default GEMINI_API_KEY.`);
+        processedGeminiApiKey = GEMINI_API_KEY; // Use the global default as a last resort
+        if (!processedGeminiApiKey) {
+             console.error(`[AutomationService] CRITICAL: No valid Gemini API Key could be resolved for course "${courseTitle}" and no global default is set. Aborting.`);
+             // Not throwing an error here to allow the function to return a structured error response
+             results.success = false;
+             results.message = `Critical: Gemini API Key for course "${courseTitle}" is missing or invalid, and no global default is available.`;
+             return results; // Early exit
+        }
+        console.log(`[AutomationService] Using global default GEMINI_API_KEY for course "${courseTitle}".`);
+    } else {
+        console.log(`[AutomationService] Successfully processed/validated Gemini API Key for course "${courseTitle}": ${processedGeminiApiKey.substring(0,15)}...`);
+    }
+    
+    const finalApiKey = processedGeminiApiKey; // Use the validated and processed key
 
     const results = {
         success: false,
@@ -249,39 +304,63 @@ Highlight the key learning outcomes and what students will gain from this course
 
             while (!linkSuccess && linkAttempts < MAX_LINK_ATTEMPTS) {
                 linkAttempts++;
+                let currentAttemptError = null;
                 try {
-                    console.log(`[AutomationService] Attempt ${linkAttempts} to get link for main course folder on Mega (Node ID: ${courseMegaNode.id || 'N/A'})...`);
-                    // The key for a folder is usually its ID or handle.
-                    // The megajs library's node.link() method for folders does not require a key if the node is already loaded with its key.
-                    // However, if a specific key format is needed (like for shared links), it would be {key: node.key}
-                    // For a simple folder node, node.key might be undefined if not explicitly set/decrypted.
-                    // Let's try without passing a key first if it's a standard folder node.
-                    // If courseMegaNode.key is indeed available and required, it can be added.
-                    // The error "Retried 4 times" from the original log suggests an internal retry mechanism in megajs is already active.
-                    // This custom retry is an additional layer.
-                    mainFolderLink = await courseMegaNode.link(); // Default link method for a folder node
-                    linkSuccess = true;
-                    console.log(`[AutomationService] Successfully obtained main course folder link on attempt ${linkAttempts}: ${mainFolderLink}`);
-                } catch (e) {
-                    console.warn(`[AutomationService] Error on attempt ${linkAttempts} to get link for main course folder: ${e.message}`);
-                    if (linkAttempts >= MAX_LINK_ATTEMPTS) {
-                        console.error(`[AutomationService] Failed to get main course folder link after ${MAX_LINK_ATTEMPTS} attempts. Last error: ${e.message}. Setting link to "Error retrieving link".`);
-                        mainFolderLink = `Error retrieving link (Last error: ${e.message.substring(0, 100)})`; // Store error indication
-                    } else if (e.message && (e.message.includes('EAGAIN') || e.message.includes('ERATE'))) { // Check for retryable errors
-                        console.log(`[AutomationService] Retrying folder link retrieval in ${LINK_RETRY_DELAY_MS * linkAttempts}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, LINK_RETRY_DELAY_MS * linkAttempts));
+                    console.log(`[AutomationService] Attempt ${linkAttempts} (Primary - with key) to get link for main course folder (ID: ${courseMegaNode.id || 'N/A'})...`);
+                    if (!courseMegaNode.key) {
+                        console.warn(`[AutomationService] courseMegaNode.key is not available for folder ${courseMegaNode.name}. Cannot generate a link with an embedded key. Attempting link without key.`);
+                        // Directly try the no-key version if node.key isn't there, as node.link({key: undefined}) might error.
+                        mainFolderLink = await courseMegaNode.link(); // Get link without explicit key
                     } else {
-                        console.error(`[AutomationService] Non-retryable error getting main course folder link: ${e.message}. Setting link to "Error retrieving link".`);
-                        mainFolderLink = `Error retrieving link (Non-retryable: ${e.message.substring(0,100)})`;
-                        break; // Break from retry loop for non-retryable errors
+                         mainFolderLink = await courseMegaNode.link({ key: courseMegaNode.key }); // Standard way for public link with key
+                    }
+                    linkSuccess = true;
+                    console.log(`[AutomationService] Successfully obtained main course folder link (with key if available) on attempt ${linkAttempts}: ${mainFolderLink}`);
+                } catch (e) {
+                    currentAttemptError = e;
+                    console.warn(`[AutomationService] Primary link attempt (with key) for main folder failed on attempt ${linkAttempts}: ${e.message}`);
+                    
+                    const eaccessError = (e.message && (e.message.includes('EACCESS') || e.message.includes('-11')));
+
+                    if (eaccessError) {
+                        console.log(`[AutomationService] EACCESS error detected. Attempting secondary link retrieval (without key) for main folder on attempt ${linkAttempts}...`);
+                        try {
+                            mainFolderLink = await courseMegaNode.link(); // Get link without explicit key (noKey: true is default for folders if key not specified)
+                            linkSuccess = true;
+                            console.log(`[AutomationService] Successfully obtained main course folder link (alternative - no key) on attempt ${linkAttempts} after EACCESS: ${mainFolderLink}`);
+                        } catch (e2) {
+                            console.warn(`[AutomationService] Secondary link attempt (without key) also failed for main folder on attempt ${linkAttempts}: ${e2.message}`);
+                            currentAttemptError = e2; // Update error to the latest one
+                        }
+                    }
+                    
+                    if (!linkSuccess) {
+                        if (linkAttempts >= MAX_LINK_ATTEMPTS) {
+                            const finalErrorMessageBase = `Failed to get main course folder link after ${MAX_LINK_ATTEMPTS} attempts.`;
+                            if (eaccessError) {
+                                console.error(`[AutomationService] CRITICAL: ${finalErrorMessageBase} Last error involved EACCESS. This usually means the Mega account lacks permission to export folder links with keys, or the folder is in a restricted share. Please check your Mega account settings. The folder was created, but its direct link is unavailable.`);
+                                mainFolderLink = `Error retrieving link (EACCESS: Check Mega account permissions. Last error: ${currentAttemptError.message.substring(0, 100)})`;
+                            } else {
+                                console.error(`[AutomationService] ${finalErrorMessageBase} Last error: ${currentAttemptError.message}.`);
+                                mainFolderLink = `Error retrieving link (Last error: ${currentAttemptError.message.substring(0, 100)})`;
+                            }
+                        } else if (currentAttemptError.message && (currentAttemptError.message.includes('EAGAIN') || currentAttemptError.message.includes('ERATE') || currentAttemptError.message.includes('Socket timeout'))) { // Check for retryable errors
+                            console.log(`[AutomationService] Retrying folder link retrieval (main folder) in ${LINK_RETRY_DELAY_MS * linkAttempts}ms due to retryable error: ${currentAttemptError.message}`);
+                            await new Promise(resolve => setTimeout(resolve, LINK_RETRY_DELAY_MS * linkAttempts));
+                        } else { // Non-retryable error (or not explicitly EACCESS for special message)
+                            console.error(`[AutomationService] Non-retryable error getting main course folder link: ${currentAttemptError.message}. Setting link to error string.`);
+                            mainFolderLink = `Error retrieving link (Non-retryable: ${currentAttemptError.message.substring(0, 100)})`;
+                            break; // Break from retry loop for non-retryable errors
+                        }
                     }
                 }
             }
-        } else if (courseMegaNode && courseMegaNode.link) { // If .link is a direct property (less likely for folders from megajs unless custom added)
+        } else if (courseMegaNode && courseMegaNode.link && typeof courseMegaNode.link !== 'function') { // If .link is a direct property
              mainFolderLink = courseMegaNode.link;
-             console.log('[AutomationService] Main course folder link obtained from direct .link property.');
+             console.log('[AutomationService] Main course folder link obtained from direct .link property (not a function).');
         } else {
-            console.warn('[AutomationService] Main course folder node is missing or does not have a link method/property. Link will be N/A.');
+            console.warn('[AutomationService] Main course folder node is missing, does not have a link method/property, or key is missing for keyed link. Link will be N/A.');
+            mainFolderLink = 'N/A (Folder node invalid or key missing for link generation)';
         }
 
         results.firestoreDataPreview = {
@@ -318,6 +397,11 @@ Highlight the key learning outcomes and what students will gain from this course
         };
 
         console.log('[AutomationService] Firestore Data Preview:', JSON.stringify(results.firestoreDataPreview, null, 2));
+        
+        if (results.firestoreDataPreview && results.firestoreDataPreview.status) {
+            console.log(`[AutomationService] Course data prepared with status: '${results.firestoreDataPreview.status}'. If the course is not immediately visible in the main user interface, please check if any manual approval, publishing step, or specific Firestore indexing/queries based on this status are required for it to appear for end-users.`);
+        }
+
         results.success = true;
         results.message = "Course automation tasks completed successfully. Firestore data preview logged.";
 
