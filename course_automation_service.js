@@ -111,7 +111,7 @@ async function automateNewCourseCreation(params) {
             finalApiKey
         );
         if (!textbookProcessingResult.success) throw new Error(`Textbook PDF processing failed: ${textbookProcessingResult.message}`);
-        results.megaLinks.processedChapters = textbookProcessingResult.chaptersProcessed.map(ch => ({
+        results.megaLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({
             title: ch.title, // Assuming 'title' is part of chapterFirestoreData structure
             pdfLink: ch.megaPdfLink, // Assuming 'megaPdfLink' is part of chapterFirestoreData
             key: `textbook_chapter_${ch.chapterNumber}` // Assuming 'chapterNumber' is part of chapterFirestoreData
