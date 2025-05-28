@@ -124,7 +124,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       }
   }
 
-  let effectiveApiKey = null;
+  // let effectiveApiKey = null; // This line is removed, the next declaration is kept.
   if (processedApiKey) { // A single key was successfully extracted from the input parameter
       effectiveApiKey = processedApiKey;
       console.log(`[AI Service - Text API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
@@ -298,7 +298,7 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
     throw new Error(`Prompt is required and must be a string. Received type: ${typeof prompt}`);
   }
 
-  let effectiveApiKey;
+  // let effectiveApiKey; // This line is removed, the next declaration is kept.
   let processedApiKey = apiKey; // Start with the input
   let logReasonForDefault = "API key not provided or empty after processing.";
 
