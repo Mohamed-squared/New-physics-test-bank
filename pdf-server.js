@@ -61,9 +61,6 @@ async function getBrowserInstance() {
                 '--font-render-hinting=none', // Consider 'medium' or 'full' for better text
                 '--enable-precise-memory-info',
                 '--disable-gpu', // Often recommended for server environments
-                // '--disable-web-security', // Use with caution if needed for local file access
-                // '--allow-file-access-from-files', // Use with caution
-                // '--disable-features=BlockTruncatedQueues', // May not be needed
             ],
             dumpio: process.env.DEBUG_PUPPETEER === 'true' // Conditional logging
         });
@@ -94,9 +91,8 @@ app.post('/generate-pdf', async (req, res) => {
             lowerFilename.includes('note_')) {
             cssFileNameToInject = 'pdf_formula_sheet_styles.css';
         }
-        // New condition for feedback PDF
         else if (lowerFilename.includes('feedback_report')) {
-             cssFileNameToInject = 'pdf_exam_styles.css'; // Or a dedicated feedback_styles.css
+             cssFileNameToInject = 'pdf_exam_styles.css'; 
              console.log(`[SERVER] Using ${cssFileNameToInject} for feedback report.`);
         }
         
@@ -135,7 +131,6 @@ app.post('/generate-pdf', async (req, res) => {
         }
     } catch (cssError) {
         console.error('[SERVER] Error reading or injecting CSS file:', cssError);
-        // Proceed without injected CSS, but log it clearly
     }
 
     console.log("[SERVER DEBUG] HTML Content Start (first 500 chars after CSS injection attempts):", htmlContent.substring(0, 500) + "...");
@@ -150,7 +145,7 @@ app.post('/generate-pdf', async (req, res) => {
             try {
                 const argsPromises = msg.args().map(arg => arg.jsonValue().catch(e => `Error serializing: ${e.message}`));
                 const args = await Promise.all(argsPromises);
-                 if (!args.some(arg => typeof arg === 'string' && arg.includes('[PDF HTML Inner] MathJax'))) { // Filter out verbose MathJax logs
+                 if (!args.some(arg => typeof arg === 'string' && arg.includes('[PDF HTML Inner] MathJax'))) { 
                     console.log(`[PUPPETEER PAGE - ${type}]:`, ...args);
                  }
             } catch (e) {
@@ -163,30 +158,26 @@ app.post('/generate-pdf', async (req, res) => {
         page.on('request', request => {
              const resourceType = request.resourceType();
              const url = request.url();
-             // Log image requests specifically or if they are from the expected path
              if (resourceType === 'image' || url.includes('/images/') || url.includes('/assets/images/')) {
                   console.log(`[PUPPETEER PAGE - REQUEST]: ${resourceType.toUpperCase()} ${request.method()} ${url}`);
              }
          });
 
         console.log('[SERVER] Setting page content in Puppeteer (CSS should be inline)...');
-        // Using `file://` protocol requires `--allow-file-access-from-files` and careful path construction if serving local HTML files.
-        // For HTML content string, `about:blank` then `setContent` is more reliable.
         await page.goto('about:blank', { waitUntil: 'networkidle0' });
         await page.setContent(htmlContent, {
-            waitUntil: 'networkidle0', // Waits for network to be idle (useful if HTML loads external resources)
+            waitUntil: 'networkidle0', 
             timeout: 90000 
         });
         console.log('[SERVER] Page content set. Waiting for MathJax global flag...');
 
         try {
             await page.waitForFunction('window.mathJaxIsCompletelyReadyForPdf === true || window.mathJaxIsCompletelyReadyForPdf === "error"', {
-                timeout: 75000 // Increased timeout for MathJax
+                timeout: 75000 
             });
             const mathJaxState = await page.evaluate(() => window.mathJaxIsCompletelyReadyForPdf);
             if (mathJaxState === 'error') {
                 console.error('[SERVER] MathJax signaled an error during its startup/typesetting in Puppeteer.');
-                // Potentially log more details from the page if MathJax provides them.
             } else if (mathJaxState === true) {
                 console.log('[SERVER] MathJax signaled ready via global flag.');
             } else {
@@ -194,7 +185,6 @@ app.post('/generate-pdf', async (req, res) => {
             }
         } catch (e) {
             console.error('[SERVER] Timeout or error waiting for MathJax signal `window.mathJaxIsCompletelyReadyForPdf`. Error:', e.message);
-            // Attempt to get more diagnostic info from the page
             const bodyHTMLSample = await page.evaluate(() => document.body.innerHTML.substring(0, 2000)).catch(() => "Could not get body HTML");
             console.error("[SERVER DEBUG] Body HTML sample on MathJax timeout:", bodyHTMLSample);
             const mathJaxScriptTag = await page.evaluate(() => document.getElementById('mathjax-pdf-script')?.outerHTML).catch(() => "MathJax script tag not found");
@@ -202,15 +192,14 @@ app.post('/generate-pdf', async (req, res) => {
         }
 
         console.log('[SERVER] Waiting a final short delay (e.g., 5s) for rendering stabilization after MathJax signal...');
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Delay to ensure rendering stability
+        await new Promise(resolve => setTimeout(resolve, 5000)); 
 
         console.log('[SERVER] Generating PDF with Puppeteer...');
         const pdfBuffer = await page.pdf({
             format: 'A4',
-            printBackground: true, // Crucial for custom backgrounds
-            margin: { top: '1.5cm', right: '1.2cm', bottom: '1.5cm', left: '1.2cm' }, // Slightly adjusted example margins
-            timeout: 120000, // Puppeteer PDF generation timeout
-            // preferCSSPageSize: true, // If you use @page in CSS
+            printBackground: true, 
+            margin: { top: '1.5cm', right: '1.2cm', bottom: '1.5cm', left: '1.2cm' }, 
+            timeout: 120000, 
         });
         console.log('[SERVER] PDF generated successfully by Puppeteer.');
 
@@ -283,8 +272,6 @@ app.post('/transcribe-lecture', async (req, res) => {
         if (result.success) {
             res.status(200).json(result);
         } else {
-            // If transcribeLecture handled the error and returned success:false, send a 500
-            // If it threw an error, it would be caught by the catch block below.
             res.status(500).json(result);
         }
     } catch (error) {
@@ -323,24 +310,22 @@ app.post('/list-mega-folder', async (req, res) => {
         let statusCode = 500;
         let message = `Server error while processing Mega folder: ${error.message}`;
 
-        // Specific error messages from mega_service_server.js or megajs library
         if (error.message) {
             const lowerErrorMessage = error.message.toLowerCase();
             if (lowerErrorMessage.includes('invalid input: must be a mega folder node') || 
                 lowerErrorMessage.includes('the provided node/link is not a folder') ||
-                lowerErrorMessage.includes('invalid url') || // from Storage.File.fromURL
-                lowerErrorMessage.includes('file or folder not found')) { // from fromURL if link is dead
+                lowerErrorMessage.includes('invalid url') || 
+                lowerErrorMessage.includes('file or folder not found')) { 
                 statusCode = 400;
                 message = "Invalid Mega link: The provided link does not appear to be a valid folder or is inaccessible.";
-            } else if (lowerErrorMessage.includes('eagain') || lowerErrorMessage.includes('failed to fetch')) { // Common Mega.js error for network issues or general fetch failures
-                statusCode = 503; // Service Unavailable
+            } else if (lowerErrorMessage.includes('eagain') || lowerErrorMessage.includes('failed to fetch')) { 
+                statusCode = 503; 
                 message = "Mega.nz service temporarily unavailable or network issue. Please try again later.";
             } else if (lowerErrorMessage.includes('access denied') || lowerErrorMessage.includes('permission denied')) {
-                statusCode = 403; // Forbidden
+                statusCode = 403; 
                 message = "Access denied: Insufficient permissions to access the Mega folder or link.";
             } else if (lowerErrorMessage.includes('mega storage is not initialized')) {
-                // This might indicate an issue with the megaEmail/megaPassword or the initialization step itself
-                statusCode = 401; // Unauthorized (though it could be bad credentials or service issue)
+                statusCode = 401; 
                 message = "Mega authentication failed. Please check credentials or Mega service status.";
             }
         }
@@ -348,7 +333,6 @@ app.post('/list-mega-folder', async (req, res) => {
         res.status(statusCode).json({
             success: false,
             message: message,
-            // error: error.stack // Consider removing for production for security
         });
     }
 });
@@ -373,7 +357,6 @@ app.post('/process-textbook-pdf', upload.single('pdfFile'), async (req, res) => 
 
     if (!courseId || !actualFirstPageNumber || !megaEmail || !megaPassword || !geminiApiKey) {
         console.error('[SERVER /process-textbook-pdf] Missing one or more required text parameters.');
-        // Clean up uploaded file if other params are missing
         if (pdfFile && pdfFile.path) {
             await fs.unlink(pdfFile.path).catch(err => console.error(`[SERVER] Error unlinking orphaned file: ${err.message}`));
         }
@@ -399,7 +382,7 @@ app.post('/process-textbook-pdf', upload.single('pdfFile'), async (req, res) => 
         if (result.success) {
             res.status(200).json(result);
         } else {
-            res.status(500).json(result); // Service handled error, returned success:false
+            res.status(500).json(result); 
         }
     } catch (error) {
         console.error('[SERVER /process-textbook-pdf] Unexpected error calling processTextbookPdf:', error);
@@ -409,7 +392,6 @@ app.post('/process-textbook-pdf', upload.single('pdfFile'), async (req, res) => 
             error: error.stack
         });
     } finally {
-        // Cleanup the temporary uploaded file
         if (pdfFile && pdfFile.path) {
             try {
                 await fs.unlink(pdfFile.path);
@@ -458,7 +440,7 @@ app.post('/generate-questions-from-pdf', async (req, res) => {
         if (result.success) {
             res.status(200).json(result);
         } else {
-            res.status(500).json(result); // Service handled error, returned success:false
+            res.status(500).json(result); 
         }
     } catch (error) {
         console.error('[SERVER /generate-questions-from-pdf] Unexpected error calling generateQuestionsFromPdf:', error);
@@ -475,7 +457,7 @@ app.post('/generate-questions-from-lectures', async (req, res) => {
     console.log('[SERVER] Received /generate-questions-from-lectures request.');
     const {
         courseId,
-        selectedLectures, // Array of { title: "Lecture Title", megaSrtLink: "..." }
+        selectedLectures, 
         chapterNameForLectures,
         megaEmail,
         megaPassword,
@@ -506,7 +488,7 @@ app.post('/generate-questions-from-lectures', async (req, res) => {
         if (result.success) {
             res.status(200).json(result);
         } else {
-            res.status(500).json(result); // Service handled error, returned success:false
+            res.status(500).json(result); 
         }
     } catch (error) {
         console.error('[SERVER /generate-questions-from-lectures] Unexpected error calling generateQuestionsFromLectures:', error);
@@ -521,10 +503,9 @@ app.post('/generate-questions-from-lectures', async (req, res) => {
 // --- Automated Full Course Creation Endpoint ---
 app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
     console.log('[SERVER] Received /automate-full-course request.');
-    const uploadedFilePaths = []; // To keep track of files for cleanup
+    const uploadedFilePaths = []; 
 
     try {
-        // Extract files
         const textbookPdfFile = (req.files && req.files['textbookPdf'] && req.files['textbookPdf'][0]) ? req.files['textbookPdf'][0] : null;
         const lectureFiles = (req.files && req.files['lectureFiles']) ? req.files['lectureFiles'] : [];
 
@@ -533,95 +514,107 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
         }
         lectureFiles.forEach(file => uploadedFilePaths.push(file.path));
 
-        // Extract body parameters
         const {
             courseTitle,
             trueFirstPageNumber,
-            lecturesMetadata, // JSON string
+            lecturesMetadata, 
             majorTag,
             subjectTag,
             megaEmail,
             megaPassword,
-            // geminiApiKey, // We will handle this with more care below
             assemblyAiApiKey
         } = req.body;
 
-        let geminiApiKey = req.body.geminiApiKey; // Keep the original reference for logging if needed
-
-        // Validate required parameters (excluding geminiApiKey for now, will validate its processed form)
-        if (!courseTitle || !textbookPdfFile || !trueFirstPageNumber || !megaEmail || !megaPassword /* !geminiApiKey - validated below */ || !assemblyAiApiKey || !majorTag || !subjectTag) {
-            console.error('[SERVER /automate-full-course] Missing one or more basic required parameters (geminiApiKey checked separately).');
-            // Clean up files if basic params are missing
-            if (textbookPdfFile && textbookPdfFile.path) await fs.unlink(textbookPdfFile.path).catch(err => console.error(`Error unlinking textbook on param fail: ${err.message}`));
-            lectureFiles.forEach(async file => { if (file && file.path) await fs.unlink(file.path).catch(err => console.error(`Error unlinking lecture file on param fail: ${err.message}`)); });
-            
+        if (!courseTitle || !textbookPdfFile || !trueFirstPageNumber || !megaEmail || !megaPassword || !assemblyAiApiKey || !majorTag || !subjectTag) {
+            console.error('[SERVER /automate-full-course] Missing one or more basic required parameters.');
             return res.status(400).json({
                 success: false,
-                message: 'Missing required parameters. Ensure courseTitle, textbookPdf, trueFirstPageNumber, megaEmail, megaPassword, assemblyAiApiKey, majorTag, and subjectTag are provided. Gemini API Key is also required but validated separately.'
+                message: 'Missing required parameters. Ensure courseTitle, textbookPdf, trueFirstPageNumber, megaEmail, megaPassword, assemblyAiApiKey, majorTag, and subjectTag are provided. Gemini API Key is also required.'
             });
         }
         
         let rawGeminiApiKey = req.body.geminiApiKey;
-        let effectiveGeminiApiKey = null;
-        const originalApiKeyType = typeof rawGeminiApiKey;
-        const originalApiKeySnippet = typeof rawGeminiApiKey === 'string' ? rawGeminiApiKey.substring(0, 50) + '...' : JSON.stringify(rawGeminiApiKey, null, 2);
-        
-        console.log(`[SERVER /automate-full-course] Received raw Gemini API Key. Type: ${originalApiKeyType}, Snippet: ${originalApiKeySnippet}`);
+        let apiKeyForService = null; // This will hold the array or single string to pass to the service
 
-        if (typeof rawGeminiApiKey === 'string' && rawGeminiApiKey.trim() !== '') {
-            // Check if it's a stringified array like '["key1","key2"]'
-            if (rawGeminiApiKey.startsWith('[') && rawGeminiApiKey.endsWith(']')) {
+        const originalApiKeyType = typeof rawGeminiApiKey;
+        // Keep existing snippet logging if you want
+        const originalApiKeySnippet = typeof rawGeminiApiKey === 'string' ? rawGeminiApiKey.substring(0, 50) + '...' : JSON.stringify(rawGeminiApiKey, null, 2);
+        console.log(`[SERVER /automate-full-course] Received raw Gemini API Key for processing. Type: ${originalApiKeyType}, Snippet: ${originalApiKeySnippet}`);
+
+
+        if (Array.isArray(rawGeminiApiKey)) {
+            console.log('[SERVER /automate-full-course] Raw Gemini API key is an array:', rawGeminiApiKey);
+            const validKeysInArray = rawGeminiApiKey.filter(k => typeof k === 'string' && k.trim() !== '');
+            if (validKeysInArray.length > 0) {
+                apiKeyForService = validKeysInArray; // Pass the filtered array
+                console.log(`[SERVER /automate-full-course] Using array of ${validKeysInArray.length} valid API key(s).`);
+            } else {
+                console.warn('[SERVER /automate-full-course] Received API key array is empty or contains no valid strings.');
+                // apiKeyForService remains null
+            }
+        } else if (typeof rawGeminiApiKey === 'string' && rawGeminiApiKey.trim() !== '') {
+            const trimmedKey = rawGeminiApiKey.trim();
+            if (trimmedKey.startsWith('[') && trimmedKey.endsWith(']')) {
                 try {
-                    const parsedArray = JSON.parse(rawGeminiApiKey);
+                    const parsedArray = JSON.parse(trimmedKey);
                     if (Array.isArray(parsedArray)) {
-                        console.log('[SERVER /automate-full-course] Raw Gemini API key is a stringified array. Parsed:', parsedArray);
-                        effectiveGeminiApiKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
-                        if (effectiveGeminiApiKey) effectiveGeminiApiKey = effectiveGeminiApiKey.trim();
+                        console.log('[SERVER /automate-full-course] Raw Gemini API key was a stringified array. Parsed.');
+                        const validKeysInParsedArray = parsedArray.filter(k => typeof k === 'string' && k.trim() !== '');
+                        if (validKeysInParsedArray.length > 0) {
+                            apiKeyForService = validKeysInParsedArray; // Pass the filtered parsed array
+                            console.log(`[SERVER /automate-full-course] Using parsed array of ${validKeysInParsedArray.length} valid API key(s).`);
+                        } else {
+                            console.warn('[SERVER /automate-full-course] Parsed API key array is empty or contains no valid strings.');
+                            // apiKeyForService remains null
+                        }
+                    } else { // Parsed but not an array
+                        console.warn('[SERVER /automate-full-course] Stringified API key did not parse into an array. Treating as single key.');
+                        apiKeyForService = trimmedKey; // Pass the original string
                     }
                 } catch (e) {
-                    console.warn('[SERVER /automate-full-course] Failed to parse stringified array-like API key, using string directly if valid:', e.message);
-                    // If parsing fails, it might be a key that happens to start/end with brackets.
-                    effectiveGeminiApiKey = rawGeminiApiKey.trim(); 
+                    console.warn(`[SERVER /automate-full-course] Failed to parse stringified array-like API key, treating as single key: ${e.message}`);
+                    apiKeyForService = trimmedKey; // Pass the original string
                 }
-            } else {
-                 effectiveGeminiApiKey = rawGeminiApiKey.trim();
+            } else { // Simple string key
+                 console.log('[SERVER /automate-full-course] Raw Gemini API key is a single string.');
+                 apiKeyForService = trimmedKey; // Pass the single string
             }
-        } else if (Array.isArray(rawGeminiApiKey)) {
-            console.log('[SERVER /automate-full-course] Raw Gemini API key is an array:', rawGeminiApiKey);
-            effectiveGeminiApiKey = rawGeminiApiKey.find(k => typeof k === 'string' && k.trim() !== '');
-            if (effectiveGeminiApiKey) effectiveGeminiApiKey = effectiveGeminiApiKey.trim();
         } else if (typeof rawGeminiApiKey === 'object' && rawGeminiApiKey !== null) {
-            console.log('[SERVER /automate-full-course] Raw Gemini API key is an object:', rawGeminiApiKey);
-            const commonKeys = ['key', 'apiKey', 'value'];
+            console.log('[SERVER /automate-full-course] Raw Gemini API key is an object. Attempting to extract a single key.');
+            const commonKeys = ['key', 'apiKey', 'value']; // Add other potential key names if necessary
+            let foundKey = null;
             for (const k of commonKeys) {
                 if (typeof rawGeminiApiKey[k] === 'string' && rawGeminiApiKey[k].trim() !== '') {
-                    effectiveGeminiApiKey = rawGeminiApiKey[k].trim();
+                    foundKey = rawGeminiApiKey[k].trim();
                     break;
                 }
             }
+            if (foundKey) {
+                apiKeyForService = foundKey; // Pass the single extracted string
+                console.log(`[SERVER /automate-full-course] Extracted single API key from object: ${foundKey.substring(0,15)}...`);
+            } else {
+                 console.warn('[SERVER /automate-full-course] Could not extract a valid string API key from object.');
+                 // apiKeyForService remains null
+            }
         }
 
-        if (effectiveGeminiApiKey) {
-            console.log(`[SERVER /automate-full-course] Extracted Gemini API Key: ${effectiveGeminiApiKey.substring(0,15)}...`);
-        } else {
-            console.error(`[SERVER /automate-full-course] CRITICAL: Could not extract a valid string Gemini API Key from the provided input. Original type: ${originalApiKeyType}, Original value snippet: ${originalApiKeySnippet}. Aborting course automation for this request.`);
-            // Clean up uploaded files as API key is crucial and not found/resolved
-            if (textbookPdfFile && textbookPdfFile.path) {
-                await fs.unlink(textbookPdfFile.path).catch(err => console.error(`[SERVER /automate-full-course] Error unlinking textbook on API key extraction failure: ${err.message}`));
-            }
-            lectureFiles.forEach(async file => {
-                if (file && file.path) {
-                    await fs.unlink(file.path).catch(err => console.error(`[SERVER /automate-full-course] Error unlinking lecture file on API key extraction failure: ${err.message}`));
-                }
-            });
-
+        // Validation: Ensure some form of key is present before calling the service
+        if (!apiKeyForService || (Array.isArray(apiKeyForService) && apiKeyForService.length === 0)) {
+            console.error(`[SERVER /automate-full-course] CRITICAL: No valid Gemini API Key could be resolved from the provided input. Aborting course automation.`);
+            // Ensure files are cleaned up (existing cleanup logic should handle this if error is thrown or returned)
             return res.status(400).json({
                 success: false,
-                message: 'Gemini API Key is missing, empty, or provided in an unusable format. A valid string API key could not be extracted.'
+                message: 'Gemini API Key is missing, empty, or provided in an unusable format. A valid API key or array of keys is required.'
             });
         }
+        
+        // Log what is being passed (be careful with logging full arrays of keys in production)
+        if (Array.isArray(apiKeyForService)) {
+            console.log(`[SERVER /automate-full-course] Passing an array of ${apiKeyForService.length} API key(s) to the automation service.`);
+        } else { // It's a string
+            console.log(`[SERVER /automate-full-course] Passing a single API key string to the automation service: ${apiKeyForService.substring(0,15)}...`);
+        }
 
-        // Parse lecturesMetadata
         let lecturesInfo = [];
         if (lecturesMetadata) {
             try {
@@ -635,47 +628,42 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
             }
         }
 
-        // Map uploaded lecture files to their metadata
         if (lectureFiles.length > 0) {
             lectureFiles.forEach(file => {
                 const lectureMeta = lecturesInfo.find(l => l.originalFileName === file.originalname);
                 if (lectureMeta) {
-                    lectureMeta.filePath = file.path; // Add server path of uploaded file
+                    lectureMeta.filePath = file.path; 
                 } else {
-                    // If client doesn't send metadata for an uploaded file, create a basic entry
                     console.warn(`[SERVER /automate-full-course] Uploaded lecture file ${file.originalname} has no matching metadata. Creating a fallback entry.`);
                     lecturesInfo.push({ 
-                        title: file.originalname, // Use original filename as title
+                        title: file.originalname, 
                         filePath: file.path, 
-                        associatedChapterKey: 'default_chapter_key_for_uploaded_file' // Default or derive as needed
-                        // Other fields like youtubeUrl, megaLink, srtMegaLink would be null/undefined
+                        associatedChapterKey: 'default_chapter_key_for_uploaded_file' 
                     });
                 }
             });
         }
         
-        // Construct params for the service
         const serviceParams = {
             courseTitle,
             textbookPdfPath: textbookPdfFile.path,
             textbookPdfOriginalName: textbookPdfFile.originalname,
             trueFirstPageNumber,
-            lectures: lecturesInfo, // This now includes filePaths for uploaded files
+            lectures: lecturesInfo, 
             majorTag,
             subjectTag,
             megaEmail,
             megaPassword,
-            geminiApiKey: effectiveGeminiApiKey, // Pass the VALIDATED and extracted key
+            geminiApiKey: apiKeyForService, 
             assemblyAiApiKey
         };
 
-        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}" with validated Gemini API key.`);
+        console.log(`[SERVER /automate-full-course] Calling automateNewCourseCreation for course: "${courseTitle}" with processed API key information.`);
         const result = await courseAutomationService.automateNewCourseCreation(serviceParams);
 
         if (result.success) {
             res.status(200).json(result);
         } else {
-            // Use a 500 status code for server-side errors from the automation service
             res.status(500).json(result);
         }
 
@@ -684,10 +672,9 @@ app.post('/automate-full-course', courseAutomationUpload, async (req, res) => {
         res.status(500).json({
             success: false,
             message: `Server error during course automation: ${error.message}`,
-            error: error.stack // Optional: include stack for debugging
+            error: error.stack 
         });
     } finally {
-        // Cleanup uploaded files
         console.log('[SERVER /automate-full-course] Cleaning up temporary files:', uploadedFilePaths);
         for (const filePath of uploadedFilePaths) {
             if (fs.existsSync(filePath)) {
