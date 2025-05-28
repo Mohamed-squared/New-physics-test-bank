@@ -167,7 +167,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
 
     const generationConfig = {
       temperature: 0.6,
-      maxOutputTokens: 2048, // Reduced back from 4096
+      maxOutputTokens: 65536, // Reduced back from 4096
       // topK, topP can also be set here if needed
     };
 
@@ -365,7 +365,7 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       }
   }
   
-  let effectiveApiKey = null;
+  
   if (processedApiKey) { // A single key was successfully extracted from the input parameter
       effectiveApiKey = processedApiKey;
       console.log(`[AI Service - Vision API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
@@ -432,7 +432,7 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
 
     const generationConfig = {
       temperature: 0.4, // Adjusted for potentially more factual responses from vision
-      maxOutputTokens: 4096, // Vision models can sometimes return longer descriptions
+      maxOutputTokens: 65536, // Vision models can sometimes return longer descriptions
       topP: 1.0, // Default from client-side vision example
       topK: 32,  // Default from client-side vision example
     };

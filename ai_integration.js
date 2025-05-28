@@ -228,7 +228,7 @@ export async function callGeminiTextAPI(prompt, history = null, systemPromptKey 
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ];
     const generationConfig = {
-        temperature: 0.6, topK: 40, topP: 0.95, maxOutputTokens: 8192, stopSequences: ["\n\n\n"]
+        temperature: 0.6, topK: 40, topP: 0.95, maxOutputTokens: 65536, stopSequences: ["\n\n\n"]
     };
 
     const generationArgs = {
@@ -330,7 +330,7 @@ export async function callGeminiVisionAPI(promptParts) {
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
     ];
     const generationConfigVision = {
-        temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 4096,
+        temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536,
     };
     const visionRequestPayload = {
         contents: [{ role: "user", parts: promptParts }],
@@ -664,7 +664,7 @@ export async function getExplanationForPdfSnapshot(userQuestion, base64ImageData
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ];
         const generationConfigVisionSnapshot = {
-            temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 4096 
+            temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536
         };
 
         while (attempts < maxAttempts) {
