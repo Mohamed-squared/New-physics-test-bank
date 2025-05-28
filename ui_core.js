@@ -383,6 +383,6 @@ export function updateMenuButtonNotification() {
     menuButton.classList.toggle('has-notification', shouldShowNotification);
 }
 
-window.updateMenuButtonNotification = updateMenuButtonNotification;
+// window.updateMenuButtonNotification = updateMenuButtonNotification; // ES Exported
 
 // --- END OF FILE ui_core.js ---

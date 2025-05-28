@@ -7,6 +7,7 @@ import { PDF_GENERATION_OPTIONS, LATEX_DOCUMENT_CLASS,
          PASSING_GRADE_PERCENT } from './config.js';
 import { showLoading, hideLoading, renderMathIn, escapeHtml } from './utils.js';
 import { cleanTextForFilename } from './filename_utils.js';
+import { generateExplanation } from './ai_exam_marking.js'; // Added import
 
 // --- Base HTML for General Exams (Questions/Solutions) ---
 export function generatePdfBaseHtml(title, innerContentHtml) {
@@ -75,6 +76,16 @@ export function generatePdfBaseHtml(title, innerContentHtml) {
 }
 
 // --- Base HTML for Formula Sheets & Summaries (links to different CSS) ---
+// IMPORTANT STYLING NOTE:
+// The visual appearance of PDFs generated using this function heavily depends on an
+// external CSS file, expected to be 'pdf_formula_sheet_styles.css'.
+// This file is injected by the server during PDF generation.
+// If this CSS file is missing, not correctly linked by the server, or if the
+// class names used here (e.g., pdf-fs-main-content, pdf-fs-title, pdf-fs-body-text)
+// do not match those in the CSS, the resulting PDF may have significant styling issues
+// (e.g., incorrect layout, fonts, colors, margins).
+// Ensure 'pdf_formula_sheet_styles.css' exists, is correctly configured on the server-side
+// PDF generation endpoint, and targets the class names used in this HTML structure.
 export function generateFormulaSheetPdfBaseHtml(title, innerContentHtml) {
     const escapedTitle = escapeHtml(title);
     const styles = `
@@ -137,10 +148,29 @@ export function generateFormulaSheetPdfBaseHtml(title, innerContentHtml) {
     `;
 }
 
-export function generatePdfHtml(examId, questions) {
+export async function generatePdfHtml(examDetails) {
+    const { examId, questions, userAnswers, markingResults } = examDetails; // Destructure from examDetails
     const placeholderText = '[Content Missing]';
     let questionItemsHtml = '';
     let solutionItemsHtml = '';
+
+    showLoading("Generating AI explanations for PDF...");
+    const aiExplanations = [];
+    for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
+        const studentAnswer = userAnswers?.[question.id];
+        const questionMarkingResult = markingResults?.questionResults?.find(r => r.questionId === question.id);
+
+        try {
+            // Pass null for correctAnswer for problems, and markingResult for context
+            const explanationResult = await generateExplanation(question, questionMarkingResult, studentAnswer, []);
+            aiExplanations[i] = explanationResult.explanationHtml;
+        } catch (error) {
+            console.error(`Error generating explanation for question ${question.id} for PDF:`, error);
+            aiExplanations[i] = "<p><i>Error generating AI explanation for this question.</i></p>";
+        }
+    }
+    hideLoading();
 
     // Determine imageBasePath
     let imageBasePath = './'; // Default fallback
@@ -233,14 +263,24 @@ export function generatePdfHtml(examId, questions) {
         `;
         questionItemsHtml += `<li class="${questionItemClasses}">${questionItemContent}</li>`;
 
+        const studentAnswerDisplay = escapeHtml(userAnswers?.[q.id] || "Not Answered"); // Get student's answer
+
          const solutionItemContent = `
              <div class="question-header">${isProblemType ? 'Problem' : 'Question'} ${questionNumber}${q.chapter ? ` (Ch ${q.chapter})` : ''}</div>
              <div class="question-text">${qTextForHtml}</div>
              ${imageHtml}
              ${solutionOptionsHtml || ''}
              <div class="solution-section page-break-inside-avoid">
-                 <span class="solution-label">Answer:</span>
+                 <span class="solution-label">Correct Answer:</span>
                  <div class="solution-text">${solutionAnswerText}</div>
+             </div>
+             <div class="student-answer-section page-break-inside-avoid">
+                 <span class="solution-label">Your Answer:</span>
+                 <div class="solution-text">${studentAnswerDisplay}</div>
+             </div>
+             <div class="ai-explanation-section page-break-inside-avoid">
+                 <span class="solution-label">AI Detailed Explanation:</span>
+                 <div class="ai-explanation-text">${aiExplanations[index] || "<p><i>AI explanation not available.</i></p>"}</div>
              </div>
          `;
         solutionItemsHtml += `<li class="${questionItemClasses}">${solutionItemContent}</li>`;

@@ -83,12 +83,12 @@ export function showManageSubjects() {
             let adminActionsHtml = '';
             if (currentUser.isAdmin && subject.id !== '1') { // Assuming '1' (FoP) isn't managed this way
                 if (status === 'pending') {
-                    adminActionsHtml = `<button onclick="window.handleSubjectApproval('${id}', 'approved')" class="btn-success-small text-xs">Approve</button>
-                                        <button onclick="window.handleSubjectApproval('${id}', 'rejected')" class="btn-danger-small text-xs">Reject</button>`;
+                    adminActionsHtml = `<button data-subject-id="${id}" data-action="approve" class="admin-subject-action-btn btn-success-small text-xs">Approve</button>
+                                        <button data-subject-id="${id}" data-action="reject" class="admin-subject-action-btn btn-danger-small text-xs">Reject</button>`;
                 } else if (status === 'rejected') {
-                    adminActionsHtml = `<button onclick="window.handleSubjectApproval('${id}', 'approved')" class="btn-success-small text-xs">Re-approve</button>`;
+                    adminActionsHtml = `<button data-subject-id="${id}" data-action="approve" class="admin-subject-action-btn btn-success-small text-xs">Re-approve</button>`;
                 } else if (status === 'approved') {
-                    adminActionsHtml = `<button onclick="window.handleSubjectApproval('${id}', 'rejected')" class="btn-warning-small text-xs">Revoke Approval</button>`;
+                    adminActionsHtml = `<button data-subject-id="${id}" data-action="reject" class="admin-subject-action-btn btn-warning-small text-xs">Revoke Approval</button>`;
                 }
             }
 
@@ -105,10 +105,10 @@ export function showManageSubjects() {
                     ${currentUser.isAdmin ? `<span class="block text-xs text-muted truncate">Created by: ${creatorName} on ${createdAt} (UID: ${subject.creatorUid || 'N/A'})</span>` : ''}
                 </div>
                 <div class="flex space-x-2 flex-shrink-0">
-                    ${canSelect ? `<button onclick="window.selectSubject('${id}')" title="Select Subject" class="p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 disabled:opacity-50 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-colors" ${isCurrent ? 'disabled' : ''}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg></button>` : `<button title="Subject not approved for selection" class="p-1 text-gray-400 dark:text-gray-500 cursor-not-allowed" disabled><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" /></svg></button>`}
-                    ${canEditGlobal ? `<button onclick="window.editSubject('${id}')" title="Edit Global Subject Definition" class="p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg></button>` : ''}
+                    ${canSelect ? `<button data-subject-id="${id}" title="Select Subject" class="select-subject-btn p-1 text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 disabled:opacity-50 disabled:text-gray-400 dark:disabled:text-gray-500 disabled:cursor-not-allowed transition-colors" ${isCurrent ? 'disabled' : ''}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg></button>` : `<button title="Subject not approved for selection" class="p-1 text-gray-400 dark:text-gray-500 cursor-not-allowed" disabled><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" /></svg></button>`}
+                    ${canEditGlobal ? `<button data-subject-id="${id}" title="Edit Global Subject Definition" class="edit-subject-btn p-1 text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path d="m2.695 14.762-1.262 3.155a.5.5 0 0 0 .65.65l3.155-1.262a4 4 0 0 0 1.343-.886L17.5 5.501a2.121 2.121 0 0 0-3-3L3.58 13.42a4 4 0 0 0-.885 1.343Z" /></svg></button>` : ''}
                     ${adminActionsHtml}
-                    ${canDeleteGlobal ? `<button onclick="window.confirmDeleteSubject('${id}')" title="Delete Global Subject Definition" class="p-1 text-danger hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.326.419C2.675 4.793 2 5.51 2 6.318V15.75A2.25 2.25 0 0 0 4.25 18h11.5A2.25 2.25 0 0 0 18 15.75V6.318c0-.808-.675-1.525-1.674-1.699a18.17 18.17 0 0 0-2.326-.419v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg></button>` : ''}
+                    ${canDeleteGlobal ? `<button data-subject-id="${id}" title="Delete Global Subject Definition" class="confirm-delete-subject-btn p-1 text-danger hover:text-red-700 dark:text-red-500 dark:hover:text-red-400 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.58.22-2.326.419C2.675 4.793 2 5.51 2 6.318V15.75A2.25 2.25 0 0 0 4.25 18h11.5A2.25 2.25 0 0 0 18 15.75V6.318c0-.808-.675-1.525-1.674-1.699a18.17 18.17 0 0 0-2.326-.419v-.443A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" /></svg></button>` : ''}
                 </div>
             </div>`;
         }).join('')
@@ -126,7 +126,7 @@ export function showManageSubjects() {
             </div>
             <div class="content-card">
                 <h3 class="text-lg font-semibold mb-4 border-b pb-2 dark:border-gray-700">${formTitle}</h3>
-                <form id="add-subject-form" onsubmit="window.addSubject(event)" class="space-y-4">
+                <form id="add-subject-form" class="space-y-4">
                     <div><label for="subject-name">Subject Name</label><input id="subject-name" type="text" placeholder="e.g., Quantum Mechanics" required></div>
                     <div><label for="subject-coursedirname">Resource Directory Name</label><input id="subject-coursedirname" type="text" placeholder="e.g., quantum_mechanics_adv" required><p class="form-help-text">A unique folder name for this subject's resources (under <code>./courses/</code>).</p></div>
                     <div><label for="subject-mcqfilename">MCQ Markdown Filename</label><input id="subject-mcqfilename" type="text" placeholder="e.g., QM_MCQs.md" required pattern="^[^\\\\/:\\*?\\"&lt;&gt;\\|]+$" title="Filename cannot contain invalid characters."><p class="form-help-text">Main MCQ definition file. Must end in '.md'. ${formHelpTextResources}</p></div>
@@ -144,6 +144,25 @@ export function showManageSubjects() {
 
     displayContent(output);
     setActiveSidebarLink('showManageSubjects', 'testgen-dropdown-content');
+
+    // Add event listeners for dynamically created buttons
+    document.querySelectorAll('.select-subject-btn').forEach(button => {
+        button.addEventListener('click', () => selectSubject(button.dataset.subjectId));
+    });
+    document.querySelectorAll('.edit-subject-btn').forEach(button => {
+        button.addEventListener('click', () => editSubject(button.dataset.subjectId));
+    });
+    document.querySelectorAll('.admin-subject-action-btn').forEach(button => {
+        button.addEventListener('click', () => handleSubjectApproval(button.dataset.subjectId, button.dataset.action));
+    });
+    document.querySelectorAll('.confirm-delete-subject-btn').forEach(button => {
+        button.addEventListener('click', () => confirmDeleteSubject(button.dataset.subjectId));
+    });
+
+    const addSubjectForm = document.getElementById('add-subject-form');
+    if (addSubjectForm) {
+        addSubjectForm.addEventListener('submit', addSubject);
+    }
 }
 
 export async function addSubject(event) {
@@ -230,7 +249,7 @@ export function editSubject(id) {
     displayContent(`
         <div class="animate-fade-in">
             <h2 class="text-2xl font-semibold mb-6 ...">Edit Global Subject: <span class="...">${escapeHtml(subjectDef.name)}</span></h2>
-            <form id="edit-subject-form" onsubmit="window.updateSubject(event, '${id}')" class="space-y-4 content-card">
+            <form id="edit-subject-form" data-subject-id="${id}" class="space-y-4 content-card">
                 <div><label for="edit-subject-name">Subject Name</label><input id="edit-subject-name" type="text" value="${escapeHtml(subjectDef.name || '')}" required></div>
                 <div><label for="edit-subject-coursedirname">Resource Directory Name</label><input id="edit-subject-coursedirname" type="text" value="${escapeHtml(subjectDef.courseDirName || '')}" required></div>
                 <div><label for="edit-subject-mcqfilename">MCQ Filename</label><input id="edit-subject-mcqfilename" type="text" value="${escapeHtml(subjectDef.mcqFileName || '')}" required></div>
@@ -242,10 +261,19 @@ export function editSubject(id) {
                 <div><label for="edit-mcq-problem-ratio">MCQ/Problem Ratio (%)</label><input id="edit-mcq-problem-ratio" type="number" min="0" max="100" step="5" value="${mcqRatioPercent.toFixed(0)}" required></div>
                 <div><label for="edit-default-duration">Default Test Duration (Minutes)</label><input id="edit-default-duration" type="number" min="10" value="${defaultDuration}" required></div>
                 <div><label>Status</label><p class="form-control-plaintext ...">${escapeHtml(subjectDef.status)}</p></div>
-                <div class="flex ..."><button type="submit" class="btn-primary ...">Save Changes</button><button type="button" onclick="window.showManageSubjects()" class="btn-secondary ...">Cancel</button></div>
+                <div class="flex ..."><button type="submit" class="btn-primary ...">Save Changes</button><button type="button" id="cancel-edit-subject-btn" class="btn-secondary ...">Cancel</button></div>
             </form>
         </div>`);
     setActiveSidebarLink('showManageSubjects', 'testgen-dropdown-content');
+
+    const editForm = document.getElementById('edit-subject-form');
+    if (editForm) {
+        editForm.addEventListener('submit', (e) => updateSubject(e, editForm.dataset.subjectId));
+    }
+    const cancelBtn = document.getElementById('cancel-edit-subject-btn');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', showManageSubjects);
+    }
 }
 
 export async function updateSubject(event, id) {
@@ -544,13 +572,13 @@ export async function handleSubjectApproval(subjectId, newStatus) {
 
 
 // Ensure window assignments match function names
-window.showManageSubjects = showManageSubjects;
-window.selectSubject = selectSubject;
-window.editSubject = editSubject;
-window.updateSubject = updateSubject;
-window.addSubject = addSubject;
-window.confirmDeleteSubject = confirmDeleteSubject;
-window.deleteSubject = deleteSubject;
-window.handleSubjectApproval = handleSubjectApproval; // For global subjects
+// window.showManageSubjects = showManageSubjects; // ES Exported
+// window.selectSubject = selectSubject; // ES Exported
+// window.editSubject = editSubject; // ES Exported
+// window.updateSubject = updateSubject; // ES Exported
+// window.addSubject = addSubject; // ES Exported
+// window.confirmDeleteSubject = confirmDeleteSubject; // ES Exported
+// window.deleteSubject = deleteSubject; // ES Exported
+// window.handleSubjectApproval = handleSubjectApproval; // ES Exported
 
 // --- END OF FILE ui_subjects.js ---

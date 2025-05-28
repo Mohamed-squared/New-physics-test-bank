@@ -1,0 +1,1 @@
+Test content for file 2. Another small test file.

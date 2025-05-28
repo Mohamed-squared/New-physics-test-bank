@@ -4,16 +4,59 @@ import { currentOnlineTestState, setCurrentOnlineTestState, currentSubject, curr
 import { displayContent, clearContent, setActiveSidebarLink } from './ui_core.js';
 // MODIFIED: renderMathIn is now directly available from window.renderMathIn setup in script.js
 // but it's good practice to import if it's a module. Assuming it's globally available for now.
-import { showLoading, hideLoading, escapeHtml, getFormattedDate } from './utils.js'; 
+import { showLoading, hideLoading, escapeHtml, getFormattedDate, renderMathIn } from './utils.js'; // Added renderMathIn
 import { saveUserData, markChapterStudiedInCourse, saveUserCourseProgress } from './firebase_firestore.js';
 import { showTestGenerationDashboard } from './ui_test_generation.js';
 import { showExamsDashboard } from './ui_exams_dashboard.js';
+import { showCurrentAssignmentsExams } from './ui_course_dashboard.js'
 import { SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT, MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE } from './config.js'; // Added MAX_BONUS_FROM_TESTGEN, MAX_TOTAL_TESTGEN_BONUS_CAP_FOR_COURSE
 import { storeExamResult, getExamDetails, showExamReviewUI, showIssueReportingModal, submitIssueReport } from './exam_storage.js';
 import { generateLatexToolbar } from './ui_latex_toolbar.js';
+
+// Module-level variable to store the active key listener
+let activeTestKeyListener = null;
+
 // --- Online Test UI & Logic ---
 
+// New function to handle keyboard navigation
+function handleOnlineTestKeystrokes(event) {
+    if (!currentOnlineTestState || currentOnlineTestState.status !== 'active') {
+        return;
+    }
+
+    const testArea = document.getElementById('online-test-area');
+    if (!testArea || testArea.classList.contains('hidden')) {
+        return; // Test UI not visible
+    }
+
+    // Ignore key events if the target is an input field, textarea, or contenteditable element
+    const targetTagName = event.target.tagName;
+    if (targetTagName === 'INPUT' || targetTagName === 'TEXTAREA' || event.target.isContentEditable) {
+        return;
+    }
+
+    if (event.key === 'ArrowLeft') {
+        const prevBtn = document.getElementById('prev-btn');
+        if (prevBtn && !prevBtn.disabled) {
+            window.navigateQuestion(-1);
+            event.preventDefault();
+        }
+    } else if (event.key === 'ArrowRight') {
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn && !nextBtn.disabled) {
+            window.navigateQuestion(1);
+            event.preventDefault();
+        }
+    }
+}
+
 export function launchOnlineTestUI() {
+    // Remove any existing listener before setting up a new one
+    if (activeTestKeyListener) {
+        document.removeEventListener('keydown', activeTestKeyListener);
+        activeTestKeyListener = null;
+    }
+
     clearContent();
     const testArea = document.getElementById('online-test-area');
     
@@ -63,7 +106,7 @@ export function launchOnlineTestUI() {
                 ${escapeHtml(displayTitle)}
             </span>
             <div class="flex items-center space-x-4">
-                <button id="force-submit-btn" onclick="window.confirmForceSubmit()" class="btn-danger-small hidden flex-shrink-0">Submit Now</button>
+                <button id="force-submit-btn" class="btn-danger-small hidden flex-shrink-0">Submit Now</button>
                 <div id="timer" class="text-lg font-mono px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0">--:--:--</div>
             </div>
         </div>
@@ -73,25 +116,42 @@ export function launchOnlineTestUI() {
     </div>
     <div class="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 p-3 shadow-up z-40 border-t dark:border-gray-700">
          <div class="container mx-auto flex justify-between items-center">
-             <button id="prev-btn" onclick="window.navigateQuestion(-1)" class="btn-secondary" disabled>
+             <button id="prev-btn" class="btn-secondary" disabled>
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" /></svg>
                  Previous
              </button>
             <span id="question-counter" class="text-sm text-gray-600 dark:text-gray-400">Question 1 / ${totalQuestions}</span>
-             <button id="next-btn" onclick="window.navigateQuestion(1)" class="btn-primary">
+             <button id="next-btn" class="btn-primary">
                  Next
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 ml-1"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg>
              </button>
-             <button id="submit-btn" onclick="window.confirmSubmitOnlineTest()" class="btn-success hidden">
+             <button id="submit-btn" class="btn-success hidden">
                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" /></svg>
                  Submit Test
              </button>
         </div>
     </div>
     `;
+    
+    // Add event listeners to buttons
+    const forceSubmitBtn = testArea.querySelector('#force-submit-btn');
+    if (forceSubmitBtn) forceSubmitBtn.addEventListener('click', confirmForceSubmit);
+    
+    const prevBtn = testArea.querySelector('#prev-btn');
+    if (prevBtn) prevBtn.addEventListener('click', () => navigateQuestion(-1));
+    
+    const nextBtn = testArea.querySelector('#next-btn');
+    if (nextBtn) nextBtn.addEventListener('click', () => navigateQuestion(1));
+    
+    const submitBtn = testArea.querySelector('#submit-btn');
+    if (submitBtn) submitBtn.addEventListener('click', confirmSubmitOnlineTest);
 
     startTimer();
     displayCurrentQuestion();
+
+    // Define and add the new key listener
+    activeTestKeyListener = handleOnlineTestKeystrokes; // Assign the function reference
+    document.addEventListener('keydown', activeTestKeyListener);
 }
 
 export function startTimer() {
@@ -203,7 +263,7 @@ export async function displayCurrentQuestion() {
                           rows="3" 
                           class="w-full p-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-gray-50 font-mono text-xs leading-normal"
                           placeholder="Type raw LaTeX here (e.g., $$\\frac{a}{b}$$ or $x^2$)"
-                          oninput="window.recordAnswer('${questionId}', this.value); window.updateLatexPreview('${questionId}')"
+                          
                           spellcheck="false">${escapeHtml(currentAnswer)}</textarea>
             </div>
             <p class="text-xs text-muted mt-1">Use the toolbar or type LaTeX in the "Edit Raw LaTeX" box (include $delimiters$ for inline math or $$delimiters$$ for display math). The preview above updates automatically. Direct editing of the preview area is not supported; click the preview to focus the raw editor.</p>
@@ -219,7 +279,7 @@ export async function displayCurrentQuestion() {
              console.log(`[DisplayQuestion MCQ] QID: ${qIdStr} | Option: ${optLetterStr} | Stored Answer: ${storedAnswer} | isChecked: ${isChecked}`);
              
              return `
-             <input type="radio" id="radio-${qIdStr}-${optLetterStr}" name="mcqOption-${qIdStr}" value="${opt.letter}" class="hidden" ${isChecked ? 'checked' : ''} onchange="window.recordAnswer('${qIdStr}', this.value)">
+             <input type="radio" id="radio-${qIdStr}-${optLetterStr}" name="mcqOption-${qIdStr}" value="${opt.letter}" class="hidden" ${isChecked ? 'checked' : ''}>
              <label for="radio-${qIdStr}-${optLetterStr}" class="option-label flex items-start space-x-3 p-3 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150">
                  <div class="flex items-baseline w-full"><span class="font-mono w-6 text-right mr-2 shrink-0">${opt.letter}.</span><div class="flex-1 option-text-container">${opt.text}</div></div>
              </label>`;
@@ -244,21 +304,31 @@ export async function displayCurrentQuestion() {
     console.log("innerHTML set for question container.");
 
     if (question.isProblem) {
-        if (typeof window.generateLatexToolbar === 'function') {
-            window.generateLatexToolbar(questionId);
+        const textarea = container.querySelector(`#problem-answer-input-${questionId}`);
+        if (textarea) {
+            textarea.addEventListener('input', () => {
+                recordAnswer(questionId, textarea.value); // recordAnswer is ES Exported
+                updateLatexPreview(questionId); // updateLatexPreview will be ES Exported
+            });
+        }
+        if (typeof generateLatexToolbar === 'function') { // generateLatexToolbar is imported
+            generateLatexToolbar(questionId);
         } else { console.error("generateLatexToolbar is not defined."); }
         
-        if (typeof window.updateLatexPreview === 'function') {
-            window.updateLatexPreview(questionId); // Initial preview render
-        } else { console.error("updateLatexPreview is not defined."); }
+        updateLatexPreview(questionId); // Initial preview render
+    } else { // MCQ
+        const radioInputs = container.querySelectorAll(`input[name="mcqOption-${questionId}"]`);
+        radioInputs.forEach(radio => {
+            radio.addEventListener('change', () => recordAnswer(questionId, radio.value));
+        });
     }
 
     try { 
-        if (typeof window.renderMathIn === 'function') {
-            await window.renderMathIn(container); 
+        if (typeof renderMathIn === 'function') { // renderMathIn is imported
+            await renderMathIn(container); 
             console.log("MathJax rendered for question container in displayCurrentQuestion.");
         } else {
-            console.error("renderMathIn function is not available on window object in displayCurrentQuestion.");
+            console.error("renderMathIn function is not available (not imported correctly or not exported).");
         }
     } catch (mathError) { 
         console.error("MathJax render error in displayCurrentQuestion:", mathError); 
@@ -292,9 +362,9 @@ export async function displayCurrentQuestion() {
 
 // ui_online_test.js
 
-window.latexPreviewTimeouts = window.latexPreviewTimeouts || {};
+window.latexPreviewTimeouts = window.latexPreviewTimeouts || {}; // Keep this global for now
 
-window.updateLatexPreview = async function(questionId) {
+export async function updateLatexPreview(questionId) { // Changed to export
     const textarea = document.getElementById(`problem-answer-input-${questionId}`);
     const previewDiv = document.getElementById(`problem-answer-preview-${questionId}`);
 
@@ -323,10 +393,10 @@ window.updateLatexPreview = async function(questionId) {
     window.latexPreviewTimeouts[questionId] = setTimeout(async () => {
         console.log(`[updateLatexPreview] Debounced: Rendering MathJax for preview of QID: ${questionId}. Content:`, previewDiv.innerHTML.substring(0,100) + "...");
         try {
-            if (typeof window.renderMathIn === 'function') {
-                await window.renderMathIn(previewDiv);
+            if (typeof renderMathIn === 'function') { // Use imported renderMathIn
+                await renderMathIn(previewDiv);
             } else {
-                console.error("renderMathIn function is not available on window object.");
+                console.error("renderMathIn function is not available (not imported correctly or not exported).");
                 previewDiv.innerHTML += '<p class="text-red-500 text-xs mathjax-render-error-msg">Math rendering library error.</p>';
             }
         } catch (e) {
@@ -342,48 +412,11 @@ window.updateLatexPreview = async function(questionId) {
 };
 
 // Store timeout IDs to manage debouncing
-window.latexPreviewTimeouts = window.latexPreviewTimeouts || {}; // Ensure it's initialized globally
+// window.latexPreviewTimeouts = window.latexPreviewTimeouts || {}; // This is already defined above, keep one.
 
-window.updateLatexPreview = async function(questionId) {
-    const textarea = document.getElementById(`problem-answer-input-${questionId}`);
-    const previewDiv = document.getElementById(`problem-answer-preview-${questionId}`);
-
-    if (!textarea || !previewDiv) {
-        console.warn("Textarea or preview div not found for LaTeX preview for QID:", questionId);
-        return;
-    }
-
-    const latexText = textarea.value;
-    
-    // Set raw LaTeX as the content for MathJax to process.
-    // MathJax looks for its delimiters ($...$, $$...$$, etc.) within this raw text.
-    previewDiv.innerHTML = latexText; 
-    
-    if (window.latexPreviewTimeouts[questionId]) {
-        clearTimeout(window.latexPreviewTimeouts[questionId]);
-    }
-
-    window.latexPreviewTimeouts[questionId] = setTimeout(async () => {
-        console.log(`[updateLatexPreview] Debounced: Rendering MathJax for preview of QID: ${questionId}`);
-        try {
-            if (typeof window.renderMathIn === 'function') {
-                await window.renderMathIn(previewDiv); // Call the global renderMathIn
-            } else {
-                console.error("renderMathIn function is not available on window object.");
-                previewDiv.innerHTML += '<p class="text-red-500 text-xs">Math rendering library error.</p>';
-            }
-        } catch (e) {
-            console.error("Error rendering MathJax in preview for QID " + questionId + ":", e);
-            // Avoid overwriting the raw LaTeX if rendering fails, just append error.
-            const errorMsgElement = document.createElement('p');
-            errorMsgElement.className = 'text-red-500 text-xs mathjax-render-error-msg';
-            errorMsgElement.textContent = ' [MathJax Error]';
-            if (!previewDiv.querySelector('.mathjax-render-error-msg')) { // Append error only once
-                previewDiv.appendChild(errorMsgElement);
-            }
-        }
-    }, 250); // Slightly shorter debounce for better responsiveness
-};
+// window.updateLatexPreview = async function(questionId) { // This is now an ES export
+// ...
+// };
 
 export function navigateQuestion(direction) {
     if (!currentOnlineTestState) return;
@@ -452,6 +485,12 @@ export async function submitOnlineTest() {
             console.error("Submit Error: State missing, already submitting, or completed.");
             hideLoading(); // Ensure loading is hidden if we return early
             return;
+        }
+
+        // Remove key listener as the test is being submitted
+        if (activeTestKeyListener) {
+            document.removeEventListener('keydown', activeTestKeyListener);
+            activeTestKeyListener = null;
         }
 
         currentOnlineTestState.status = 'submitting';
@@ -702,6 +741,11 @@ export async function submitOnlineTest() {
 
     } catch (error) {
         console.error("Error finishing test:", error);
+        // Ensure listener is removed on error too, if not already
+        if (activeTestKeyListener) {
+            document.removeEventListener('keydown', activeTestKeyListener);
+            activeTestKeyListener = null;
+        }
         setCurrentOnlineTestState(null); // Clear state on error too
         alert("Error submitting test results. Please try again later. " + error.message);
         
@@ -796,28 +840,46 @@ export async function displayOnlineTestResults(examRecord) {
             ` : '<p class="text-muted italic text-center my-4">No overall feedback available.</p>'}
 
             <div class="flex justify-center gap-4 flex-wrap">
-                <button onclick="window.showExamReviewUI('${currentUser.uid}', '${examId}')" class="btn-primary" data-exam-id="${examId}">
+                <button id="view-detailed-review-btn" class="btn-primary" data-exam-id="${examId}" data-user-id="${currentUser.uid}">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5 mr-1"><path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" /><path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.18l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 0 2.336 0l.879-.879a1.651 1.651 0 0 1 2.336 0l.879.879a1.651 1.651 0 0 1 0 1.18l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879a1.651 1.651 0 0 0-2.336 0l-.879.879a1.651 1.651 0 0 1-2.336 0l-.879-.879Zm16.471-1.591a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0l-.879.879a.151.151 0 0 1-.212 0l-.879-.879a.151.151 0 0 0-.212 0A.15.15 0 0 0 .452 9l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0l.879-.879a.151.151 0 0 1 .212 0l.879.879a.151.151 0 0 0 .212 0Z" clip-rule="evenodd" /></svg>
                     View Detailed Review
                 </button>
-                <button onclick="${isCourse ? `window.showCurrentAssignmentsExams('${courseId}')` : 'window.showExamsDashboard()'}" class="btn-secondary">
+                <button id="back-to-exams-btn" data-is-course="${isCourse}" data-course-id="${courseId}" class="btn-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
                     ${isCourse ? 'Back to Course Exams' : 'Back to TestGen Exams'}
                 </button>
-                 ${!isCourse ? `<button onclick="window.showTestGenerationDashboard()" class="btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Generate New Test</button>` : ''}
+                 ${!isCourse ? `<button id="generate-new-test-btn" class="btn-secondary"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>Generate New Test</button>` : ''}
             </div>
         </div>`;
     displayContent(resultsHtml, 'content'); // Ensure it's displayed in the main content area
+    
+    // Add event listeners for results page buttons
+    document.getElementById('view-detailed-review-btn')?.addEventListener('click', (e) => {
+        showExamReviewUI(e.currentTarget.dataset.userId, e.currentTarget.dataset.examId); // showExamReviewUI is imported
+    });
+    document.getElementById('back-to-exams-btn')?.addEventListener('click', (e) => {
+        const isCourseBtn = e.currentTarget.dataset.isCourse === 'true';
+        const cId = e.currentTarget.dataset.courseId;
+        if (isCourseBtn) {
+            showCurrentAssignmentsExams(cId); // showCurrentAssignmentsExams is imported
+        } else {
+            showExamsDashboard(); // showExamsDashboard is imported
+        }
+    });
+    if (!isCourse) {
+        document.getElementById('generate-new-test-btn')?.addEventListener('click', showTestGenerationDashboard); // showTestGenerationDashboard is imported
+    }
+
     // Set the correct sidebar link active
     setActiveSidebarLink(isCourse ? 'showCurrentAssignmentsExams' : 'showExamsDashboard', isCourse ? 'sidebar-course-nav' : 'testgen-dropdown-content');
 
     const overallFeedbackArea = document.querySelector('.overall-feedback-area');
-    if (overallFeedbackArea) await renderMathIn(overallFeedbackArea);
+    if (overallFeedbackArea) await renderMathIn(overallFeedbackArea); // renderMathIn is imported
 }
 
-window.showExamReviewUI = showExamReviewUI; // From exam_storage.js
-window.showIssueReportingModal = showIssueReportingModal; // From exam_storage.js
-window.submitIssueReport = submitIssueReport; // From exam_storage.js
+// window.showExamReviewUI = showExamReviewUI; // REMOVED - Not needed, imported and used via event listener
+// window.showIssueReportingModal = showIssueReportingModal; // REMOVED - Not needed, exam_storage.js handles its own
+// window.submitIssueReport = submitIssueReport; // REMOVED - Not needed, exam_storage.js handles its own
 
 // Ensure currentOnlineTestState is available for module functions
 export { setCurrentOnlineTestState };

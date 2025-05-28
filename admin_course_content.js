@@ -1,115 +1,584 @@
-// --- START OF FILE admin_course_content.js ---
+// admin_course_content.js
+import { currentUser, globalCourseDataMap, updateGlobalCourseData } from './state.js'; // Added updateGlobalCourseData
+import { approveCourse } from './firebase_firestore.js'; // Import approveCourse
 
-import { db, currentUser, globalCourseDataMap } from './state.js';
-import { ADMIN_UID } from './config.js'
-import { escapeHtml, showLoading, hideLoading } from './utils.js';
-// Import functions from the MAIN ui_courses.js that admins might trigger
-import { showCourseDetails, showEditCourseForm as showAdminEditCourseForm, showAddCourseForm as showGlobalAddCourseForm, handleCourseApproval as globalHandleCourseApproval } from './ui_courses.js';
-import { updateCourseDefinition } from './firebase_firestore.js'; // Admin function for course updates
+// Import display functions from the new specialized modules
+import { displayMegaMigrationDashboard } from './admin_mega_service.js';
+import { displayLectureTranscriptionAutomator } from './admin_transcription_service.js';
+import { displayTextbookPdfProcessor } from './admin_pdf_processing_service.js';
+import { displayPdfMcqProblemGenerator, displayLectureMcqProblemGenerator } from './admin_question_generation_service.js';
 
-// This function is responsible for rendering the "Course Content Management" section
-// within the admin panel.
-export function displayCourseManagementSection(containerElement) {
-    containerElement.innerHTML = `
-        <h3 class="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-6">Global Course Management</h3>
-        <section class="p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
-            <h4 class="text-lg font-medium mb-3">Courses Requiring Attention</h4>
-            <p class="text-sm text-muted mb-3">Review pending/reported courses. Approving here makes them globally available.</p>
-            <div id="admin-global-courses-area" class="max-h-96 overflow-y-auto pr-2 mb-3 custom-scrollbar">
-                <p class="text-muted text-sm">Loading courses...</p>
-            </div>
-            <div class="flex gap-2 mt-3">
-                <button onclick="window.loadAdminCourses()" class="btn-secondary-small text-xs">Refresh List</button>
-                <button onclick="window.showGlobalAddCourseForm()" class="btn-primary-small text-xs">Add New Global Course</button>
-            </div>
-        </section>
-        
-        <section class="mt-6 p-4 border dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/30">
-            <h4 class="text-lg font-medium mb-3">Playlist & Chapter Resource Assignment</h4>
-            <div class="flex gap-4 mb-4">
-                <select id="admin-playlist-course-select" class="flex-grow form-control text-sm"><option value="">Select Course...</option></select>
-                <button onclick="window.loadPlaylistForAdmin()" class="btn-secondary-small text-xs flex-shrink-0" disabled>Load Playlist Videos</button>
-            </div>
-            <div id="admin-playlist-videos-area" class="max-h-96 overflow-y-auto border dark:border-gray-600 rounded p-3 bg-white dark:bg-gray-800 mb-3 custom-scrollbar">
-                 <p class="text-muted text-sm">Select a course to load its associated YouTube playlist(s).</p>
-            </div>
-            <div id="admin-video-action-area" class="mt-3 pt-3 border-t dark:border-gray-600 hidden">
-                <p id="admin-selected-video-count" class="text-sm font-medium mb-3">Selected Videos: 0</p>
-                <div class="flex flex-wrap gap-3 items-center">
-                     <label for="admin-assign-chapter-num" class="self-center text-sm">Target Chapter:</label>
-                     <input type="number" id="admin-assign-chapter-num" min="1" class="w-20 text-sm form-control">
-                     <button id="admin-assign-video-btn" onclick="window.handleAssignVideoToChapter()" class="btn-primary-small text-xs" disabled>Assign Selected</button>
-                     <button id="admin-unassign-video-btn" onclick="window.handleUnassignVideoFromChapter()" class="btn-danger-small text-xs" disabled>Unassign Selected</button>
-                </div>
-            </div>
-        </section>
-    `;
-    loadAdminCourses();
-    window.populateAdminCourseSelect();
-}
-
-
-export async function loadCoursesForAdmin() {
-    const coursesArea = document.getElementById('admin-global-courses-area');
-    if (!coursesArea) return;
-    coursesArea.innerHTML = `<div class="loader animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary-500 mx-auto my-4"></div>`;
-
-    try {
-        const coursesSnapshot = await db.collection('courses')
-            .where('status', 'in', ['pending', 'reported']) // Only fetch these statuses
-            .orderBy('createdAt', 'desc')
-            .limit(50)
-            .get();
-
-        if (coursesSnapshot.empty) {
-            coursesArea.innerHTML = '<p class="text-sm text-muted">No courses currently require admin attention.</p>';
-            return;
-        }
-
-        let coursesHtml = '<div class="space-y-3">';
-        coursesSnapshot.forEach(doc => {
-            const course = doc.data();
-            const courseId = doc.id;
-            const date = course.createdAt?.toDate ? new Date(course.createdAt.toDate()).toLocaleString() : 'N/A';
-            const statusClass = course.status === 'pending' ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-900/80' : 'border-red-400 bg-red-50 dark:bg-red-900/80';
-            const statusText = course.status === 'pending' ? 'Pending Approval' : 'Reported';
-            const creatorName = escapeHtml(course.creatorName || 'Unknown');
-            const courseName = escapeHtml(course.name || 'Unnamed Course');
-
-            coursesHtml += `
-                <div class="course-card border rounded-lg p-3 shadow-sm text-sm ${statusClass}">
-                     <div class="flex justify-between items-center mb-2">
-                         <h4 class="font-semibold text-base text-primary-700 dark:text-primary-300">${courseName}</h4>
-                         <span class="text-xs font-bold px-2 py-0.5 rounded ${course.status === 'pending' ? 'bg-yellow-500 text-white' : 'bg-red-500 text-white'}">${statusText}</span>
-                     </div>
-                     <p><strong>Creator:</strong> ${creatorName} (UID: ${course.creatorUid || 'N/A'})</p>
-                     <p><strong>Date Submitted:</strong> ${date}</p>
-                     ${course.status === 'reported' ? `<p class="text-xs mt-1"><strong>Report Reason:</strong> ${escapeHtml(course.reportReason || 'None provided.')}</p><p class="text-xs"><strong>Reported By:</strong> ${course.reportedBy?.length || 0} user(s)</p>` : ''}
-                     <div class="mt-3 pt-2 border-t dark:border-gray-600 text-right space-x-2">
-                          <button onclick="window.showAdminCourseDetails('${courseId}')" class="btn-secondary-small text-xs">View Details</button>
-                          <button onclick="window.showAdminEditCourseForm('${courseId}')" class="btn-secondary-small text-xs">Edit</button>
-                         ${course.status === 'pending' ? `
-                             <button onclick="window.handleAdminCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Approve</button>
-                             <button onclick="window.handleAdminCourseApproval('${courseId}', false)" class="btn-danger-small text-xs">Reject</button>
-                         ` : ''}
-                          ${course.status === 'reported' ? `
-                             <button onclick="window.handleAdminCourseApproval('${courseId}', true)" class="btn-success-small text-xs">Clear Report (Approve)</button>
-                             <button onclick="window.handleAdminCourseApproval('${courseId}', false, true)" class="btn-danger-small text-xs">Delete Course</button>
-                         ` : ''}
-                     </div>
-                </div>
-            `;
-        });
-        coursesHtml += '</div>';
-        coursesArea.innerHTML = coursesHtml;
-    } catch (error) {
-        console.error("Error loading global courses for admin:", error);
-        if (error.code === 'failed-precondition') {
-             coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error: Missing Firestore index for courses query. Check console.</p>`;
-        } else {
-            coursesArea.innerHTML = `<p class="text-red-500 text-sm">Error loading courses: ${error.message}.</p>`;
-        }
+// This function might still be needed if called from elsewhere (e.g., ui_admin_dashboard.js)
+// If it was only for the internal use of the now-moved sections, it might be removable or simplified.
+// For now, keeping it as it might be part of the public API of this older module.
+// A more thorough check would be needed to see if it's still used externally.
+function loadCoursesForAdmin() {
+    console.log("loadCoursesForAdmin called. If this was for a specific moved section, its new module should handle data loading.");
+    // Original implementation might have fetched and prepared globalCourseDataMap or similar.
+    // If globalCourseDataMap is already populated by other means (e.g., on app load),
+    // this function might just be a placeholder or could be removed if no longer called.
+    if (!globalCourseDataMap || globalCourseDataMap.size === 0) {
+        console.warn("loadCoursesForAdmin: globalCourseDataMap is empty. Course-dependent sections might not display correctly.");
     }
 }
 
-// --- END OF FILE admin_course_content.js ---
+// --- Course Content Management Hub ---
+function displayCourseManagementSection(containerElement) {
+    if (!currentUser || !currentUser.isAdmin) {
+        containerElement.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">Access Denied. Admin privileges required for Course Content Management.</div>`;
+        return;
+    }
+
+    containerElement.innerHTML = `
+        <div class="course-content-management p-0 m-0 h-full flex flex-col">
+            <h1 class="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4 px-1 py-2">Course Management</h1>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 px-1">Manage course content, assets, and automated processing tools.</p>
+            <div id="course-content-tabs" class="flex border-b border-gray-300 dark:border-gray-600 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                <!-- Tab buttons will be dynamically added here -->
+            </div>
+            <div id="course-content-tab-area" class="flex-grow p-4 overflow-y-auto">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    `;
+
+    const tabsConfig = [
+        { id: 'fullCourseAutomation', name: 'Full Course Creator', renderFunc: displayFullCourseAutomationForm },
+        { id: 'pendingCourses', name: 'Pending Review', renderFunc: displayPendingCoursesList }, // New Tab
+        { id: 'megaTools', name: 'MEGA Tools', renderFunc: displayMegaMigrationDashboard },
+        { id: 'transcription', name: 'Transcription', renderFunc: displayLectureTranscriptionAutomator },
+        { id: 'pdfProcessing', name: 'PDF Processing', renderFunc: displayTextbookPdfProcessor },
+        { id: 'pdfQGenerator', name: 'PDF Q-Generator', renderFunc: displayPdfMcqProblemGenerator },
+        { id: 'transcriptQGenerator', name: 'Transcript Q-Generator', renderFunc: displayLectureMcqProblemGenerator }
+    ];
+
+    const tabsContainer = containerElement.querySelector('#course-content-tabs');
+    const tabAreaContainer = containerElement.querySelector('#course-content-tab-area');
+
+    tabsConfig.forEach(tab => {
+        const button = document.createElement('button');
+        button.textContent = tab.name;
+        button.classList.add('course-content-tab-button', 'py-3', 'px-6', '-mb-px', 'border-b-2', 'border-transparent', 'text-gray-600', 'dark:text-gray-400', 'hover:text-primary-600', 'dark:hover:text-primary-400', 'focus:outline-none', 'text-sm', 'font-medium');
+        button.dataset.tabId = tab.id;
+        button.addEventListener('click', () => switchCourseContentTab(tab.id));
+        tabsContainer.appendChild(button);
+    });
+
+    function switchCourseContentTab(tabId) {
+        if (!tabAreaContainer) return;
+        tabAreaContainer.innerHTML = ''; // Clear previous content
+
+        const selectedTab = tabsConfig.find(t => t.id === tabId);
+        if (selectedTab) {
+            selectedTab.renderFunc(tabAreaContainer);
+        }
+
+        // Update active tab styling
+        tabsContainer.querySelectorAll('.course-content-tab-button').forEach(btn => {
+            const isActive = btn.dataset.tabId === tabId;
+            btn.classList.toggle('border-primary-500', isActive);
+            btn.classList.toggle('text-primary-600', isActive);
+            btn.classList.toggle('dark:text-primary-400', isActive);
+            btn.classList.toggle('border-transparent', !isActive); // Ensure non-active tabs are transparent
+            btn.classList.toggle('text-gray-600', !isActive);
+            btn.classList.toggle('dark:text-gray-400', !isActive);
+        });
+    }
+
+    // Initial tab load
+    if (tabsConfig.length > 0) {
+        switchCourseContentTab(tabsConfig[0].id);
+    }
+}
+
+// Exports that are still needed by ui_admin_dashboard.js
+export { 
+    displayMegaMigrationDashboard,
+    displayCourseManagementSection,
+    loadCoursesForAdmin, // Keep if ui_admin_dashboard.js still imports and uses it
+    displayPendingCoursesList, // Export the new function
+};
+
+// --- Pending Courses List Display ---
+async function displayPendingCoursesList(containerElement) {
+    containerElement.innerHTML = `<div class="p-4"><h2 class="text-xl font-semibold mb-4">Courses Pending Review</h2></div>`;
+    
+    if (!globalCourseDataMap || globalCourseDataMap.size === 0) {
+        containerElement.innerHTML += `<p class="text-gray-600 dark:text-gray-400">No course data loaded. Cannot display pending courses.</p>`;
+        return;
+    }
+
+    const pendingCourses = [];
+    for (const [courseId, courseData] of globalCourseDataMap.entries()) {
+        if (courseData.status === "pending_review") {
+            pendingCourses.push({ id: courseId, ...courseData });
+        }
+    }
+
+    if (pendingCourses.length === 0) {
+        containerElement.innerHTML += `<p class="text-gray-600 dark:text-gray-400">No courses are currently awaiting review.</p>`;
+        return;
+    }
+
+    const listElement = document.createElement('ul');
+    listElement.className = 'space-y-4';
+
+    pendingCourses.forEach(course => {
+        const listItem = document.createElement('li');
+        listItem.className = 'p-4 bg-white dark:bg-gray-700 shadow rounded-lg';
+        
+        // Use course.courseTitle if available (from automation service), otherwise course.name (older structure)
+        const title = course.courseTitle || course.name || 'Untitled Course';
+        const majorTag = course.majorTag || 'N/A';
+        const subjectTag = course.subjectTag || 'N/A';
+
+        listItem.innerHTML = `
+            <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300">${title}</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Major:</strong> ${majorTag}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Subject:</strong> ${subjectTag}</p>
+            <button 
+                class="btn-primary mt-3 py-2 px-4 text-sm" 
+                onclick="window.previewAndApproveCourse('${course.id}')">
+                Preview & Approve
+            </button>
+        `;
+        listElement.appendChild(listItem);
+    });
+
+    containerElement.appendChild(listElement);
+}
+
+// --- Course Preview and Approval Modal ---
+window.previewAndApproveCourse = async (courseId) => {
+    const course = globalCourseDataMap.get(courseId);
+    if (!course) {
+        alert("Error: Course data not found for ID: " + courseId);
+        return;
+    }
+
+    // Modal container
+    const modalId = `preview-modal-${courseId}`;
+    let modal = document.getElementById(modalId);
+    if (modal) modal.remove(); // Remove existing modal if any
+
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4';
+    modal.style.backdropFilter = 'blur(3px)';
+
+
+    let modalContentHtml = `
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">Preview Course: ${course.courseTitle || course.name || 'N/A'}</h2>
+                <button class="text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 text-2xl" onclick="document.getElementById('${modalId}').remove();">&times;</button>
+            </div>
+    `;
+
+    const details = course.firestoreDataPreview || course; // Prefer firestoreDataPreview if available
+
+    modalContentHtml += `<div class="space-y-3 text-sm text-gray-700 dark:text-gray-300">`;
+    modalContentHtml += `<p><strong>Course ID (DirName):</strong> ${details.courseDirName || courseId}</p>`;
+    modalContentHtml += `<p><strong>Major Tag:</strong> ${details.majorTag || 'N/A'}</p>`;
+    modalContentHtml += `<p><strong>Subject Tag:</strong> ${details.subjectTag || 'N/A'}</p>`;
+    modalContentHtml += `<p><strong>AI Description:</strong> ${details.aiGeneratedDescription || 'N/A'}</p>`;
+    
+    // Mega Links
+    modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Mega Links:</h4>`;
+    modalContentHtml += `<p>Main Folder: ${details.megaMainFolderLink ? `<a href="${details.megaMainFolderLink}" target="_blank" class="link">View Folder</a>` : 'N/A'}</p>`;
+    modalContentHtml += `<p>Original Textbook PDF: ${details.megaTextbookFullPdfLink ? `<a href="${details.megaTextbookFullPdfLink}" target="_blank" class="link">View PDF</a>` : 'N/A'}</p>`;
+
+    // Chapters
+    if (details.chapters && details.chapters.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Chapters:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.chapters.forEach(chap => {
+            modalContentHtml += `<li><strong>${chap.title || `Chapter ${chap.key}`}</strong>: 
+                ${chap.pdfLink ? `<a href="${chap.pdfLink}" target="_blank" class="link">PDF</a>` : 'No PDF'}
+                ${chap.pdfMcqLink ? ` | <a href="${chap.pdfMcqLink}" target="_blank" class="link">MCQs</a>` : ''}
+                ${chap.pdfProblemsLink ? ` | <a href="${chap.pdfProblemsLink}" target="_blank" class="link">Problems</a>` : ''}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+
+    // Lectures - Transcriptions
+    if (details.transcriptionLinks && details.transcriptionLinks.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Transcriptions:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.transcriptionLinks.forEach(trans => {
+            modalContentHtml += `<li><strong>${trans.title}</strong> (Chapter Key: ${trans.chapterKey}): 
+                ${trans.srtLink ? `<a href="${trans.srtLink}" target="_blank" class="link">SRT</a>` : 'No SRT'}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+    
+    // Lectures - Generated Questions
+    if (details.lectureQuestionSets && details.lectureQuestionSets.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Question Sets:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.lectureQuestionSets.forEach(lqs => {
+            modalContentHtml += `<li>Topic Key: <strong>${lqs.key}</strong>: 
+                ${lqs.mcqLink ? `<a href="${lqs.mcqLink}" target="_blank" class="link">MCQs</a>` : 'No MCQs'}
+                ${lqs.problemsLink ? ` | <a href="${lqs.problemsLink}" target="_blank" class="link">Problems</a>` : ''}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+    
+    modalContentHtml += `</div>`; // End of space-y-3
+
+    modalContentHtml += `
+            <div class="mt-6 flex justify-end space-x-3">
+                <button class="btn-secondary py-2 px-4" onclick="document.getElementById('${modalId}').remove();">Close</button>
+                <button class="btn-primary py-2 px-4" onclick="window.approveCourseInFirestore('${courseId}')">Approve Course</button>
+            </div>
+        </div> 
+    `; // End of modal content div
+
+    modal.innerHTML = modalContentHtml;
+    document.body.appendChild(modal);
+};
+
+window.approveCourseInFirestore = async (courseId) => {
+    if (!currentUser || !currentUser.isAdmin) {
+        alert("Error: Admin privileges required.");
+        return;
+    }
+    
+    // Optional: Add a confirmation dialog
+    // if (!confirm(`Are you sure you want to approve course: ${courseId}?`)) {
+    //     return;
+    // }
+
+    const result = await approveCourse(courseId); // Call the imported function
+
+    if (result.success) {
+        alert(result.message);
+        const courseData = globalCourseDataMap.get(courseId);
+        if (courseData) {
+            courseData.status = "approved";
+            courseData.updatedAt = new Date().toISOString(); // Use ISO string for consistency if needed, or just Date object
+            updateGlobalCourseData(courseId, courseData); // Update the global map via state.js function
+        }
+        
+        // Close modal
+        const modalId = `preview-modal-${courseId}`;
+        const modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        // Refresh the pending courses list
+        // This assumes the tab area is identifiable and currently displaying the pending list.
+        // A more robust way might be to check current active tab.
+        const tabAreaContainer = document.getElementById('course-content-tab-area');
+        if (tabAreaContainer) {
+            // Check if the "Pending Review" tab is active or if we should force refresh it.
+            // For simplicity, just re-render if the container exists.
+            // A better check would be to see if `displayPendingCoursesList` was the last rendered function.
+            const activeTabButton = document.querySelector('#course-content-tabs .course-content-tab-button.border-primary-500');
+            if (activeTabButton && activeTabButton.dataset.tabId === 'pendingCourses') {
+                 displayPendingCoursesList(tabAreaContainer);
+            } else {
+                console.log("Pending courses tab not active, list not refreshed on UI immediately.");
+            }
+        } else {
+            console.warn("Could not find course-content-tab-area to refresh pending list.");
+        }
+
+    } else {
+        alert(`Error approving course: ${result.message}`);
+    }
+};
+
+// --- Full Course Automation Form ---
+export function displayFullCourseAutomationForm(containerElement) {
+    containerElement.innerHTML = `
+        <div class="content-card p-6">
+            <h2 class="text-2xl font-bold text-primary-700 dark:text-primary-300 mb-6">Full Course Creator</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+                Automate the creation of a new course by providing a textbook, lecture materials, and other details.
+                The system will process these assets, generate supplementary materials, and set up the course structure on MEGA.
+            </p>
+            <form id="full-course-automation-form" class="space-y-6">
+                
+                <div>
+                    <label for="courseTitle" class="label">Course Title:</label>
+                    <input type="text" id="courseTitle" name="courseTitle" class="input-field" required>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="textbookPdfFile" class="label">Textbook PDF File:</label>
+                        <input type="file" id="textbookPdfFile" name="textbookPdf" class="input-field file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-700 file:text-primary-700 dark:file:text-primary-100 hover:file:bg-primary-100 dark:hover:file:bg-primary-600" accept=".pdf">
+                    </div>
+                    <div>
+                        <label for="textbookMegaLink" class="label">Textbook PDF Mega Link (Optional):</label>
+                        <input type="text" id="textbookMegaLink" name="textbookMegaLink" class="input-field" placeholder="Or provide a Mega link to the textbook PDF">
+                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Note: If a Mega link is provided, the file upload will be ignored. This feature is for future use; currently, local PDF upload is primary.</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="trueFirstPageNumber" class="label">Textbook's True First Page Number (Actual page 1 of content):</label>
+                    <input type="number" id="trueFirstPageNumber" name="trueFirstPageNumber" class="input-field" required min="1">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="majorTag" class="label">Major Tag:</label>
+                        <input type="text" id="majorTag" name="majorTag" class="input-field" placeholder="e.g., Computer Science, Physics" required>
+                    </div>
+                    <div>
+                        <label for="subjectTag" class="label">Subject Tag:</label>
+                        <input type="text" id="subjectTag" name="subjectTag" class="input-field" placeholder="e.g., Quantum Mechanics, Web Development" required>
+                    </div>
+                </div>
+
+                <hr class="my-6 border-gray-300 dark:border-gray-600">
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Optional Course Metadata</h3>
+                <div>
+                    <label for="prerequisites" class="label">Prerequisites (comma-separated):</label>
+                    <input type="text" id="prerequisites" name="prerequisites" class="input-field" placeholder="e.g., Basic Algebra, Introduction to Programming">
+                </div>
+                <div>
+                    <label for="bannerPicUrl" class="label">Banner Picture URL:</label>
+                    <input type="url" id="bannerPicUrl" name="bannerPicUrl" class="input-field" placeholder="https://example.com/banner.jpg">
+                </div>
+                <div>
+                    <label for="coursePicUrl" class="label">Course Picture URL (for cards/thumbnails):</label>
+                    <input type="url" id="coursePicUrl" name="coursePicUrl" class="input-field" placeholder="https://example.com/course-thumb.jpg">
+                </div>
+
+                <hr class="my-6 border-gray-300 dark:border-gray-600">
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Lectures Information</h3>
+                <div id="lectures-input-area" class="space-y-4">
+                    <!-- Lecture rows will be added here -->
+                </div>
+                <button type="button" id="add-lecture-btn" class="btn-secondary-small">+ Add Lecture</button>
+
+                <hr class="my-6 border-gray-300 dark:border-gray-600">
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Credentials & API Keys</h3>
+                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">These are required for interacting with external services like MEGA and AI for processing.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="megaEmail" class="label">Mega Email:</label>
+                        <input type="email" id="megaEmail" name="megaEmail" class="input-field" required>
+                    </div>
+                    <div>
+                        <label for="megaPassword" class="label">Mega Password:</label>
+                        <input type="password" id="megaPassword" name="megaPassword" class="input-field" required>
+                    </div>
+                    <div>
+                        <label for="assemblyAiApiKey" class="label">AssemblyAI API Key (for Transcription):</label>
+                        <input type="text" id="assemblyAiApiKey" name="assemblyAiApiKey" class="input-field">
+                    </div>
+                    <div>
+                        <label for="geminiApiKey" class="label">Google Gemini API Key (Optional):</label>
+                        <input type="text" id="geminiApiKey" name="geminiApiKey" class="input-field">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">If blank, the server's default key will be attempted.</p>
+                    </div>
+                </div>
+                
+                <button type="submit" id="submit-course-automation-btn" class="btn-primary w-full py-3 mt-8">Start Full Course Automation</button>
+            </form>
+            <div id="course-automation-feedback" class="mt-6 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 min-h-[50px]">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Automation status will appear here.</p>
+            </div>
+        </div>
+    `;
+
+    const lecturesArea = containerElement.querySelector('#lectures-input-area');
+    const addLectureButton = containerElement.querySelector('#add-lecture-btn');
+    const form = containerElement.querySelector('#full-course-automation-form');
+    const feedbackDiv = containerElement.querySelector('#course-automation-feedback');
+
+    let lectureRowCount = 0;
+
+    function addLectureRow() {
+        lectureRowCount++;
+        const lectureRow = document.createElement('div');
+        lectureRow.classList.add('lecture-row', 'p-4', 'border', 'border-gray-200', 'dark:border-gray-600', 'rounded-lg', 'space-y-3');
+        lectureRow.innerHTML = `
+            <h4 class="text-md font-medium text-gray-700 dark:text-gray-300">Lecture ${lectureRowCount}</h4>
+            <div>
+                <label for="lectureTitle-${lectureRowCount}" class="label text-sm">Lecture Title:</label>
+                <input type="text" id="lectureTitle-${lectureRowCount}" name="lectureTitle" class="input-field input-field-sm" required>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="lectureFile-${lectureRowCount}" class="label text-sm">Lecture Audio/Video File (Optional):</label>
+                    <input type="file" id="lectureFile-${lectureRowCount}" name="lectureFiles" class="input-field input-field-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-600 file:text-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-500">
+                </div>
+                <div>
+                    <label for="lectureLink-${lectureRowCount}" class="label text-sm">YouTube or Mega Link (Optional):</label>
+                    <input type="text" id="lectureLink-${lectureRowCount}" name="lectureLink" class="input-field input-field-sm" placeholder="YouTube URL or Mega File Link">
+                </div>
+            </div>
+            <div>
+                <label for="srtMegaLink-${lectureRowCount}" class="label text-sm">SRT Mega Link (Optional, if pre-transcribed):</label>
+                <input type="text" id="srtMegaLink-${lectureRowCount}" name="srtMegaLink" class="input-field input-field-sm" placeholder="Mega link to .srt file">
+            </div>
+            <div>
+                <label for="associatedChapterKey-${lectureRowCount}" class="label text-sm">Associated Chapter Key/Topic (e.g., textbook_chapter_1):</label>
+                <input type="text" id="associatedChapterKey-${lectureRowCount}" name="associatedChapterKey" class="input-field input-field-sm" placeholder="Leave blank if general">
+            </div>
+        `;
+        lecturesArea.appendChild(lectureRow);
+    }
+
+    addLectureButton.addEventListener('click', addLectureRow);
+    // Add one lecture row by default
+    addLectureRow(); 
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        feedbackDiv.innerHTML = '<p class="text-blue-600 dark:text-blue-400">Processing... Please wait.</p>';
+        // showLoading('Starting full course automation...'); // Assuming showLoading is available globally or imported
+
+        const formData = new FormData();
+        const requiredTextFields = ['courseTitle', 'trueFirstPageNumber', 'majorTag', 'subjectTag', 'megaEmail', 'megaPassword', 'assemblyAiApiKey', 'geminiApiKey'];
+        let allRequiredFilled = true;
+
+        requiredTextFields.forEach(fieldName => {
+            const input = form.querySelector(`#${fieldName}`);
+            if (input && input.value.trim()) {
+                formData.append(fieldName, input.value.trim());
+            } else {
+                allRequiredFilled = false;
+            }
+        });
+        
+        // Optional text fields
+        ['textbookMegaLink', 'assemblyAiApiKey', 'geminiApiKey', 'prerequisites', 'bannerPicUrl', 'coursePicUrl'].forEach(fieldName => {
+             const input = form.querySelector(`#${fieldName}`);
+             if (input && input.value.trim()) formData.append(fieldName, input.value.trim());
+        });
+
+
+        const textbookPdfInput = form.querySelector('#textbookPdfFile');
+        if (textbookPdfInput.files.length > 0) {
+            formData.append('textbookPdf', textbookPdfInput.files[0]);
+        } else if (!form.querySelector('#textbookMegaLink').value.trim()) {
+            // If no Mega link is provided either, then textbook PDF is required.
+            // This check is basic; server-side will do more thorough validation.
+            // allRequiredFilled = false; 
+            // Decided to make textbook PDF optional if Mega link is provided (though link feature is future)
+            // Server will validate if at least one textbook source is present
+        }
+
+        
+        const textbookMegaLinkInput = form.querySelector('#textbookMegaLink');
+        if (textbookPdfInput.files.length === 0 && !textbookMegaLinkInput.value.trim()) {
+            allRequiredFilled = false;
+            // It's good practice to also provide specific feedback for this, 
+            // but the main error message update is in the next plan step.
+            // For now, just ensuring allRequiredFilled is correctly set is sufficient for this step.
+        }
+        
+        if (!allRequiredFilled) {
+            feedbackDiv.innerHTML = '<p class="text-red-500">Please fill in all required fields: Course Title, Textbook PDF (or Mega Link), True First Page Number, Major Tag, Subject Tag, Mega Email, Mega Password, AssemblyAI API Key, and Gemini API Key.</p>';
+            // hideLoading();
+            return;
+        }
+
+
+        const lecturesData = [];
+        lecturesArea.querySelectorAll('.lecture-row').forEach((row, index) => {
+            const titleInput = row.querySelector('input[name="lectureTitle"]');
+            if (!titleInput || !titleInput.value.trim()) return; // Skip if no title
+
+            const lecture = {
+                title: titleInput.value.trim(),
+                // Prioritize Mega link if both YouTube and Mega links are provided for the same field
+                youtubeUrl: row.querySelector('input[name="lectureLink"]').value.trim().startsWith('https://www.youtube.com') ? row.querySelector('input[name="lectureLink"]').value.trim() : undefined,
+                megaLink: row.querySelector('input[name="lectureLink"]').value.trim().startsWith('https://mega.nz/') ? row.querySelector('input[name="lectureLink"]').value.trim() : undefined,
+                srtMegaLink: row.querySelector('input[name="srtMegaLink"]').value.trim() || undefined,
+                associatedChapterKey: row.querySelector('input[name="associatedChapterKey"]').value.trim() || `lecture_topic_${index + 1}`,
+                originalFileName: undefined
+            };
+
+            const fileInput = row.querySelector('input[name="lectureFiles"]');
+            if (fileInput.files.length > 0) {
+                formData.append('lectureFiles', fileInput.files[0]);
+                lecture.originalFileName = fileInput.files[0].name;
+            }
+            lecturesData.push(lecture);
+        });
+        formData.append('lecturesMetadata', JSON.stringify(lecturesData));
+
+        try {
+            const response = await fetch('http://localhost:3001/automate-full-course', {
+                method: 'POST',
+                body: formData // No 'Content-Type' header for FormData with files; browser sets it
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                let progressLogsHtml = '';
+                if (result.progressLogs && Array.isArray(result.progressLogs)) {
+                    progressLogsHtml = result.progressLogs.map(log => 
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+
+                feedbackDiv.innerHTML = `
+                    <p class="text-green-600 dark:text-green-400 font-semibold">Course Automation Successful!</p>
+                    <p><strong>Final Automation Step:</strong> ${result.firestoreDataPreview?.currentAutomationStep || 'N/A'}</p>
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs:</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${progressLogsHtml || '<p class="text-xs text-gray-500 dark:text-gray-400">No progress logs available.</p>'}
+                        </div>
+                    </div>
+                    <hr class="my-3 border-gray-300 dark:border-gray-600">
+                    <p><strong>Course Title:</strong> ${result.courseTitle || 'N/A'}</p>
+                    <p><strong>Course Directory Name (Mega):</strong> ${result.courseDirName || 'N/A'}</p>
+                    <p><strong>AI Description:</strong> ${result.aiGeneratedDescription ? result.aiGeneratedDescription.substring(0, 150) + '...' : 'N/A'}</p>
+                    <p class="mt-2"><strong>Firestore Data Preview:</strong></p>
+                    <pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(result.firestoreDataPreview, null, 2)}</pre>
+                `;
+                form.reset(); 
+                lecturesArea.innerHTML = ''; 
+                addLectureRow(); 
+            } else {
+                // Handle server-side failure where result might still contain logs
+                let errorProgressLogsHtml = '';
+                if (result && result.progressLogs && Array.isArray(result.progressLogs)) {
+                    errorProgressLogsHtml = result.progressLogs.map(log => 
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+                const finalStepMessage = result?.firestoreDataPreview?.currentAutomationStep || "Unknown step";
+                feedbackDiv.innerHTML = `
+                    <p class="text-red-500 font-semibold">Course Automation Failed at step: ${finalStepMessage}</p>
+                    <p class="text-red-400">${result.message || `Server error: ${response.status}`}</p>
+                    ${errorProgressLogsHtml ? `
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs (up to failure):</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${errorProgressLogsHtml}
+                        </div>
+                    </div>` : ''}
+                `;
+                // Not throwing error here as we want to display the partial logs from result
+            }
+        } catch (error) { // Network error or error during fetch/parsing
+            console.error('Error submitting course automation form:', error);
+            feedbackDiv.innerHTML = `<p class="text-red-500">Submission failed: ${error.message}. Check the console for more details.</p>`;
+        } finally {
+            // hideLoading(); // Assuming hideLoading is available globally or imported
+        }
+    });
+}
+
+// Removed all window assignments as functions are now modular and imported where needed,
+// or their internal event handlers are set up within their respective modules.
+// The Mega File Explorer helper functions (handleMegaFileDownload, etc.) were moved to admin_mega_service.js
+// and are exported from there if needed, or used via event listeners set up in displayMegaFileExplorer.```
+/* File `admin_course_content.js` overwritten successfully.
+```
+
+**Step 3: Verify Imports in `ui_admin_dashboard.js`**
+
+I need to ensure that `ui_admin_dashboard.js` correctly imports `displayCourseManagementSection` and `loadCoursesForAdmin` (if still used) from the refactored `admin_course_content.js`.
+
+Let's read `ui_admin_dashboard.js`.*/

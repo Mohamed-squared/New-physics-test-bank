@@ -11,6 +11,7 @@ import {
     // --- NEW: Import for global subject defs map ---
     globalSubjectDefinitionsMap, setGlobalSubjectDefinitionsMap, updateGlobalSubjectDefinition,
     
+    
 } from './state.js';
 import { showLoading, hideLoading, getFormattedDate } from './utils.js';
 import { updateChaptersFromMarkdown, parseChaptersFromMarkdown  } from './markdown_parser.js';
@@ -666,6 +667,11 @@ export async function loadGlobalCourseDefinitions() {
                     } else {
                         baseData.createdAt = new Date(); // Fallback
                     }
+                    // Initialize MEGA links to null for new FOP instance
+                    baseData.megaTranscriptionsFolderLink = null;
+                    baseData.megaPdfFolderLink = null;
+                    baseData.megaMcqFolderLink = null;
+                    baseData.megaTextbookFullPdfLink = null;
                     isNewFoPInstance = true;
                     console.log(`[FoP Processing] Preparing new FoP instance for course ID: ${courseId}`);
                 } else {
@@ -706,6 +712,13 @@ export async function loadGlobalCourseDefinitions() {
             if (!finalCourseData.createdAt) { // If still not set (e.g. old Firestore doc without it)
                 finalCourseData.createdAt = (typeof firebase !== 'undefined' && firebase.firestore && baseData.createdAt !== firebase.firestore.FieldValue.serverTimestamp()) ? firebase.firestore.FieldValue.serverTimestamp() : new Date();
             }
+
+            // --- MEGA Link Fields ---
+            finalCourseData.megaTranscriptionsFolderLink = baseData.megaTranscriptionsFolderLink || null;
+            finalCourseData.megaPdfFolderLink = baseData.megaPdfFolderLink || null;
+            finalCourseData.megaMcqFolderLink = baseData.megaMcqFolderLink || null;
+            finalCourseData.megaTextbookFullPdfLink = baseData.megaTextbookFullPdfLink || null;
+            // --- End MEGA Link Fields ---
             // --- End Core Fields Init ---
 
 
@@ -1674,6 +1687,14 @@ export async function updateCourseDefinition(courseId, updates) {
              mergedData.corequisites = Array.isArray(updatedDataFromFS.corequisites)
                                        ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string')
                                        : [];
+
+             // --- MEGA Link Fields for local cache update ---
+             mergedData.megaTranscriptionsFolderLink = updatedDataFromFS.megaTranscriptionsFolderLink || null;
+             mergedData.megaPdfFolderLink = updatedDataFromFS.megaPdfFolderLink || null;
+             mergedData.megaMcqFolderLink = updatedDataFromFS.megaMcqFolderLink || null;
+             mergedData.megaTextbookFullPdfLink = updatedDataFromFS.megaTextbookFullPdfLink || null;
+             // --- End MEGA Link Fields ---
+
              updateGlobalCourseData(courseId, mergedData); 
              console.log("Local course definition map updated after Firestore save.");
          } else {
@@ -1728,6 +1749,12 @@ export async function addCourseToFirestore(courseData) {
         corequisites: Array.isArray(courseData.corequisites)
                       ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) 
                       : [],
+        // --- MEGA Link Fields ---
+        megaTranscriptionsFolderLink: null,
+        megaPdfFolderLink: null,
+        megaMcqFolderLink: null,
+        megaTextbookFullPdfLink: null,
+        // --- End MEGA Link Fields ---
     };
 
     let finalTotalChapters = 0;
@@ -3375,6 +3402,103 @@ export async function adminDeleteGlobalSubject(subjectId) {
     // Potentially trigger a re-merge for current user's `data.subjects`
 }
 
+// --- NEW FUNCTION: Get Course Details ---
+/**
+ * Fetches course details, first from global map, then from Firestore.
+ * @param {string} courseId - The ID of the course to fetch.
+ * @returns {Promise<object|null>} - Course data object or null if not found.
+ */
+export async function getCourseDetails(courseId) {
+    if (!courseId) {
+        console.warn("[getCourseDetails] Course ID is missing.");
+        return null;
+    }
+
+    // 1. Check globalCourseDataMap first
+    if (globalCourseDataMap && globalCourseDataMap.has(courseId)) {
+        console.log(`[getCourseDetails] Found course ${courseId} in globalCourseDataMap.`);
+        return globalCourseDataMap.get(courseId);
+    }
+
+    // 2. If not in map, fetch from Firestore
+    if (!db) {
+        console.error("[getCourseDetails] Firestore DB not initialized.");
+        return null;
+    }
+    console.log(`[getCourseDetails] Course ${courseId} not in map, fetching from Firestore...`);
+    const courseRef = db.collection('courses').doc(courseId);
+
+    try {
+        const docSnap = await courseRef.get();
+        if (docSnap.exists) {
+            console.log(`[getCourseDetails] Successfully fetched course ${courseId} from Firestore.`);
+            const courseData = docSnap.data();
+            // Optionally, update the global map (though loadGlobalCourseDefinitions should handle this)
+            // updateGlobalCourseData(courseId, { id: courseId, ...courseData });
+            return { id: courseId, ...courseData }; // Ensure ID is part of the returned object
+        } else {
+            console.warn(`[getCourseDetails] Course document ${courseId} not found in Firestore.`);
+            return null;
+        }
+    } catch (error) {
+        console.error(`[getCourseDetails] Error fetching course ${courseId} from Firestore:`, error);
+        return null;
+    }
+}
+// --- END NEW FUNCTION ---
+
+// --- NEW FUNCTION: Approve Course ---
+/**
+ * Approves a course by updating its status in Firestore.
+ * @param {string} courseId - The ID of the course to approve.
+ * @returns {Promise<object>} - Result object { success: boolean, message: string }.
+ */
+export async function approveCourse(courseId) {
+    if (!db) {
+        console.error("[approveCourse] Firestore DB not initialized.");
+        return { success: false, message: "Database not initialized." };
+    }
+    if (!currentUser || !currentUser.isAdmin) {
+        console.error("[approveCourse] Permission Denied: Admin privileges required.");
+        return { success: false, message: "Admin privileges required to approve courses." };
+    }
+    if (!courseId) {
+        console.error("[approveCourse] Course ID is missing.");
+        return { success: false, message: "Course ID is missing." };
+    }
+
+    const courseRef = db.collection('courses').doc(courseId);
+    console.log(`[approveCourse] Admin ${currentUser.uid} attempting to approve course: ${courseId}`);
+
+    try {
+        await courseRef.update({
+            status: "approved",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`[approveCourse] Course ${courseId} successfully approved.`);
+        
+        // Optionally, update local globalCourseDataMap if the course exists there
+        if (globalCourseDataMap.has(courseId)) {
+            const courseData = globalCourseDataMap.get(courseId);
+            if (courseData) {
+                courseData.status = "approved";
+                courseData.updatedAt = new Date(); // Reflect immediate change locally
+                updateGlobalCourseData(courseId, courseData); // Update state
+                 console.log(`[approveCourse] Local cache for course ${courseId} updated to 'approved'.`);
+            }
+        }
+        
+        return { success: true, message: `Course "${courseId}" approved successfully.` };
+    } catch (error) {
+        console.error(`[approveCourse] Error approving course ${courseId}:`, error);
+        let message = `Failed to approve course: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            message = `Failed to approve course: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        return { success: false, message: message };
+    }
+}
+// --- END NEW FUNCTION ---
 
 export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSenderId) {
     if (!db || !currentUser || !currentUser.isAdmin) {

@@ -53,6 +53,9 @@ import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatM
 // --- Leaderboard/Marketplace Imports ---
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
+// --- Gamification Alerts Import ---
+import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js';
+
 // --- AI Chat Studio Import ---
 import { showAiChatStudio } from './ui_ai_chat_studio.js';
 // --- AI Settings UI Import ---
@@ -434,7 +437,8 @@ window.showImportExportDashboard = showImportExportDashboard;
 window.showAddSubjectComingSoon = showAddSubjectComingSoon;
 window.completeOnboarding = completeOnboarding;
 
-window.showAdminDashboard = showAdminDashboard;
+window.showAdminDashboard = showAdminDashboard; // Existing export, ensured it's the direct import
+
 window.promptAdminReply = promptAdminModerationReply; 
 window.handleAdminMarkCourseComplete = handleAdminMarkCourseComplete;
 window.loadUserCoursesForAdmin = loadUserCoursesForAdmin;
@@ -464,17 +468,25 @@ window.toggleSidebarDropdown = function(contentId, arrowId) {
 };
 
 export function updateAdminPanelVisibility() {
-    const adminPanelLink = document.getElementById('admin-panel-link');
-    const adminIcon = document.getElementById('admin-indicator-icon'); 
     const stateCurrentUser = currentUser;
-
     const isAdmin = stateCurrentUser && (stateCurrentUser.uid === ADMIN_UID || stateCurrentUser.isAdmin === true);
 
-    if (adminPanelLink) {
-        adminPanelLink.style.display = isAdmin ? 'flex' : 'none';
-    }
+    // Define admin navigation items and their corresponding link IDs
+    const adminNavItems = [
+        { linkId: 'admin-panel-link' }
+        // Add other admin-specific link IDs here if any in the future
+    ];
+
+    adminNavItems.forEach(item => {
+        const linkElement = document.getElementById(item.linkId);
+        if (linkElement) {
+            linkElement.style.display = isAdmin ? 'flex' : 'none';
+        }
+    });
+
+    const adminIcon = document.getElementById('admin-indicator-icon');
     if (adminIcon) {
-         adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
+        adminIcon.style.display = isAdmin ? 'inline-block' : 'none';
     }
 }
 
@@ -498,7 +510,7 @@ export function updateExperimentalFeaturesSidebarVisibility() {
     const musicLink = document.getElementById('sidebar-music-link');
     if (musicLink) musicLink.style.display = features.musicAndSounds ? 'flex' : 'none';
 }
-window.updateExperimentalFeaturesSidebarVisibility = updateExperimentalFeaturesSidebarVisibility; // Make it globally callable
+// window.updateExperimentalFeaturesSidebarVisibility = updateExperimentalFeaturesSidebarVisibility; // ES Exported
 // --- END MODIFIED ---
 
 

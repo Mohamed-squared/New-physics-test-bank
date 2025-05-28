@@ -3,7 +3,7 @@
 // ai_integration.js
 
 // *** MODIFIED: Import new path constants ***
-import { GEMINI_API_KEY, PDF_WORKER_SRC, COURSE_BASE_PATH, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER, AVAILABLE_AI_MODELS, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL } from './config.js'; // Import the API key & Path Config
+import { GEMINI_API_KEYS, PDF_WORKER_SRC, COURSE_BASE_PATH, DEFAULT_COURSE_PDF_FOLDER, DEFAULT_COURSE_TRANSCRIPTION_FOLDER, AVAILABLE_AI_MODELS, DEFAULT_PRIMARY_AI_MODEL, DEFAULT_FALLBACK_AI_MODEL } from './config.js'; // Import the API key & Path Config
 import { showLoading, hideLoading, escapeHtml, decodeHtmlEntities } from './utils.js'; // Import UI helpers & escapeHtml
 import { globalCourseDataMap, currentUser, userAiChatSettings, globalAiSystemPrompts } from './state.js'; // Need course data map, current user, and AI settings
 // *** NEW: Import DEFAULT_AI_SYSTEM_PROMPTS from ai_prompts.js ***
@@ -28,6 +28,17 @@ try {
             context: "System Error - AI SDK Load"
         }, currentUser).catch(e => console.error("Failed to submit feedback for SDK load error:", e));
     }
+}
+
+let currentApiKeyIndex = 0;
+
+function getNextApiKey() {
+    if (!GEMINI_API_KEYS || GEMINI_API_KEYS.length === 0) {
+        throw new Error("API Key array is empty or not configured.");
+    }
+    const apiKey = GEMINI_API_KEYS[currentApiKeyIndex];
+    currentApiKeyIndex = (currentApiKeyIndex + 1) % GEMINI_API_KEYS.length;
+    return apiKey;
 }
 
 // PDF.js library (dynamically check if loaded - needed for PDF text extraction)
@@ -116,7 +127,7 @@ export async function getAllPdfTextForAI(pdfDataOrPath) {
         return null;
     }
 }
-window.getAllPdfTextForAI = getAllPdfTextForAI;
+// window.getAllPdfTextForAI = getAllPdfTextForAI; // ES Exported
 
 
 // --- API Call Helpers ---
@@ -147,7 +158,6 @@ export async function tokenLimitCheck(contextText, charLimit = 1800000) {
  */
 export async function callGeminiTextAPI(prompt, history = null, systemPromptKey = null) {
     if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY") throw new Error("API Key not configured.");
 
     const checkContent = (history && history.length > 0) ? JSON.stringify(history) : prompt;
     if (!await tokenLimitCheck(checkContent)) {
@@ -211,127 +221,184 @@ export async function callGeminiTextAPI(prompt, history = null, systemPromptKey 
         parts: [{ text: prompt || '' }]
     }];
 
-    try {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: effectiveModelName });
+    const safetySettings = [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    ];
+    const generationConfig = {
+        temperature: 0.6, topK: 40, topP: 0.95, maxOutputTokens: 65536, stopSequences: ["\n\n\n"]
+    };
 
-        const safetySettings = [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-        ];
-        const generationConfig = {
-            temperature: 0.6, topK: 40, topP: 0.95, maxOutputTokens: 8192, stopSequences: ["\n\n\n"]
-        };
+    const generationArgs = {
+        contents: requestContents,
+        safetySettings,
+        generationConfig
+    };
 
-        const generationArgs = {
-            contents: requestContents,
-            safetySettings,
-            generationConfig
-        };
-
-        if (effectiveSystemPromptText) {
-            generationArgs.systemInstruction = { parts: [{ text: effectiveSystemPromptText }] };
-            console.log(`[AI Call] System instruction set: "${effectiveSystemPromptText.substring(0,100)}..."`);
-        }
-
-        console.log('[AI Call] Sending request to Gemini API with effective model:', effectiveModelName, 'Args:', JSON.stringify(generationArgs, (key, value) => (key === 'parts' && typeof value?.[0]?.text === 'string' && value[0].text.length > 200) ? `[{text: "${value[0].text.substring(0,100)}... (truncated)"}]` : value, 2));
-
-
-        const result = await model.generateContent(generationArgs);
-        const response = result.response;
-
-        if (response.promptFeedback?.blockReason) {
-            console.error("Prompt blocked by safety settings:", response.promptFeedback.blockReason);
-            throw new Error(`AI request blocked due to safety settings: ${response.promptFeedback.blockReason}`);
-        }
-        if (!response.candidates || response.candidates.length === 0) {
-            console.warn("Gemini response has no candidates:", response);
-            throw new Error("AI response was empty or missing content.");
-        }
-        if (response.candidates[0].finishReason === 'SAFETY') {
-            console.error("Response candidate blocked by safety settings.");
-            throw new Error("AI response blocked due to safety settings.");
-        }
-        if (response.candidates[0].finishReason === 'MAX_TOKENS') {
-             console.warn("Gemini response truncated due to max tokens.");
-        }
-         if (!response.candidates[0].content?.parts?.[0]?.text) {
-             console.warn("Gemini response content part is missing text:", response.candidates[0].content);
-             if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
-                 throw new Error(`AI response content missing, finish reason: ${response.candidates[0].finishReason}`);
-             } else {
-                 console.warn("AI response finished normally but content text is missing. Returning empty string.");
-                 return "";
-             }
-         }
-
-        return response.candidates[0].content.parts[0].text;
-    } catch (error) {
-        console.error(`Error in callGeminiTextAPI (Model: ${effectiveModelName}):`, error);
-        if (currentUser) {
-            submitFeedback({
-                subjectId: "AI API Error", questionId: null,
-                feedbackText: `Error in callGeminiTextAPI (Model: ${effectiveModelName}): ${error.message}`,
-                context: "System Error - AI API Call"
-            }, currentUser).catch(e => console.error("Failed to submit feedback for API error:", e));
-        }
-        throw error; // Re-throw the original error
+    if (effectiveSystemPromptText) {
+        generationArgs.systemInstruction = { parts: [{ text: effectiveSystemPromptText }] };
+        console.log(`[AI Call] System instruction set: "${effectiveSystemPromptText.substring(0,100)}..."`);
     }
+    
+    let attempts = 0;
+    const maxAttempts = GEMINI_API_KEYS.length; // Try each key once
+
+    while (attempts < maxAttempts) {
+        const currentApiKey = getNextApiKey();
+        if (!currentApiKey || currentApiKey === "YOUR_API_KEY") {
+            console.warn(`[AI Call] Invalid API key at index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Skipping.`);
+            attempts++;
+            if (attempts >= maxAttempts) throw new Error("All API Keys are invalid or not configured.");
+            continue; // Try next key
+        }
+        console.log(`[AI Call] Attempting API call with key index: ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}`);
+
+        try {
+            const genAI = new GoogleGenerativeAI(currentApiKey);
+            const model = genAI.getGenerativeModel({ model: effectiveModelName });
+
+            console.log('[AI Call] Sending request to Gemini API with effective model:', effectiveModelName, 'Args:', JSON.stringify(generationArgs, (key, value) => (key === 'parts' && typeof value?.[0]?.text === 'string' && value[0].text.length > 200) ? `[{text: "${value[0].text.substring(0,100)}... (truncated)"}]` : value, 2));
+            const result = await model.generateContent(generationArgs);
+            const response = result.response;
+
+            if (response.promptFeedback?.blockReason) {
+                console.error("Prompt blocked by safety settings:", response.promptFeedback.blockReason);
+                throw new Error(`AI request blocked due to safety settings: ${response.promptFeedback.blockReason}`);
+            }
+            if (!response.candidates || response.candidates.length === 0) {
+                console.warn("Gemini response has no candidates:", response);
+                throw new Error("AI response was empty or missing content.");
+            }
+            if (response.candidates[0].finishReason === 'SAFETY') {
+                console.error("Response candidate blocked by safety settings.");
+                throw new Error("AI response blocked due to safety settings.");
+            }
+            if (response.candidates[0].finishReason === 'MAX_TOKENS') {
+                 console.warn("Gemini response truncated due to max tokens.");
+            }
+             if (!response.candidates[0].content?.parts?.[0]?.text) {
+                 console.warn("Gemini response content part is missing text:", response.candidates[0].content);
+                 if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
+                     throw new Error(`AI response content missing, finish reason: ${response.candidates[0].finishReason}`);
+                 } else {
+                     console.warn("AI response finished normally but content text is missing. Returning empty string.");
+                     return "";
+                 }
+             }
+            return response.candidates[0].content.parts[0].text;
+
+        } catch (error) {
+            console.error(`Error in callGeminiTextAPI with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts} (Model: ${effectiveModelName}):`, error);
+            attempts++;
+            
+            const isApiKeyError = error.message && (
+                error.message.toLowerCase().includes("api key not valid") ||
+                error.message.toLowerCase().includes("quota exceeded") ||
+                error.message.toLowerCase().includes("api_key_invalid") ||
+                error.message.toLowerCase().includes("resource exhausted")
+            );
+
+            if (isApiKeyError && attempts < maxAttempts) {
+                console.warn(`[AI Call] API key error with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Trying next key. Attempts: ${attempts}/${maxAttempts}`);
+            } else {
+                if (currentUser) {
+                    submitFeedback({
+                        subjectId: "AI API Error", questionId: null,
+                        feedbackText: `Error in callGeminiTextAPI after ${attempts} attempts (Last Model: ${effectiveModelName}): ${error.message}`,
+                        context: "System Error - AI API Call"
+                    }, currentUser).catch(e => console.error("Failed to submit feedback for API error:", e));
+                }
+                throw error; 
+            }
+        }
+    }
+    throw new Error("Failed to get a response from AI after trying all API keys.");
 }
 
 export async function callGeminiVisionAPI(promptParts) {
-     if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
-    if (!GEMINI_API_KEY || GEMINI_API_KEY === "YOUR_API_KEY") throw new Error("API Key not configured.");
+    if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load.");
     if (!promptParts?.length) throw new Error("Prompt parts cannot be empty.");
 
-    // Note: Vision model selection is not dynamic via user settings in this iteration. Uses VISION_MODEL_NAME.
-    // If vision models also need to be configurable, similar logic as in callGeminiTextAPI would be needed.
     console.log(`[AI Vision Call] Using model: ${VISION_MODEL_NAME}`);
 
-    try {
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: VISION_MODEL_NAME });
-        const logParts = promptParts.map(p => p.inlineData ? `{inlineData: mimeType=${p.inlineData.mimeType}, length=${p.inlineData.data?.length}}` : p);
-        console.log(`Sending VISION prompt (${VISION_MODEL_NAME}):`, logParts);
-        const safetySettings = [
-             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-             { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-             { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-         ];
-         const generationConfig = {
-             temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 4096,
-         };
+    const safetySettingsVision = [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+    ];
+    const generationConfigVision = {
+        temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536,
+    };
+    const visionRequestPayload = {
+        contents: [{ role: "user", parts: promptParts }],
+        safetySettings: safetySettingsVision,
+        generationConfig: generationConfigVision
+    };
+    
+    let attempts = 0;
+    const maxAttempts = GEMINI_API_KEYS.length;
 
-        const result = await model.generateContent({ contents: [{ role: "user", parts: promptParts }], safetySettings, generationConfig });
-        const response = result.response;
-
-        if (response.promptFeedback?.blockReason) { throw new Error(`AI request blocked: ${response.promptFeedback.blockReason}`); }
-        if (!response.candidates?.length) { throw new Error("AI response was empty."); }
-        if (response.candidates[0].finishReason === 'SAFETY') { throw new Error("AI response blocked due to safety settings."); }
-        if (response.candidates[0].finishReason === 'MAX_TOKENS') { console.warn("Vision response truncated due to MAX_TOKENS."); }
-        if (!response.candidates[0].content?.parts?.[0]?.text) {
-             console.warn("Vision response content part is missing text:", response.candidates[0].content);
-             if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
-                 throw new Error(`Vision response content missing, finish reason: ${response.candidates[0].finishReason}`);
-             } else {
-                  console.warn("Vision response finished normally but content text is missing. Returning empty string.");
-                  return "";
-             }
+    while (attempts < maxAttempts) {
+        const currentApiKey = getNextApiKey();
+        if (!currentApiKey || currentApiKey === "YOUR_API_KEY") {
+            console.warn(`[AI Vision Call] Invalid API key at index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Skipping.`);
+            attempts++;
+            if (attempts >= maxAttempts) throw new Error("All API Keys are invalid or not configured for Vision.");
+            continue; 
         }
+        console.log(`[AI Vision Call] Attempting API call with key index: ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}`);
+        
+        try {
+            const genAI = new GoogleGenerativeAI(currentApiKey);
+            const model = genAI.getGenerativeModel({ model: VISION_MODEL_NAME });
+            const logParts = promptParts.map(p => p.inlineData ? `{inlineData: mimeType=${p.inlineData.mimeType}, length=${p.inlineData.data?.length}}` : p);
+            console.log(`Sending VISION prompt (${VISION_MODEL_NAME}):`, logParts);
+            
+            const result = await model.generateContent(visionRequestPayload);
+            const response = result.response;
 
-        const text = response.candidates[0].content.parts[0].text;
-        console.log("Received AI vision response.");
-        return text;
-    } catch (error) {
-        console.error("Error calling Gemini Vision API:", error);
-        let errorMessage = `Gemini API Error: ${error.message || 'Unknown error'}.`;
-        if (error.message?.toLowerCase().includes('api key not valid')) { errorMessage = "Invalid API Key."; }
-        else if (error.message?.includes('quota')) { errorMessage = "Quota exceeded."; }
-        throw new Error(errorMessage);
+            if (response.promptFeedback?.blockReason) { throw new Error(`AI request blocked: ${response.promptFeedback.blockReason}`); }
+            if (!response.candidates?.length) { throw new Error("AI response was empty."); }
+            if (response.candidates[0].finishReason === 'SAFETY') { throw new Error("AI response blocked due to safety settings."); }
+            if (response.candidates[0].finishReason === 'MAX_TOKENS') { console.warn("Vision response truncated due to MAX_TOKENS."); }
+            if (!response.candidates[0].content?.parts?.[0]?.text) {
+                 console.warn("Vision response content part is missing text:", response.candidates[0].content);
+                 if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
+                     throw new Error(`Vision response content missing, finish reason: ${response.candidates[0].finishReason}`);
+                 } else {
+                      console.warn("Vision response finished normally but content text is missing. Returning empty string.");
+                      return "";
+                 }
+            }
+
+            const text = response.candidates[0].content.parts[0].text;
+            console.log("Received AI vision response.");
+            return text;
+
+        } catch (error) {
+            console.error(`Error calling Gemini Vision API with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}:`, error);
+            attempts++;
+            const isApiKeyError = error.message && (
+                error.message.toLowerCase().includes("api key not valid") ||
+                error.message.toLowerCase().includes("quota exceeded") ||
+                error.message.toLowerCase().includes("api_key_invalid") ||
+                error.message.toLowerCase().includes("resource exhausted")
+            );
+
+            if (isApiKeyError && attempts < maxAttempts) {
+                console.warn(`[AI Vision Call] API key error with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Trying next key. Attempts: ${attempts}/${maxAttempts}`);
+            } else {
+                let errorMessage = `Gemini API Error: ${error.message || 'Unknown error'}.`;
+                if (error.message?.toLowerCase().includes('api key not valid')) { errorMessage = "Invalid API Key."; }
+                else if (error.message?.includes('quota')) { errorMessage = "Quota exceeded."; }
+                throw new Error(errorMessage); 
+            }
+        }
     }
+    throw new Error("Failed to get a response from Vision AI after trying all API keys.");
 }
 
 // --- HTML Formatting ---
@@ -581,44 +648,92 @@ export async function getExplanationForPdfSnapshot(userQuestion, base64ImageData
         // The `callGeminiVisionAPI` needs to reflect this structure if it's a wrapper.
         // If `callGeminiVisionAPI` is a thin wrapper just for ONE turn, then this function is doing the history management.
         // Let's assume `callGeminiVisionAPI` is for single-turn and `getExplanationForPdfSnapshot` manages history.
-
-        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: VISION_MODEL_NAME }); // Vision model
-        const safetySettings = [ /* ... as defined in callGeminiVisionAPI ... */ ];
-        const generationConfig = { /* ... as defined in callGeminiVisionAPI ... */ };
-
-        console.log(`[AI Vision Call] Sending to model ${VISION_MODEL_NAME} with history length: ${updatedHistory.length}`);
-        const result = await model.generateContent({ contents: updatedHistory, safetySettings, generationConfig });
-        const response = result.response;
-
-        if (response.promptFeedback?.blockReason) { throw new Error(`AI request blocked: ${response.promptFeedback.blockReason}`); }
-        if (!response.candidates?.length) { throw new Error("AI response was empty."); }
-        if (response.candidates[0].finishReason === 'SAFETY') { throw new Error("AI response blocked due to safety settings."); }
-        if (response.candidates[0].finishReason === 'MAX_TOKENS') { console.warn("Vision response truncated due to MAX_TOKENS."); }
         
-        let explanationText = "";
-        if (response.candidates[0].content?.parts?.[0]?.text) {
-            explanationText = response.candidates[0].content.parts[0].text;
-        } else {
-             console.warn("Vision response content part is missing text:", response.candidates[0].content);
-             if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
-                 throw new Error(`Vision response content missing, finish reason: ${response.candidates[0].finishReason}`);
-             } else {
-                  console.warn("Vision response finished normally but content text is missing. Returning empty string.");
-                  // explanationText remains ""
-             }
-        }
-        
-        updatedHistory.push({ role: "model", parts: [{ text: explanationText }] });
+        // --- Start of new retry logic for getExplanationForPdfSnapshot ---
+        if (!GoogleGenerativeAI) throw new Error("AI SDK failed to load for Snapshot Explainer.");
 
-        return {
-            explanationHtml: formatResponseAsHtml(explanationText),
-            history: updatedHistory
+        let attempts = 0;
+        const maxAttempts = GEMINI_API_KEYS.length;
+        let explanationText = ""; 
+
+        // Define safetySettings and generationConfig for Vision within this function's scope
+        const safetySettingsVisionSnapshot = [
+            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+        ];
+        const generationConfigVisionSnapshot = {
+            temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536 
         };
-    } catch (error) {
-        console.error("Error explaining PDF snapshot:", error);
-        // Return history up to the point of the user's last failed prompt
-        const historyBeforeError = updatedHistory.filter(turn => turn.role !== "model" || turn.parts[0].text !== undefined); // crude way to slice off a potential failed model turn
+
+        while (attempts < maxAttempts) {
+            const currentApiKey = getNextApiKey();
+            if (!currentApiKey || currentApiKey === "YOUR_API_KEY") {
+                console.warn(`[AI Snapshot Explainer] Invalid API key at index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Skipping.`);
+                attempts++;
+                if (attempts >= maxAttempts) throw new Error("All API Keys are invalid or not configured for Snapshot Explainer.");
+                continue;
+            }
+            console.log(`[AI Snapshot Explainer] Attempting with key index: ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}`);
+            
+            try {
+                const genAI = new GoogleGenerativeAI(currentApiKey); 
+                const model = genAI.getGenerativeModel({ model: VISION_MODEL_NAME });
+
+                console.log(`[AI Vision Call in Snapshot Explainer] Sending to model ${VISION_MODEL_NAME} with history length: ${updatedHistory.length}`);
+                const result = await model.generateContent({ contents: updatedHistory, safetySettings: safetySettingsVisionSnapshot, generationConfig: generationConfigVisionSnapshot }); 
+                const response = result.response;
+
+                if (response.promptFeedback?.blockReason) { throw new Error(`AI request blocked: ${response.promptFeedback.blockReason}`); }
+                if (!response.candidates?.length) { throw new Error("AI response was empty."); }
+                if (response.candidates[0].finishReason === 'SAFETY') { throw new Error("AI response blocked due to safety settings."); }
+                if (response.candidates[0].finishReason === 'MAX_TOKENS') { console.warn("Vision response truncated due to MAX_TOKENS."); }
+                
+                if (response.candidates[0].content?.parts?.[0]?.text) {
+                    explanationText = response.candidates[0].content.parts[0].text;
+                } else {
+                     console.warn("Vision response content part is missing text:", response.candidates[0].content);
+                     if (response.candidates[0].finishReason && response.candidates[0].finishReason !== 'STOP') {
+                         throw new Error(`Vision response content missing, finish reason: ${response.candidates[0].finishReason}`);
+                     } else {
+                          console.warn("Vision response finished normally but content text is missing. Returning empty string.");
+                          explanationText = ""; 
+                     }
+                }
+                
+                updatedHistory.push({ role: "model", parts: [{ text: explanationText }] });
+                return { 
+                    explanationHtml: formatResponseAsHtml(explanationText),
+                    history: updatedHistory
+                };
+
+            } catch (error) {
+                console.error(`Error in getExplanationForPdfSnapshot with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}:`, error);
+                attempts++;
+                const isApiKeyError = error.message && (
+                    error.message.toLowerCase().includes("api key not valid") ||
+                    error.message.toLowerCase().includes("quota exceeded") ||
+                    error.message.toLowerCase().includes("api_key_invalid") ||
+                    error.message.toLowerCase().includes("resource exhausted")
+                );
+                if (isApiKeyError && attempts < maxAttempts) {
+                    console.warn(`[AI Snapshot Explainer] API key error with key index ${(currentApiKeyIndex - 1 + maxAttempts) % maxAttempts}. Trying next key. Attempts: ${attempts}/${maxAttempts}`);
+                } else {
+                    const historyBeforeError = updatedHistory.filter(turn => turn.role !== "model" || turn.parts[0].text !== undefined);
+                    return {
+                        explanationHtml: `<p class="text-danger">Error: ${error.message}</p>`,
+                        history: historyBeforeError 
+                    };
+                }
+            }
+        }
+        // If all keys failed
+        throw new Error("Failed to get explanation for PDF snapshot after trying all API keys.");
+        // --- End of new retry logic for getExplanationForPdfSnapshot ---
+    } catch (error) { // This is the original outer catch block for getExplanationForPdfSnapshot
+        console.error("Error explaining PDF snapshot (outer catch):", error);
+        const historyBeforeError = updatedHistory.filter(turn => turn.role !== "model" || (turn.parts && turn.parts[0].text !== undefined));
         return {
              explanationHtml: `<p class="text-danger">Error: ${error.message}</p>`,
              history: historyBeforeError 

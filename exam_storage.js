@@ -4,8 +4,12 @@ import { markFullExam, generateExplanation } from './ai_exam_marking.js';
 import { renderMathIn } from './utils.js';
 import { displayContent, setActiveSidebarLink} from './ui_core.js';
 import { showProgressDashboard } from './ui_progress_dashboard.js';
+// Import showExamsDashboard
+import { showExamsDashboard } from './ui_exams_dashboard.js';
 import { submitFeedback, saveUserData, updateUserCredits } from './firebase_firestore.js';
 import { MAX_MARKS_PER_PROBLEM, MAX_MARKS_PER_MCQ, SKIP_EXAM_PASSING_PERCENT, PASSING_GRADE_PERCENT } from './config.js';
+import { generatePdfHtml, generateAndDownloadPdfWithMathJax, generateExamFeedbackPdfHtml } from './ui_pdf_generation.js';
+
 
 // --- Exam Storage and Retrieval Functions ---
 
@@ -330,7 +334,14 @@ export async function showExamReviewUI(userId, examId) {
         const contextName = isCourse ? (globalCourseDataMap.get(courseId)?.name ?? courseId)
                            : subjectId ? (window.data?.subjects?.[subjectId]?.name ?? subjectId)
                            : 'Standard Test';
-        const typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        let typeDisplay;
+        if (examDetails.isTestGen) {
+            typeDisplay = "TestGen Exam";
+        } else if (type) { // type here refers to examDetails.type
+            typeDisplay = type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        } else {
+            typeDisplay = "Exam"; // Fallback
+        }
 
         let questionsHtml = '<p class="text-center text-muted italic">No question data found in this record.</p>';
         if (questions && questions.length > 0 && markingResults?.questionResults) {
@@ -400,11 +411,11 @@ export async function showExamReviewUI(userId, examId) {
 
                         <!-- Action Buttons -->
                         <div class="mt-3 text-right space-x-2">
-                            <button onclick="window.showAIExplanationSection('${examId}', ${index})" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
+                            <button id="explain-ai-btn-${index}" data-exam-id="${examId}" data-question-index="${index}" class="btn-secondary-small text-xs" title="Get a step-by-step explanation from AI">
                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.375 3.375 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                                 Explain (AI)
                              </button>
-                            <button onclick="window.showIssueReportingModal('${examId}', ${index})" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
+                            <button id="report-issue-btn-${index}" data-exam-id="${examId}" data-question-index="${index}" class="btn-warning-small text-xs" title="Report an issue with this question or its marking">
                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 Report Issue
                             </button>
@@ -443,7 +454,7 @@ export async function showExamReviewUI(userId, examId) {
                               <p class="text-sm text-gray-500 dark:text-gray-400">Exam ID: ${escapeHtml(examId)}</p>
                               <p class="text-sm text-gray-500 dark:text-gray-400">Completed: ${date} ${durationMinutes ? `(${durationMinutes} min)` : ''}</p>
                          </div>
-                         <button onclick="window.showExamsDashboard()" class="btn-secondary-small flex-shrink-0">Back to Exams List</button>
+                         <button id="back-to-exams-list-btn-header" class="btn-secondary-small flex-shrink-0">Back to Exams List</button>
                     </div>
                     <div class="text-center border-t dark:border-gray-600 pt-4">
                          <p class="text-lg text-gray-600 dark:text-gray-400 mb-1">Overall Score</p>
@@ -462,13 +473,34 @@ export async function showExamReviewUI(userId, examId) {
                     </div>
                 </div>
 
-                <div class="text-center mt-6">
-                    <button onclick="window.showExamsDashboard()" class="btn-secondary">Back to Exams List</button>
+                <div class="text-center mt-6 flex flex-wrap justify-center gap-3">
+                    <button id="download-questions-pdf-btn" data-user-id="${userId}" data-exam-id="${examId}" class="btn-secondary">Download Questions PDF</button>
+                    <button id="download-solutions-pdf-btn" data-user-id="${userId}" data-exam-id="${examId}" class="btn-primary">Download Solutions & Explanations PDF</button>
+                    <button id="download-full-report-btn" data-user-id="${userId}" data-exam-id="${examId}" class="btn-info">Download Full Report (HTML)</button>
+                    <button id="back-to-exams-list-btn-footer" class="btn-secondary">Back to Exams List</button>
                 </div>
             </div>
         `;
 
         displayContent(reviewHtml, 'content');
+        
+        // Add event listeners for per-question buttons
+        questions.forEach((q, index) => {
+            const explainBtn = document.getElementById(`explain-ai-btn-${index}`);
+            if (explainBtn) explainBtn.addEventListener('click', () => showAIExplanationSection(explainBtn.dataset.examId, parseInt(explainBtn.dataset.questionIndex)));
+            
+            const reportBtn = document.getElementById(`report-issue-btn-${index}`);
+            if (reportBtn) reportBtn.addEventListener('click', () => showIssueReportingModal(reportBtn.dataset.examId, parseInt(reportBtn.dataset.questionIndex)));
+        });
+
+        // Add event listeners for footer buttons
+        document.getElementById('download-questions-pdf-btn')?.addEventListener('click', (e) => handleDownloadExamQuestionsPdfWrapper(e.currentTarget.dataset.userId, e.currentTarget.dataset.examId));
+        document.getElementById('download-solutions-pdf-btn')?.addEventListener('click', (e) => handleDownloadExamSolutionsPdfWrapper(e.currentTarget.dataset.userId, e.currentTarget.dataset.examId));
+        document.getElementById('download-full-report-btn')?.addEventListener('click', (e) => handleDownloadFullReportWrapper(e.currentTarget.dataset.userId, e.currentTarget.dataset.examId));
+        
+        document.getElementById('back-to-exams-list-btn-header')?.addEventListener('click', showExamsDashboard);
+        document.getElementById('back-to-exams-list-btn-footer')?.addEventListener('click', showExamsDashboard);
+
         const questionsContainer = document.getElementById('review-questions-container');
         if (questionsContainer) await renderMathIn(questionsContainer);
         const overallFeedbackContainer = document.querySelector('.overall-feedback-area');
@@ -590,7 +622,7 @@ export const showAIExplanationSection = async (examId, questionIndex) => {
     }
 };
 
-window.showAIExplanationSection = showAIExplanationSection;
+// window.showAIExplanationSection = showAIExplanationSection; // ES Exported
 
 export const askAIFollowUp = async (examId, questionIndex) => {
     console.log(`[askAIFollowUp] Starting for examId: ${examId}, questionIndex: ${questionIndex}`);
@@ -670,7 +702,7 @@ export const askAIFollowUp = async (examId, questionIndex) => {
     }
 };
 
-window.askAIFollowUp = askAIFollowUp;
+// window.askAIFollowUp = askAIFollowUp; // ES Exported
 
 export function showIssueReportingModal(examId, questionIndex) {
     document.getElementById('issue-report-modal')?.remove();
@@ -689,7 +721,7 @@ export function showIssueReportingModal(examId, questionIndex) {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     document.getElementById('issue-description').focus();
 }
-window.showIssueReportingModal = showIssueReportingModal;
+// window.showIssueReportingModal = showIssueReportingModal; // ES Exported
 
 export async function submitIssueReport(examId, questionIndex) {
     const issueType = document.getElementById('issue-type')?.value;
@@ -727,7 +759,7 @@ export async function submitIssueReport(examId, questionIndex) {
         alert(`Failed to submit report: ${error.message}`);
     }
 }
-window.submitIssueReport = submitIssueReport;
+// window.submitIssueReport = submitIssueReport; // ES Exported
 
 export async function deleteCompletedExamV2(examId) {
     if (!currentUser || !db || !data) {
@@ -891,6 +923,123 @@ export async function deleteCompletedExamV2(examId) {
         return false;
     }
 }
-window.deleteCompletedExamV2 = deleteCompletedExamV2;
+// window.deleteCompletedExamV2 = deleteCompletedExamV2; // ES Exported
+
+// --- PDF Download Logic and Wrappers ---
+
+async function handleDownloadExamQuestionsPdfLogic(userId, examId) {
+    showLoading("Preparing Questions PDF...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate PDF.');
+            hideLoading();
+            return;
+        }
+        // Note: generatePdfHtml is now async and expects full examDetails
+        const { questionHtml } = await generatePdfHtml(examDetails);
+        // generateAndDownloadPdfWithMathJax handles its own loading for the server part, but we keep overall loading here
+        await generateAndDownloadPdfWithMathJax(questionHtml, `Exam-${examId}-Questions`);
+    } finally {
+        hideLoading(); // Ensure loading is hidden regardless of success or failure within this scope
+    }
+}
+
+async function handleDownloadExamSolutionsPdfLogic(userId, examId) {
+    showLoading("Preparing Solutions & Explanations PDF...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate PDF.');
+            hideLoading();
+            return;
+        }
+        // Note: generatePdfHtml is now async and expects full examDetails
+        const { solutionHtml } = await generatePdfHtml(examDetails);
+        await generateAndDownloadPdfWithMathJax(solutionHtml, `Exam-${examId}-Solutions-Explanations`);
+    } finally {
+        hideLoading(); // Ensure loading is hidden
+    }
+}
+
+export async function handleDownloadExamQuestionsPdfWrapper(userId, examId) {
+    try {
+        await handleDownloadExamQuestionsPdfLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading questions PDF:", error);
+        alert("Failed to download questions PDF: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+// window.handleDownloadExamQuestionsPdfWrapper = handleDownloadExamQuestionsPdfWrapper; // ES Exported
+
+export async function handleDownloadExamSolutionsPdfWrapper(userId, examId) {
+    try {
+        await handleDownloadExamSolutionsPdfLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading solutions PDF:", error);
+        alert("Failed to download solutions PDF: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+// window.handleDownloadExamSolutionsPdfWrapper = handleDownloadExamSolutionsPdfWrapper; // ES Exported
+
+// --- Full HTML Report Download Logic and Wrapper ---
+
+async function handleDownloadFullReportLogic(userId, examId) {
+    showLoading("Preparing Full Report...");
+    try {
+        const examDetails = await getExamDetails(userId, examId);
+        if (!examDetails || !examDetails.questions || examDetails.questions.length === 0) {
+            alert('Error: Exam details or questions not found. Cannot generate full report.');
+            hideLoading();
+            return;
+        }
+
+        const populatedFeedbackDetails = {};
+        showLoading("Generating AI Explanations for Full Report..."); // Update loading message
+        for (let i = 0; i < examDetails.questions.length; i++) {
+            const question = examDetails.questions[i];
+            const studentAnswer = examDetails.userAnswers?.[question.id];
+            const questionMarkingResult = examDetails.markingResults?.questionResults?.find(r => r.questionId === question.id);
+            try {
+                const explanationResult = await generateExplanation(question, questionMarkingResult, studentAnswer, []);
+                populatedFeedbackDetails[question.id] = { explanationHtml: explanationResult.explanationHtml };
+            } catch (err) {
+                console.error(`Error generating explanation for question ${question.id} for full report:`, err);
+                populatedFeedbackDetails[question.id] = { explanationHtml: "<p><i>Error generating AI explanation for this question.</i></p>" };
+            }
+        }
+        hideLoading(); // Hide after explanations are generated
+
+        showLoading("Generating HTML Report..."); // Show loading for HTML generation
+        // generateExamFeedbackPdfHtml is misnamed if it returns general HTML, but using as specified
+        const reportHtml = generateExamFeedbackPdfHtml(examDetails.examId, examDetails, populatedFeedbackDetails);
+
+        const blob = new Blob([reportHtml], { type: 'text/html' });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `Exam-Report-${examDetails.examId}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(downloadUrl);
+
+    } finally {
+        hideLoading(); // Ensure loading is hidden
+    }
+}
+
+export async function handleDownloadFullReportWrapper(userId, examId) {
+    try {
+        await handleDownloadFullReportLogic(userId, examId);
+    } catch (error) {
+        console.error("Error downloading full HTML report:", error);
+        alert("Failed to download full HTML report: " + error.message);
+        hideLoading(); // Ensure loading is hidden on error from the wrapper
+    }
+}
+// window.handleDownloadFullReportWrapper = handleDownloadFullReportWrapper; // ES Exported
 
 // --- END OF FILE exam_storage.js ---

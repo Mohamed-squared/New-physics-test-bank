@@ -76,7 +76,7 @@ export function showUserProfileDashboard() {
             <h2 class="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">Your Profile</h2>
 
             <div class="content-card mb-6">
-                 <form id="update-profile-form" onsubmit="window.updateUserProfile(event)">
+                 <form id="update-profile-form">
                     <div class="flex flex-col sm:flex-row items-center mb-6 space-y-4 sm:space-y-0 sm:space-x-4 pb-4 border-b dark:border-gray-700">
                          <div class="relative group flex-shrink-0">
                             <img id="profile-pic-preview" src="${photoUrlValue}" alt="Profile Picture" class="w-20 h-20 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600 shadow-sm" onerror="this.onerror=null;this.src='${DEFAULT_PROFILE_PIC_URL}';">
@@ -121,12 +121,15 @@ export function showUserProfileDashboard() {
              </div>
 
              <div class="content-card">
-                 <p class="text-sm text-center text-muted">Account actions (Logout, Delete, Change Email/Password) are available in <button class="link" onclick="window.showSettingsPanel()">Settings</button>.</p>
+                 <p class="text-sm text-center text-muted">Account actions (Logout, Delete, Change Email/Password) are available in <button id="go-to-settings-btn" class="link">Settings</button>.</p>
              </div>
         </div>`;
         // --- END MODIFICATION ---
 
         displayContent(html);
+
+        document.getElementById('update-profile-form')?.addEventListener('submit', updateUserProfile);
+        document.getElementById('go-to-settings-btn')?.addEventListener('click', window.showSettingsPanel); // showSettingsPanel is on window from script.js
 
         const fileInput = document.getElementById('profilePicInput');
         if (fileInput) {
@@ -358,6 +361,6 @@ async function handleSelfDeleteAccount() {
         window.playUiSound?.('error');
     } finally { hideLoading(); }
 }
-window.updateUserProfile = updateUserProfile;
+// window.updateUserProfile = updateUserProfile; // Now called via event listener, ES Exported
 // Removed window.signOutUserWrapper and window.confirmSelfDeleteAccount as they will be in settings panel
 // --- END OF FILE ui_user_profile.js ---
