@@ -664,7 +664,7 @@ export async function getExplanationForPdfSnapshot(userQuestion, base64ImageData
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
         ];
         const generationConfigVisionSnapshot = {
-            temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536
+            temperature: 0.4, topK: 32, topP: 1.0, maxOutputTokens: 65536 
         };
 
         while (attempts < maxAttempts) {

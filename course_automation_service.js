@@ -9,6 +9,58 @@ const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js');
 const { GEMINI_API_KEY } = require('./server_config.js'); // Example if a central key is used, though often passed in params
 
+/**
+ * Executes tasks in parallel batches, assigning a unique API key to each task.
+ * @param {Array<any>} items - Array of items to process (e.g., chapters).
+ * @param {Function} taskFunction - Async function to execute for each item. 
+ *                                  It will receive (item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword).
+ * @param {Array<string>} apiKeys - Array of available API keys.
+ * @param {string} courseIdPlaceholder - The course ID.
+ * @param {string} megaEmail - Mega email.
+ * @param {string} megaPassword - Mega password.
+ * @param {Function} logProgress - Logging function.
+ * @param {object} resultsRef - Reference to the main results object for logging.
+ * @returns {Promise<Array<object>>} - Array of results from all settled promises.
+ */
+async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlaceholder, megaEmail, megaPassword, logProgress, resultsRef) {
+    if (!apiKeys || apiKeys.length === 0) {
+        logProgress('CRITICAL: No API keys available for parallel processing.', resultsRef, 'error');
+        throw new Error('No API keys available for parallel tasks.');
+    }
+    const numWorkers = Math.min(items.length, apiKeys.length); // Max workers = num keys or num items
+    const results = [];
+    let itemIndex = 0;
+
+    logProgress(`Starting parallel processing for ${items.length} items with up to ${numWorkers} concurrent workers.`, resultsRef);
+
+    // Create a pool of workers
+    const workers = [];
+    for (let i = 0; i < numWorkers; i++) {
+        workers.push((async () => {
+            let assignedItemIndex;
+            while ((assignedItemIndex = itemIndex++) < items.length) {
+                const item = items[assignedItemIndex];
+                const apiKeyForTask = apiKeys[i % apiKeys.length]; // Assign key (round-robin if more items than keys, but numWorkers is capped by apiKeys.length)
+                                                               // With numWorkers = min(items, keys), i will be < apiKeys.length here.
+                
+                logProgress(`Worker ${i}: Processing item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}') with API key index ${i % apiKeys.length}.`, resultsRef);
+                try {
+                    const result = await taskFunction(item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword);
+                    results.push({ status: 'fulfilled', value: result, item });
+                    logProgress(`Worker ${i}: Successfully processed item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}').`, resultsRef);
+                } catch (error) {
+                    results.push({ status: 'rejected', reason: error, item });
+                    logProgress(`Worker ${i}: ERROR processing item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}'): ${error.message}`, resultsRef, 'error');
+                }
+            }
+        })());
+    }
+
+    await Promise.allSettled(workers); // Wait for all items to be processed by the worker pool
+    logProgress(`Finished all parallel tasks. Total results: ${results.length}`, resultsRef);
+    return results; // Array of {status, value/reason, item}
+}
+
 // Standardized Mega Folder Names
 const TEXTBOOK_FULL_DIR_NAME = "Textbook_Full";
 const TEXTBOOK_CHAPTERS_DIR_NAME = "Textbook_Chapters"; // Used by pdf_processing_service
@@ -307,33 +359,121 @@ Highlight the key learning outcomes and what students will gain from this course
 
 
         // --- 5. Question Generation ---
-        console.log('[AutomationService] Generating questions from PDF chapters...');
-        for (const chapter of results.megaLinks.processedChapters) {
-            console.log(`[AutomationService] Generating PDF questions for chapter: "${chapter.title}" (Key: ${chapter.key})`);
-            // generateQuestionsFromPdf uses courseIdPlaceholder and chapterKey to structure its output on Mega.
-            const pdfQuestionsResult = await generateQuestionsFromPdf(
-                courseIdPlaceholder,
+        // Define the task function for PDF question generation
+        const generatePdfQuestionsForChapterTask = async (chapter, apiKey, courseId, email, password) => {
+            logProgress(`[TaskRunner] Generating PDF questions for chapter: "${chapter.title}" (Key: ${chapter.key}) using assigned API key index...`, results); // Log with results ref
+            return generateQuestionsFromPdf(
+                courseId,
                 chapter.key,
                 chapter.pdfLink,
                 chapter.title,
-                megaEmail,
-                megaPassword,
-                finalApiKeyForAIServer
+                email,
+                password,
+                apiKey
             );
-            if (pdfQuestionsResult.success) {
-                results.megaLinks.pdfQuestions.push({
-                    chapterKey: chapter.key,
-                    mcqLink: pdfQuestionsResult.mcqMegaLink,
-                    problemsLink: pdfQuestionsResult.problemsMegaLink
-                });
+        };
+
+        results.firestoreDataPreview.currentAutomationStep = "Generating PDF Questions (Parallel)";
+        logProgress('Starting PDF Question Generation step with retry logic...', results);
+
+        let itemsToProcessForPdfQuestions = [...results.megaLinks.processedChapters]; // Start with all chapters
+        let allPdfQuestionTaskResults = []; // Accumulate all results (success or final failure)
+        let pdfRetryAttemptsDone = 0;
+        
+        let validApiKeysForParallel = Array.isArray(finalApiKeyForAIServer) 
+            ? finalApiKeyForAIServer.filter(k => typeof k === 'string' && k.trim() !== '') 
+            : [];
+
+        if (!validApiKeysForParallel || validApiKeysForParallel.length === 0) {
+            logProgress('WARN: No valid API keys in finalApiKeyForAIServer. Attempting to use fallback from server_config.js for PDF Question Generation.', results, 'warn');
+            const fallbackKeys = Array.isArray(GEMINI_API_KEY) ? GEMINI_API_KEY.filter(k => typeof k === 'string' && k.trim() !== '') : [];
+            if (fallbackKeys.length > 0) {
+                validApiKeysForParallel = fallbackKeys;
+                logProgress('Using fallback API keys from server_config.js for PDF question generation.', results);
             } else {
-                console.warn(`[AutomationService] Failed to generate PDF questions for chapter "${chapter.title}": ${pdfQuestionsResult.message}`);
+                logProgress('CRITICAL: No valid API keys for PDF Question Generation. Skipping this step.', results, 'error');
+                // Ensure itemsToProcessForPdfQuestions is empty to skip the loop or handle error appropriately
+                itemsToProcessForPdfQuestions = [];
             }
         }
-        console.log(`[AutomationService] PDF question generation completed. ${results.megaLinks.pdfQuestions.length} sets generated.`);
+        
+        const MAX_TOTAL_ATTEMPTS_PER_ITEM = Math.max(1, validApiKeysForParallel.length); // Each item gets N chances if N keys
+
+        while (itemsToProcessForPdfQuestions.length > 0 && pdfRetryAttemptsDone < MAX_TOTAL_ATTEMPTS_PER_ITEM && validApiKeysForParallel.length > 0) {
+            let attemptNumber = pdfRetryAttemptsDone + 1;
+            logProgress(`PDF Question Generation: Starting attempt ${attemptNumber}/${MAX_TOTAL_ATTEMPTS_PER_ITEM} for ${itemsToProcessForPdfQuestions.length} item(s).`, results);
+
+            // Rotate keys for this attempt: Take the first key and move it to the end
+            // This ensures workers get different initial keys over retries for the same item if item count matches worker count.
+            if (pdfRetryAttemptsDone > 0 && validApiKeysForParallel.length > 1) {
+                const firstKey = validApiKeysForParallel.shift();
+                validApiKeysForParallel.push(firstKey);
+                logProgress(`Rotated API keys for attempt ${attemptNumber}. New first key for worker 0: ${validApiKeysForParallel[0].substring(0,15)}...`, results);
+            }
+
+            const currentBatchTaskResults = await runTasksInParallel(
+                itemsToProcessForPdfQuestions,
+                generatePdfQuestionsForChapterTask, // Defined in previous step
+                validApiKeysForParallel,
+                courseIdPlaceholder,
+                megaEmail,
+                megaPassword,
+                logProgress,
+                results
+            );
+
+            const stillNeedsProcessing = []; // Items that failed with a retriable API key error
+
+            for (const result of currentBatchTaskResults) {
+                const item = result.item; // Item associated with this result by runTasksInParallel
+                if (result.status === 'fulfilled' && result.value.success) {
+                    allPdfQuestionTaskResults.push(result); // Successfully processed
+                } else {
+                    const errorMsg = result.reason ? (result.reason.message || String(result.reason)).toLowerCase() : 
+                                     result.value && result.value.message ? result.value.message.toLowerCase() : 'unknown error';
+                    
+                    const isApiKeyError = errorMsg.includes("api key") || 
+                                          errorMsg.includes("quota") || 
+                                          errorMsg.includes("resource exhausted") ||
+                                          errorMsg.includes("api_key_invalid") || // More specific checks
+                                          errorMsg.includes("billing") || // Billing issues are key-related
+                                          errorMsg.includes("permission_denied"); // Can be key-related
+
+                    if (isApiKeyError && attemptNumber < MAX_TOTAL_ATTEMPTS_PER_ITEM) {
+                        stillNeedsProcessing.push(item);
+                        logProgress(`PDF Question Generation: Item '${item.title || item.key}' (Attempt ${attemptNumber}) failed with API key error. Will retry. Error: ${errorMsg.substring(0, 200)}`, results, 'warn');
+                    } else {
+                        allPdfQuestionTaskResults.push(result); // Failed permanently (non-API key error or max attempts reached)
+                        logProgress(`PDF Question Generation: Item '${item.title || item.key}' (Attempt ${attemptNumber}) failed permanently. Error: ${errorMsg.substring(0,200)}`, results, 'error');
+                    }
+                }
+            }
+
+            itemsToProcessForPdfQuestions = stillNeedsProcessing;
+            pdfRetryAttemptsDone++;
+
+            if (itemsToProcessForPdfQuestions.length === 0) {
+                logProgress('PDF Question Generation: All items processed or failed permanently in this batch.', results);
+                break; 
+            }
+        }
+        
+        results.megaLinks.pdfQuestions = []; // Initialize
+        allPdfQuestionTaskResults.forEach(outcome => {
+            if (outcome.status === 'fulfilled' && outcome.value.success) {
+                results.megaLinks.pdfQuestions.push({
+                    chapterKey: outcome.item.key,
+                    mcqLink: outcome.value.mcqMegaLink,
+                    problemsLink: outcome.value.problemsMegaLink
+                });
+            } else {
+                // Failures already logged during the loop if they became permanent
+            }
+        });
+        logProgress(`PDF question generation (with retries) completed. ${results.megaLinks.pdfQuestions.length} sets successfully generated out of ${results.megaLinks.processedChapters.length}.`, results);
 
         if (lectures && lectures.length > 0 && Object.keys(lectureSrtLinksByChapterKey).length > 0) {
-            console.log('[AutomationService] Generating questions from lectures...');
+            logProgress('Generating questions from lectures...', results);
             for (const chapterKey of Object.keys(lectureSrtLinksByChapterKey)) {
                 const srtObjectsArray = lectureSrtLinksByChapterKey[chapterKey]; // Array of { title, megaSrtLink }
                 // Ensure lectures array is available for finding the chapter name
