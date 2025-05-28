@@ -1,5 +1,6 @@
 // admin_course_content.js
-import { currentUser, globalCourseDataMap } from './state.js'; // Assuming loadCoursesForAdmin might still use these.
+import { currentUser, globalCourseDataMap, updateGlobalCourseData } from './state.js'; // Added updateGlobalCourseData
+import { approveCourse } from './firebase_firestore.js'; // Import approveCourse
 
 // Import display functions from the new specialized modules
 import { displayMegaMigrationDashboard } from './admin_mega_service.js';
@@ -42,7 +43,8 @@ function displayCourseManagementSection(containerElement) {
     `;
 
     const tabsConfig = [
-        { id: 'fullCourseAutomation', name: 'Full Course Creator', renderFunc: displayFullCourseAutomationForm }, // New Tab
+        { id: 'fullCourseAutomation', name: 'Full Course Creator', renderFunc: displayFullCourseAutomationForm },
+        { id: 'pendingCourses', name: 'Pending Review', renderFunc: displayPendingCoursesList }, // New Tab
         { id: 'megaTools', name: 'MEGA Tools', renderFunc: displayMegaMigrationDashboard },
         { id: 'transcription', name: 'Transcription', renderFunc: displayLectureTranscriptionAutomator },
         { id: 'pdfProcessing', name: 'PDF Processing', renderFunc: displayTextbookPdfProcessor },
@@ -94,7 +96,196 @@ export {
     displayMegaMigrationDashboard,
     displayCourseManagementSection,
     loadCoursesForAdmin, // Keep if ui_admin_dashboard.js still imports and uses it
+    displayPendingCoursesList, // Export the new function
+};
+
+// --- Pending Courses List Display ---
+async function displayPendingCoursesList(containerElement) {
+    containerElement.innerHTML = `<div class="p-4"><h2 class="text-xl font-semibold mb-4">Courses Pending Review</h2></div>`;
     
+    if (!globalCourseDataMap || globalCourseDataMap.size === 0) {
+        containerElement.innerHTML += `<p class="text-gray-600 dark:text-gray-400">No course data loaded. Cannot display pending courses.</p>`;
+        return;
+    }
+
+    const pendingCourses = [];
+    for (const [courseId, courseData] of globalCourseDataMap.entries()) {
+        if (courseData.status === "pending_review") {
+            pendingCourses.push({ id: courseId, ...courseData });
+        }
+    }
+
+    if (pendingCourses.length === 0) {
+        containerElement.innerHTML += `<p class="text-gray-600 dark:text-gray-400">No courses are currently awaiting review.</p>`;
+        return;
+    }
+
+    const listElement = document.createElement('ul');
+    listElement.className = 'space-y-4';
+
+    pendingCourses.forEach(course => {
+        const listItem = document.createElement('li');
+        listItem.className = 'p-4 bg-white dark:bg-gray-700 shadow rounded-lg';
+        
+        // Use course.courseTitle if available (from automation service), otherwise course.name (older structure)
+        const title = course.courseTitle || course.name || 'Untitled Course';
+        const majorTag = course.majorTag || 'N/A';
+        const subjectTag = course.subjectTag || 'N/A';
+
+        listItem.innerHTML = `
+            <h3 class="text-lg font-semibold text-primary-700 dark:text-primary-300">${title}</h3>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Major:</strong> ${majorTag}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><strong>Subject:</strong> ${subjectTag}</p>
+            <button 
+                class="btn-primary mt-3 py-2 px-4 text-sm" 
+                onclick="window.previewAndApproveCourse('${course.id}')">
+                Preview & Approve
+            </button>
+        `;
+        listElement.appendChild(listItem);
+    });
+
+    containerElement.appendChild(listElement);
+}
+
+// --- Course Preview and Approval Modal ---
+window.previewAndApproveCourse = async (courseId) => {
+    const course = globalCourseDataMap.get(courseId);
+    if (!course) {
+        alert("Error: Course data not found for ID: " + courseId);
+        return;
+    }
+
+    // Modal container
+    const modalId = `preview-modal-${courseId}`;
+    let modal = document.getElementById(modalId);
+    if (modal) modal.remove(); // Remove existing modal if any
+
+    modal = document.createElement('div');
+    modal.id = modalId;
+    modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex justify-center items-center p-4';
+    modal.style.backdropFilter = 'blur(3px)';
+
+
+    let modalContentHtml = `
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-semibold text-primary-700 dark:text-primary-300">Preview Course: ${course.courseTitle || course.name || 'N/A'}</h2>
+                <button class="text-gray-600 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-400 text-2xl" onclick="document.getElementById('${modalId}').remove();">&times;</button>
+            </div>
+    `;
+
+    const details = course.firestoreDataPreview || course; // Prefer firestoreDataPreview if available
+
+    modalContentHtml += `<div class="space-y-3 text-sm text-gray-700 dark:text-gray-300">`;
+    modalContentHtml += `<p><strong>Course ID (DirName):</strong> ${details.courseDirName || courseId}</p>`;
+    modalContentHtml += `<p><strong>Major Tag:</strong> ${details.majorTag || 'N/A'}</p>`;
+    modalContentHtml += `<p><strong>Subject Tag:</strong> ${details.subjectTag || 'N/A'}</p>`;
+    modalContentHtml += `<p><strong>AI Description:</strong> ${details.aiGeneratedDescription || 'N/A'}</p>`;
+    
+    // Mega Links
+    modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Mega Links:</h4>`;
+    modalContentHtml += `<p>Main Folder: ${details.megaMainFolderLink ? `<a href="${details.megaMainFolderLink}" target="_blank" class="link">View Folder</a>` : 'N/A'}</p>`;
+    modalContentHtml += `<p>Original Textbook PDF: ${details.megaTextbookFullPdfLink ? `<a href="${details.megaTextbookFullPdfLink}" target="_blank" class="link">View PDF</a>` : 'N/A'}</p>`;
+
+    // Chapters
+    if (details.chapters && details.chapters.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Chapters:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.chapters.forEach(chap => {
+            modalContentHtml += `<li><strong>${chap.title || `Chapter ${chap.key}`}</strong>: 
+                ${chap.pdfLink ? `<a href="${chap.pdfLink}" target="_blank" class="link">PDF</a>` : 'No PDF'}
+                ${chap.pdfMcqLink ? ` | <a href="${chap.pdfMcqLink}" target="_blank" class="link">MCQs</a>` : ''}
+                ${chap.pdfProblemsLink ? ` | <a href="${chap.pdfProblemsLink}" target="_blank" class="link">Problems</a>` : ''}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+
+    // Lectures - Transcriptions
+    if (details.transcriptionLinks && details.transcriptionLinks.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Transcriptions:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.transcriptionLinks.forEach(trans => {
+            modalContentHtml += `<li><strong>${trans.title}</strong> (Chapter Key: ${trans.chapterKey}): 
+                ${trans.srtLink ? `<a href="${trans.srtLink}" target="_blank" class="link">SRT</a>` : 'No SRT'}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+    
+    // Lectures - Generated Questions
+    if (details.lectureQuestionSets && details.lectureQuestionSets.length > 0) {
+        modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Question Sets:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
+        details.lectureQuestionSets.forEach(lqs => {
+            modalContentHtml += `<li>Topic Key: <strong>${lqs.key}</strong>: 
+                ${lqs.mcqLink ? `<a href="${lqs.mcqLink}" target="_blank" class="link">MCQs</a>` : 'No MCQs'}
+                ${lqs.problemsLink ? ` | <a href="${lqs.problemsLink}" target="_blank" class="link">Problems</a>` : ''}
+            </li>`;
+        });
+        modalContentHtml += `</ul>`;
+    }
+    
+    modalContentHtml += `</div>`; // End of space-y-3
+
+    modalContentHtml += `
+            <div class="mt-6 flex justify-end space-x-3">
+                <button class="btn-secondary py-2 px-4" onclick="document.getElementById('${modalId}').remove();">Close</button>
+                <button class="btn-primary py-2 px-4" onclick="window.approveCourseInFirestore('${courseId}')">Approve Course</button>
+            </div>
+        </div> 
+    `; // End of modal content div
+
+    modal.innerHTML = modalContentHtml;
+    document.body.appendChild(modal);
+};
+
+window.approveCourseInFirestore = async (courseId) => {
+    if (!currentUser || !currentUser.isAdmin) {
+        alert("Error: Admin privileges required.");
+        return;
+    }
+    
+    // Optional: Add a confirmation dialog
+    // if (!confirm(`Are you sure you want to approve course: ${courseId}?`)) {
+    //     return;
+    // }
+
+    const result = await approveCourse(courseId); // Call the imported function
+
+    if (result.success) {
+        alert(result.message);
+        const courseData = globalCourseDataMap.get(courseId);
+        if (courseData) {
+            courseData.status = "approved";
+            courseData.updatedAt = new Date().toISOString(); // Use ISO string for consistency if needed, or just Date object
+            updateGlobalCourseData(courseId, courseData); // Update the global map via state.js function
+        }
+        
+        // Close modal
+        const modalId = `preview-modal-${courseId}`;
+        const modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        // Refresh the pending courses list
+        // This assumes the tab area is identifiable and currently displaying the pending list.
+        // A more robust way might be to check current active tab.
+        const tabAreaContainer = document.getElementById('course-content-tab-area');
+        if (tabAreaContainer) {
+            // Check if the "Pending Review" tab is active or if we should force refresh it.
+            // For simplicity, just re-render if the container exists.
+            // A better check would be to see if `displayPendingCoursesList` was the last rendered function.
+            const activeTabButton = document.querySelector('#course-content-tabs .course-content-tab-button.border-primary-500');
+            if (activeTabButton && activeTabButton.dataset.tabId === 'pendingCourses') {
+                 displayPendingCoursesList(tabAreaContainer);
+            } else {
+                console.log("Pending courses tab not active, list not refreshed on UI immediately.");
+            }
+        } else {
+            console.warn("Could not find course-content-tab-area to refresh pending list.");
+        }
+
+    } else {
+        alert(`Error approving course: ${result.message}`);
+    }
 };
 
 // --- Full Course Automation Form ---
@@ -139,6 +330,21 @@ export function displayFullCourseAutomationForm(containerElement) {
                         <label for="subjectTag" class="label">Subject Tag:</label>
                         <input type="text" id="subjectTag" name="subjectTag" class="input-field" placeholder="e.g., Quantum Mechanics, Web Development" required>
                     </div>
+                </div>
+
+                <hr class="my-6 border-gray-300 dark:border-gray-600">
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Optional Course Metadata</h3>
+                <div>
+                    <label for="prerequisites" class="label">Prerequisites (comma-separated):</label>
+                    <input type="text" id="prerequisites" name="prerequisites" class="input-field" placeholder="e.g., Basic Algebra, Introduction to Programming">
+                </div>
+                <div>
+                    <label for="bannerPicUrl" class="label">Banner Picture URL:</label>
+                    <input type="url" id="bannerPicUrl" name="bannerPicUrl" class="input-field" placeholder="https://example.com/banner.jpg">
+                </div>
+                <div>
+                    <label for="coursePicUrl" class="label">Course Picture URL (for cards/thumbnails):</label>
+                    <input type="url" id="coursePicUrl" name="coursePicUrl" class="input-field" placeholder="https://example.com/course-thumb.jpg">
                 </div>
 
                 <hr class="my-6 border-gray-300 dark:border-gray-600">
@@ -241,7 +447,7 @@ export function displayFullCourseAutomationForm(containerElement) {
         });
         
         // Optional text fields
-        ['textbookMegaLink', 'assemblyAiApiKey', 'geminiApiKey'].forEach(fieldName => {
+        ['textbookMegaLink', 'assemblyAiApiKey', 'geminiApiKey', 'prerequisites', 'bannerPicUrl', 'coursePicUrl'].forEach(fieldName => {
              const input = form.querySelector(`#${fieldName}`);
              if (input && input.value.trim()) formData.append(fieldName, input.value.trim());
         });
@@ -307,23 +513,57 @@ export function displayFullCourseAutomationForm(containerElement) {
             const result = await response.json();
 
             if (response.ok && result.success) {
+                let progressLogsHtml = '';
+                if (result.progressLogs && Array.isArray(result.progressLogs)) {
+                    progressLogsHtml = result.progressLogs.map(log => 
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+
                 feedbackDiv.innerHTML = `
                     <p class="text-green-600 dark:text-green-400 font-semibold">Course Automation Successful!</p>
-                    <p><strong>Course Title:</strong> ${result.courseTitle}</p>
-                    <p><strong>Course Directory Name (Mega):</strong> ${result.courseDirName}</p>
+                    <p><strong>Final Automation Step:</strong> ${result.firestoreDataPreview?.currentAutomationStep || 'N/A'}</p>
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs:</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${progressLogsHtml || '<p class="text-xs text-gray-500 dark:text-gray-400">No progress logs available.</p>'}
+                        </div>
+                    </div>
+                    <hr class="my-3 border-gray-300 dark:border-gray-600">
+                    <p><strong>Course Title:</strong> ${result.courseTitle || 'N/A'}</p>
+                    <p><strong>Course Directory Name (Mega):</strong> ${result.courseDirName || 'N/A'}</p>
                     <p><strong>AI Description:</strong> ${result.aiGeneratedDescription ? result.aiGeneratedDescription.substring(0, 150) + '...' : 'N/A'}</p>
                     <p class="mt-2"><strong>Firestore Data Preview:</strong></p>
                     <pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(result.firestoreDataPreview, null, 2)}</pre>
                 `;
-                form.reset(); // Optionally clear form
-                lecturesArea.innerHTML = ''; // Clear dynamic rows
-                addLectureRow(); // Add one fresh row
+                form.reset(); 
+                lecturesArea.innerHTML = ''; 
+                addLectureRow(); 
             } else {
-                throw new Error(result.message || `Server error: ${response.status}`);
+                // Handle server-side failure where result might still contain logs
+                let errorProgressLogsHtml = '';
+                if (result && result.progressLogs && Array.isArray(result.progressLogs)) {
+                    errorProgressLogsHtml = result.progressLogs.map(log => 
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+                const finalStepMessage = result?.firestoreDataPreview?.currentAutomationStep || "Unknown step";
+                feedbackDiv.innerHTML = `
+                    <p class="text-red-500 font-semibold">Course Automation Failed at step: ${finalStepMessage}</p>
+                    <p class="text-red-400">${result.message || `Server error: ${response.status}`}</p>
+                    ${errorProgressLogsHtml ? `
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs (up to failure):</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${errorProgressLogsHtml}
+                        </div>
+                    </div>` : ''}
+                `;
+                // Not throwing error here as we want to display the partial logs from result
             }
-        } catch (error) {
+        } catch (error) { // Network error or error during fetch/parsing
             console.error('Error submitting course automation form:', error);
-            feedbackDiv.innerHTML = `<p class="text-red-500">Submission failed: ${error.message}</p>`;
+            feedbackDiv.innerHTML = `<p class="text-red-500">Submission failed: ${error.message}. Check the console for more details.</p>`;
         } finally {
             // hideLoading(); // Assuming hideLoading is available globally or imported
         }

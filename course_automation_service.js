@@ -9,6 +9,12 @@ const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js');
 const { GEMINI_API_KEY } = require('./server_config.js'); // Example if a central key is used, though often passed in params
 
+// Standardized Mega Folder Names
+const TEXTBOOK_FULL_DIR_NAME = "Textbook_Full";
+const TEXTBOOK_CHAPTERS_DIR_NAME = "Textbook_Chapters"; // Used by pdf_processing_service
+const TRANSCRIPTIONS_ARCHIVE_DIR_NAME = "Transcriptions_Archive";
+const GENERATED_ASSESSMENTS_DIR_NAME = "Generated_Assessments";
+
 const LYCEUM_ROOT_FOLDER_NAME = "LyceumCourses_Test";
 
 /**
@@ -42,40 +48,82 @@ async function automateNewCourseCreation(params) {
         megaEmail,
         megaPassword,
         geminiApiKey, // Prefer passed-in key
-        assemblyAiApiKey
+        assemblyAiApiKey,
+        prerequisites, // New
+        bannerPicUrl,  // New
+        coursePicUrl   // New
     } = params;
 
-    const courseIdPlaceholder = sanitizeCourseTitleForDirName(courseTitle); // Using sanitized title as a unique course identifier for now
-    console.log(`[AutomationService] Starting automated course creation for: "${courseTitle}" (ID Placeholder: ${courseIdPlaceholder})`);
+    const courseIdPlaceholder = sanitizeCourseTitleForDirName(courseTitle); 
+    
+    // Helper function for logging
+    const logProgress = (message, currentResults, level = 'info') => {
+        const timestampedMessage = { timestamp: new Date().toISOString(), message };
+        if (currentResults && currentResults.progressLogs) {
+            currentResults.progressLogs.push(timestampedMessage);
+        }
+        
+        const logPrefix = `[AutomationService][${courseIdPlaceholder}]`;
+        if (level === 'warn') {
+            console.warn(`${logPrefix} ${message}`);
+        } else if (level === 'error') {
+            console.error(`${logPrefix} ${message}`);
+        } else {
+            console.log(`${logPrefix} ${message}`);
+        }
+    };
+    
+    const results = {
+        success: false,
+        message: "",
+        courseTitle: courseTitle,
+        courseDirName: courseIdPlaceholder,
+        aiGeneratedDescription: null,
+        megaLinks: {
+            originalTextbook: null,
+            processedChapters: [], 
+            transcriptions: [], 
+            pdfQuestions: [], 
+            lectureQuestions: [] 
+        },
+        firestoreDataPreview: {
+            currentAutomationStep: "Initializing..." // Initial step
+        },
+        progressLogs: [] // Initialize progressLogs
+    };
+
+    logProgress(`Starting automated course creation for: "${courseTitle}"`, results);
+    results.firestoreDataPreview.currentAutomationStep = "Validating API Keys...";
 
     // --- Gemini API Key Validation and Processing ---
+    results.firestoreDataPreview.currentAutomationStep = "Validating API Keys"; // Set step
     let processedGeminiApiKey = null;
     const originalGeminiApiKeyType = typeof geminiApiKey;
     const originalGeminiApiKeySnippet = typeof geminiApiKey === 'string' ? geminiApiKey.substring(0, 50) + '...' : JSON.stringify(geminiApiKey, null, 2);
-    console.log(`[AutomationService] Received Gemini API Key for course "${courseTitle}". Original Type: ${originalGeminiApiKeyType}, Original Snippet: ${originalGeminiApiKeySnippet}`);
+    logProgress(`Received Gemini API Key. Original Type: ${originalGeminiApiKeyType}, Original Snippet: ${originalGeminiApiKeySnippet}`, results);
 
     if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
         if (geminiApiKey.startsWith('[') && geminiApiKey.endsWith(']')) {
             try {
                 const parsedArray = JSON.parse(geminiApiKey);
                 if (Array.isArray(parsedArray)) {
-                    console.log('[AutomationService] Received Gemini API key is a stringified array. Parsed:', parsedArray);
+                    logProgress('Received Gemini API key is a stringified array. Parsed.', results);
                     processedGeminiApiKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
                     if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
                 }
             } catch (e) {
-                console.warn('[AutomationService] Failed to parse stringified array-like API key, using string directly if valid:', e.message);
+                logProgress(`WARN: Failed to parse stringified array-like API key, using string directly if valid: ${e.message}`, results, 'warn');
                 processedGeminiApiKey = geminiApiKey.trim();
             }
         } else {
             processedGeminiApiKey = geminiApiKey.trim();
         }
     } else if (Array.isArray(geminiApiKey)) {
-        console.log('[AutomationService] Received Gemini API key is an array:', geminiApiKey);
+        logProgress('Received Gemini API key is an array.', results);
         processedGeminiApiKey = geminiApiKey.find(k => typeof k === 'string' && k.trim() !== '');
         if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
     } else if (typeof geminiApiKey === 'object' && geminiApiKey !== null) {
-        console.log('[AutomationService] Received Gemini API key is an object:', geminiApiKey);
+        logProgress('Received Gemini API key is an object.', results);
         const commonKeys = ['key', 'apiKey', 'value'];
         for (const k of commonKeys) {
             if (typeof geminiApiKey[k] === 'string' && geminiApiKey[k].trim() !== '') {
@@ -86,67 +134,59 @@ async function automateNewCourseCreation(params) {
     }
 
     if (!processedGeminiApiKey) {
-        // Fallback to a globally defined default key IF ONE IS CONFIGURED AND ACCEPTABLE.
-        // For this service, a key is critical. If it's not resolved here, it will fail in ai_integration_server.js,
-        // but it's better to catch it early.
-        console.warn(`[AutomationService] Could not extract a valid string Gemini API Key for course "${courseTitle}" from provided input (Original type: ${originalGeminiApiKeyType}). Attempting to use global default GEMINI_API_KEY.`);
-        processedGeminiApiKey = GEMINI_API_KEY; // Use the global default as a last resort
+        logProgress(`WARN: Could not extract a valid string Gemini API Key from provided input. Attempting to use global default GEMINI_API_KEY.`, results, 'warn');
+        processedGeminiApiKey = GEMINI_API_KEY; 
         if (!processedGeminiApiKey) {
-             console.error(`[AutomationService] CRITICAL: No valid Gemini API Key could be resolved for course "${courseTitle}" and no global default is set. Aborting.`);
-             // Not throwing an error here to allow the function to return a structured error response
+             const errorMsg = `CRITICAL: No valid Gemini API Key could be resolved and no global default is set. Aborting.`;
+             logProgress(errorMsg, results, 'error');
              results.success = false;
-             results.message = `Critical: Gemini API Key for course "${courseTitle}" is missing or invalid, and no global default is available.`;
-             return results; // Early exit
+             results.message = errorMsg;
+             results.firestoreDataPreview.currentAutomationStep = `Failed: Gemini API Key missing`; // Update step on failure
+             return results; 
         }
-        console.log(`[AutomationService] Using global default GEMINI_API_KEY for course "${courseTitle}".`);
+        logProgress(`Using global default GEMINI_API_KEY.`, results);
     } else {
-        console.log(`[AutomationService] Successfully processed/validated Gemini API Key for course "${courseTitle}": ${processedGeminiApiKey.substring(0,15)}...`);
+        logProgress(`Successfully processed/validated Gemini API Key: ${processedGeminiApiKey.substring(0,15)}...`, results);
     }
     
-    const finalApiKey = processedGeminiApiKey; // Use the validated and processed key
-
-    const results = {
-        success: false,
-        message: "",
-        courseTitle: courseTitle,
-        courseDirName: courseIdPlaceholder,
-        aiGeneratedDescription: null,
-        megaLinks: {
-            originalTextbook: null,
-            processedChapters: [], // { title, pdfLink, key (chapterKey from pdf_processing) }
-            transcriptions: [], // { title, srtLink, chapterKey }
-            pdfQuestions: [], // { chapterKey, mcqLink, problemsLink }
-            lectureQuestions: [] // { chapterKey, mcqLink, problemsLink }
-        },
-        firestoreDataPreview: {}
-    };
+    const finalApiKey = processedGeminiApiKey; 
 
     try {
+        results.firestoreDataPreview.currentAutomationStep = "Initializing Mega Service"; // Set step
         // --- 1. Initialization & Setup ---
-        console.log('[AutomationService] Initializing Mega service...');
+        logProgress('Initializing Mega service...', results);
         await serverMega.initialize(megaEmail, megaPassword);
         const megaStorage = serverMega.getMegaStorage();
         if (!megaStorage || !megaStorage.root) throw new Error("Mega service initialization failed.");
+        logProgress('Mega service initialized.', results);
 
-        console.log(`[AutomationService] Creating base Mega folder structure for ${courseIdPlaceholder}...`);
+        results.firestoreDataPreview.currentAutomationStep = "Creating Mega Folder Structure"; // Set step
+        logProgress(`Creating base Mega folder structure for ${courseIdPlaceholder}...`, results);
         let lyceumRootNode = await serverMega.findFolder(LYCEUM_ROOT_FOLDER_NAME, megaStorage.root);
-        if (!lyceumRootNode) lyceumRootNode = await serverMega.createFolder(LYCEUM_ROOT_FOLDER_NAME, megaStorage.root);
+        if (!lyceumRootNode) {
+            logProgress(`Lyceum root folder "${LYCEUM_ROOT_FOLDER_NAME}" not found, creating...`, results);
+            lyceumRootNode = await serverMega.createFolder(LYCEUM_ROOT_FOLDER_NAME, megaStorage.root);
+        }
         if (!lyceumRootNode) throw new Error(`Failed to find or create Lyceum root folder: ${LYCEUM_ROOT_FOLDER_NAME}`);
+        logProgress(`Found/Created Lyceum root folder: ${LYCEUM_ROOT_FOLDER_NAME}`, results);
 
         let courseMegaNode = await serverMega.findFolder(courseIdPlaceholder, lyceumRootNode);
-        if (!courseMegaNode) courseMegaNode = await serverMega.createFolder(courseIdPlaceholder, lyceumRootNode);
+        if (!courseMegaNode) {
+            logProgress(`Course folder "${courseIdPlaceholder}" not found, creating...`, results);
+            courseMegaNode = await serverMega.createFolder(courseIdPlaceholder, lyceumRootNode);
+        }
         if (!courseMegaNode) throw new Error(`Failed to create main course folder: ${courseIdPlaceholder}`);
-        console.log(`[AutomationService] Main course folder on Mega: ${courseMegaNode.name}`);
+        logProgress(`Main course folder on Mega: ${courseMegaNode.name}`, results);
 
-        const textbookFullMegaFolder = await serverMega.createFolder("Textbook_Full", courseMegaNode);
-        // pdf_processing_service is assumed to create Textbook_Chapters under its own course-derived path
-        // For now, let's assume it will create it under courseMegaNode. If not, this needs adjustment.
-        // const textbookChaptersMegaFolder = await serverMega.createFolder("Textbook_Chapters", courseMegaNode);
-        const transcriptionsArchiveMegaFolder = await serverMega.createFolder("Transcriptions_Archive", courseMegaNode);
-        // Question generation services create subfolders under Generated_Assessments/{courseDirName}/{chapterKey}
-        const generatedAssessmentsMegaFolder = await serverMega.createFolder("Generated_Assessments", courseMegaNode);
+        const textbookFullMegaFolder = await serverMega.createFolder(TEXTBOOK_FULL_DIR_NAME, courseMegaNode);
+        logProgress(`Created Mega folder: ${TEXTBOOK_FULL_DIR_NAME}`, results);
+        const transcriptionsArchiveMegaFolder = await serverMega.createFolder(TRANSCRIPTIONS_ARCHIVE_DIR_NAME, courseMegaNode);
+        logProgress(`Created Mega folder: ${TRANSCRIPTIONS_ARCHIVE_DIR_NAME}`, results);
+        const generatedAssessmentsMegaFolder = await serverMega.createFolder(GENERATED_ASSESSMENTS_DIR_NAME, courseMegaNode);
+        logProgress(`Created Mega folder: ${GENERATED_ASSESSMENTS_DIR_NAME}`, results);
+        logProgress('Base Mega folder structure created.', results);
 
-
+        results.firestoreDataPreview.currentAutomationStep = "Processing Textbook"; // Set step
         // --- 2. Textbook Processing ---
         console.log(`[AutomationService] Uploading original textbook: ${textbookPdfOriginalName}`);
         if (!fs.existsSync(textbookPdfPath)) throw new Error(`Textbook PDF not found at local path: ${textbookPdfPath}`);
@@ -155,8 +195,8 @@ async function automateNewCourseCreation(params) {
         console.log(`[AutomationService] Original textbook uploaded to Mega: ${uploadedTextbook.link}`);
 
         console.log('[AutomationService] Processing textbook PDF for chapters...');
-        // processTextbookPdf uses courseIdPlaceholder to create its own structures on Mega.
-        // It's assumed it uses megaEmail, megaPassword for its internal Mega operations correctly.
+        // processTextbookPdf uses courseIdPlaceholder to create its own structures on Mega
+        // and is expected to use the TEXTBOOK_CHAPTERS_DIR_NAME constant for the chapters folder.
         const textbookProcessingResult = await processTextbookPdf(
             textbookPdfPath,
             courseIdPlaceholder, // This will be used by processTextbookPdf to structure its output on Mega
@@ -173,65 +213,68 @@ async function automateNewCourseCreation(params) {
         }));
         console.log(`[AutomationService] Textbook processing completed. ${results.megaLinks.processedChapters.length} chapters processed.`);
         const tocForAIDescription = results.megaLinks.processedChapters.map(ch => `Chapter ${ch.key.split('_')[2]}: ${ch.title}`).join('\n');
-
-
-        // --- 3. Lecture Processing ---
-        console.log('[AutomationService] Processing lectures...');
+        
+        // Initialize lecture related variables
         const lectureSrtLinksByChapterKey = {};
         const lectureTitlesForAIDescription = [];
 
-        for (const lecture of lectures) {
-            lectureTitlesForAIDescription.push(lecture.title);
-            let srtMegaLink = lecture.srtMegaLink;
-            const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures';
+        // --- 3. Lecture Processing ---
+        if (lectures && lectures.length > 0) {
+            console.log('[AutomationService] Processing lectures...');
+            for (const lecture of lectures) {
+                lectureTitlesForAIDescription.push(lecture.title);
+                let srtMegaLink = lecture.srtMegaLink;
+                const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures';
 
-            if (!srtMegaLink) {
-                if (!lecture.filePath && !lecture.youtubeUrl) {
-                    console.warn(`[AutomationService] Lecture "${lecture.title}" has no SRT, filePath, or YouTube URL. Skipping transcription.`);
-                    continue;
+                if (!srtMegaLink) {
+                    if (!lecture.filePath && !lecture.youtubeUrl) {
+                        console.warn(`[AutomationService] Lecture "${lecture.title}" has no SRT, filePath, or YouTube URL. Skipping transcription.`);
+                        continue;
+                    }
+                    console.log(`[AutomationService] Transcribing lecture: "${lecture.title}" for chapter ${chapterKeyForLecture}`);
+                    const transcriptionResult = await transcribeLecture(
+                        lecture.youtubeUrl || null,
+                        courseIdPlaceholder,
+                        chapterKeyForLecture,
+                        assemblyAiApiKey,
+                        megaEmail,
+                        megaPassword
+                    );
+                    if (!transcriptionResult.success) {
+                        console.warn(`[AutomationService] Transcription failed for lecture "${lecture.title}": ${transcriptionResult.message}. Skipping this lecture.`);
+                        continue;
+                    }
+                    srtMegaLink = transcriptionResult.srtMegaLink;
                 }
-                console.log(`[AutomationService] Transcribing lecture: "${lecture.title}" for chapter ${chapterKeyForLecture}`);
-                // transcribeLecture uses courseIdPlaceholder and chapterId to structure its output on Mega.
-                // It is assumed to use megaEmail, megaPassword for its internal Mega ops correctly.
-                // The chapterId for transcribeLecture should be chapterKeyForLecture
-                const transcriptionResult = await transcribeLecture(
-                    lecture.youtubeUrl || null, // Pass null if not available
-                    courseIdPlaceholder,        // Course context for Mega structure
-                    chapterKeyForLecture,       // Chapter context for Mega structure
-                    assemblyAiApiKey,
-                    megaEmail,
-                    megaPassword
-                    // filePath is not directly handled by transcribeLecture in current definition;
-                    // if it were, it would be passed here. For now, assuming ytdl handles URLs.
-                );
-                if (!transcriptionResult.success) {
-                    console.warn(`[AutomationService] Transcription failed for lecture "${lecture.title}": ${transcriptionResult.message}. Skipping this lecture.`);
-                    continue;
+                
+                if (srtMegaLink) {
+                    results.megaLinks.transcriptions.push({ title: lecture.title, srtLink: srtMegaLink, chapterKey: chapterKeyForLecture });
+                    if (!lectureSrtLinksByChapterKey[chapterKeyForLecture]) {
+                        lectureSrtLinksByChapterKey[chapterKeyForLecture] = [];
+                    }
+                    lectureSrtLinksByChapterKey[chapterKeyForLecture].push({ title: lecture.title, megaSrtLink: srtMegaLink });
                 }
-                srtMegaLink = transcriptionResult.srtMegaLink;
             }
-            
-            if (srtMegaLink) {
-                results.megaLinks.transcriptions.push({ title: lecture.title, srtLink: srtMegaLink, chapterKey: chapterKeyForLecture });
-                if (!lectureSrtLinksByChapterKey[chapterKeyForLecture]) {
-                    lectureSrtLinksByChapterKey[chapterKeyForLecture] = [];
-                }
-                lectureSrtLinksByChapterKey[chapterKeyForLecture].push({ title: lecture.title, megaSrtLink: srtMegaLink });
-            }
+            console.log(`[AutomationService] Lecture processing completed. ${results.megaLinks.transcriptions.length} transcriptions processed/linked.`);
+        } else {
+            console.log('[AutomationService] No lectures provided. Skipping lecture processing.');
         }
-        console.log(`[AutomationService] Lecture processing completed. ${results.megaLinks.transcriptions.length} transcriptions processed/linked.`);
 
 
         // --- 4. AI Course Description ---
         console.log('[AutomationService] Generating AI course description...');
+        let lectureSectionForPrompt = "";
+        if (lectureTitlesForAIDescription.length > 0) {
+            lectureSectionForPrompt = `
+It also includes lectures on:
+${lectureTitlesForAIDescription.join('\n')}`;
+        }
+
         const descriptionPrompt = `
 Generate a concise and engaging course description for a new course titled "${courseTitle}".
 The course covers the following major topics (from textbook table of contents):
 ${tocForAIDescription}
-
-It also includes lectures on:
-${lectureTitlesForAIDescription.join('\n')}
-
+${lectureSectionForPrompt}
 The course falls under the major category of "${majorTag}" and the specific subject of "${subjectTag}".
 Highlight the key learning outcomes and what students will gain from this course. Keep it under 150 words.
         `;
@@ -265,32 +308,36 @@ Highlight the key learning outcomes and what students will gain from this course
         }
         console.log(`[AutomationService] PDF question generation completed. ${results.megaLinks.pdfQuestions.length} sets generated.`);
 
-        console.log('[AutomationService] Generating questions from lectures...');
-        for (const chapterKey of Object.keys(lectureSrtLinksByChapterKey)) {
-            const srtObjectsArray = lectureSrtLinksByChapterKey[chapterKey]; // Array of { title, megaSrtLink }
-            const chapterNameForLectures = lectures.find(l => l.associatedChapterKey === chapterKey)?.title || chapterKey.replace(/_/g, ' '); // Attempt to find a representative name
-            
-            console.log(`[AutomationService] Generating lecture questions for chapter/topic: "${chapterNameForLectures}" (Key: ${chapterKey})`);
-            // generateQuestionsFromLectures uses courseIdPlaceholder and chapterKey to structure its output on Mega.
-            const lectureQuestionsResult = await generateQuestionsFromLectures(
-                courseIdPlaceholder,
-                srtObjectsArray,
-                chapterNameForLectures,
-                megaEmail,
-                megaPassword,
-                finalApiKey
-            );
-            if (lectureQuestionsResult.success) {
-                results.megaLinks.lectureQuestions.push({
-                    chapterKey: lectureQuestionsResult.newChapterKey, // This service might generate its own key
-                    mcqLink: lectureQuestionsResult.mcqMegaLink,
-                    problemsLink: lectureQuestionsResult.problemsMegaLink
-                });
-            } else {
-                console.warn(`[AutomationService] Failed to generate lecture questions for chapter key "${chapterKey}": ${lectureQuestionsResult.message}`);
+        if (lectures && lectures.length > 0 && Object.keys(lectureSrtLinksByChapterKey).length > 0) {
+            console.log('[AutomationService] Generating questions from lectures...');
+            for (const chapterKey of Object.keys(lectureSrtLinksByChapterKey)) {
+                const srtObjectsArray = lectureSrtLinksByChapterKey[chapterKey]; // Array of { title, megaSrtLink }
+                // Ensure lectures array is available for finding the chapter name
+                const chapterNameForLectures = lectures.find(l => l.associatedChapterKey === chapterKey)?.title || chapterKey.replace(/_/g, ' ');
+                
+                console.log(`[AutomationService] Generating lecture questions for chapter/topic: "${chapterNameForLectures}" (Key: ${chapterKey})`);
+                const lectureQuestionsResult = await generateQuestionsFromLectures(
+                    courseIdPlaceholder,
+                    srtObjectsArray,
+                    chapterNameForLectures,
+                    megaEmail,
+                    megaPassword,
+                    finalApiKey
+                );
+                if (lectureQuestionsResult.success) {
+                    results.megaLinks.lectureQuestions.push({
+                        chapterKey: lectureQuestionsResult.newChapterKey,
+                        mcqLink: lectureQuestionsResult.mcqMegaLink,
+                        problemsLink: lectureQuestionsResult.problemsMegaLink
+                    });
+                } else {
+                    console.warn(`[AutomationService] Failed to generate lecture questions for chapter key "${chapterKey}": ${lectureQuestionsResult.message}`);
+                }
             }
+            console.log(`[AutomationService] Lecture question generation completed. ${results.megaLinks.lectureQuestions.length} sets generated.`);
+        } else {
+            console.log('[AutomationService] No lectures processed or no SRT links found. Skipping lecture question generation.');
         }
-        console.log(`[AutomationService] Lecture question generation completed. ${results.megaLinks.lectureQuestions.length} sets generated.`);
 
         // --- 6. Result Aggregation & Firestore Data Preparation ---
         console.log('[AutomationService] Preparing Firestore data preview. This may involve final Mega link generations.');
@@ -391,6 +438,11 @@ Highlight the key learning outcomes and what students will gain from this course
             transcriptionLinks: results.megaLinks.transcriptions,
             // Other fields like totalChapters, imageUrl, prerequisites, etc. would be added here
             // or by a subsequent admin step.
+        prerequisites: typeof prerequisites === 'string' && prerequisites.trim() !== '' 
+            ? prerequisites.split(',').map(p => p.trim()).filter(p => p) 
+            : [], // Store as array, handle empty/null string
+        bannerPicUrl: bannerPicUrl || null,
+        coursePicUrl: coursePicUrl || null,
             status: "pending_review", // Initial status
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),

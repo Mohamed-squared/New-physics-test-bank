@@ -3447,6 +3447,59 @@ export async function getCourseDetails(courseId) {
 }
 // --- END NEW FUNCTION ---
 
+// --- NEW FUNCTION: Approve Course ---
+/**
+ * Approves a course by updating its status in Firestore.
+ * @param {string} courseId - The ID of the course to approve.
+ * @returns {Promise<object>} - Result object { success: boolean, message: string }.
+ */
+export async function approveCourse(courseId) {
+    if (!db) {
+        console.error("[approveCourse] Firestore DB not initialized.");
+        return { success: false, message: "Database not initialized." };
+    }
+    if (!currentUser || !currentUser.isAdmin) {
+        console.error("[approveCourse] Permission Denied: Admin privileges required.");
+        return { success: false, message: "Admin privileges required to approve courses." };
+    }
+    if (!courseId) {
+        console.error("[approveCourse] Course ID is missing.");
+        return { success: false, message: "Course ID is missing." };
+    }
+
+    const courseRef = db.collection('courses').doc(courseId);
+    console.log(`[approveCourse] Admin ${currentUser.uid} attempting to approve course: ${courseId}`);
+
+    try {
+        await courseRef.update({
+            status: "approved",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log(`[approveCourse] Course ${courseId} successfully approved.`);
+        
+        // Optionally, update local globalCourseDataMap if the course exists there
+        if (globalCourseDataMap.has(courseId)) {
+            const courseData = globalCourseDataMap.get(courseId);
+            if (courseData) {
+                courseData.status = "approved";
+                courseData.updatedAt = new Date(); // Reflect immediate change locally
+                updateGlobalCourseData(courseId, courseData); // Update state
+                 console.log(`[approveCourse] Local cache for course ${courseId} updated to 'approved'.`);
+            }
+        }
+        
+        return { success: true, message: `Course "${courseId}" approved successfully.` };
+    } catch (error) {
+        console.error(`[approveCourse] Error approving course ${courseId}:`, error);
+        let message = `Failed to approve course: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            message = `Failed to approve course: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        return { success: false, message: message };
+    }
+}
+// --- END NEW FUNCTION ---
+
 export async function sendGlobalAnnouncementToAllUsers(subject, body, adminSenderId) {
     if (!db || !currentUser || !currentUser.isAdmin) {
         return { success: false, count: 0, message: "Admin privileges required." };
