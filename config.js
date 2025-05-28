@@ -6,7 +6,14 @@
 export const ADMIN_UID = "04amtH9UgfTWxPH0rqn2quaKiNf1";
 
 // Google AI API Key
-export const GEMINI_API_KEY = "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM"; // Keep your Gemini key separate
+export const GEMINI_API_KEYS = [
+  "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM", // Original key
+  "AIzaSyAKOtEzrQWzitRJ627-iZ6v182xfb7KJLo",
+  "AIzaSyDUt_A4NU4mLwiHdcP0Qr6BRaaERP97kGo",
+  "AIzaSyDN52jguMN5ibjh6GyGPltxeyB9UYAxdew",
+  "AIzaSyDKbDVAiHKGIgyy6bZmaY4wyBpzfgRMYhw",
+  "AIzaSyCxhEq4RF8PEzQCDbineXiFhvEjzBz8CAA"
+]; // Keep your Gemini keys separate
 
 // !!! YouTube Data API v3 Key !!!
 // WARNING: Embedding this directly in frontend code is INSECURE for production.

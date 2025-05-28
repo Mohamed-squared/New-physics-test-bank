@@ -4,7 +4,15 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
-const DEFAULT_API_KEY = 'AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM';
+const DEFAULT_API_KEYS_ARRAY = [
+  "AIzaSyAfAn-Ti1V9g2DTUi9tdjErGtddSVoa3iM", // Original key
+  "AIzaSyAKOtEzrQWzitRJ627-iZ6v182xfb7KJLo",
+  "AIzaSyDUt_A4NU4mLwiHdcP0Qr6BRaaERP97kGo",
+  "AIzaSyDN52jguMN5ibjh6GyGPltxeyB9UYAxdew",
+  "AIzaSyDKbDVAiHKGIgyy6bZmaY4wyBpzfgRMYhw",
+  "AIzaSyCxhEq4RF8PEzQCDbineXiFhvEjzBz8CAA"
+];
+const DEFAULT_API_KEY = DEFAULT_API_KEYS_ARRAY; // Keep variable name for minimal diff, but it's now an array.
 
 /**
  * Extracts text content from all pages of a PDF file.
@@ -116,20 +124,31 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       }
   }
 
-  let effectiveApiKey;
-  if (processedApiKey) {
-    effectiveApiKey = processedApiKey;
-    console.log(`[AI Service - Text API] Using processed API key: ${effectiveApiKey.substring(0,15)}...`);
+  let effectiveApiKey = null;
+  if (processedApiKey) { // A single key was successfully extracted from the input parameter
+      effectiveApiKey = processedApiKey;
+      console.log(`[AI Service - Text API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
   } else {
-    effectiveApiKey = DEFAULT_API_KEY;
-    console.warn(`[AI Service - Text API] ${logReasonForDefault} Falling back to default API key for text API.`);
+      console.warn(`[AI Service - Text API] ${logReasonForDefault} No valid API key from input parameter. Attempting to use default API keys.`);
+      if (Array.isArray(DEFAULT_API_KEY) && DEFAULT_API_KEY.length > 0) {
+          effectiveApiKey = DEFAULT_API_KEY.find(k => typeof k === 'string' && k.trim() !== ''); // Get first valid key
+          if (effectiveApiKey) {
+              console.log(`[AI Service - Text API] Using first valid key from default API key array: ${effectiveApiKey.substring(0,15)}...`);
+          } else {
+              console.error('[AI Service - Text API] CRITICAL: Default API key array is configured but contains no valid string keys.');
+              // effectiveApiKey remains null
+          }
+      } else {
+          console.error('[AI Service - Text API] CRITICAL: Default API key array is not configured or empty.');
+          // effectiveApiKey remains null
+      }
   }
   
   console.log(`Calling Gemini text API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}..."`);
 
   if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check on effectiveApiKey
-    console.error('[AI Service - Text API] CRITICAL: Effective API Key is missing or empty even after processing and fallback attempts. Throwing error.');
-    throw new Error('Google AI API Key is required.');
+    console.error('[AI Service - Text API] CRITICAL: Effective API Key is missing or empty even after processing input and default fallbacks. Throwing error.');
+    throw new Error('Google AI API Key is required and could not be resolved.');
   }
 
   try {
@@ -346,20 +365,31 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       }
   }
   
-  let effectiveApiKey;
-  if (processedApiKey) {
-    effectiveApiKey = processedApiKey;
-    console.log(`[AI Service - Vision API] Using processed API key: ${effectiveApiKey.substring(0,15)}...`);
+  let effectiveApiKey = null;
+  if (processedApiKey) { // A single key was successfully extracted from the input parameter
+      effectiveApiKey = processedApiKey;
+      console.log(`[AI Service - Vision API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
   } else {
-    effectiveApiKey = DEFAULT_API_KEY;
-    console.warn(`[AI Service - Vision API] ${logReasonForDefault} Falling back to default API key for vision API.`);
+      console.warn(`[AI Service - Vision API] ${logReasonForDefault} No valid API key from input parameter. Attempting to use default API keys.`);
+      if (Array.isArray(DEFAULT_API_KEY) && DEFAULT_API_KEY.length > 0) {
+          effectiveApiKey = DEFAULT_API_KEY.find(k => typeof k === 'string' && k.trim() !== ''); // Get first valid key
+          if (effectiveApiKey) {
+              console.log(`[AI Service - Vision API] Using first valid key from default API key array: ${effectiveApiKey.substring(0,15)}...`);
+          } else {
+              console.error('[AI Service - Vision API] CRITICAL: Default API key array is configured but contains no valid string keys.');
+              // effectiveApiKey remains null
+          }
+      } else {
+          console.error('[AI Service - Vision API] CRITICAL: Default API key array is not configured or empty.');
+          // effectiveApiKey remains null
+      }
   }
 
   console.log(`Calling Gemini Vision API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}...", Images: ${imagePaths.join(', ')}`);
 
   if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check
-    console.error('[AI Service - Vision API] CRITICAL: Effective API Key is missing or empty even after processing and fallback attempts. Throwing error.');
-    throw new Error('Google AI API Key is required.');
+    console.error('[AI Service - Vision API] CRITICAL: Effective API Key is missing or empty even after processing input and default fallbacks. Throwing error.');
+    throw new Error('Google AI API Key is required and could not be resolved.');
   }
   if (!imagePaths || imagePaths.length === 0) {
     console.error('No image paths provided.');

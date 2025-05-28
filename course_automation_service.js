@@ -54,7 +54,7 @@ async function automateNewCourseCreation(params) {
         coursePicUrl   // New
     } = params;
 
-    const courseIdPlaceholder = sanitizeCourseTitleForDirName(courseTitle); 
+    const courseIdPlaceholder = sanitizeCourseTitleForDirName(courseTitle);
     
     // Helper function for logging
     const logProgress = (message, currentResults, level = 'info') => {
@@ -97,59 +97,83 @@ async function automateNewCourseCreation(params) {
 
     // --- Gemini API Key Validation and Processing ---
     results.firestoreDataPreview.currentAutomationStep = "Validating API Keys"; // Set step
-    let processedGeminiApiKey = null;
+    let finalApiKeyForAIServer; // This will be passed to aiServer functions
+
     const originalGeminiApiKeyType = typeof geminiApiKey;
     const originalGeminiApiKeySnippet = typeof geminiApiKey === 'string' ? geminiApiKey.substring(0, 50) + '...' : JSON.stringify(geminiApiKey, null, 2);
-    logProgress(`Received Gemini API Key. Original Type: ${originalGeminiApiKeyType}, Original Snippet: ${originalGeminiApiKeySnippet}`, results);
+    logProgress(`Received Gemini API Key for Course Automation. Original Type: ${originalGeminiApiKeyType}, Original Snippet: ${originalGeminiApiKeySnippet}`, results);
 
-    if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
+    if (Array.isArray(geminiApiKey)) {
+        logProgress('Gemini API Key is an array. Using it directly.', results);
+        finalApiKeyForAIServer = geminiApiKey.filter(k => typeof k === 'string' && k.trim() !== ''); // Filter out invalid entries
+        if (finalApiKeyForAIServer.length === 0) {
+            logProgress('WARN: Provided API key array is empty or contains no valid strings.', results, 'warn');
+            finalApiKeyForAIServer = null; // Signal to use fallback
+        }
+    } else if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
         if (geminiApiKey.startsWith('[') && geminiApiKey.endsWith(']')) {
             try {
                 const parsedArray = JSON.parse(geminiApiKey);
                 if (Array.isArray(parsedArray)) {
-                    logProgress('Received Gemini API key is a stringified array. Parsed.', results);
-                    processedGeminiApiKey = parsedArray.find(k => typeof k === 'string' && k.trim() !== '');
-                    if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
+                    logProgress('Gemini API key was a stringified array. Parsed.', results);
+                    finalApiKeyForAIServer = parsedArray.filter(k => typeof k === 'string' && k.trim() !== '');
+                    if (finalApiKeyForAIServer.length === 0) {
+                        logProgress('WARN: Parsed API key array is empty or contains no valid strings.', results, 'warn');
+                        finalApiKeyForAIServer = null;
+                    }
+                } else { // Parsed but not an array
+                    logProgress('WARN: Stringified API key did not parse into an array. Treating as single key if non-empty.', results, 'warn');
+                    finalApiKeyForAIServer = [geminiApiKey.trim()]; // Treat as single key in an array
                 }
             } catch (e) {
-                logProgress(`WARN: Failed to parse stringified array-like API key, using string directly if valid: ${e.message}`, results, 'warn');
-                processedGeminiApiKey = geminiApiKey.trim();
+                logProgress(`WARN: Failed to parse stringified array-like API key, treating as single key: ${e.message}`, results, 'warn');
+                finalApiKeyForAIServer = [geminiApiKey.trim()]; // Treat as single key in an array
             }
-        } else {
-            processedGeminiApiKey = geminiApiKey.trim();
+        } else { // Simple string key
+            logProgress('Gemini API Key is a single string.', results);
+            finalApiKeyForAIServer = [geminiApiKey.trim()]; // Pass as an array with one key
         }
-    } else if (Array.isArray(geminiApiKey)) {
-        logProgress('Received Gemini API key is an array.', results);
-        processedGeminiApiKey = geminiApiKey.find(k => typeof k === 'string' && k.trim() !== '');
-        if (processedGeminiApiKey) processedGeminiApiKey = processedGeminiApiKey.trim();
     } else if (typeof geminiApiKey === 'object' && geminiApiKey !== null) {
-        logProgress('Received Gemini API key is an object.', results);
+        logProgress('Gemini API key is an object. Attempting to extract key.', results);
         const commonKeys = ['key', 'apiKey', 'value'];
+        let foundKey = null;
         for (const k of commonKeys) {
             if (typeof geminiApiKey[k] === 'string' && geminiApiKey[k].trim() !== '') {
-                processedGeminiApiKey = geminiApiKey[k].trim();
+                foundKey = geminiApiKey[k].trim();
                 break;
             }
         }
+        if (foundKey) {
+            finalApiKeyForAIServer = [foundKey]; // Pass as an array with one key
+        } else {
+            logProgress('WARN: Could not extract a valid string key from API key object.', results, 'warn');
+            finalApiKeyForAIServer = null;
+        }
+    } else {
+        logProgress('Gemini API Key parameter is not a valid array, string, or object.', results, 'warn');
+        finalApiKeyForAIServer = null;
     }
 
-    if (!processedGeminiApiKey) {
-        logProgress(`WARN: Could not extract a valid string Gemini API Key from provided input. Attempting to use global default GEMINI_API_KEY.`, results, 'warn');
-        processedGeminiApiKey = GEMINI_API_KEY; 
-        if (!processedGeminiApiKey) {
-             const errorMsg = `CRITICAL: No valid Gemini API Key could be resolved and no global default is set. Aborting.`;
+    if (!finalApiKeyForAIServer || finalApiKeyForAIServer.length === 0) {
+        logProgress(`WARN: No valid Gemini API Key from input. Attempting to use global default GEMINI_API_KEY from server_config.js.`, results, 'warn');
+        finalApiKeyForAIServer = GEMINI_API_KEY; 
+        if (!finalApiKeyForAIServer || (Array.isArray(finalApiKeyForAIServer) && finalApiKeyForAIServer.length === 0)) {
+             const errorMsg = `CRITICAL: No valid Gemini API Key could be resolved from input, and global default from server_config.js is also missing or empty. Aborting.`;
              logProgress(errorMsg, results, 'error');
              results.success = false;
              results.message = errorMsg;
-             results.firestoreDataPreview.currentAutomationStep = `Failed: Gemini API Key missing`; // Update step on failure
+             results.firestoreDataPreview.currentAutomationStep = `Failed: Gemini API Key missing`;
              return results; 
         }
-        logProgress(`Using global default GEMINI_API_KEY.`, results);
-    } else {
-        logProgress(`Successfully processed/validated Gemini API Key: ${processedGeminiApiKey.substring(0,15)}...`, results);
+        logProgress(`Using global default GEMINI_API_KEY from server_config.js. Type: ${typeof finalApiKeyForAIServer}`, results);
     }
     
-    const finalApiKey = processedGeminiApiKey; 
+    if (typeof finalApiKeyForAIServer === 'string') {
+        finalApiKeyForAIServer = [finalApiKeyForAIServer];
+        logProgress(`Wrapped string API key from server_config.js into an array.`, results);
+    }
+    
+    logProgress(`Final API Key for AI Server (type: ${typeof finalApiKeyForAIServer}, isArray: ${Array.isArray(finalApiKeyForAIServer)}): ${JSON.stringify(finalApiKeyForAIServer).substring(0,100)}...`, results);
 
     try {
         results.firestoreDataPreview.currentAutomationStep = "Initializing Mega Service"; // Set step
@@ -203,7 +227,7 @@ async function automateNewCourseCreation(params) {
             trueFirstPageNumber,
             megaEmail, // Pass credentials for processTextbookPdf internal Mega ops
             megaPassword,
-            finalApiKey
+            finalApiKeyForAIServer
         );
         if (!textbookProcessingResult.success) throw new Error(`Textbook PDF processing failed: ${textbookProcessingResult.message}`);
         results.megaLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({
@@ -278,7 +302,7 @@ ${lectureSectionForPrompt}
 The course falls under the major category of "${majorTag}" and the specific subject of "${subjectTag}".
 Highlight the key learning outcomes and what students will gain from this course. Keep it under 150 words.
         `;
-        results.aiGeneratedDescription = await aiServer.callGeminiTextAPI(finalApiKey, descriptionPrompt, null, "You are a course catalog editor creating compelling course descriptions.");
+        results.aiGeneratedDescription = await aiServer.callGeminiTextAPI(finalApiKeyForAIServer, descriptionPrompt, null, "You are a course catalog editor creating compelling course descriptions.");
         console.log(`[AutomationService] AI course description generated: ${results.aiGeneratedDescription.substring(0, 100)}...`);
 
 
@@ -294,7 +318,7 @@ Highlight the key learning outcomes and what students will gain from this course
                 chapter.title,
                 megaEmail,
                 megaPassword,
-                finalApiKey
+                finalApiKeyForAIServer
             );
             if (pdfQuestionsResult.success) {
                 results.megaLinks.pdfQuestions.push({
@@ -322,7 +346,7 @@ Highlight the key learning outcomes and what students will gain from this course
                     chapterNameForLectures,
                     megaEmail,
                     megaPassword,
-                    finalApiKey
+                    finalApiKeyForAIServer
                 );
                 if (lectureQuestionsResult.success) {
                     results.megaLinks.lectureQuestions.push({
