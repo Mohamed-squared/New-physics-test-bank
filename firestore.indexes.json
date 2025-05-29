@@ -42,13 +42,6 @@
       ]
     },
     {
-      "collectionGroup": "users",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "isAdmin", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "feedback",
       "queryScope": "COLLECTION",
       "fields": [
