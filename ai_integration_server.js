@@ -16,6 +16,21 @@ const DEFAULT_API_KEY = DEFAULT_API_KEYS_ARRAY; // Keep variable name for minima
 let defaultApiKeyIndex = 0; // Module-level index for cycling through default keys
 
 /**
+ * Creates a snippet of an API key for logging.
+ * @param {string} apiKey The API key.
+ * @returns {string} A snippet of the API key (e.g., "AIzaSyA...VoaX") or the full key if too short.
+ */
+function getApiKeySnippet(apiKey) {
+  if (typeof apiKey !== 'string' || apiKey.length === 0) {
+    return "N/A (empty or not a string)";
+  }
+  if (apiKey.length <= 11) { // 7 (start) + 4 (end)
+    return apiKey; // Return the full key if it's too short to make a meaningful snippet
+  }
+  return `${apiKey.substring(0, 7)}...${apiKey.slice(-4)}`;
+}
+
+/**
  * Extracts text content from all pages of a PDF file.
  * @param {string} pdfPath - Path to the PDF file on the local server filesystem.
  * @returns {Promise<string>} The extracted text content.
@@ -175,7 +190,8 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
     throw new Error('Google AI API Key is required and could not be resolved for the call.');
   }
   
-  const apiKeySnippet = effectiveApiKey.substring(0, 15); // Define here, now that effectiveApiKey is set.
+  // const apiKeySnippet = effectiveApiKey.substring(0, 15); // Old snippet style
+  const apiKeyLogSnippet = getApiKeySnippet(effectiveApiKey); // Use new helper for logging
 
   const MAX_RETRIES = 3;
   const INITIAL_BACKOFF_MS = 1000;
@@ -236,14 +252,14 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
           console.log(`Using system instruction: "${systemInstruction.substring(0,100)}..."`);
       }
 
-      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini API. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}..."`);
+      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini API. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}..."`);
       const result = await model.generateContent(requestPayload);
       
       console.log(`[${functionName}] Received response from Gemini API.`);
       const response = result.response;
 
       if (!response) {
-          const logMsg = `[${functionName}] Gemini API call failed: No response object. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+          const logMsg = `[${functionName}] Gemini API call failed: No response object. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}"`;
           console.error(logMsg, result);
           if (result.promptFeedback && result.promptFeedback.blockReason) {
               throw new Error(`${logMsg}. Request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
@@ -258,7 +274,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       const candidate = response.candidates && response.candidates[0];
       if (candidate) {
         if (candidate.finishReason === 'RECITATION') {
-          const recitationMsg = `[${functionName}] Gemini API call resulted in RECITATION. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+          const recitationMsg = `[${functionName}] Gemini API call resulted in RECITATION. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}"`;
           console.warn(recitationMsg, candidate);
           const recitationError = new Error(`${recitationMsg}. Finish reason: ${candidate.finishReason}. Safety ratings: ${JSON.stringify(candidate.safetyRatings)}.`);
           recitationError.isRecitationError = true; // Custom property
@@ -279,7 +295,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       }
       
       // If we reach here, it means no valid text content was found or another issue occurred.
-      const noContentMsg = `[${functionName}] Gemini Text API call failed: No valid text content in response. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+      const noContentMsg = `[${functionName}] Gemini Text API call failed: No valid text content in response. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}"`;
       console.error(noContentMsg, response);
       if (candidate && candidate.finishReason) {
         const finishReason = candidate.finishReason;
@@ -295,7 +311,8 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
 
     } catch (error) {
       const timestamp = new Date().toISOString();
-      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
+      // Use apiKeyLogSnippet for consistent logging of the key being used
+      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
 
       if (error.isRecitationError) { // Propagate recitation error for specific handling
         throw error; // This will be caught by the outer RECITATION handling wrapper
@@ -308,7 +325,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
         await new Promise(resolve => setTimeout(resolve, backoffDelay));
       } else {
         // Non-transient error or max retries reached
-        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with key "${apiKeySnippet}...": ${error.message}`;
+        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with effective key "${apiKeyLogSnippet}": ${error.message}`;
         console.error(finalErrorMsg, error.stack); // Log stack for the final error as well
         throw new Error(finalErrorMsg, { cause: error });
       }
@@ -316,7 +333,7 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
   }
   // This part should ideally not be reached if loop exits due to error, as error would be thrown.
   // If loop completes without returning/throwing (e.g. if MAX_RETRIES = 0), throw error.
-  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}...".`;
+  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}..." using effective key "${apiKeyLogSnippet}".`;
   console.error(maxRetryErrorMsg);
   throw new Error(maxRetryErrorMsg);
 }
@@ -325,12 +342,10 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
 // Specific RECITATION handling wrapper for callGeminiTextAPI
 async function callGeminiTextAPIWithRecitationHandling(apiKey, prompt, history = null, systemInstruction = null, modelName = 'gemini-2.5-flash-preview-05-20') {
   const functionName = "callGeminiTextAPIWithRecitationHandling";
-  // Resolve effectiveApiKey once here for logging and passing to the core function.
-  // This duplicates some logic from the start of callGeminiTextAPI, but ensures the wrapper also has access
-  // to a resolved key for consistent logging, especially if the initial call fails before even entering the retry loop.
-  // For simplicity in this step, we'll pass the raw apiKey and let callGeminiTextAPI resolve it.
-  // The snippet for logging here will use the raw key.
-  const apiKeySnippet = typeof apiKey === 'string' ? apiKey.substring(0, 15) + "..." : "N/A (or non-string type)";
+  // For this wrapper, the detailed key resolution happens inside callGeminiTextAPI.
+  // We log the raw key passed to this wrapper for context. If callGeminiTextAPI resolves it to a default,
+  // its internal logs will show the effective key.
+  const rawApiKeyLogSnippet = getApiKeySnippet(typeof apiKey === 'string' ? apiKey : "N/A (raw key not string)");
   const promptSnippet = String(prompt).substring(0, 100);
 
   try {
@@ -342,33 +357,35 @@ async function callGeminiTextAPIWithRecitationHandling(apiKey, prompt, history =
     // Based on current `callGeminiTextAPI` structure, `isRecitationError` is on the error itself.
     if (error.isRecitationError || (error.cause && error.cause.isRecitationError)) {
       const originalError = error.cause || error; // Get the actual recitation error
-      console.warn(`[${functionName}] Initial call resulted in RECITATION. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}". Details: ${originalError.message}. Attempting one retry with modified prompt.`);
+      // The error message from originalError already contains the effectiveApiKey snippet if it came from the retry loop's end.
+      console.warn(`[${functionName}] Initial call resulted in RECITATION. Raw Key (to wrapper): ${rawApiKeyLogSnippet}, Prompt: "${promptSnippet}". Details: ${originalError.message}. Attempting one retry with modified prompt.`);
       
       const modifiedPrompt = prompt + "\n\nPlease ensure the response is original and does not closely mirror the provided text.";
       
       try {
         // Retry once with the modified prompt
-        console.log(`[${functionName}] Retrying with modified prompt for RECITATION. Key: ${apiKeySnippet}...`);
+        console.log(`[${functionName}] Retrying with modified prompt for RECITATION. Raw Key (to wrapper): ${rawApiKeyLogSnippet}...`);
         // Pass the original apiKey, history, systemInstruction, modelName
         return await callGeminiTextAPI(apiKey, modifiedPrompt, history, systemInstruction, modelName);
       } catch (retryError) {
         const timestamp = new Date().toISOString();
         const retryPromptSnippet = modifiedPrompt.substring(0,150);
-        console.error(`[${functionName}] Retry attempt for RECITATION also failed. Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt (modified): "${retryPromptSnippet}...". Error: ${retryError.message}`, retryError.stack);
+        // The retryError.message (if from callGeminiTextAPI final error) will contain the effectiveApiKey snippet.
+        console.error(`[${functionName}] Retry attempt for RECITATION also failed. Timestamp: ${timestamp}. Raw Key (to wrapper): ${rawApiKeyLogSnippet}, Prompt (modified): "${retryPromptSnippet}...". Error: ${retryError.message}`, retryError.stack);
         
         // Check if the retry error is also a recitation error
         const isRetryRecitation = retryError.isRecitationError || (retryError.cause && retryError.cause.isRecitationError);
-        const finalUnderlyingError = retryError.cause || retryError;
+        const finalUnderlyingError = retryError.cause || retryError; // This would be the error from callGeminiTextAPI
 
         if (isRetryRecitation) {
-          throw new Error(`[${functionName}] Persistent RECITATION error after retry for prompt "${promptSnippet}...". Original error: ${originalError.message}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
+          throw new Error(`[${functionName}] Persistent RECITATION error after retry for prompt "${promptSnippet}...". Raw Key (to wrapper): ${rawApiKeyLogSnippet}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
         }
-        throw new Error(`[${functionName}] Error during retry for RECITATION for prompt "${promptSnippet}...". Original error: ${originalError.message}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
+        throw new Error(`[${functionName}] Error during retry for RECITATION for prompt "${promptSnippet}...". Raw Key (to wrapper): ${rawApiKeyLogSnippet}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
       }
     } else {
       // Not a recitation error we are specifically handling here, or it's a wrapped error from the retry loop that isn't recitation.
-      // The error message from callGeminiTextAPI's retry loop is already quite descriptive.
-      console.error(`[${functionName}] An error occurred that is not being handled as a RECITATION case. Key: ${apiKeySnippet}, Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
+      // The error message from callGeminiTextAPI's retry loop should already be descriptive and include the effective key snippet.
+      console.error(`[${functionName}] An error occurred that is not being handled as a RECITATION case. Raw Key (to wrapper): ${rawApiKeyLogSnippet}, Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
       throw error; // Rethrow the already processed error
     }
   }
@@ -536,7 +553,8 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
     throw new Error('Google AI API Key is required and could not be resolved for the call.');
   }
   
-  const apiKeySnippet = effectiveApiKey.substring(0, 15); // Define here.
+  // const apiKeySnippet = effectiveApiKey.substring(0, 15); // Old snippet style
+  const apiKeyLogSnippet = getApiKeySnippet(effectiveApiKey); // Use new helper for logging
 
   if (!imagePaths || imagePaths.length === 0) {
     console.error(`[${functionName}] No image paths provided for prompt "${promptSnippet}".`);
@@ -610,14 +628,14 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
         safetySettings,
       };
 
-      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini Vision API. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}..."`);
+      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini Vision API. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}..."`);
       const result = await model.generateContent(requestPayload);
       
       console.log(`[${functionName}] Received response from Gemini Vision API.`);
       const response = result.response;
 
       if (!response) {
-        const logMsg = `[${functionName}] Gemini Vision API call failed: No response object. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+        const logMsg = `[${functionName}] Gemini Vision API call failed: No response object. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}"`;
         console.error(logMsg, result);
         if (result.promptFeedback && result.promptFeedback.blockReason) {
           throw new Error(`${logMsg}. Request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
@@ -641,7 +659,7 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       }
       
       // If we reach here, no valid text content.
-      const noContentMsg = `[${functionName}] Gemini Vision API call failed: No valid text content in response. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+      const noContentMsg = `[${functionName}] Gemini Vision API call failed: No valid text content in response. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}"`;
       console.error(noContentMsg, response);
       const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
       if (candidate && candidate.finishReason) {
@@ -661,7 +679,8 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       const timestamp = new Date().toISOString();
       // Include imagePaths in error logging for vision API for more context
       const imagePathsSnippet = imagePaths.join(', ').substring(0, 200) + (imagePaths.join(', ').length > 200 ? '...' : '');
-      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}", Images: "${imagePathsSnippet}". Error: ${error.message}`, error.stack);
+      // Use apiKeyLogSnippet for consistent logging
+      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeyLogSnippet}, Prompt: "${promptSnippet}", Images: "${imagePathsSnippet}". Error: ${error.message}`, error.stack);
       
       // Specific check for image file not found, which is not transient
       if (error.message.toLowerCase().includes('image file not found')) {
@@ -674,13 +693,13 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
         retries++;
         await new Promise(resolve => setTimeout(resolve, backoffDelay));
       } else {
-        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with key "${apiKeySnippet}...": ${error.message}`;
+        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with effective key "${apiKeyLogSnippet}": ${error.message}`;
         console.error(finalErrorMsg, error.stack);
         throw new Error(finalErrorMsg, { cause: error });
       }
     }
   }
-  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}...".`;
+  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}..." using effective key "${apiKeyLogSnippet}".`;
   console.error(maxRetryErrorMsg);
   throw new Error(maxRetryErrorMsg);
 }

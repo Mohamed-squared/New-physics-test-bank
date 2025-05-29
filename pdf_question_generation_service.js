@@ -93,6 +93,7 @@ async function generateQuestionsFromPdf(
     chapterTitle,
     megaEmail,
     megaPassword,
+    initializedServerMega, // Added: initialized serverMega instance from the caller
     geminiApiKey // Expected to be an array of keys or a single key string
 ) {
     const processingTimestamp = Date.now();
@@ -109,14 +110,17 @@ async function generateQuestionsFromPdf(
         await fs.ensureDir(TEMP_PROCESSING_DIR);
 
         // --- 1. Download Chapter PDF from MEGA ---
-        logQGen(logContext, 'Initializing MEGA service for PDF download...');
-        await serverMega.initialize(megaEmail, megaPassword); 
-        const megaStorage = serverMega.getMegaStorage(); 
-        if (!megaStorage || !megaStorage.root) throw new Error('MEGA service initialization failed or root directory not accessible.'); 
+        // Mega service is now initialized by the caller and passed as 'initializedServerMega'
+        // We will use 'initializedServerMega' directly for operations.
+        // logQGen(logContext, 'Initializing MEGA service for PDF download...'); // No longer initializing here
+        // await serverMega.initialize(megaEmail, megaPassword); // REMOVED
+        // const megaStorage = serverMega.getMegaStorage(); // REMOVED - serverMega functions will use internal state
+        // if (!megaStorage || !megaStorage.root) throw new Error('MEGA service initialization failed or root directory not accessible.'); // REMOVED
         
-        logQGen(logContext, `Downloading PDF from MEGA link: ${chapterPdfMegaLink}`);
+        logQGen(logContext, `Downloading PDF from MEGA link: ${chapterPdfMegaLink} using provided Mega instance.`);
         const tempPdfName = sanitizeFilename(`${chapterKey}_temp.pdf`); 
-        downloadedPdfPath = await serverMega.downloadFile(chapterPdfMegaLink, TEMP_PROCESSING_DIR, tempPdfName); 
+        // Use the passed-in initializedServerMega for operations
+        downloadedPdfPath = await initializedServerMega.downloadFile(chapterPdfMegaLink, TEMP_PROCESSING_DIR, tempPdfName); 
         logQGen(logContext, `Chapter PDF downloaded to: ${downloadedPdfPath}`);
 
         // --- 2. Extract Text from PDF ---
@@ -234,27 +238,32 @@ Generate problems now.
         const lyceumRootFolderName = "LyceumCourses_Test";
         const generatedQuestionsFolderName = "Generated_Questions"; 
 
-        let lyceumRootNode = await serverMega.findFolder(lyceumRootFolderName, megaStorage.root); 
-        if (!lyceumRootNode) lyceumRootNode = await serverMega.createFolder(lyceumRootFolderName, megaStorage.root); 
+        // Use initializedServerMega for all Mega operations
+        // Note: serverMega.getMegaStorage() will be called *inside* these functions if they need the storage.root
+        // And because serverMega was initialized by the caller, getMegaStorage() will return the correct, ready storage.
+        const megaStorageForRoot = initializedServerMega.getMegaStorage(); // Or rely on functions to call it. Let's be explicit for root.
+
+        let lyceumRootNode = await initializedServerMega.findFolder(lyceumRootFolderName, megaStorageForRoot.root); 
+        if (!lyceumRootNode) lyceumRootNode = await initializedServerMega.createFolder(lyceumRootFolderName, megaStorageForRoot.root); 
         if (!lyceumRootNode) throw new Error(`Failed to find/create Lyceum root folder: ${lyceumRootFolderName}`);
 
-        let courseMegaFolderNode = await serverMega.findFolder(courseDirName, lyceumRootNode); 
-        if (!courseMegaFolderNode) courseMegaFolderNode = await serverMega.createFolder(courseDirName, lyceumRootNode); 
+        let courseMegaFolderNode = await initializedServerMega.findFolder(courseDirName, lyceumRootNode); 
+        if (!courseMegaFolderNode) courseMegaFolderNode = await initializedServerMega.createFolder(courseDirName, lyceumRootNode); 
         if (!courseMegaFolderNode) throw new Error(`Failed to find/create course folder: ${courseDirName}`);
         
-        let genQuestionsCourseNode = await serverMega.findFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
-        if(!genQuestionsCourseNode) genQuestionsCourseNode = await serverMega.createFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
+        let genQuestionsCourseNode = await initializedServerMega.findFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
+        if(!genQuestionsCourseNode) genQuestionsCourseNode = await initializedServerMega.createFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
         if(!genQuestionsCourseNode) throw new Error(`Failed to find/create Generated_Questions folder for course: ${generatedQuestionsFolderName}`);
 
-        let chapterQuestionsNode = await serverMega.findFolder(chapterKey, genQuestionsCourseNode); 
-        if (!chapterQuestionsNode) chapterQuestionsNode = await serverMega.createFolder(chapterKey, genQuestionsCourseNode); 
+        let chapterQuestionsNode = await initializedServerMega.findFolder(chapterKey, genQuestionsCourseNode); 
+        if (!chapterQuestionsNode) chapterQuestionsNode = await initializedServerMega.createFolder(chapterKey, genQuestionsCourseNode); 
         if (!chapterQuestionsNode) throw new Error(`Failed to find/create chapter-specific questions folder: ${chapterKey}`);
         
         const uploadedFileLinks = {};
 
         for (const fileToUpload of generatedFilesToUpload) {
             logQGen(logContext, `Uploading ${fileToUpload.name} to MEGA folder: ${chapterQuestionsNode.name}`);
-            const uploadedFile = await serverMega.uploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode); 
+            const uploadedFile = await initializedServerMega.uploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode); 
             if (!uploadedFile || !uploadedFile.link) {
                 throw new Error(`Failed to upload ${fileToUpload.name} to MEGA or link not returned.`);
             }

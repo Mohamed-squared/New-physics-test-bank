@@ -22,9 +22,10 @@ let courseServiceApiKeyIndex = 0; // Module-level index for cycling through API 
  * @param {string} megaPassword - Mega password.
  * @param {Function} logProgress - Logging function.
  * @param {object} resultsRef - Reference to the main results object for logging.
+ * @param {object} initializedServerMega - The initialized serverMega instance.
  * @returns {Promise<Array<object>>} - Array of results from all settled promises.
  */
-async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlaceholder, megaEmail, megaPassword, logProgress, resultsRef) {
+async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlaceholder, megaEmail, megaPassword, logProgress, resultsRef, initializedServerMega) {
     if (!apiKeys || apiKeys.length === 0) {
         logProgress('CRITICAL: No API keys available for parallel processing.', resultsRef, 'error');
         throw new Error('No API keys available for parallel tasks.');
@@ -47,7 +48,8 @@ async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlacehol
                 
                 logProgress(`Worker ${i}: Processing item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}') with API key index ${i % apiKeys.length}.`, resultsRef);
                 try {
-                    const result = await taskFunction(item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword);
+                    // Pass initializedServerMega to the task function
+                    const result = await taskFunction(item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword, initializedServerMega);
                     results.push({ status: 'fulfilled', value: result, item });
                     logProgress(`Worker ${i}: Successfully processed item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}').`, resultsRef);
                 } catch (error) {
@@ -255,8 +257,8 @@ async function automateNewCourseCreation(params) {
         // --- 1. Initialization & Setup ---
         logProgress('Initializing Mega service...', results);
         await serverMega.initialize(megaEmail, megaPassword);
-        const megaStorage = serverMega.getMegaStorage();
-        if (!megaStorage || !megaStorage.root) throw new Error("Mega service initialization failed.");
+        // const megaStorage = serverMega.getMegaStorage(); // We'll pass serverMega itself
+        // if (!megaStorage || !megaStorage.root) throw new Error("Mega service initialization failed."); // Check is done by initialize()
         logProgress('Mega service initialized.', results);
 
         results.firestoreDataPreview.currentAutomationStep = "Creating Mega Folder Structure"; // Set step
@@ -396,7 +398,7 @@ Highlight the key learning outcomes and what students will gain from this course
 
         // --- 5. Question Generation ---
         // Define the task function for PDF question generation
-        const generatePdfQuestionsForChapterTask = async (chapter, apiKey, courseId, email, password) => {
+        const generatePdfQuestionsForChapterTask = async (chapter, apiKey, courseId, email, password, initializedServerMegaInstance) => {
             logProgress(`[TaskRunner] Generating PDF questions for chapter: "${chapter.title}" (Key: ${chapter.key}) using assigned API key index...`, results); // Log with results ref
             return generateQuestionsFromPdf(
                 courseId,
@@ -405,6 +407,7 @@ Highlight the key learning outcomes and what students will gain from this course
                 chapter.title,
                 email,
                 password,
+                initializedServerMegaInstance, // Pass the initialized serverMega instance
                 apiKey
             );
         };
@@ -455,7 +458,8 @@ Highlight the key learning outcomes and what students will gain from this course
                 megaEmail,
                 megaPassword,
                 logProgress,
-                results
+                results,
+                serverMega // Pass the initialized serverMega module
             );
 
             const stillNeedsProcessing = []; // Items that failed with a retriable API key error
@@ -564,9 +568,18 @@ Highlight the key learning outcomes and what students will gain from this course
                     attributesLoaded = true;
                     logProgress(`Successfully loaded attributes for "${courseMegaNode.name || courseMegaNode.id}" on attempt ${loadAttrAttempts}.`, results);
                 } catch (attrError) {
-                    logProgress(new Error(`Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" failed: ${attrError.message}`), results, 'warn');
+                    if (attrError.message && attrError.message.includes("This is not needed for files loaded from logged in sessions")) {
+                        logProgress(`[Debug] Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" indicated: ${attrError.message}. Proceeding as this is often non-critical.`, results, 'debug'); // Using 'debug' level
+                        // Still counts as an attempt, and if it keeps happening, eventually MAX_LOAD_ATTR_ATTEMPTS will be hit.
+                        // The attributesLoaded flag remains false, so the loop continues or exits based on attempts.
+                    } else {
+                        logProgress(new Error(`Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" failed: ${attrError.message}`), results, 'warn');
+                    }
+                    // Common logic for all attrErrors in this catch block:
                     if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS) {
-                        logProgress(new Error(`Failed to load attributes for main course folder node after ${MAX_LOAD_ATTR_ATTEMPTS} attempts. Link generation might fail or use stale data. Last error: ${attrError.message}`), results, 'error');
+                        // Log that max attempts were reached, regardless of the specific error type of the last attempt.
+                        // If the last error was the "not needed" message, this log might be slightly less alarming but still notes that attributes might not be "formally" loaded.
+                        logProgress(new Error(`Failed to formally load attributes for main course folder node after ${MAX_LOAD_ATTR_ATTEMPTS} attempts. Link generation might fail or use stale data if attributes were truly necessary. Last error: ${attrError.message}`), results, 'warn'); // Changed to 'warn' to be less severe if the last message was the "not needed" one.
                         // Proceeding to attempt link generation anyway, as per original plan.
                     } else {
                         // Simplified delay, not using isRetryableMegaError here as it's not imported.
@@ -620,8 +633,9 @@ Highlight the key learning outcomes and what students will gain from this course
                         if (linkAttempts >= MAX_LINK_ATTEMPTS) {
                             const finalErrorMessageBase = `Failed to get main course folder link after ${MAX_LINK_ATTEMPTS} attempts.`;
                             if (eaccessError) {
-                                logProgress(`CRITICAL: ${finalErrorMessageBase} Last error involved EACCESS. This usually means the Mega account lacks permission to export folder links with keys, or the folder is in a restricted share. Please check your Mega account settings. The folder was created, but its direct link is unavailable. Error: ${currentAttemptError.message}`, results, 'error');
-                                mainFolderLink = `Error retrieving link (EACCESS: Check Mega account permissions. Last error: ${currentAttemptError.message.substring(0, 100)})`;
+                                const detailedEaccessMsg = `CRITICAL: Main course folder link generation failed with EACCESS. This indicates the Mega account (email: ${megaEmail || 'not available'}) likely lacks permissions to create shareable links for folders. Please check your Mega account settings, subscription type, and permissions on any parent folders. The course folder was created, but its direct link cannot be generated. Original error: ${currentAttemptError.message}`;
+                                logProgress(detailedEaccessMsg, results, 'error');
+                                mainFolderLink = `Error: EACCESS - Mega account (email: ${megaEmail || 'N/A'}) permission issue. Link generation failed. Check account settings.`;
                             } else {
                                 logProgress(`${finalErrorMessageBase} Last error: ${currentAttemptError.message}.`, results, 'error');
                                 mainFolderLink = `Error retrieving link (Last error: ${currentAttemptError.message.substring(0, 100)})`;

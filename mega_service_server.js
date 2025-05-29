@@ -133,22 +133,29 @@ async function findFolder(folderName, parentNode = null) {
                   attributesLoaded = true;
                   break; // Success
               } catch (attrError) {
-                  console.warn(`[MegaService] Attempt ${loadAttrAttempts} to load attributes for "${searchNode.name}" failed: ${attrError.message}`);
-                  if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS || !isRetryableMegaError(attrError)) {
-                      console.error(`[MegaService] Failed to load attributes for parent node "${searchNode.name}" after ${loadAttrAttempts} attempts or non-retryable error. This may prevent finding child folder "${folderName}".`);
-                      // Re-throwing this error will be caught by the outer retry loop of findFolder.
-                      // The outer loop will then retry the entire findFolder operation, which includes this attribute loading.
-                      // This is acceptable as a failed attribute load for the parent means we can't search its children.
-                      throw attrError; 
+                  if (attrError.message && attrError.message.includes("This is not needed for files loaded from logged in sessions")) {
+                      console.log(`[MegaService][Debug] Attempt ${loadAttrAttempts} to load attributes for parent node "${searchNode.name}" indicated: ${attrError.message}. Proceeding as this may not be critical here.`);
+                      // Do not throw; loop will continue or exit based on loadAttrAttempts.
+                  } else {
+                      console.warn(`[MegaService] Attempt ${loadAttrAttempts} to load attributes for "${searchNode.name}" failed: ${attrError.message}`);
+                      if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS || !isRetryableMegaError(attrError)) {
+                          console.error(`[MegaService] Critically failed to load attributes for parent node "${searchNode.name}" after ${loadAttrAttempts} attempts or non-retryable error. This may prevent finding child folder "${folderName}".`);
+                          throw attrError; // Re-throw critical (non-"not needed" and non-retryable or max attempts) errors
+                      }
                   }
-                  await new Promise(resolve => setTimeout(resolve, LOAD_ATTR_RETRY_DELAY_MS * loadAttrAttempts));
+                  // If error was not thrown (i.e., it was the "not needed" message, or a retryable one before max attempts for other errors)
+                  if (loadAttrAttempts < MAX_LOAD_ATTR_ATTEMPTS) {
+                      await new Promise(resolve => setTimeout(resolve, LOAD_ATTR_RETRY_DELAY_MS * loadAttrAttempts));
+                  }
               }
           }
           if (!attributesLoaded && loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS) {
-             // This case might be redundant if the throw inside the loop is hit, but good for clarity.
-             console.error(`[MegaService] Exhausted retries for loading attributes of "${searchNode.name}". Cannot reliably search for "${folderName}".`);
-             // Throwing an error here will also be caught by the outer findFolder retry logic.
-             throw new Error(`Failed to load attributes for parent node "${searchNode.name}" after ${MAX_LOAD_ATTR_ATTEMPTS} retries.`);
+             // If, after all attempts, attributes are still not loaded, this is a more concerning situation.
+             // Even if the "not needed" message appeared, we didn't get a success confirmation.
+             // Log a warning and allow findFolder to attempt to use searchNode.children.
+             console.warn(`[MegaService] Exhausted retries for loading attributes of "${searchNode.name}". Attributes were not explicitly confirmed as loaded. Proceeding with caution for findFolder operation concerning "${folderName}".`);
+             // DO NOT throw new Error here. Let findFolder attempt to use searchNode.children.
+             // If searchNode.children is undefined or access fails, the main findFolder catch will handle it.
           }
       }
 
