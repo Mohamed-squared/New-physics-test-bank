@@ -39,9 +39,11 @@ async function generateQuestionsFromLectures(
     chapterNameForLectures, // User-provided name for this new "chapter" or topic
     megaEmail,
     megaPassword,
-    geminiApiKey
+    geminiApiKey // Expected to be an array of keys, or a single key string
 ) {
     const processingTimestamp = Date.now();
+    let lectureQGenApiKeyIndex = 0; // Index for cycling through API keys
+
     // Sanitize chapterNameForLectures for use in paths/keys and add UUID for uniqueness
     const sanitizedBaseChapterName = sanitizeForPath(chapterNameForLectures);
     const newChapterKey = `${sanitizedBaseChapterName}_${uuidv4().substring(0, 8)}`;
@@ -114,8 +116,28 @@ ${allLecturesText}
 
 Generate the MCQs now.
 `;
-        // const mcqContent = await generateTextContentResponse([{ text: mcqPrompt }], geminiApiKey); // OLD AI Call
-        const mcqContent = await aiServer.callGeminiTextAPI(geminiApiKey, mcqPrompt); // NEW AI Call
+        
+        let apiKeyForMcq;
+        let validGeminiApiKeys = [];
+        if (Array.isArray(geminiApiKey) && geminiApiKey.length > 0) {
+            validGeminiApiKeys = geminiApiKey.filter(k => typeof k === 'string' && k.trim() !== '');
+            if (validGeminiApiKeys.length > 0) {
+                apiKeyForMcq = validGeminiApiKeys[lectureQGenApiKeyIndex % validGeminiApiKeys.length];
+                lectureQGenApiKeyIndex++;
+                console.log(`[LecQGenService] Using API key from input array (index ${(lectureQGenApiKeyIndex - 1 + validGeminiApiKeys.length) % validGeminiApiKeys.length}) for MCQ generation.`);
+            } else {
+                console.warn('[LecQGenService] geminiApiKey array provided but no valid keys found. Falling back to AI server default for MCQ generation.');
+                apiKeyForMcq = null;
+            }
+        } else if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
+            apiKeyForMcq = geminiApiKey;
+            console.log('[LecQGenService] Using single provided API key for MCQ generation.');
+        } else {
+            console.warn('[LecQGenService] No valid geminiApiKey (array or string) provided. Falling back to AI server default keys for MCQ generation.');
+            apiKeyForMcq = null;
+        }
+
+        const mcqContent = await aiServer.callGeminiTextAPI(apiKeyForMcq, mcqPrompt);
         const tempMcqPath = path.join(TEMP_PROCESSING_DIR, 'LecturesMCQ.md');
         await fs.writeFile(tempMcqPath, mcqContent);
         generatedMarkdownFiles.push({ path: tempMcqPath, name: 'LecturesMCQ.md', type: 'generated_lecture_mcq_markdown' });
@@ -148,8 +170,26 @@ ${allLecturesText}
 
 Generate the problems now.
 `;
-        // const problemsContent = await generateTextContentResponse([{ text: problemsPrompt }], geminiApiKey); // OLD AI Call
-        const problemsContent = await aiServer.callGeminiTextAPI(geminiApiKey, problemsPrompt); // NEW AI Call
+
+        let apiKeyForProblems;
+        // Re-evaluate valid keys from geminiApiKey array in case it was modified or for clarity,
+        // though lectureQGenApiKeyIndex will continue from its previous state.
+        // validGeminiApiKeys was defined above.
+        if (validGeminiApiKeys.length > 0) { // Check if we had valid keys from the array
+            apiKeyForProblems = validGeminiApiKeys[lectureQGenApiKeyIndex % validGeminiApiKeys.length];
+            lectureQGenApiKeyIndex++;
+            console.log(`[LecQGenService] Using API key from input array (index ${(lectureQGenApiKeyIndex - 1 + validGeminiApiKeys.length) % validGeminiApiKeys.length}) for Problems generation.`);
+        } else if (typeof geminiApiKey === 'string' && geminiApiKey.trim() !== '') {
+            // If it was a single string key, it would have been used for MCQs. 
+            // For sequential calls, if there's only one key, it gets reused.
+            apiKeyForProblems = geminiApiKey;
+            console.log('[LecQGenService] Using single provided API key (re-used) for Problems generation.');
+        } else {
+            console.warn('[LecQGenService] No valid geminiApiKey (array or string) provided. Falling back to AI server default keys for Problems generation.');
+            apiKeyForProblems = null;
+        }
+        
+        const problemsContent = await aiServer.callGeminiTextAPI(apiKeyForProblems, problemsPrompt);
         const tempProblemsPath = path.join(TEMP_PROCESSING_DIR, 'LecturesProblems.md');
         await fs.writeFile(tempProblemsPath, problemsContent);
         generatedMarkdownFiles.push({ path: tempProblemsPath, name: 'LecturesProblems.md', type: 'generated_lecture_problems_markdown' });

@@ -103,14 +103,53 @@ async function findFolder(folderName, parentNode = null) {
       // megajs typically loads children when a folder node is instantiated or loadAttributes is called.
       // If searchNode is storage.root, children are loaded by megaStorage.ready.
       // For other nodes, ensure they are "complete" (attributes loaded).
-      // If `searchNode` might be incomplete, `await searchNode.loadAttributes()` could be called here,
-      // but that also needs its own retry logic. Assuming `searchNode` is usually ready.
+      // If `searchNode` might be incomplete, `await searchNode.loadAttributes()` could be called here.
+      // This is the section targeted by the subtask.
       
       // Ensure children are loaded if the node is not the root and might be incomplete
       if (searchNode !== storage.root && (!searchNode.children || searchNode.children.length === 0) && searchNode.numfiles > 0) {
-          console.log(`[MegaService] Node "${searchNode.name}" seems to have items but children array is empty/missing. Attempting loadAttributes.`);
-          await searchNode.loadAttributes(); // This itself can fail and should ideally have retries.
-                                           // For simplicity in this step, assuming it succeeds or fails fast.
+          console.log(`[MegaService] Node "${searchNode.name}" (parent for find) seems to have items but children array is empty/missing. Attempting loadAttributes for it.`);
+          let loadAttrAttempts = 0;
+          const MAX_LOAD_ATTR_ATTEMPTS = 3;
+          const LOAD_ATTR_RETRY_DELAY_MS = 1500;
+          let attributesLoaded = false;
+          while (loadAttrAttempts < MAX_LOAD_ATTR_ATTEMPTS) {
+              loadAttrAttempts++;
+              try {
+                  console.log(`[MegaService] Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${searchNode.name}"...`);
+                  // According to megajs docs, loadAttributes can take a callback.
+                  // To use with async/await, it should be promisified or check if it returns a promise directly.
+                  // Assuming it can be awaited directly or is promisified internally by the library if it's a common pattern.
+                  // If it strictly uses callbacks, this await might not work as expected without a wrapper.
+                  // However, other parts of the codebase (e.g., downloadFile, getFolderContents) use `await new Promise` with `node.loadAttributes((err, node) => {})`.
+                  // For consistency and explicit promisification:
+                  await new Promise((resolve, reject) => {
+                      searchNode.loadAttributes((err, node) => {
+                          if (err) return reject(err);
+                          resolve(node);
+                      });
+                  });
+                  console.log(`[MegaService] Attributes loaded for "${searchNode.name}" on attempt ${loadAttrAttempts}.`);
+                  attributesLoaded = true;
+                  break; // Success
+              } catch (attrError) {
+                  console.warn(`[MegaService] Attempt ${loadAttrAttempts} to load attributes for "${searchNode.name}" failed: ${attrError.message}`);
+                  if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS || !isRetryableMegaError(attrError)) {
+                      console.error(`[MegaService] Failed to load attributes for parent node "${searchNode.name}" after ${loadAttrAttempts} attempts or non-retryable error. This may prevent finding child folder "${folderName}".`);
+                      // Re-throwing this error will be caught by the outer retry loop of findFolder.
+                      // The outer loop will then retry the entire findFolder operation, which includes this attribute loading.
+                      // This is acceptable as a failed attribute load for the parent means we can't search its children.
+                      throw attrError; 
+                  }
+                  await new Promise(resolve => setTimeout(resolve, LOAD_ATTR_RETRY_DELAY_MS * loadAttrAttempts));
+              }
+          }
+          if (!attributesLoaded && loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS) {
+             // This case might be redundant if the throw inside the loop is hit, but good for clarity.
+             console.error(`[MegaService] Exhausted retries for loading attributes of "${searchNode.name}". Cannot reliably search for "${folderName}".`);
+             // Throwing an error here will also be caught by the outer findFolder retry logic.
+             throw new Error(`Failed to load attributes for parent node "${searchNode.name}" after ${MAX_LOAD_ATTR_ATTEMPTS} retries.`);
+          }
       }
 
       const children = searchNode.children || [];

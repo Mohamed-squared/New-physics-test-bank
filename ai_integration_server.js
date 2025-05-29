@@ -13,6 +13,7 @@ const DEFAULT_API_KEYS_ARRAY = [
   "AIzaSyCxhEq4RF8PEzQCDbineXiFhvEjzBz8CAA"
 ];
 const DEFAULT_API_KEY = DEFAULT_API_KEYS_ARRAY; // Keep variable name for minimal diff, but it's now an array.
+let defaultApiKeyIndex = 0; // Module-level index for cycling through default keys
 
 /**
  * Extracts text content from all pages of a PDF file.
@@ -130,12 +131,27 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       console.log(`[AI Service - Text API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
   } else {
       console.warn(`[AI Service - Text API] ${logReasonForDefault} No valid API key from input parameter. Attempting to use default API keys.`);
-      if (Array.isArray(DEFAULT_API_KEY) && DEFAULT_API_KEY.length > 0) {
-          effectiveApiKey = DEFAULT_API_KEY.find(k => typeof k === 'string' && k.trim() !== ''); // Get first valid key
-          if (effectiveApiKey) {
-              console.log(`[AI Service - Text API] Using first valid key from default API key array: ${effectiveApiKey.substring(0,15)}...`);
+      if (Array.isArray(DEFAULT_API_KEYS_ARRAY) && DEFAULT_API_KEYS_ARRAY.length > 0) {
+          let foundKey = null;
+          let checkedCount = 0;
+          const totalKeys = DEFAULT_API_KEYS_ARRAY.length;
+          while (checkedCount < totalKeys) {
+              const currentIndex = defaultApiKeyIndex % totalKeys;
+              const potentialKey = DEFAULT_API_KEYS_ARRAY[currentIndex];
+              defaultApiKeyIndex = (currentIndex + 1) % totalKeys; // Move to next for next time, even if this one is invalid
+
+              if (typeof potentialKey === 'string' && potentialKey.trim() !== '') {
+                  foundKey = potentialKey.trim();
+                  break; 
+              }
+              checkedCount++;
+          }
+
+          if (foundKey) {
+              effectiveApiKey = foundKey;
+              console.log(`[AI Service - Text API] Using default API key (index ${ (defaultApiKeyIndex -1 + totalKeys) % totalKeys}) from pool: ${effectiveApiKey.substring(0,15)}...`);
           } else {
-              console.error('[AI Service - Text API] CRITICAL: Default API key array is configured but contains no valid string keys.');
+              console.error('[AI Service - Text API] CRITICAL: Default API key array is configured but contains NO valid string keys after checking all.');
               // effectiveApiKey remains null
           }
       } else {
@@ -144,18 +160,47 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
       }
   }
   
-  console.log(`Calling Gemini text API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}..."`);
+  // The apiKeySnippet for logging should be defined AFTER effectiveApiKey is determined.
+  // Moved apiKeySnippet definition down.
+
+  const functionName = "callGeminiTextAPI";
+  // const apiKeySnippet = effectiveApiKey.substring(0, 15); // Moved down
+  const promptSnippet = prompt.substring(0, 100);
+
+  console.log(`[${functionName}] Preparing API call. Model: ${modelName}, Prompt: "${promptSnippet}..."`);
 
   if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check on effectiveApiKey
-    console.error('[AI Service - Text API] CRITICAL: Effective API Key is missing or empty even after processing input and default fallbacks. Throwing error.');
-    throw new Error('Google AI API Key is required and could not be resolved.');
+    const errorMsg = `[${functionName}] CRITICAL: Effective API Key is missing or empty. Prompt: "${promptSnippet}"`;
+    console.error(errorMsg);
+    throw new Error('Google AI API Key is required and could not be resolved for the call.');
   }
+  
+  const apiKeySnippet = effectiveApiKey.substring(0, 15); // Define here, now that effectiveApiKey is set.
 
-  try {
-    const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
+  const MAX_RETRIES = 3;
+  const INITIAL_BACKOFF_MS = 1000;
+  let retries = 0;
 
-    const contents = [];
+  // Helper function to check for transient errors
+  const isTransientError = (error) => {
+    const errorMessage = error.message.toLowerCase();
+    const transientErrorSignatures = [
+      "fetch failed", "eai_again", "econnreset", "etimedout", "socket timeout",
+      "service unavailable", "internal server error", "http status 500", "http status 503", "http status 429"
+    ];
+    return transientErrorSignatures.some(sig => errorMessage.includes(sig));
+  };
+
+  const functionName = "callGeminiTextAPI";
+  const apiKeySnippet = effectiveApiKey.substring(0, 15);
+  const promptSnippet = prompt.substring(0, 100);
+
+  while (retries < MAX_RETRIES) {
+    try {
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      const contents = [];
     if (history && Array.isArray(history)) {
       history.forEach(item => {
         if (item && item.role && item.parts) {
@@ -186,76 +231,154 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
         safetySettings,
     };
 
-    if (systemInstruction) {
-        // For gemini-1.5-pro and newer, systemInstruction is a top-level field.
-        // For gemini-2.5-flash-preview-05-20, it might need to be part of the `contents` array or handled differently.
-        // The `@google/generative-ai` library version 0.9.0 and above supports `systemInstruction` as a top-level field for compatible models.
-        // Let's assume we are using a version that supports it.
-        requestPayload.systemInstruction = { role: "system", parts: [{ text: systemInstruction }] };
-        console.log(`Using system instruction: "${systemInstruction.substring(0,100)}..."`);
-    }
-
-
-    console.log('Sending request to Gemini API...');
-    const result = await model.generateContent(requestPayload);
-    
-    console.log('Received response from Gemini API.');
-    const response = result.response;
-
-    if (!response) {
-        console.error('Gemini API call failed: No response object.', result);
-        // Check for blocked content due to safety settings
-        if (result.promptFeedback && result.promptFeedback.blockReason) {
-            throw new Error(`Gemini API request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
-        }
-        if (response && response.candidates && response.candidates[0] && response.candidates[0].finishReason === 'SAFETY') {
-             throw new Error(`Gemini API response was blocked due to safety settings. Finish reason: SAFETY. Details: ${JSON.stringify(response.candidates[0].safetyRatings)}`);
-        }
-        throw new Error('Gemini API call failed: No response object or content blocked.');
-    }
-    
-    if (response.candidates && response.candidates.length > 0 &&
-        response.candidates[0].content && response.candidates[0].content.parts &&
-        response.candidates[0].content.parts.length > 0 &&
-        response.candidates[0].content.parts[0].text // Ensure text part exists
-        ) {
-      const textResponse = response.candidates[0].content.parts[0].text;
-      console.log(`[AI Service] Gemini Text API call successful. Response length: ${textResponse.length}`);
-      if (response.usageMetadata) {
-        console.log("[AI Service] Gemini Text API Usage Metadata: ", response.usageMetadata);
-      } else {
-        console.log("[AI Service] Gemini Text API Usage Metadata: Not available in response.");
+      if (systemInstruction) {
+          requestPayload.systemInstruction = { role: "system", parts: [{ text: systemInstruction }] };
+          console.log(`Using system instruction: "${systemInstruction.substring(0,100)}..."`);
       }
-      return textResponse;
-    } else {
-      console.error('Gemini Text API call failed: No valid text content in response.', response);
-       // Check for block reason in candidate if available
-      if (response.candidates && response.candidates[0] && response.candidates[0].finishReason) {
-        const finishReason = response.candidates[0].finishReason;
-        const safetyRatings = JSON.stringify(response.candidates[0].safetyRatings);
+
+      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini API. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}..."`);
+      const result = await model.generateContent(requestPayload);
+      
+      console.log(`[${functionName}] Received response from Gemini API.`);
+      const response = result.response;
+
+      if (!response) {
+          const logMsg = `[${functionName}] Gemini API call failed: No response object. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+          console.error(logMsg, result);
+          if (result.promptFeedback && result.promptFeedback.blockReason) {
+              throw new Error(`${logMsg}. Request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
+          }
+          // It's possible 'response' is null but candidate data exists with blocking info
+          if (result.candidates && result.candidates[0] && result.candidates[0].finishReason === 'SAFETY') {
+               throw new Error(`${logMsg}. Response was blocked due to safety settings. Finish reason: SAFETY. Details: ${JSON.stringify(result.candidates[0].safetyRatings)}`);
+          }
+          throw new Error(`${logMsg}. No response object or content blocked.`);
+      }
+      
+      const candidate = response.candidates && response.candidates[0];
+      if (candidate) {
+        if (candidate.finishReason === 'RECITATION') {
+          const recitationMsg = `[${functionName}] Gemini API call resulted in RECITATION. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+          console.warn(recitationMsg, candidate);
+          const recitationError = new Error(`${recitationMsg}. Finish reason: ${candidate.finishReason}. Safety ratings: ${JSON.stringify(candidate.safetyRatings)}.`);
+          recitationError.isRecitationError = true; // Custom property
+          recitationError.details = candidate; // Attach details for further inspection if needed
+          throw recitationError;
+        }
+
+        if (candidate.content && candidate.content.parts && candidate.content.parts.length > 0 && candidate.content.parts[0].text) {
+          const textResponse = candidate.content.parts[0].text;
+          console.log(`[AI Service - ${functionName}] Gemini Text API call successful. Response length: ${textResponse.length}`);
+          if (response.usageMetadata) {
+            console.log(`[AI Service - ${functionName}] Gemini Text API Usage Metadata: `, response.usageMetadata);
+          } else {
+            console.log(`[AI Service - ${functionName}] Gemini Text API Usage Metadata: Not available in response.`);
+          }
+          return textResponse; // Successful response
+        }
+      }
+      
+      // If we reach here, it means no valid text content was found or another issue occurred.
+      const noContentMsg = `[${functionName}] Gemini Text API call failed: No valid text content in response. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+      console.error(noContentMsg, response);
+      if (candidate && candidate.finishReason) {
+        const finishReason = candidate.finishReason;
+        const safetyRatings = JSON.stringify(candidate.safetyRatings);
         const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
 
         if (finishReason === 'MAX_TOKENS') {
-          throw new Error(`Gemini API call failed: The response was truncated because the maximum output token limit was reached (MAX_TOKENS). Consider adjusting input length or output token settings. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
+          throw new Error(`${noContentMsg}. The response was truncated because the maximum output token limit was reached (MAX_TOKENS). Consider adjusting input length or output token settings. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
         }
-        throw new Error(`Gemini API call failed: No text content. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
+        throw new Error(`${noContentMsg}. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
       }
-      throw new Error('Gemini API call failed: No text content in the response and no specific finish reason found.');
-    }
+      throw new Error(`${noContentMsg}. No text content in the response and no specific finish reason found.`);
 
-  } catch (error) {
-    console.error('Error calling Gemini API:', error.message, error.stack);
-    // If the error is already specific, rethrow it. Otherwise, wrap it.
-    if (error.message.includes('Gemini API') || error.message.includes('API Key')) {
-        throw error;
+    } catch (error) {
+      const timestamp = new Date().toISOString();
+      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
+
+      if (error.isRecitationError) { // Propagate recitation error for specific handling
+        throw error; // This will be caught by the outer RECITATION handling wrapper
+      }
+
+      if (isTransientError(error) && retries < MAX_RETRIES - 1) {
+        const backoffDelay = INITIAL_BACKOFF_MS * Math.pow(2, retries);
+        console.log(`[${functionName}] Transient error detected (Attempt ${retries + 1}/${MAX_RETRIES}). Retrying in ${backoffDelay}ms... Error: ${error.message}`);
+        retries++;
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+      } else {
+        // Non-transient error or max retries reached
+        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with key "${apiKeySnippet}...": ${error.message}`;
+        console.error(finalErrorMsg, error.stack); // Log stack for the final error as well
+        throw new Error(finalErrorMsg, { cause: error });
+      }
     }
-    throw new Error(`Error communicating with Google Generative AI: ${error.message}`);
+  }
+  // This part should ideally not be reached if loop exits due to error, as error would be thrown.
+  // If loop completes without returning/throwing (e.g. if MAX_RETRIES = 0), throw error.
+  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}...".`;
+  console.error(maxRetryErrorMsg);
+  throw new Error(maxRetryErrorMsg);
+}
+
+
+// Specific RECITATION handling wrapper for callGeminiTextAPI
+async function callGeminiTextAPIWithRecitationHandling(apiKey, prompt, history = null, systemInstruction = null, modelName = 'gemini-2.5-flash-preview-05-20') {
+  const functionName = "callGeminiTextAPIWithRecitationHandling";
+  // Resolve effectiveApiKey once here for logging and passing to the core function.
+  // This duplicates some logic from the start of callGeminiTextAPI, but ensures the wrapper also has access
+  // to a resolved key for consistent logging, especially if the initial call fails before even entering the retry loop.
+  // For simplicity in this step, we'll pass the raw apiKey and let callGeminiTextAPI resolve it.
+  // The snippet for logging here will use the raw key.
+  const apiKeySnippet = typeof apiKey === 'string' ? apiKey.substring(0, 15) + "..." : "N/A (or non-string type)";
+  const promptSnippet = String(prompt).substring(0, 100);
+
+  try {
+    // The actual resolution of apiKey (including defaults) happens inside callGeminiTextAPI
+    return await callGeminiTextAPI(apiKey, prompt, history, systemInstruction, modelName);
+  } catch (error) {
+    // Check if the error was thrown by our retry logic and has our custom 'isRecitationError'
+    // This check should ideally be on `error.cause` if `callGeminiTextAPI` wraps it, or directly if not.
+    // Based on current `callGeminiTextAPI` structure, `isRecitationError` is on the error itself.
+    if (error.isRecitationError || (error.cause && error.cause.isRecitationError)) {
+      const originalError = error.cause || error; // Get the actual recitation error
+      console.warn(`[${functionName}] Initial call resulted in RECITATION. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}". Details: ${originalError.message}. Attempting one retry with modified prompt.`);
+      
+      const modifiedPrompt = prompt + "\n\nPlease ensure the response is original and does not closely mirror the provided text.";
+      
+      try {
+        // Retry once with the modified prompt
+        console.log(`[${functionName}] Retrying with modified prompt for RECITATION. Key: ${apiKeySnippet}...`);
+        // Pass the original apiKey, history, systemInstruction, modelName
+        return await callGeminiTextAPI(apiKey, modifiedPrompt, history, systemInstruction, modelName);
+      } catch (retryError) {
+        const timestamp = new Date().toISOString();
+        const retryPromptSnippet = modifiedPrompt.substring(0,150);
+        console.error(`[${functionName}] Retry attempt for RECITATION also failed. Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt (modified): "${retryPromptSnippet}...". Error: ${retryError.message}`, retryError.stack);
+        
+        // Check if the retry error is also a recitation error
+        const isRetryRecitation = retryError.isRecitationError || (retryError.cause && retryError.cause.isRecitationError);
+        const finalUnderlyingError = retryError.cause || retryError;
+
+        if (isRetryRecitation) {
+          throw new Error(`[${functionName}] Persistent RECITATION error after retry for prompt "${promptSnippet}...". Original error: ${originalError.message}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
+        }
+        throw new Error(`[${functionName}] Error during retry for RECITATION for prompt "${promptSnippet}...". Original error: ${originalError.message}. Retry error: ${finalUnderlyingError.message}`, { cause: finalUnderlyingError });
+      }
+    } else {
+      // Not a recitation error we are specifically handling here, or it's a wrapped error from the retry loop that isn't recitation.
+      // The error message from callGeminiTextAPI's retry loop is already quite descriptive.
+      console.error(`[${functionName}] An error occurred that is not being handled as a RECITATION case. Key: ${apiKeySnippet}, Prompt: "${promptSnippet}". Error: ${error.message}`, error.stack);
+      throw error; // Rethrow the already processed error
+    }
   }
 }
 
+
 module.exports = {
   getAllPdfTextForAI,
-  callGeminiTextAPI,
+  callGeminiTextAPI: callGeminiTextAPIWithRecitationHandling, // Expose the wrapped version
+  _callGeminiTextAPI_direct: callGeminiTextAPI, // For testing or specific internal use if needed
   generateImageContentResponse,
 };
 
@@ -371,12 +494,27 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       console.log(`[AI Service - Vision API] Using processed API key from input parameter: ${effectiveApiKey.substring(0,15)}...`);
   } else {
       console.warn(`[AI Service - Vision API] ${logReasonForDefault} No valid API key from input parameter. Attempting to use default API keys.`);
-      if (Array.isArray(DEFAULT_API_KEY) && DEFAULT_API_KEY.length > 0) {
-          effectiveApiKey = DEFAULT_API_KEY.find(k => typeof k === 'string' && k.trim() !== ''); // Get first valid key
-          if (effectiveApiKey) {
-              console.log(`[AI Service - Vision API] Using first valid key from default API key array: ${effectiveApiKey.substring(0,15)}...`);
+      if (Array.isArray(DEFAULT_API_KEYS_ARRAY) && DEFAULT_API_KEYS_ARRAY.length > 0) {
+          let foundKey = null;
+          let checkedCount = 0;
+          const totalKeys = DEFAULT_API_KEYS_ARRAY.length;
+          while (checkedCount < totalKeys) {
+              const currentIndex = defaultApiKeyIndex % totalKeys;
+              const potentialKey = DEFAULT_API_KEYS_ARRAY[currentIndex];
+              defaultApiKeyIndex = (currentIndex + 1) % totalKeys; // Move to next for next time
+
+              if (typeof potentialKey === 'string' && potentialKey.trim() !== '') {
+                  foundKey = potentialKey.trim();
+                  break;
+              }
+              checkedCount++;
+          }
+
+          if (foundKey) {
+              effectiveApiKey = foundKey;
+              console.log(`[AI Service - Vision API] Using default API key (index ${(defaultApiKeyIndex - 1 + totalKeys) % totalKeys}) from pool: ${effectiveApiKey.substring(0,15)}...`);
           } else {
-              console.error('[AI Service - Vision API] CRITICAL: Default API key array is configured but contains no valid string keys.');
+              console.error('[AI Service - Vision API] CRITICAL: Default API key array is configured but contains NO valid string keys after checking all.');
               // effectiveApiKey remains null
           }
       } else {
@@ -384,28 +522,50 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
           // effectiveApiKey remains null
       }
   }
+  
+  // Moved apiKeySnippet definition down.
+  const functionName = "generateImageContentResponse";
+  // const apiKeySnippet = effectiveApiKey.substring(0, 15); // Moved down
+  const promptSnippet = prompt.substring(0, 100); // Using 100 chars for consistency
 
-  console.log(`Calling Gemini Vision API. Model: ${modelName}, Prompt: "${prompt.substring(0, 50)}...", Images: ${imagePaths.join(', ')}`);
+  console.log(`[${functionName}] Preparing API call. Model: ${modelName}, Prompt: "${promptSnippet}...", Images: ${imagePaths.join(', ')}`);
 
   if (!effectiveApiKey || effectiveApiKey.trim() === '') { // Final check
-    console.error('[AI Service - Vision API] CRITICAL: Effective API Key is missing or empty even after processing input and default fallbacks. Throwing error.');
-    throw new Error('Google AI API Key is required and could not be resolved.');
+    const errorMsg = `[${functionName}] CRITICAL: Effective API Key is missing or empty. Prompt: "${promptSnippet}"`;
+    console.error(errorMsg);
+    throw new Error('Google AI API Key is required and could not be resolved for the call.');
   }
+  
+  const apiKeySnippet = effectiveApiKey.substring(0, 15); // Define here.
+
   if (!imagePaths || imagePaths.length === 0) {
-    console.error('No image paths provided.');
-    throw new Error('At least one image path is required.');
+    console.error(`[${functionName}] No image paths provided for prompt "${promptSnippet}".`);
+    throw new Error(`[${functionName}] At least one image path is required for prompt "${promptSnippet}".`);
   }
-  // The comprehensive check for prompt above replaces the old one:
-  // if (!prompt) {
-  //   console.error('Prompt is missing.');
-  //   throw new Error('Prompt is required.');
-  // }
+  // Prompt check is already done.
 
-  try {
-    const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    const model = genAI.getGenerativeModel({ model: modelName });
+  const MAX_RETRIES = 3;
+  const INITIAL_BACKOFF_MS = 1000;
+  let retries = 0;
 
-    const imageParts = [];
+  // Helper function to check for transient errors (already defined, ensure it's in scope or passed if modularized)
+  // For this change, assuming it's defined as it was in the previous step for generateImageContentResponse
+  const isTransientError = (error) => {
+    const errorMessage = error.message.toLowerCase();
+    const transientErrorSignatures = [
+      "fetch failed", "eai_again", "econnreset", "etimedout", "socket timeout",
+      "service unavailable", "internal server error", "http status 500", "http status 503", "http status 429"
+    ];
+    return transientErrorSignatures.some(sig => errorMessage.includes(sig));
+  };
+
+
+  while (retries < MAX_RETRIES) {
+    try {
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      const model = genAI.getGenerativeModel({ model: modelName });
+
+      const imageParts = [];
     for (const imagePath of imagePaths) {
       if (!fs.existsSync(imagePath)) {
         console.error(`Image file not found: ${imagePath}`);
@@ -437,72 +597,90 @@ async function generateImageContentResponse(imagePaths, prompt, apiKey, modelNam
       topK: 32,  // Default from client-side vision example
     };
 
-    const safetySettings = [
-      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-    ];
+      const safetySettings = [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
+      ];
 
-    const requestPayload = {
-      contents,
-      generationConfig,
-      safetySettings,
-    };
+      const requestPayload = {
+        contents,
+        generationConfig,
+        safetySettings,
+      };
 
-    console.log('Sending request to Gemini Vision API...');
-    const result = await model.generateContent(requestPayload);
-    
-    console.log('Received response from Gemini Vision API.');
-    const response = result.response;
+      console.log(`[${functionName}] Attempt ${retries + 1}/${MAX_RETRIES} Sending request to Gemini Vision API. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}..."`);
+      const result = await model.generateContent(requestPayload);
+      
+      console.log(`[${functionName}] Received response from Gemini Vision API.`);
+      const response = result.response;
 
-    if (!response) {
-      console.error('Gemini Vision API call failed: No response object.', result);
-      if (result.promptFeedback && result.promptFeedback.blockReason) {
-        throw new Error(`Gemini Vision API request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
-      }
-      // Check for block reason in candidate if available (though typically promptFeedback is key for request-side blocks)
-      if (response && response.candidates && response.candidates[0] && response.candidates[0].finishReason === 'SAFETY') {
-           throw new Error(`Gemini Vision API response was blocked due to safety settings. Finish reason: SAFETY. Details: ${JSON.stringify(response.candidates[0].safetyRatings)}`);
-      }
-      throw new Error('Gemini Vision API call failed: No response object or content blocked.');
-    }
-
-    if (response.candidates && response.candidates.length > 0 &&
-        response.candidates[0].content && response.candidates[0].content.parts &&
-        response.candidates[0].content.parts.length > 0 &&
-        response.candidates[0].content.parts[0].text) {
-      const textResponse = response.candidates[0].content.parts[0].text;
-      console.log(`[AI Service] Gemini Vision API call successful. Response length: ${textResponse.length}`);
-      if (response.usageMetadata) {
-        console.log("[AI Service] Gemini Vision API Usage Metadata: ", response.usageMetadata);
-      } else {
-        console.log("[AI Service] Gemini Vision API Usage Metadata: Not available in response.");
-      }
-      return textResponse;
-    } else {
-      console.error('Gemini Vision API call failed: No valid text content in response.', response);
-      const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
-      if (response.candidates && response.candidates[0] && response.candidates[0].finishReason) {
-        const finishReason = response.candidates[0].finishReason;
-        const safetyRatings = JSON.stringify(response.candidates[0].safetyRatings);
-         if (finishReason === 'MAX_TOKENS') { // Though less common for vision if input is fixed size image
-            throw new Error(`Gemini Vision API call failed: The response was truncated because MAX_TOKENS was reached. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
+      if (!response) {
+        const logMsg = `[${functionName}] Gemini Vision API call failed: No response object. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+        console.error(logMsg, result);
+        if (result.promptFeedback && result.promptFeedback.blockReason) {
+          throw new Error(`${logMsg}. Request was blocked due to prompt content: ${result.promptFeedback.blockReason}`);
         }
-        throw new Error(`Gemini Vision API call failed: No text content. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
+        if (result.candidates && result.candidates[0] && result.candidates[0].finishReason === 'SAFETY') {
+             throw new Error(`${logMsg}. Response was blocked due to safety settings. Finish reason: SAFETY. Details: ${JSON.stringify(result.candidates[0].safetyRatings)}`);
+        }
+        throw new Error(`${logMsg}. No response object or content blocked.`);
       }
-      // If promptFeedback exists and indicates blocking, prioritize that message
-      if (response.promptFeedback && response.promptFeedback.blockReason) {
-        throw new Error(`Gemini Vision API call failed: Request blocked due to prompt content: ${response.promptFeedback.blockReason}. Full feedback: ${JSON.stringify(response.promptFeedback)}. Usage: ${usageMetadataString}`);
-      }
-      throw new Error(`Gemini Vision API call failed: No text content in the response or other unknown error. Usage: ${usageMetadataString}`);
-    }
 
-  } catch (error) {
-    console.error('Error calling Gemini Vision API:', error.message, error.stack);
-    if (error.message.includes('Gemini Vision API') || error.message.includes('API Key') || error.message.includes('Image file not found')) {
-        throw error;
+      const candidate = response.candidates && response.candidates[0];
+      if (candidate && candidate.content && candidate.content.parts && candidate.content.parts.length > 0 && candidate.content.parts[0].text) {
+        const textResponse = candidate.content.parts[0].text;
+        console.log(`[AI Service - ${functionName}] Gemini Vision API call successful. Response length: ${textResponse.length}`);
+        if (response.usageMetadata) {
+          console.log(`[AI Service - ${functionName}] Gemini Vision API Usage Metadata: `, response.usageMetadata);
+        } else {
+          console.log(`[AI Service - ${functionName}] Gemini Vision API Usage Metadata: Not available in response.`);
+        }
+        return textResponse; // Successful response
+      }
+      
+      // If we reach here, no valid text content.
+      const noContentMsg = `[${functionName}] Gemini Vision API call failed: No valid text content in response. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}"`;
+      console.error(noContentMsg, response);
+      const usageMetadataString = response.usageMetadata ? JSON.stringify(response.usageMetadata) : "Not available";
+      if (candidate && candidate.finishReason) {
+        const finishReason = candidate.finishReason;
+        const safetyRatings = JSON.stringify(candidate.safetyRatings);
+         if (finishReason === 'MAX_TOKENS') {
+            throw new Error(`${noContentMsg}. The response was truncated because MAX_TOKENS was reached. Usage: ${usageMetadataString}. Safety ratings: ${safetyRatings}`);
+        }
+        throw new Error(`${noContentMsg}. Finish reason: ${finishReason}. Safety ratings: ${safetyRatings}. Usage: ${usageMetadataString}`);
+      }
+      if (response.promptFeedback && response.promptFeedback.blockReason) { // This might be redundant if already caught by !response but good for safety
+        throw new Error(`${noContentMsg}. Request blocked due to prompt content: ${response.promptFeedback.blockReason}. Full feedback: ${JSON.stringify(response.promptFeedback)}. Usage: ${usageMetadataString}`);
+      }
+      throw new Error(`${noContentMsg}. No text content in the response or other unknown error. Usage: ${usageMetadataString}`);
+
+    } catch (error) {
+      const timestamp = new Date().toISOString();
+      // Include imagePaths in error logging for vision API for more context
+      const imagePathsSnippet = imagePaths.join(', ').substring(0, 200) + (imagePaths.join(', ').length > 200 ? '...' : '');
+      console.error(`[${functionName}] Error during API call (Attempt ${retries + 1}/${MAX_RETRIES}). Timestamp: ${timestamp}. Key: ${apiKeySnippet}..., Prompt: "${promptSnippet}", Images: "${imagePathsSnippet}". Error: ${error.message}`, error.stack);
+      
+      // Specific check for image file not found, which is not transient
+      if (error.message.toLowerCase().includes('image file not found')) {
+          throw new Error(`[${functionName}] Pre-flight error: ${error.message}`, {cause: error});
+      }
+
+      if (isTransientError(error) && retries < MAX_RETRIES - 1) {
+        const backoffDelay = INITIAL_BACKOFF_MS * Math.pow(2, retries);
+        console.log(`[${functionName}] Transient error detected (Attempt ${retries + 1}/${MAX_RETRIES}). Retrying in ${backoffDelay}ms... Error: ${error.message}`);
+        retries++;
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
+      } else {
+        const finalErrorMsg = `[${functionName}] Failed after ${retries + 1} attempt(s) for prompt "${promptSnippet}..." with key "${apiKeySnippet}...": ${error.message}`;
+        console.error(finalErrorMsg, error.stack);
+        throw new Error(finalErrorMsg, { cause: error });
+      }
     }
-    throw new Error(`Error communicating with Google Generative AI (Vision): ${error.message}`);
   }
+  const maxRetryErrorMsg = `[${functionName}] Max retries (${MAX_RETRIES}) reached without success for prompt "${promptSnippet}...".`;
+  console.error(maxRetryErrorMsg);
+  throw new Error(maxRetryErrorMsg);
 }

@@ -1,4 +1,25 @@
 // --- START OF FILE pdf-server.js ---
+
+// --- Global Error Handlers ---
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('-----------------------------------');
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('-----------------------------------');
+  // Application specific logging, throwing an error, or other logic here
+  // For critical unhandled rejections, you might consider exiting the process
+  // process.exit(1); // Uncomment if appropriate, but log first
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('-----------------------------------');
+  console.error('Uncaught Exception:', error);
+  console.error('-----------------------------------');
+  // Application specific logging
+  // It's generally recommended to gracefully shut down after an uncaught exception
+  // process.exit(1); // Uncomment if appropriate, but log first
+});
+// --- End of Global Error Handlers ---
+
 const express = require('express');
 const puppeteer = require('puppeteer');
 const cors = require('cors');
