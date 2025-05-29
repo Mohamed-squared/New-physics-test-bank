@@ -191,9 +191,9 @@ async function callGeminiTextAPI(apiKey, prompt, history = null, systemInstructi
     return transientErrorSignatures.some(sig => errorMessage.includes(sig));
   };
 
-  const functionName = "callGeminiTextAPI";
-  const apiKeySnippet = effectiveApiKey.substring(0, 15);
-  const promptSnippet = prompt.substring(0, 100);
+  // Note: functionName, apiKeySnippet, and promptSnippet are already defined above
+  // after effectiveApiKey is resolved and before the retry loop.
+  // The duplicate declarations that were here have been removed.
 
   while (retries < MAX_RETRIES) {
     try {
