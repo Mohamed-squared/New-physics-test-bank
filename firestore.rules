@@ -19,10 +19,7 @@ service cloud.firestore {
       return isLoggedIn() && isPrimaryAdminUid(request.auth.uid);
     }
 
-    function isAssignedAdmin(uid) {
-      return exists(/databases/$(database)/documents/users/$(uid)) &&
-             get(/databases/$(database)/documents/users/$(uid)).data.isAdmin == true;
-    }
+    // First definition of isAssignedAdmin (lines 19-22) is removed.
 
     // Checks if a user with a given uid has the isAdmin flag set to true in their user document.
     // IMPORTANT: This function relies on the ability to read the user document /users/$(uid).
@@ -44,9 +41,10 @@ service cloud.firestore {
       return str is string && str.size() >= minLength && str.size() <= maxLength;
     }
 
-    function isValidNumber(num, minVal, maxVal) {
-        return num is number && num >= minVal && num <= maxVal;
-    }
+    // Unused function, may be useful later.
+    // function isValidNumber(num, minVal, maxVal) {
+    //     return num is number && num >= minVal && num <= maxVal;
+    // }
 
     function allowedUserUpdateFieldsOwner() {
       return [
@@ -86,15 +84,16 @@ service cloud.firestore {
         ];
     }
 
-    function isValidExamTypeConfig(config) {
-      return config is map &&
-             config.keys().hasAll(['questions', 'durationMinutes', 'mcqRatio', 'textSourceRatio']) &&
-             config.keys().size() == 4 &&
-             config.questions is number && config.questions >= 1 &&
-             config.durationMinutes is number && config.durationMinutes >= 5 &&
-             config.mcqRatio is number && config.mcqRatio >= 0 && config.mcqRatio <= 1 &&
-             config.textSourceRatio is number && config.textSourceRatio >= 0 && config.textSourceRatio <= 1;
-    }
+    // Unused function, potentially for validating courseExamDefaults. May be useful later.
+    // function isValidExamTypeConfig(config) {
+    //   return config is map &&
+    //          config.keys().hasAll(['questions', 'durationMinutes', 'mcqRatio', 'textSourceRatio']) &&
+    //          config.keys().size() == 4 &&
+    //          config.questions is number && config.questions >= 1 &&
+    //          config.durationMinutes is number && config.durationMinutes >= 5 &&
+    //          config.mcqRatio is number && config.mcqRatio >= 0 && config.mcqRatio <= 1 &&
+    //          config.textSourceRatio is number && config.textSourceRatio >= 0 && config.textSourceRatio <= 1;
+    // }
 
     function isValidTestGenConfig(config) {
       return config is map &&

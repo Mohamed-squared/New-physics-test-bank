@@ -543,6 +543,40 @@ Highlight the key learning outcomes and what students will gain from this course
 
         // --- 6. Result Aggregation & Firestore Data Preparation ---
         logProgress('Preparing Firestore data preview. This may involve final Mega link generations.', results);
+
+        // Explicitly load attributes for courseMegaNode before attempting link generation
+        if (courseMegaNode && typeof courseMegaNode.loadAttributes === 'function') {
+            logProgress(`Explicitly loading attributes for main course folder node "${courseMegaNode.name || courseMegaNode.id}" before link generation...`, results);
+            let loadAttrAttempts = 0;
+            const MAX_LOAD_ATTR_ATTEMPTS = 3;
+            const LOAD_ATTR_RETRY_DELAY_MS = 1000; // milliseconds
+            let attributesLoaded = false;
+
+            while (loadAttrAttempts < MAX_LOAD_ATTR_ATTEMPTS && !attributesLoaded) {
+                loadAttrAttempts++;
+                try {
+                    await new Promise((resolve, reject) => {
+                        courseMegaNode.loadAttributes((err, node) => {
+                            if (err) return reject(err);
+                            resolve(node);
+                        });
+                    });
+                    attributesLoaded = true;
+                    logProgress(`Successfully loaded attributes for "${courseMegaNode.name || courseMegaNode.id}" on attempt ${loadAttrAttempts}.`, results);
+                } catch (attrError) {
+                    logProgress(new Error(`Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" failed: ${attrError.message}`), results, 'warn');
+                    if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS) {
+                        logProgress(new Error(`Failed to load attributes for main course folder node after ${MAX_LOAD_ATTR_ATTEMPTS} attempts. Link generation might fail or use stale data. Last error: ${attrError.message}`), results, 'error');
+                        // Proceeding to attempt link generation anyway, as per original plan.
+                    } else {
+                        // Simplified delay, not using isRetryableMegaError here as it's not imported.
+                        await new Promise(resolve => setTimeout(resolve, LOAD_ATTR_RETRY_DELAY_MS * loadAttrAttempts));
+                    }
+                }
+            }
+        } else if (courseMegaNode) {
+            logProgress(`courseMegaNode for "${courseMegaNode.name || courseMegaNode.id}" does not have a loadAttributes function. Skipping explicit attribute load.`, results, 'warn');
+        }
         
         let mainFolderLink = 'N/A';
         if (courseMegaNode && typeof courseMegaNode.link === 'function') {
