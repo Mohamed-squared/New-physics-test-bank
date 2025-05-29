@@ -257,9 +257,12 @@ async function automateNewCourseCreation(params) {
         // --- 1. Initialization & Setup ---
         logProgress('Initializing Mega service...', results);
         await serverMega.initialize(megaEmail, megaPassword);
-        // const megaStorage = serverMega.getMegaStorage(); // We'll pass serverMega itself
-        // if (!megaStorage || !megaStorage.root) throw new Error("Mega service initialization failed."); // Check is done by initialize()
-        logProgress('Mega service initialized.', results);
+        const megaStorage = serverMega.getMegaStorage(); // Ensure this is present and uncommented
+        if (!megaStorage || !megaStorage.root) { // Add this check
+            logProgress('CRITICAL: Mega service initialization failed - megaStorage or megaStorage.root is not available after getMegaStorage().', results, 'error');
+            throw new Error("Mega service initialization failed - megaStorage or megaStorage.root is not available.");
+        }
+        logProgress('Mega service initialized and megaStorage retrieved.', results);
 
         results.firestoreDataPreview.currentAutomationStep = "Creating Mega Folder Structure"; // Set step
         logProgress(`Creating base Mega folder structure for ${courseIdPlaceholder}...`, results);
