@@ -19,8 +19,8 @@ import { displayDatabaseManagementSection } from './admin_database_management.js
 // --- NEW: Import Admin Music Management ---
 import { displayMusicManagementSection } from './admin_music_management.js';
 // --- END NEW ---
-import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js';
-import { displayMegaMigrationDashboard } from './admin_mega_service.js';
+import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js'; // This might need update if it's MEGA specific
+import { displayDriveMigrationDashboard } from './admin_drive_service.js'; // Updated import
 
 
 // --- Main Admin Dashboard UI ---
@@ -106,11 +106,11 @@ export function showAdminDashboard() {
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 0 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
                     Testing Aids
                 </a>
-                <a href="#" onclick="window.showAdminSection('megaTools'); return false;" data-section="megaTools" class="admin-nav-link">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-3">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.338-2.32 3.75 3.75 0 011.036 7.493M15 19.5v-2.25A2.25 2.25 0 0012.75 15H11.25" />
+                <a href="#" onclick="window.showAdminSection('driveTools'); return false;" data-section="driveTools" class="admin-nav-link"> {/* Renamed section */}
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-3 text-blue-500" fill="currentColor" viewBox="0 0 24 24"> {/* Google Drive Icon */}
+                       <path d="M19.52 6.022A7.99 7.99 0 0012.015 0a7.99 7.99 0 00-7.504 6.022H19.52zM4.511 6.522L0 14.015l3.008 5.21h4.496V6.522H4.51zM8.254 19.725l-3.008-5.21L8.254 9.35v10.375zm.75 0h6v-7.5h-6v7.5zm6.75 0L24 14.015l-3.008-5.21H15.754v10.375zM15 11.725V6.522h-4.496L15 11.725z"/>
                     </svg>
-                    MEGA Tools
+                    Google Drive Tools
                 </a>
             </nav>
         </aside>
@@ -123,7 +123,7 @@ export function showAdminDashboard() {
     displayContent(adminPanelHtml);
     updateAdminPanelBackgroundRGBs();
     showAdminSection(currentAdminSection);
-    checkAndShowMegaMigrationAlert();
+    // checkAndShowMegaMigrationAlert(); // This might need to be updated or removed if it's MEGA specific
 
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle && !themeToggle.dataset.adminBgListener) {
@@ -206,8 +206,8 @@ export async function showAdminSection(sectionName) {
         case 'testingAids':
             displayTestingAidsSection(contentArea);
             break;
-        case 'megaTools':
-            displayMegaMigrationDashboard(contentArea);
+        case 'driveTools': // Renamed section
+            displayDriveMigrationDashboard(contentArea); // Updated function call
             break;
         default:
             contentArea.innerHTML = `<p class="text-red-500 p-4">Error: Unknown admin section "${sectionName}".</p>`;
