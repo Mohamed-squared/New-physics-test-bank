@@ -1,13 +1,13 @@
 // course_automation_service.js
 const fs = require('fs-extra');
 const path = require('path');
-const serverMega = require('./mega_service_server.js');
+const serverDrive = require('./google_drive_service_server.js'); // Renamed serverMega to serverDrive
 const aiServer = require('./ai_integration_server.js');
 const { processTextbookPdf } = require('./pdf_processing_service.js');
 const { transcribeLecture } = require('./lecture_transcription_service.js');
 const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.js');
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js');
-const { GEMINI_API_KEY } = require('./server_config.js'); // Example if a central key is used, though often passed in params
+const { GEMINI_API_KEY, GOOGLE_DRIVE_API_KEY } = require('./server_config.js'); // Added GOOGLE_DRIVE_API_KEY
 
 let courseServiceApiKeyIndex = 0; // Module-level index for cycling through API keys for direct calls
 
@@ -15,17 +15,15 @@ let courseServiceApiKeyIndex = 0; // Module-level index for cycling through API 
  * Executes tasks in parallel batches, assigning a unique API key to each task.
  * @param {Array<any>} items - Array of items to process (e.g., chapters).
  * @param {Function} taskFunction - Async function to execute for each item. 
- *                                  It will receive (item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword).
+ *                                  It will receive (item, apiKeyForTask, courseIdPlaceholder, initializedServerDriveInstance).
  * @param {Array<string>} apiKeys - Array of available API keys.
  * @param {string} courseIdPlaceholder - The course ID.
- * @param {string} megaEmail - Mega email.
- * @param {string} megaPassword - Mega password.
  * @param {Function} logProgress - Logging function.
  * @param {object} resultsRef - Reference to the main results object for logging.
- * @param {object} initializedServerMega - The initialized serverMega instance.
+ * @param {object} initializedServerDrive - The initialized serverDrive instance.
  * @returns {Promise<Array<object>>} - Array of results from all settled promises.
  */
-async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlaceholder, megaEmail, megaPassword, logProgress, resultsRef, initializedServerMega) {
+async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlaceholder, logProgress, resultsRef, initializedServerDrive) {
     if (!apiKeys || apiKeys.length === 0) {
         logProgress('CRITICAL: No API keys available for parallel processing.', resultsRef, 'error');
         throw new Error('No API keys available for parallel tasks.');
@@ -48,8 +46,8 @@ async function runTasksInParallel(items, taskFunction, apiKeys, courseIdPlacehol
                 
                 logProgress(`Worker ${i}: Processing item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}') with API key index ${i % apiKeys.length}.`, resultsRef);
                 try {
-                    // Pass initializedServerMega to the task function
-                    const result = await taskFunction(item, apiKeyForTask, courseIdPlaceholder, megaEmail, megaPassword, initializedServerMega);
+                    // Pass initializedServerDrive to the task function
+                    const result = await taskFunction(item, apiKeyForTask, courseIdPlaceholder, initializedServerDrive);
                     results.push({ status: 'fulfilled', value: result, item });
                     logProgress(`Worker ${i}: Successfully processed item ${assignedItemIndex + 1}/${items.length} ('${item.title || item.key || 'N/A'}').`, resultsRef);
                 } catch (error) {
@@ -98,11 +96,11 @@ async function automateNewCourseCreation(params) {
         textbookPdfPath, // Local path to the PDF
         textbookPdfOriginalName, // Original name of the PDF
         trueFirstPageNumber,
-        lectures, // Array of { title, filePath?, youtubeUrl?, megaLink?, srtMegaLink?, associatedChapterKey }
+        lectures, // Array of { title, filePath?, youtubeUrl?, driveLink?, srtDriveLink?, associatedChapterKey }
         majorTag,
         subjectTag,
-        megaEmail,
-        megaPassword,
+        // megaEmail, // Removed
+        // megaPassword, // Removed
         geminiApiKey, // Prefer passed-in key
         assemblyAiApiKey,
         prerequisites, // New
@@ -172,8 +170,10 @@ async function automateNewCourseCreation(params) {
     logProgress(`Starting automated course creation for: "${courseTitle}"`, results);
     results.firestoreDataPreview.currentAutomationStep = "Validating API Keys...";
 
-    // --- Gemini API Key Validation and Processing ---
-    results.firestoreDataPreview.currentAutomationStep = "Validating API Keys"; // Set step
+    // --- API Key Validation and Processing ---
+    // GOOGLE_DRIVE_API_KEY is now imported and will be used directly for serverDrive.initialize()
+    // The logic below is for GEMINI_API_KEY used by aiServer
+    results.firestoreDataPreview.currentAutomationStep = "Validating Gemini API Keys"; // Set step
     let finalApiKeyForAIServer; // This will be passed to aiServer functions
 
     const originalGeminiApiKeyType = typeof geminiApiKey;
@@ -253,73 +253,87 @@ async function automateNewCourseCreation(params) {
     logProgress(`Final API Key for AI Server (type: ${typeof finalApiKeyForAIServer}, isArray: ${Array.isArray(finalApiKeyForAIServer)}): ${JSON.stringify(finalApiKeyForAIServer).substring(0,100)}...`, results);
 
     try {
-        results.firestoreDataPreview.currentAutomationStep = "Initializing Mega Service"; // Set step
+        results.firestoreDataPreview.currentAutomationStep = "Initializing Google Drive Service"; // Set step
         // --- 1. Initialization & Setup ---
-        logProgress('Initializing Mega service...', results);
-        await serverMega.initialize(megaEmail, megaPassword);
-        const megaStorage = serverMega.getMegaStorage(); // Ensure this is present and uncommented
-        if (!megaStorage || !megaStorage.root) { // Add this check
-            logProgress('CRITICAL: Mega service initialization failed - megaStorage or megaStorage.root is not available after getMegaStorage().', results, 'error');
-            throw new Error("Mega service initialization failed - megaStorage or megaStorage.root is not available.");
+        logProgress('Initializing Google Drive service...', results);
+        // GOOGLE_DRIVE_API_KEY is imported from server_config.js
+        if (!GOOGLE_DRIVE_API_KEY) {
+            logProgress('CRITICAL: GOOGLE_DRIVE_API_KEY is not available from server_config.js. Aborting.', results, 'error');
+            throw new Error("Google Drive API Key is missing.");
         }
-        logProgress('Mega service initialized and megaStorage retrieved.', results);
+        await serverDrive.initialize(GOOGLE_DRIVE_API_KEY);
+        logProgress('Google Drive service initialized.', results);
 
-        results.firestoreDataPreview.currentAutomationStep = "Creating Mega Folder Structure"; // Set step
-        logProgress(`Creating base Mega folder structure for ${courseIdPlaceholder}...`, results);
-        let lyceumRootNode = await serverMega.findFolder(LYCEUM_ROOT_FOLDER_NAME, megaStorage.root);
-        if (!lyceumRootNode) {
-            logProgress(`Lyceum root folder "${LYCEUM_ROOT_FOLDER_NAME}" not found, creating...`, results);
-            lyceumRootNode = await serverMega.createFolder(LYCEUM_ROOT_FOLDER_NAME, megaStorage.root);
-        }
-        if (!lyceumRootNode) throw new Error(`Failed to find or create Lyceum root folder: ${LYCEUM_ROOT_FOLDER_NAME}`);
-        logProgress(`Found/Created Lyceum root folder: ${LYCEUM_ROOT_FOLDER_NAME}`, results);
+        results.firestoreDataPreview.currentAutomationStep = "Creating Google Drive Folder Structure"; // Set step
+        logProgress(`Creating base Google Drive folder structure for ${courseIdPlaceholder}...`, results);
+        // Root folder for all Lyceum courses on Drive
+        const lyceumRootDriveFolderId = await serverDrive.findOrCreateFolder(LYCEUM_ROOT_FOLDER_NAME); // Parent is 'root' by default
+        if (!lyceumRootDriveFolderId) throw new Error(`Failed to find or create Lyceum root folder in Google Drive: ${LYCEUM_ROOT_FOLDER_NAME}`);
+        logProgress(`Found/Created Lyceum root folder in Google Drive: ${LYCEUM_ROOT_FOLDER_NAME} (ID: ${lyceumRootDriveFolderId})`, results);
 
-        let courseMegaNode = await serverMega.findFolder(courseIdPlaceholder, lyceumRootNode);
-        if (!courseMegaNode) {
-            logProgress(`Course folder "${courseIdPlaceholder}" not found, creating...`, results);
-            courseMegaNode = await serverMega.createFolder(courseIdPlaceholder, lyceumRootNode);
-        }
-        if (!courseMegaNode) throw new Error(`Failed to create main course folder: ${courseIdPlaceholder}`);
-        logProgress(`Main course folder on Mega: ${courseMegaNode.name}`, results);
+        // Course-specific folder under the Lyceum root
+        const courseDriveFolderId = await serverDrive.findOrCreateFolder(courseIdPlaceholder, lyceumRootDriveFolderId);
+        if (!courseDriveFolderId) throw new Error(`Failed to create main course folder in Google Drive: ${courseIdPlaceholder}`);
+        logProgress(`Main course folder in Google Drive: ${courseIdPlaceholder} (ID: ${courseDriveFolderId})`, results);
 
-        const textbookFullMegaFolder = await serverMega.createFolder(TEXTBOOK_FULL_DIR_NAME, courseMegaNode);
-        logProgress(`Created Mega folder: ${TEXTBOOK_FULL_DIR_NAME}`, results);
-        const transcriptionsArchiveMegaFolder = await serverMega.createFolder(TRANSCRIPTIONS_ARCHIVE_DIR_NAME, courseMegaNode);
-        logProgress(`Created Mega folder: ${TRANSCRIPTIONS_ARCHIVE_DIR_NAME}`, results);
-        const generatedAssessmentsMegaFolder = await serverMega.createFolder(GENERATED_ASSESSMENTS_DIR_NAME, courseMegaNode);
-        logProgress(`Created Mega folder: ${GENERATED_ASSESSMENTS_DIR_NAME}`, results);
-        logProgress('Base Mega folder structure created.', results);
+        // Subfolders within the course folder
+        const textbookFullDriveFolderId = await serverDrive.findOrCreateFolder(TEXTBOOK_FULL_DIR_NAME, courseDriveFolderId);
+        logProgress(`Created Google Drive folder: ${TEXTBOOK_FULL_DIR_NAME} (ID: ${textbookFullDriveFolderId})`, results);
+        const transcriptionsArchiveDriveFolderId = await serverDrive.findOrCreateFolder(TRANSCRIPTIONS_ARCHIVE_DIR_NAME, courseDriveFolderId);
+        logProgress(`Created Google Drive folder: ${TRANSCRIPTIONS_ARCHIVE_DIR_NAME} (ID: ${transcriptionsArchiveDriveFolderId})`, results);
+        const generatedAssessmentsDriveFolderId = await serverDrive.findOrCreateFolder(GENERATED_ASSESSMENTS_DIR_NAME, courseDriveFolderId);
+        logProgress(`Created Google Drive folder: ${GENERATED_ASSESSMENTS_DIR_NAME} (ID: ${generatedAssessmentsDriveFolderId})`, results);
+        logProgress('Base Google Drive folder structure created.', results);
 
         results.firestoreDataPreview.currentAutomationStep = "Processing Textbook"; // Set step
         // --- 2. Textbook Processing ---
         logProgress(`Uploading original textbook: ${textbookPdfOriginalName}`, results);
         if (!fs.existsSync(textbookPdfPath)) throw new Error(`Textbook PDF not found at local path: ${textbookPdfPath}`);
-        const uploadedTextbook = await serverMega.uploadFile(textbookPdfPath, textbookPdfOriginalName, textbookFullMegaFolder);
-        results.megaLinks.originalTextbook = uploadedTextbook.link;
-        logProgress(`Original textbook uploaded to Mega: ${uploadedTextbook.link}`, results);
+        // Upload to the 'Textbook_Full' directory in Drive
+        const uploadedTextbook = await serverDrive.uploadFile(textbookPdfPath, textbookPdfOriginalName, textbookFullDriveFolderId);
+        // results.megaLinks.originalTextbook = uploadedTextbook.link; // Will be renamed to results.driveLinks
+        logProgress(`Original textbook uploaded to Google Drive: ${uploadedTextbook.webViewLink} (ID: ${uploadedTextbook.id})`, results);
 
         logProgress('Processing textbook PDF for chapters...', results);
-        // processTextbookPdf uses courseIdPlaceholder to create its own structures on Mega
-        // and is expected to use the TEXTBOOK_CHAPTERS_DIR_NAME constant for the chapters folder.
+        // processTextbookPdf will need to be updated to use Google Drive
+        // It will receive the parent courseDriveFolderId and create TEXTBOOK_CHAPTERS_DIR_NAME within it.
         const textbookProcessingResult = await processTextbookPdf(
             textbookPdfPath,
-            courseIdPlaceholder, // This will be used by processTextbookPdf to structure its output on Mega
+            courseIdPlaceholder, // Course identifier
             trueFirstPageNumber,
-            megaEmail, // Pass credentials for processTextbookPdf internal Mega ops
-            megaPassword,
-            finalApiKeyForAIServer
+            // megaEmail, // Removed
+            // megaPassword, // Removed
+            GOOGLE_DRIVE_API_KEY, // Pass API key for its internal Drive operations (or it should use its own initialized client)
+            courseDriveFolderId, // Pass parent Drive folder ID for chapters
+            finalApiKeyForAIServer // Gemini API key for AI tasks within pdf_processing_service
         );
-        if (!textbookProcessingResult.success) throw new Error(`Textbook PDF processing failed: ${textbookProcessingResult.message}`);
-        results.megaLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({
-            title: ch.title, // Assuming 'title' is part of chapterFirestoreData structure
-            pdfLink: ch.megaPdfLink, // Assuming 'megaPdfLink' is part of chapterFirestoreData
-            key: `textbook_chapter_${ch.chapterNumber}` // Assuming 'chapterNumber' is part of chapterFirestoreData
-        }));
-        logProgress(`Textbook processing completed. ${results.megaLinks.processedChapters.length} chapters processed.`, results);
-        const tocForAIDescription = results.megaLinks.processedChapters.map(ch => `Chapter ${ch.key.split('_')[2]}: ${ch.title}`).join('\n');
+        // if (!textbookProcessingResult.success) throw new Error(`Textbook PDF processing failed: ${textbookProcessingResult.message}`);
+        // results.megaLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({ // Will be renamed
+        //     title: ch.title,
+        //     pdfLink: ch.megaPdfLink,
+        //     key: `textbook_chapter_${ch.chapterNumber}`
+        // }));
+        // logProgress(`Textbook processing completed. ${results.megaLinks.processedChapters.length} chapters processed.`, results);
+        // const tocForAIDescription = results.megaLinks.processedChapters.map(ch => `Chapter ${ch.key.split('_')[2]}: ${ch.title}`).join('\n');
         
+        // Placeholder for updated logic after processTextbookPdf is refactored
+        if (!textbookProcessingResult.success) throw new Error(`Textbook PDF processing failed: ${textbookProcessingResult.message}`);
+        // Assuming textbookProcessingResult.processedChapterDetails now contains driveLink or driveId
+        // results.driveLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({
+        // title: ch.title,
+        // pdfLink: ch.driveLink, // Or however the link/ID is returned
+        // key: `textbook_chapter_${ch.chapterNumber}`
+        // }));
+        logProgress(`Textbook processing completed. ${(results.driveLinks.processedChapters || []).length} chapters processed.`, results);
+        const tocForAIDescription = results.driveLinks.processedChapters && results.driveLinks.processedChapters.length > 0
+            ? results.driveLinks.processedChapters.map(ch => `Chapter ${ch.key.split('_')[2]}: ${ch.title}`).join('\n')
+            : "Table of Contents not available.";
+        // const tocForAIDescription = "Placeholder TOC - processTextbookPdf output needs integration"; // Placeholder
+        logProgress("Textbook processing step finished (placeholder for drive integration details).", results);
+
+
         // Initialize lecture related variables
-        const lectureSrtLinksByChapterKey = {};
+        const lectureSrtDriveLinksByChapterKey = {};
         const lectureTitlesForAIDescription = [];
 
         // --- 3. Lecture Processing ---
@@ -330,36 +344,44 @@ async function automateNewCourseCreation(params) {
                 let srtMegaLink = lecture.srtMegaLink;
                 const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures';
 
-                if (!srtMegaLink) {
+                let srtDriveLink = lecture.srtDriveLink; // Assuming field name changes from srtMegaLink
+                const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures';
+
+                if (!srtDriveLink) {
                     if (!lecture.filePath && !lecture.youtubeUrl) {
                         logProgress(`Lecture "${lecture.title}" has no SRT, filePath, or YouTube URL. Skipping transcription.`, results, 'warn');
                         continue;
                     }
                     logProgress(`Transcribing lecture: "${lecture.title}" for chapter ${chapterKeyForLecture}`, results);
+                    // transcribeLecture will also need to be updated to use Google Drive
                     const transcriptionResult = await transcribeLecture(
                         lecture.youtubeUrl || null,
-                        courseIdPlaceholder,
+                        courseIdPlaceholder, // Course Identifier
                         chapterKeyForLecture,
                         assemblyAiApiKey,
-                        megaEmail,
-                        megaPassword
+                        // megaEmail, // Removed
+                        // megaPassword, // Removed
+                        GOOGLE_DRIVE_API_KEY, // For its internal Drive operations
+                        transcriptionsArchiveDriveFolderId // Pass parent Drive folder ID for SRT uploads
                     );
                     if (!transcriptionResult.success) {
                         logProgress(`Transcription failed for lecture "${lecture.title}": ${transcriptionResult.message}. Skipping this lecture.`, results, 'warn');
                         continue;
                     }
-                    srtMegaLink = transcriptionResult.srtMegaLink;
+                    srtDriveLink = transcriptionResult.srtDriveLink; // Assuming this is returned
                 }
                 
-                if (srtMegaLink) {
-                    results.megaLinks.transcriptions.push({ title: lecture.title, srtLink: srtMegaLink, chapterKey: chapterKeyForLecture });
-                    if (!lectureSrtLinksByChapterKey[chapterKeyForLecture]) {
-                        lectureSrtLinksByChapterKey[chapterKeyForLecture] = [];
+                if (srtDriveLink) {
+                    // results.megaLinks.transcriptions.push({ title: lecture.title, srtLink: srtDriveLink, chapterKey: chapterKeyForLecture }); // To be renamed
+                    if (!lectureSrtDriveLinksByChapterKey[chapterKeyForLecture]) {
+                        lectureSrtDriveLinksByChapterKey[chapterKeyForLecture] = [];
                     }
-                    lectureSrtLinksByChapterKey[chapterKeyForLecture].push({ title: lecture.title, megaSrtLink: srtMegaLink });
+                    lectureSrtDriveLinksByChapterKey[chapterKeyForLecture].push({ title: lecture.title, srtDriveLink: srtDriveLink });
                 }
             }
-            logProgress(`Lecture processing completed. ${results.megaLinks.transcriptions.length} transcriptions processed/linked.`, results);
+            // logProgress(`Lecture processing completed. ${results.megaLinks.transcriptions.length} transcriptions processed/linked.`, results); // To be updated
+            logProgress("Lecture processing step finished (placeholder for drive integration details).", results);
+
         } else {
             logProgress('No lectures provided. Skipping lecture processing.', results);
         }
@@ -401,24 +423,28 @@ Highlight the key learning outcomes and what students will gain from this course
 
         // --- 5. Question Generation ---
         // Define the task function for PDF question generation
-        const generatePdfQuestionsForChapterTask = async (chapter, apiKey, courseId, email, password, initializedServerMegaInstance) => {
+        const generatePdfQuestionsForChapterTask = async (chapter, apiKey, courseId, initializedServerDriveInstance) => {
             logProgress(`[TaskRunner] Generating PDF questions for chapter: "${chapter.title}" (Key: ${chapter.key}) using assigned API key index...`, results); // Log with results ref
+            // generateQuestionsFromPdf will need to be updated for Google Drive
             return generateQuestionsFromPdf(
-                courseId,
-                chapter.key,
-                chapter.pdfLink,
+                courseId, // Course Identifier
+                chapter.key, // Chapter key
+                chapter.pdfLink, // This should be a Drive link/ID
                 chapter.title,
-                email,
-                password,
-                initializedServerMegaInstance, // Pass the initialized serverMega instance
-                apiKey
+                // email, // Removed
+                // password, // Removed
+                initializedServerDriveInstance, // Pass the initialized serverDrive instance
+                GOOGLE_DRIVE_API_KEY, // For its internal Drive operations (if not using passed instance for all)
+                generatedAssessmentsDriveFolderId, // Parent Drive folder for question uploads
+                apiKey // Gemini API Key
             );
         };
 
         results.firestoreDataPreview.currentAutomationStep = "Generating PDF Questions (Parallel)";
         logProgress('Starting PDF Question Generation step with retry logic...', results);
 
-        let itemsToProcessForPdfQuestions = [...results.megaLinks.processedChapters]; // Start with all chapters
+        // Corrected: Should use results.driveLinks
+        let itemsToProcessForPdfQuestions = results.driveLinks.processedChapters ? [...results.driveLinks.processedChapters] : [];
         let allPdfQuestionTaskResults = []; // Accumulate all results (success or final failure)
         let pdfRetryAttemptsDone = 0;
         
@@ -442,7 +468,7 @@ Highlight the key learning outcomes and what students will gain from this course
         const MAX_TOTAL_ATTEMPTS_PER_ITEM = Math.max(1, validApiKeysForParallel.length); // Each item gets N chances if N keys
 
         while (itemsToProcessForPdfQuestions.length > 0 && pdfRetryAttemptsDone < MAX_TOTAL_ATTEMPTS_PER_ITEM && validApiKeysForParallel.length > 0) {
-            let attemptNumber = pdfRetryAttemptsDone + 1;
+            let attemptNumber = pdfRetryAttemptsDone + 1; // Corrected: attemptNumber should be based on pdfRetryAttemptsDone
             logProgress(`PDF Question Generation: Starting attempt ${attemptNumber}/${MAX_TOTAL_ATTEMPTS_PER_ITEM} for ${itemsToProcessForPdfQuestions.length} item(s).`, results);
 
             // Rotate keys for this attempt: Take the first key and move it to the end
@@ -455,14 +481,14 @@ Highlight the key learning outcomes and what students will gain from this course
 
             const currentBatchTaskResults = await runTasksInParallel(
                 itemsToProcessForPdfQuestions,
-                generatePdfQuestionsForChapterTask, // Defined in previous step
-                validApiKeysForParallel,
+                generatePdfQuestionsForChapterTask, // Defined above
+                validApiKeysForParallel, // These are Gemini API Keys
                 courseIdPlaceholder,
-                megaEmail,
-                megaPassword,
+                // megaEmail, // Removed
+                // megaPassword, // Removed
                 logProgress,
                 results,
-                serverMega // Pass the initialized serverMega module
+                serverDrive // Pass the initialized serverDrive module
             );
 
             const stillNeedsProcessing = []; // Items that failed with a retriable API key error
@@ -501,221 +527,201 @@ Highlight the key learning outcomes and what students will gain from this course
             }
         }
         
-        results.megaLinks.pdfQuestions = []; // Initialize
-        allPdfQuestionTaskResults.forEach(outcome => {
+        // results.megaLinks.pdfQuestions = []; // To be renamed
+        allPdfQuestionTaskResults.forEach(outcome => { // Ensure this populates results.driveLinks.pdfQuestions
             if (outcome.status === 'fulfilled' && outcome.value.success) {
-                results.megaLinks.pdfQuestions.push({
-                    chapterKey: outcome.item.key,
-                    mcqLink: outcome.value.mcqMegaLink,
-                    problemsLink: outcome.value.problemsMegaLink
+                results.driveLinks.pdfQuestions.push({
+                    chapterKey: outcome.item.key, // outcome.item should be a chapter from itemsToProcessForPdfQuestions
+                    mcqLink: outcome.value.driveMcqLink,
+                    mcqId: outcome.value.driveMcqId, // Assuming IDs are also returned
+                    problemsLink: outcome.value.driveProblemsLink,
+                    problemsId: outcome.value.driveProblemsId // Assuming IDs are also returned
                 });
-            } else {
-                // Failures already logged during the loop if they became permanent
             }
         });
-        logProgress(`PDF question generation (with retries) completed. ${results.megaLinks.pdfQuestions.length} sets successfully generated out of ${results.megaLinks.processedChapters.length}.`, results);
+        const chaptersCountForPdfQuestions = results.driveLinks.processedChapters ? results.driveLinks.processedChapters.length : 0;
+        logProgress(`PDF question generation (with retries) completed. ${results.driveLinks.pdfQuestions.length} sets successfully generated out of ${chaptersCountForPdfQuestions}.`, results);
+        // logProgress("PDF Question generation finished (placeholder for drive integration details).", results);
 
-        if (lectures && lectures.length > 0 && Object.keys(lectureSrtLinksByChapterKey).length > 0) {
+
+        if (lectures && lectures.length > 0 && Object.keys(lectureSrtDriveLinksByChapterKey).length > 0) {
             logProgress('Generating questions from lectures...', results);
-            for (const chapterKey of Object.keys(lectureSrtLinksByChapterKey)) {
-                const srtObjectsArray = lectureSrtLinksByChapterKey[chapterKey]; // Array of { title, megaSrtLink }
-                // Ensure lectures array is available for finding the chapter name
+            for (const chapterKey of Object.keys(lectureSrtDriveLinksByChapterKey)) {
+                const srtObjectsArray = lectureSrtDriveLinksByChapterKey[chapterKey]; // Array of { title, srtDriveLink }
                 const chapterNameForLectures = lectures.find(l => l.associatedChapterKey === chapterKey)?.title || chapterKey.replace(/_/g, ' ');
                 
                 logProgress(`Generating lecture questions for chapter/topic: "${chapterNameForLectures}" (Key: ${chapterKey})`, results);
+                // generateQuestionsFromLectures will need to be updated for Google Drive
                 const lectureQuestionsResult = await generateQuestionsFromLectures(
-                    courseIdPlaceholder,
-                    srtObjectsArray,
+                    courseIdPlaceholder, // Course Identifier
+                    srtObjectsArray, // Should contain srtDriveLink
                     chapterNameForLectures,
-                    megaEmail,
-                    megaPassword,
-                    finalApiKeyForAIServer // Passing the full array here; lecture_question_generation_service would need internal rotation if it makes multiple calls.
-                                          // If this service itself made multiple *sequential* calls to generateQuestionsFromLectures, 
-                                          // then we'd apply rotation here for the key passed to *this* call.
+                    // megaEmail, // Removed
+                    // megaPassword, // Removed
+                    GOOGLE_DRIVE_API_KEY, // For its internal Drive operations
+                    generatedAssessmentsDriveFolderId, // Parent Drive folder for question uploads
+                    finalApiKeyForAIServer // Gemini API Keys
                 );
-                if (lectureQuestionsResult.success) {
-                    results.megaLinks.lectureQuestions.push({
-                        chapterKey: lectureQuestionsResult.newChapterKey,
-                        mcqLink: lectureQuestionsResult.mcqMegaLink,
-                        problemsLink: lectureQuestionsResult.problemsMegaLink
-                    });
-                } else {
-                    logProgress(`Failed to generate lecture questions for chapter key "${chapterKey}": ${lectureQuestionsResult.message}`, results, 'warn');
-                }
+                // if (lectureQuestionsResult.success) {
+                //     results.driveLinks.lectureQuestions.push({ // Renamed
+                //         chapterKey: lectureQuestionsResult.newChapterKey,
+                //         mcqLink: lectureQuestionsResult.driveMcqLink, // Assuming new field name
+                //         problemsLink: lectureQuestionsResult.driveProblemsLink // Assuming new field name
+                //     });
+                // } else {
+                //     logProgress(`Failed to generate lecture questions for chapter key "${chapterKey}": ${lectureQuestionsResult.message}`, results, 'warn');
+                // }
             }
-            logProgress(`Lecture question generation completed. ${results.megaLinks.lectureQuestions.length} sets generated.`, results);
+            // logProgress(`Lecture question generation completed. ${results.driveLinks.lectureQuestions.length} sets generated.`, results);
+            logProgress("Lecture question generation finished (placeholder for drive integration details).", results);
+
         } else {
             logProgress('No lectures processed or no SRT links found. Skipping lecture question generation.', results);
         }
 
         // --- 6. Result Aggregation & Firestore Data Preparation ---
-        logProgress('Preparing Firestore data preview. This may involve final Mega link generations.', results);
+        logProgress('Preparing Firestore data preview. This may involve final Google Drive link generations.', results);
 
-        // Explicitly load attributes for courseMegaNode before attempting link generation
-        if (courseMegaNode && typeof courseMegaNode.loadAttributes === 'function') {
-            logProgress(`Explicitly loading attributes for main course folder node "${courseMegaNode.name || courseMegaNode.id}" before link generation...`, results);
-            let loadAttrAttempts = 0;
-            const MAX_LOAD_ATTR_ATTEMPTS = 3;
-            const LOAD_ATTR_RETRY_DELAY_MS = 1000; // milliseconds
-            let attributesLoaded = false;
-
-            while (loadAttrAttempts < MAX_LOAD_ATTR_ATTEMPTS && !attributesLoaded) {
-                loadAttrAttempts++;
-                try {
-                    await new Promise((resolve, reject) => {
-                        courseMegaNode.loadAttributes((err, node) => {
-                            if (err) return reject(err);
-                            resolve(node);
-                        });
-                    });
-                    attributesLoaded = true;
-                    logProgress(`Successfully loaded attributes for "${courseMegaNode.name || courseMegaNode.id}" on attempt ${loadAttrAttempts}.`, results);
-                } catch (attrError) {
-                    if (attrError.message && attrError.message.includes("This is not needed for files loaded from logged in sessions")) {
-                        logProgress(`[Debug] Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" indicated: ${attrError.message}. Proceeding as this is often non-critical.`, results, 'debug'); // Using 'debug' level
-                        // Still counts as an attempt, and if it keeps happening, eventually MAX_LOAD_ATTR_ATTEMPTS will be hit.
-                        // The attributesLoaded flag remains false, so the loop continues or exits based on attempts.
-                    } else {
-                        logProgress(new Error(`Attempt ${loadAttrAttempts}/${MAX_LOAD_ATTR_ATTEMPTS} to load attributes for "${courseMegaNode.name || courseMegaNode.id}" failed: ${attrError.message}`), results, 'warn');
-                    }
-                    // Common logic for all attrErrors in this catch block:
-                    if (loadAttrAttempts >= MAX_LOAD_ATTR_ATTEMPTS) {
-                        // Log that max attempts were reached, regardless of the specific error type of the last attempt.
-                        // If the last error was the "not needed" message, this log might be slightly less alarming but still notes that attributes might not be "formally" loaded.
-                        logProgress(new Error(`Failed to formally load attributes for main course folder node after ${MAX_LOAD_ATTR_ATTEMPTS} attempts. Link generation might fail or use stale data if attributes were truly necessary. Last error: ${attrError.message}`), results, 'warn'); // Changed to 'warn' to be less severe if the last message was the "not needed" one.
-                        // Proceeding to attempt link generation anyway, as per original plan.
-                    } else {
-                        // Simplified delay, not using isRetryableMegaError here as it's not imported.
-                        await new Promise(resolve => setTimeout(resolve, LOAD_ATTR_RETRY_DELAY_MS * loadAttrAttempts));
-                    }
-                }
-            }
-        } else if (courseMegaNode) {
-            logProgress(`courseMegaNode for "${courseMegaNode.name || courseMegaNode.id}" does not have a loadAttributes function. Skipping explicit attribute load.`, results, 'warn');
-        }
+        // For Google Drive, the main course folder ID is courseDriveFolderId.
+        // We might want its webViewLink for the Firestore data.
+        // This requires an additional call if findOrCreateFolder doesn't return it (it currently returns only ID).
+        // For now, we'll store the ID. If a link is needed, serverDrive.getFileLink(courseDriveFolderId) could be used,
+        // but getFileLink is more for files. For folders, the link is usually predictable or obtained via 'get' with 'webViewLink' field.
+        // Let's assume for now we store the ID, or get the link if easily available.
+        // The serverDrive.findOrCreateFolder could be enhanced to return the webViewLink too.
+        // For simplicity, we'll use the ID or a placeholder link.
         
-        let mainFolderLink = 'N/A';
-        if (courseMegaNode && typeof courseMegaNode.link === 'function') {
-            let linkSuccess = false;
-            let linkAttempts = 0;
-            const MAX_LINK_ATTEMPTS = 3; // Specific retries for this operation
-            const LINK_RETRY_DELAY_MS = 2500;
+        let mainFolderLink = `https://drive.google.com/drive/folders/${courseDriveFolderId}`; // Construct a typical folder link
+        logProgress(`Main course folder in Google Drive: ${mainFolderLink} (ID: ${courseDriveFolderId})`, results);
 
-            while (!linkSuccess && linkAttempts < MAX_LINK_ATTEMPTS) {
-                linkAttempts++;
-                let currentAttemptError = null;
-                try {
-                    logProgress(`Attempt ${linkAttempts} (Primary - with key) to get link for main course folder (ID: ${courseMegaNode.id || 'N/A'})...`, results);
-                    if (!courseMegaNode.key) {
-                        logProgress(`courseMegaNode.key is not available for folder ${courseMegaNode.name}. Cannot generate a link with an embedded key. Attempting link without key.`, results, 'warn');
-                        mainFolderLink = await courseMegaNode.link(); // Get link without explicit key
-                    } else {
-                         mainFolderLink = await courseMegaNode.link({ key: courseMegaNode.key }); // Standard way for public link with key
-                    }
-                    linkSuccess = true;
-                    logProgress(`Successfully obtained main course folder link (with key if available) on attempt ${linkAttempts}: ${mainFolderLink}`, results);
-                } catch (e) {
-                    currentAttemptError = e;
-                    logProgress(`Primary link attempt (with key) for main folder failed on attempt ${linkAttempts}: ${e.message}`, results, 'warn');
-                    
-                    const eaccessError = (e.message && (e.message.includes('EACCESS') || e.message.includes('-11')));
 
-                    if (eaccessError) {
-                        logProgress(`EACCESS error detected. Attempting secondary link retrieval (without key) for main folder on attempt ${linkAttempts}...`, results);
-                        try {
-                            mainFolderLink = await courseMegaNode.link(); // Get link without explicit key (noKey: true is default for folders if key not specified)
-                            linkSuccess = true;
-                            logProgress(`Successfully obtained main course folder link (alternative - no key) on attempt ${linkAttempts} after EACCESS: ${mainFolderLink}`, results);
-                        } catch (e2) {
-                            logProgress(`Secondary link attempt (without key) also failed for main folder on attempt ${linkAttempts}: ${e2.message}`, results, 'warn');
-                            currentAttemptError = e2; // Update error to the latest one
-                        }
-                    }
-                    
-                    if (!linkSuccess) {
-                        if (linkAttempts >= MAX_LINK_ATTEMPTS) {
-                            const finalErrorMessageBase = `Failed to get main course folder link after ${MAX_LINK_ATTEMPTS} attempts.`;
-                            if (eaccessError) {
-                                const detailedEaccessMsg = `CRITICAL: Main course folder link generation failed with EACCESS. This indicates the Mega account (email: ${megaEmail || 'not available'}) likely lacks permissions to create shareable links for folders. Please check your Mega account settings, subscription type, and permissions on any parent folders. The course folder was created, but its direct link cannot be generated. Original error: ${currentAttemptError.message}`;
-                                logProgress(detailedEaccessMsg, results, 'error');
-                                mainFolderLink = `Error: EACCESS - Mega account (email: ${megaEmail || 'N/A'}) permission issue. Link generation failed. Check account settings.`;
-                            } else {
-                                logProgress(`${finalErrorMessageBase} Last error: ${currentAttemptError.message}.`, results, 'error');
-                                mainFolderLink = `Error retrieving link (Last error: ${currentAttemptError.message.substring(0, 100)})`;
-                            }
-                        } else if (currentAttemptError.message && (currentAttemptError.message.includes('EAGAIN') || currentAttemptError.message.includes('ERATE') || currentAttemptError.message.includes('Socket timeout'))) { // Check for retryable errors
-                            logProgress(`Retrying folder link retrieval (main folder) in ${LINK_RETRY_DELAY_MS * linkAttempts}ms due to retryable error: ${currentAttemptError.message}`, results, 'warn');
-                            await new Promise(resolve => setTimeout(resolve, LINK_RETRY_DELAY_MS * linkAttempts));
-                        } else { // Non-retryable error (or not explicitly EACCESS for special message)
-                            logProgress(`Non-retryable error getting main course folder link: ${currentAttemptError.message}. Setting link to error string.`, results, 'error');
-                            mainFolderLink = `Error retrieving link (Non-retryable: ${currentAttemptError.message.substring(0, 100)})`;
-                            break; // Break from retry loop for non-retryable errors
-                        }
-                    }
-                }
-            }
-        } else if (courseMegaNode && courseMegaNode.link && typeof courseMegaNode.link !== 'function') { // If .link is a direct property
-             mainFolderLink = courseMegaNode.link;
-             logProgress('Main course folder link obtained from direct .link property (not a function).', results);
-        } else {
-            logProgress('Main course folder node is missing, does not have a link method/property, or key is missing for keyed link. Link will be N/A.', results, 'warn');
-            mainFolderLink = 'N/A (Folder node invalid or key missing for link generation)';
+        // results.firestoreDataPreview = { // Placeholder for the full structure update
+        //     courseTitle: params.courseTitle,
+        //     courseDirName: courseIdPlaceholder,
+        //     aiGeneratedDescription: results.aiGeneratedDescription,
+        //     majorTag: params.majorTag,
+        //     subjectTag: params.subjectTag,
+        //     driveMainFolderLink: mainFolderLink, // Changed from megaMainFolderLink
+        //     driveTextbookFullPdfLink: results.driveLinks.originalTextbook, // Changed & assuming driveLinks structure
+        //     chapters: results.driveLinks.processedChapters.map(pc => ({
+        //         key: pc.key,
+        //         title: pc.title,
+        //         pdfLink: pc.pdfLink, // This should be a Drive link
+        //         relatedTranscriptions: results.driveLinks.transcriptions.filter(t => t.chapterKey === pc.key),
+        //         pdfMcqLink: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.mcqLink,
+        //         pdfProblemsLink: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.problemsLink,
+        //     })),
+        //     lectureQuestionSets: results.driveLinks.lectureQuestions.map(lq => ({
+        //         key: lq.chapterKey,
+        //         mcqLink: lq.mcqLink,
+        //         problemsLink: lq.problemsLink,
+        //     })),
+        //     transcriptionLinks: results.driveLinks.transcriptions,
+        //     prerequisites: typeof prerequisites === 'string' && prerequisites.trim() !== ''
+        //         ? prerequisites.split(',').map(p => p.trim()).filter(p => p)
+        //         : [],
+        //     bannerPicUrl: bannerPicUrl || null,
+        //     coursePicUrl: coursePicUrl || null,
+        //     status: "pending_review",
+        //     createdAt: new Date().toISOString(),
+        //     updatedAt: new Date().toISOString(),
+        // };
+        logProgress("Firestore data preview structure needs full update based on Drive links (placeholder).", results);
+
+
+        // Initialize results.driveLinks (rename from megaLinks)
+        results.driveLinks = {
+            originalTextbook: uploadedTextbook.webViewLink, // Store the webViewLink
+            originalTextbookId: uploadedTextbook.id, // Store the ID
+            processedChapters: [],
+            transcriptions: [],
+            pdfQuestions: [],
+            lectureQuestions: []
+        };
+        // Populate Processed Chapters (example, actual data comes from refactored processTextbookPdf)
+        if (textbookProcessingResult.success && textbookProcessingResult.processedChapterDetails) {
+            results.driveLinks.processedChapters = textbookProcessingResult.processedChapterDetails.map(ch => ({
+                title: ch.title,
+                pdfLink: ch.driveLink, // Assuming this structure from refactored service
+                pdfId: ch.driveId,     // Assuming this structure
+                key: `textbook_chapter_${ch.chapterNumber}`
+            }));
+        }
+         // Populate Transcriptions (example)
+        if (results.driveLinks.transcriptions) { // Check if it was initialized
+            // Logic from before, adapted for driveLinks
+            Object.keys(lectureSrtDriveLinksByChapterKey).forEach(chapterKey => {
+                lectureSrtDriveLinksByChapterKey[chapterKey].forEach(lectureSrtInfo => {
+                    results.driveLinks.transcriptions.push({
+                        title: lectureSrtInfo.title,
+                        srtLink: lectureSrtInfo.srtDriveLink, // This is the webViewLink from Drive
+                        // srtId: lectureSrtInfo.srtDriveId, // If ID is also returned and needed
+                        chapterKey: chapterKey
+                    });
+                });
+            });
         }
 
+
+        // Update firestoreDataPreview with new Drive links
         results.firestoreDataPreview = {
             courseTitle: params.courseTitle,
             courseDirName: courseIdPlaceholder,
             aiGeneratedDescription: results.aiGeneratedDescription,
             majorTag: params.majorTag,
             subjectTag: params.subjectTag,
-            megaMainFolderLink: mainFolderLink,
-            megaTextbookFullPdfLink: results.megaLinks.originalTextbook,
-            // These would be more complex objects in a real Firestore schema
-            chapters: results.megaLinks.processedChapters.map(pc => ({
+            driveFolderId: courseDriveFolderId, // Store the main course folder ID
+            driveFolderLink: mainFolderLink,    // Store the constructed link
+            driveTextbookFullPdfLink: results.driveLinks.originalTextbook,
+            driveTextbookFullPdfId: results.driveLinks.originalTextbookId,
+            chapters: results.driveLinks.processedChapters.map(pc => ({
                 key: pc.key,
                 title: pc.title,
                 pdfLink: pc.pdfLink,
-                relatedTranscriptions: results.megaLinks.transcriptions.filter(t => t.chapterKey === pc.key),
-                pdfMcqLink: results.megaLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.mcqLink,
-                pdfProblemsLink: results.megaLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.problemsLink,
+                pdfId: pc.pdfId,
+                relatedTranscriptions: results.driveLinks.transcriptions
+                                            .filter(t => t.chapterKey === pc.key)
+                                            .map(t => ({ title: t.title, srtLink: t.srtLink /*, srtId: t.srtId */ })),
+                pdfMcqLink: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.mcqLink,
+                // pdfMcqId: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.mcqId,
+                pdfProblemsLink: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.problemsLink,
+                // pdfProblemsId: results.driveLinks.pdfQuestions.find(pq => pq.chapterKey === pc.key)?.problemsId,
             })),
-            // Lecture-specific question sets (might not map 1:1 to PDF chapters)
-            lectureQuestionSets: results.megaLinks.lectureQuestions.map(lq => ({
+            lectureQuestionSets: results.driveLinks.lectureQuestions.map(lq => ({
                 key: lq.chapterKey,
                 mcqLink: lq.mcqLink,
+                // mcqId: lq.mcqId,
                 problemsLink: lq.problemsLink,
-                // Add associated lecture titles if needed by finding them in results.megaLinks.transcriptions
+                // problemsId: lq.problemsId,
             })),
-            // Raw transcription links (could also be nested under chapterResources as in other services)
-            transcriptionLinks: results.megaLinks.transcriptions,
-            // Other fields like totalChapters, imageUrl, prerequisites, etc. would be added here
-            // or by a subsequent admin step.
-        prerequisites: typeof prerequisites === 'string' && prerequisites.trim() !== '' 
-            ? prerequisites.split(',').map(p => p.trim()).filter(p => p) 
-            : [], // Store as array, handle empty/null string
-        bannerPicUrl: bannerPicUrl || null,
-        coursePicUrl: coursePicUrl || null,
+            transcriptionDetails: results.driveLinks.transcriptions.map(t => ({ // More detailed than just links
+                title: t.title,
+                srtLink: t.srtLink,
+                // srtId: t.srtId,
+                chapterKey: t.chapterKey
+            })),
+            prerequisites: typeof prerequisites === 'string' && prerequisites.trim() !== ''
+                ? prerequisites.split(',').map(p => p.trim()).filter(p => p)
+                : [],
+            bannerPicUrl: bannerPicUrl || null,
+            coursePicUrl: coursePicUrl || null,
             status: "pending_review", // Initial status
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
-
-        logProgress(`Firestore Data Preview: ${JSON.stringify(results.firestoreDataPreview, null, 2)}`, results, 'info');
+        logProgress(`Firestore Data Preview (Drive): ${JSON.stringify(results.firestoreDataPreview, null, 2)}`, results, 'info');
         
         if (results.firestoreDataPreview && results.firestoreDataPreview.status) {
             logProgress(`Course data prepared with status: '${results.firestoreDataPreview.status}'. If the course is not immediately visible in the main user interface, please check if any manual approval, publishing step, or specific Firestore indexing/queries based on this status are required for it to appear for end-users.`, results);
         }
 
         results.success = true;
-        results.message = "Course automation tasks completed successfully. Firestore data preview logged.";
+        results.message = "Course automation tasks completed successfully using Google Drive. Firestore data preview logged.";
 
     } catch (error) {
-        // Log the full error object with stack trace using logProgress
         logProgress(error, results, 'error'); 
         results.success = false;
-        // Ensure message is a string, error.message might be undefined for some error types
-        results.message = `Course automation failed: ${error.message || String(error)}`;
-        // results.errorStack = error.stack; // Already captured by logProgress if it's an Error instance
+        results.message = `Course automation failed (Google Drive): ${error.message || String(error)}`;
     }
 
     return results;

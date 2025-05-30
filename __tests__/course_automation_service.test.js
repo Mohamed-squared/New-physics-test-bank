@@ -11,12 +11,13 @@ jest.mock('fs-extra', () => ({
     remove: jest.fn(() => Promise.resolve()), 
 }));
 
-jest.mock('../mega_service_server.js', () => ({
+// Mock Google Drive Server Service
+jest.mock('../google_drive_service_server.js', () => ({
     initialize: jest.fn(() => Promise.resolve()),
-    getMegaStorage: jest.fn(),
-    findFolder: jest.fn(),
-    createFolder: jest.fn(),
+    findOrCreateFolder: jest.fn(),
     uploadFile: jest.fn(),
+    // getFolderContents: jest.fn(), // Add if needed by course_automation_service directly
+    // getFileLink: jest.fn(), // Add if needed
 }));
 
 jest.mock('../ai_integration_server.js', () => ({
@@ -40,7 +41,8 @@ jest.mock('../lecture_question_generation_service.js', () => ({
 }));
 
 jest.mock('../server_config.js', () => ({
-    GEMINI_API_KEY: 'mock-global-gemini-key', 
+    GEMINI_API_KEY: 'mock-global-gemini-key',
+    GOOGLE_DRIVE_API_KEY: 'mock-drive-api-key', // Added Drive API key
 }));
 
 
@@ -81,23 +83,22 @@ describe('sanitizeCourseTitleForDirName', () => {
 
 describe('automateNewCourseCreation', () => {
     const fs = require('fs-extra');
-    const serverMega = require('../mega_service_server');
+    const serverDrive = require('../google_drive_service_server'); // Renamed
     const aiServer = require('../ai_integration_server');
     const pdfProcessingService = require('../pdf_processing_service');
     const lectureTranscriptionService = require('../lecture_transcription_service');
     const pdfQuestionGenerationService = require('../pdf_question_generation_service');
     const lectureQuestionGenerationService = require('../lecture_question_generation_service');
-    const serverConfig = require('../server_config'); // To modify GEMINI_API_KEY
+    const serverConfig = require('../server_config');
 
-    const mockMegaFolder = (name = 'mock-folder') => ({ 
+    // Helper to mock Drive folder creation/finding
+    const mockDriveFolder = (id = 'mock-folder-id', name = 'mock-folder') => id; // findOrCreateFolder returns ID
+
+    // Helper to mock Drive file upload
+    const mockDriveFile = (name = 'mock-file.pdf', id = 'mock-file-id') => ({
         name: name, 
-        link: jest.fn(() => Promise.resolve(`https://mega.nz/${name}-link`)), 
-        id: `${name}-id`, 
-        key: `${name}-key`
-    });
-    const mockMegaFile = (name = 'mock-file.pdf') => ({ 
-        name: name, 
-        link: `https://mega.nz/${name}-link` 
+        id: id,
+        webViewLink: `https://drive.google.com/file/d/${id}/view`
     });
     
     const defaultParams = {
@@ -105,14 +106,13 @@ describe('automateNewCourseCreation', () => {
         textbookPdfPath: '/fake/path/to/textbook.pdf',
         textbookPdfOriginalName: 'textbook.pdf',
         trueFirstPageNumber: 1,
-        lectures: [
+        lectures: [ // Assuming links might be Drive links post-transcription/processing
             { title: 'Lecture 1 Alpha', youtubeUrl: 'https://youtube.com/lec1alpha', associatedChapterKey: 'textbook_chapter_1' },
             { title: 'Lecture 2 Beta', filePath: '/fake/path/to/lec2beta.mp4', originalFileName: 'lec2beta.mp4', associatedChapterKey: 'textbook_chapter_2' },
         ],
         majorTag: 'Testing Major',
         subjectTag: 'Advanced Mocks',
-        megaEmail: 'test@example.com',
-        megaPassword: 'password',
+        // megaEmail and megaPassword removed
         geminiApiKey: 'test-gemini-key-param',
         assemblyAiApiKey: 'test-assemblyai-key-param',
         prerequisites: 'Intro to Testing, Basic Jest',
@@ -125,49 +125,55 @@ describe('automateNewCourseCreation', () => {
 
         fs.existsSync.mockReturnValue(true);
         
-        const lyceumRoot = mockMegaFolder('LyceumCourses_Test');
-        const courseFolder = mockMegaFolder(sanitizeCourseTitleForDirName(defaultParams.courseTitle));
-
-        serverMega.initialize.mockResolvedValue(undefined);
-        serverMega.getMegaStorage.mockReturnValue({ root: lyceumRoot });
+        serverDrive.initialize.mockResolvedValue(undefined); // Initialize Drive service
         
-        serverMega.findFolder
-            .mockResolvedValueOnce(lyceumRoot) // First call for LYCEUM_ROOT_FOLDER_NAME
-            .mockResolvedValueOnce(null);      // Second call for courseIdPlaceholder (not found)
-                                             // Subsequent calls will create new mockMegaFolder
+        // Mock findOrCreateFolder to return IDs
+        serverDrive.findOrCreateFolder
+            .mockResolvedValueOnce('lyceumRootDriveFolderId')    // For LYCEUM_ROOT_FOLDER_NAME
+            .mockResolvedValueOnce('courseDriveFolderId')        // For courseIdPlaceholder
+            .mockResolvedValueOnce('textbookFullDriveFolderId')  // For TEXTBOOK_FULL_DIR_NAME
+            .mockResolvedValueOnce('transcriptionsArchiveDriveFolderId') // For TRANSCRIPTIONS_ARCHIVE_DIR_NAME
+            .mockResolvedValueOnce('generatedAssessmentsDriveFolderId'); // For GENERATED_ASSESSMENTS_DIR_NAME
+            // Add more if other direct calls are made in the main function
 
-        serverMega.createFolder.mockImplementation((name) => Promise.resolve(mockMegaFolder(name)));
-        serverMega.uploadFile.mockImplementation((path, name) => Promise.resolve(mockMegaFile(name)));
+        serverDrive.uploadFile.mockImplementation((path, name, folderId) =>
+            Promise.resolve(mockDriveFile(name, `${name}-drive-id`))
+        );
 
         aiServer.callGeminiTextAPI.mockResolvedValue('Mock AI Course Description from Gemini');
         
+        // Sub-services now need to return Drive-like links/IDs
         pdfProcessingService.processTextbookPdf.mockResolvedValue({
             success: true,
-            message: 'PDF processed successfully by mock',
-            processedChapterDetails: [
-                { title: 'Chapter 1 PDF Title', megaPdfLink: 'https://mega.nz/ch1.pdf', chapterNumber: 1 },
-                { title: 'Chapter 2 PDF Title', megaPdfLink: 'https://mega.nz/ch2.pdf', chapterNumber: 2 },
+            message: 'PDF processed successfully by mock (Drive)',
+            processedChapterDetails: [ // Assuming this structure is adapted
+                { title: 'Chapter 1 PDF Title', driveLink: 'https://drive.google.com/ch1-drive-id', driveId: 'ch1-drive-id', chapterNumber: 1 },
+                { title: 'Chapter 2 PDF Title', driveLink: 'https://drive.google.com/ch2-drive-id', driveId: 'ch2-drive-id', chapterNumber: 2 },
             ],
         });
 
-        lectureTranscriptionService.transcribeLecture.mockImplementation(async (youtubeUrl, courseId, chapterId) => ({
+        lectureTranscriptionService.transcribeLecture.mockImplementation(async (youtubeUrl, courseId, chapterKey, assemblyAiApiKey, driveApiKey, parentFolderId) => ({
             success: true,
-            message: 'Lecture transcribed successfully by mock',
-            srtMegaLink: `https://mega.nz/lecture_${chapterId}.srt`,
+            message: 'Lecture transcribed successfully by mock (Drive)',
+            srtDriveLink: `https://drive.google.com/lecture_${chapterKey}.srt-id`, // Example Drive link
+            srtDriveId: `lecture_${chapterKey}.srt-id`,
         }));
 
-
-        pdfQuestionGenerationService.generateQuestionsFromPdf.mockImplementation(async (courseId, chapterKey) => ({
+        pdfQuestionGenerationService.generateQuestionsFromPdf.mockImplementation(async (courseId, chapterKey, pdfDriveLink, chapterTitle, driveApiKey, parentAssessmentsFolderId, geminiApiKey) => ({
             success: true,
-            mcqMegaLink: `https://mega.nz/pdf-mcq-${chapterKey}.json`,
-            problemsMegaLink: `https://mega.nz/pdf-problems-${chapterKey}.json`,
+            driveMcqLink: `https://drive.google.com/pdf-mcq-${chapterKey}-id`,
+            driveMcqId: `pdf-mcq-${chapterKey}-id`,
+            driveProblemsLink: `https://drive.google.com/pdf-problems-${chapterKey}-id`,
+            driveProblemsId: `pdf-problems-${chapterKey}-id`,
         }));
 
-        lectureQuestionGenerationService.generateQuestionsFromLectures.mockImplementation(async (courseId, srtObjectsArray, chapterName) => ({
+        lectureQuestionGenerationService.generateQuestionsFromLectures.mockImplementation(async (courseId, srtObjectsArray, chapterName, driveApiKey, parentAssessmentsFolderId, geminiApiKey) => ({
             success: true,
             newChapterKey: `lecture_questions_${chapterName.replace(/\s+/g, '_').toLowerCase()}`,
-            mcqMegaLink: `https://mega.nz/lecture-mcq-${chapterName}.json`,
-            problemsMegaLink: `https://mega.nz/lecture-problems-${chapterName}.json`,
+            driveMcqLink: `https://drive.google.com/lecture-mcq-${chapterName}-id`,
+            driveMcqId: `lecture-mcq-${chapterName}-id`,
+            driveProblemsLink: `https://drive.google.com/lecture-problems-${chapterName}-id`,
+            driveProblemsId: `lecture-problems-${chapterName}-id`,
         }));
         
         serverConfig.GEMINI_API_KEY = 'mock-global-gemini-key-default'; 
@@ -186,25 +192,64 @@ describe('automateNewCourseCreation', () => {
             expect(results.firestoreDataPreview.coursePicUrl).toBe(params.coursePicUrl);
 
             expect(results.progressLogs.length).toBeGreaterThan(10); 
-            expect(results.firestoreDataPreview.currentAutomationStep).toBe('Completed');
+            expect(results.firestoreDataPreview.currentAutomationStep).toBe('Completed'); // Or final step name
 
-            expect(serverMega.createFolder).toHaveBeenCalledTimes(4); // Lyceum Root (if needed), Course Folder, Textbook_Full, Transcriptions_Archive, Generated_Assessments
-            expect(serverMega.createFolder).toHaveBeenCalledWith(sanitizeCourseTitleForDirName(params.courseTitle), expect.any(Object));
-            expect(serverMega.createFolder).toHaveBeenCalledWith('Textbook_Full', expect.any(Object));
-            expect(serverMega.createFolder).toHaveBeenCalledWith('Transcriptions_Archive', expect.any(Object));
-            expect(serverMega.createFolder).toHaveBeenCalledWith('Generated_Assessments', expect.any(Object));
+            expect(serverDrive.findOrCreateFolder).toHaveBeenCalledWith('LyceumCourses_Test', undefined); // Root call
+            expect(serverDrive.findOrCreateFolder).toHaveBeenCalledWith(sanitizeCourseTitleForDirName(params.courseTitle), 'lyceumRootDriveFolderId');
+            expect(serverDrive.findOrCreateFolder).toHaveBeenCalledWith('Textbook_Full', 'courseDriveFolderId');
+            expect(serverDrive.findOrCreateFolder).toHaveBeenCalledWith('Transcriptions_Archive', 'courseDriveFolderId');
+            expect(serverDrive.findOrCreateFolder).toHaveBeenCalledWith('Generated_Assessments', 'courseDriveFolderId');
 
-            expect(serverMega.uploadFile).toHaveBeenCalledTimes(1); 
-            expect(pdfProcessingService.processTextbookPdf).toHaveBeenCalledTimes(1);
+            expect(serverDrive.uploadFile).toHaveBeenCalledTimes(1); // For the original textbook
+
+            expect(pdfProcessingService.processTextbookPdf).toHaveBeenCalledWith(
+                params.textbookPdfPath,
+                sanitizeCourseTitleForDirName(params.courseTitle),
+                params.trueFirstPageNumber,
+                serverConfig.GOOGLE_DRIVE_API_KEY, // Expect Drive API key
+                'courseDriveFolderId', // Expect parent Drive folder ID
+                params.geminiApiKey // Gemini key
+            );
             expect(lectureTranscriptionService.transcribeLecture).toHaveBeenCalledTimes(params.lectures.length);
+            // Check one call to ensure Drive parameters are passed
+             expect(lectureTranscriptionService.transcribeLecture).toHaveBeenNthCalledWith(1,
+                params.lectures[0].youtubeUrl,
+                sanitizeCourseTitleForDirName(params.courseTitle),
+                params.lectures[0].associatedChapterKey,
+                params.assemblyAiApiKey,
+                serverConfig.GOOGLE_DRIVE_API_KEY,
+                'transcriptionsArchiveDriveFolderId' // Passed parent folder ID
+            );
+
             expect(pdfQuestionGenerationService.generateQuestionsFromPdf).toHaveBeenCalledTimes(2); // For 2 processed PDF chapters
+            // Check one call
+            expect(pdfQuestionGenerationService.generateQuestionsFromPdf).toHaveBeenNthCalledWith(1,
+                sanitizeCourseTitleForDirName(params.courseTitle), // courseId
+                'textbook_chapter_1', // chapterKey from processed PDF
+                'https://drive.google.com/ch1-drive-id', // driveLink from processed PDF
+                'Chapter 1 PDF Title', // chapterTitle from processed PDF
+                serverDrive, // Initialized serverDrive instance
+                serverConfig.GOOGLE_DRIVE_API_KEY, // Drive API Key for internal operations
+                'generatedAssessmentsDriveFolderId', // Parent folder for outputs
+                params.geminiApiKey // Gemini API key
+            );
             
-            // Based on unique associatedChapterKey for lectures
             const uniqueLectureChapterKeys = new Set(params.lectures.map(l => l.associatedChapterKey));
             expect(lectureQuestionGenerationService.generateQuestionsFromLectures).toHaveBeenCalledTimes(uniqueLectureChapterKeys.size);
+             // Check one call
+            expect(lectureQuestionGenerationService.generateQuestionsFromLectures).toHaveBeenNthCalledWith(1,
+                sanitizeCourseTitleForDirName(params.courseTitle),
+                expect.arrayContaining([expect.objectContaining({ title: 'Lecture 1 Alpha', srtDriveLink: expect.any(String) })]),
+                'Chapter 1 PDF Title', // chapterName (derived if not directly passed)
+                serverConfig.GOOGLE_DRIVE_API_KEY,
+                'generatedAssessmentsDriveFolderId',
+                params.geminiApiKey
+            );
 
             expect(aiServer.callGeminiTextAPI).toHaveBeenCalledTimes(1); 
-            expect(results.firestoreDataPreview.megaMainFolderLink).toBeTruthy();
+            expect(results.firestoreDataPreview.driveFolderId).toBe('courseDriveFolderId');
+            expect(results.firestoreDataPreview.driveCourseRootLink).toContain('courseMainDriveFolderId'); // Constructed link
+            expect(results.driveLinks.originalTextbook).toContain('textbook.pdf-drive-id');
         });
     });
 
@@ -216,8 +261,8 @@ describe('automateNewCourseCreation', () => {
             expect(results.success).toBe(true);
             expect(lectureTranscriptionService.transcribeLecture).not.toHaveBeenCalled();
             expect(lectureQuestionGenerationService.generateQuestionsFromLectures).not.toHaveBeenCalled();
-            expect(results.megaLinks.transcriptions).toEqual([]);
-            expect(results.megaLinks.lectureQuestions).toEqual([]);
+            expect(results.driveLinks.transcriptions).toEqual([]); // Check driveLinks
+            expect(results.driveLinks.lectureQuestions).toEqual([]); // Check driveLinks
             
             const skippedLectureProcessingLog = results.progressLogs.find(log => log.message.includes('No lectures provided. Skipping lecture processing.'));
             expect(skippedLectureProcessingLog).toBeDefined();
@@ -225,11 +270,12 @@ describe('automateNewCourseCreation', () => {
             expect(skippedLectureQuestionsLog).toBeDefined();
 
             expect(aiServer.callGeminiTextAPI).toHaveBeenCalledTimes(1);
-            const descriptionCallArgs = aiServer.callGeminiTextAPI.mock.calls[0];
-            const descriptionPrompt = descriptionCallArgs[1]; 
+            // Check that the prompt for AI description does not include lecture part
+            const descriptionCallArgs = aiServer.callGeminiTextAPI.mock.calls[0]; // Get arguments of the first call
+            const descriptionPrompt = descriptionCallArgs[1]; // Second argument is the prompt
             expect(descriptionPrompt).not.toContain('It also includes lectures on:');
 
-            expect(results.firestoreDataPreview.currentAutomationStep).toBe('Completed');
+            expect(results.firestoreDataPreview.currentAutomationStep).toBe('Completed'); // Or final step name
         });
     });
 
@@ -250,16 +296,18 @@ describe('automateNewCourseCreation', () => {
 
         it('should use global default if param key is missing', async () => {
             serverConfig.GEMINI_API_KEY = 'global-fallback-key'; // Ensure global key is set
-            const params = { ...defaultParams, geminiApiKey: '' }; // No key provided in params
-             // Re-mock findFolder to provide the course folder directly on second call for this specific test
-            const lyceumRoot = mockMegaFolder('LyceumCourses_Test');
-            const courseFolder = mockMegaFolder(sanitizeCourseTitleForDirName(params.courseTitle));
-            serverMega.findFolder
-                .mockResolvedValueOnce(lyceumRoot) 
-                .mockResolvedValueOnce(courseFolder); // Course folder found directly
+            const params = { ...defaultParams, geminiApiKey: '' };
+
+            // Ensure Drive mocks are set up for a successful run otherwise
+            serverDrive.findOrCreateFolder.mockResolvedValue('someFolderId');
+            serverDrive.uploadFile.mockResolvedValue({ id: 'fileId', webViewLink: 'link' });
+            pdfProcessingService.processTextbookPdf.mockResolvedValue({ success: true, processedChapterDetails: [] });
+            // No lectures, so transcribe and lecture Q gen won't be called.
+            aiServer.callGeminiTextAPI.mockResolvedValue("AI Description");
+
 
             const results = await automateNewCourseCreation(params);
-            expect(results.success).toBe(true); // Should succeed using global key
+            expect(results.success).toBe(true);
             const usedGlobalKeyLog = results.progressLogs.find(log => log.message.includes('Using global default GEMINI_API_KEY.'));
             expect(usedGlobalKeyLog).toBeDefined();
         });

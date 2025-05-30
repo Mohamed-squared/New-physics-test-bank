@@ -9,8 +9,9 @@ const GEMINI_API_KEYS_ARRAY = [
 ];
 
 module.exports = {
-    GEMINI_API_KEY: GEMINI_API_KEYS_ARRAY // Exporting as GEMINI_API_KEY to match existing import in course_automation_service.js
+    GEMINI_API_KEY: GEMINI_API_KEYS_ARRAY, // Exporting as GEMINI_API_KEY to match existing import in course_automation_service.js
                                           // OR, preferably, rename export and update import in course_automation_service.js
                                           // For now, keeping export name same to minimize changes to other files not in this step's direct focus.
                                           // The course_automation_service.js was already updated to handle an array from this.
+    GOOGLE_DRIVE_API_KEY: "AIzaSyBkBeXMuIsUJb-gGDAf7nLeOJk3var_uww",
 };

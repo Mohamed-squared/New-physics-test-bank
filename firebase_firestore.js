@@ -1688,15 +1688,35 @@ export async function updateCourseDefinition(courseId, updates) {
                                        ? updatedDataFromFS.corequisites.filter(item => typeof item === 'string')
                                        : [];
 
-             // --- MEGA Link Fields for local cache update ---
+             // --- MEGA Link Fields for local cache update (for backward compatibility during transition) ---
+             mergedData.megaCourseRootFolderLink = updatedDataFromFS.megaCourseRootFolderLink || null;
              mergedData.megaTranscriptionsFolderLink = updatedDataFromFS.megaTranscriptionsFolderLink || null;
              mergedData.megaPdfFolderLink = updatedDataFromFS.megaPdfFolderLink || null;
              mergedData.megaMcqFolderLink = updatedDataFromFS.megaMcqFolderLink || null;
              mergedData.megaTextbookFullPdfLink = updatedDataFromFS.megaTextbookFullPdfLink || null;
              // --- End MEGA Link Fields ---
 
+             // --- Google Drive Fields for local cache update ---
+             mergedData.driveCourseRootFolderId = updatedDataFromFS.driveCourseRootFolderId || null;
+             mergedData.driveCourseRootLink = updatedDataFromFS.driveCourseRootLink || null;
+             mergedData.driveTextbookFullFolderId = updatedDataFromFS.driveTextbookFullFolderId || null;
+             mergedData.driveTextbookChaptersFolderId = updatedDataFromFS.driveTextbookChaptersFolderId || null;
+             mergedData.driveTranscriptionsFolderId = updatedDataFromFS.driveTranscriptionsFolderId || null;
+             mergedData.driveGeneratedAssessmentsFolderId = updatedDataFromFS.driveGeneratedAssessmentsFolderId || null;
+             // Specific PDF/MCQ folder IDs if they differ from the general "GeneratedAssessments" or "TextbookChapters"
+             mergedData.drivePdfFolderId = updatedDataFromFS.drivePdfFolderId || null; // Could be same as textbookChaptersFolderId
+             mergedData.driveMcqFolderId = updatedDataFromFS.driveMcqFolderId || null; // Could be same as generatedAssessmentsFolderId
+
+             mergedData.driveTextbookFullPdfId = updatedDataFromFS.driveTextbookFullPdfId || null;
+             mergedData.driveTextbookFullPdfLink = updatedDataFromFS.driveTextbookFullPdfLink || null;
+             // Add other specific Drive file/folder IDs and links as they are defined in course structures
+             // e.g., for processed chapters, transcriptions, generated questions if they store individual file IDs/links
+             // This part depends on the exact structure saved by course_automation_service and admin_drive_service
+             // For now, ensuring the main folder IDs and the original textbook ID/link are cached.
+             // --- End Google Drive Fields ---
+
              updateGlobalCourseData(courseId, mergedData); 
-             console.log("Local course definition map updated after Firestore save.");
+             console.log("Local course definition map updated after Firestore save (including Drive fields).");
          } else {
               console.warn(`Course ${courseId} not found after update/set operation. Local cache might be stale.`);
               globalCourseDataMap.delete(courseId); 
@@ -1749,12 +1769,27 @@ export async function addCourseToFirestore(courseData) {
         corequisites: Array.isArray(courseData.corequisites)
                       ? courseData.corequisites.filter(item => typeof item === 'string' && item.trim()) 
                       : [],
-        // --- MEGA Link Fields ---
+        // --- MEGA Link Fields (for potential backward compatibility if old courses are not migrated) ---
+        megaCourseRootFolderLink: null,
         megaTranscriptionsFolderLink: null,
         megaPdfFolderLink: null,
         megaMcqFolderLink: null,
         megaTextbookFullPdfLink: null,
         // --- End MEGA Link Fields ---
+
+        // --- Google Drive Fields (new structure) ---
+        driveCourseRootFolderId: null,
+        driveCourseRootLink: null,
+        driveTextbookFullFolderId: null,
+        driveTextbookChaptersFolderId: null,
+        driveTranscriptionsFolderId: null,
+        driveGeneratedAssessmentsFolderId: null,
+        drivePdfFolderId: null, // May be redundant if same as driveTextbookChaptersFolderId
+        driveMcqFolderId: null,   // May be redundant if same as driveGeneratedAssessmentsFolderId
+        driveTextbookFullPdfId: null,
+        driveTextbookFullPdfLink: null,
+        // Other Drive related fields can be added here as needed
+        // --- End Google Drive Fields ---
     };
 
     let finalTotalChapters = 0;
