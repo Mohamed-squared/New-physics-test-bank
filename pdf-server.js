@@ -27,6 +27,27 @@ const serverGoogleDrive = require('./google_drive_service_server.js'); // RENAME
 const courseAutomationService = require('./course_automation_service.js');
 const multer = require('multer');
 
+// --- Initialize Google Drive Service ---
+const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH;
+if (!SERVICE_ACCOUNT_KEY_PATH) {
+  console.error('[SERVER] CRITICAL: GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH environment variable not set.');
+  console.error('[SERVER] This variable must point to the JSON file containing your Google Drive service account credentials.');
+  console.error('[SERVER] The application cannot start without it. Exiting.');
+  process.exit(1);
+}
+
+serverGoogleDrive.initialize(SERVICE_ACCOUNT_KEY_PATH)
+  .then(() => {
+    console.log('[SERVER] Google Drive service initialized successfully using Service Account from path.');
+  })
+  .catch(error => {
+    console.error('[SERVER] CRITICAL: Failed to initialize Google Drive service:', error);
+    console.error('[SERVER] Please ensure the path is correct and the key file is valid.');
+    console.error('[SERVER] The application cannot start without it. Exiting.');
+    process.exit(1);
+  });
+// --- End of Google Drive Service Initialization ---
+
 const app = express();
 const TEMP_UPLOAD_DIR = path.join(__dirname, 'temp_uploads');
 fs.ensureDirSync(TEMP_UPLOAD_DIR);
@@ -141,17 +162,6 @@ app.post('/transcribe-lecture', async (req, res) => {
 app.post('/list-google-drive-folder', async (req, res) => { // RENAMED_ENDPOINT
     console.log('[SERVER] Received /list-google-drive-folder request.');
     const { folderId = 'root' /* No longer megaFolderLink, megaEmail, megaPassword */ } = req.body;
-
-    // TODO: Ensure serverGoogleDrive is initialized.
-    // This might be done at server startup using a service account key path from env variables.
-    // If not, serverGoogleDrive.initialize(YOUR_SERVICE_ACCOUNT_KEY_PATH) would be needed here.
-    // For now, assuming it's initialized by services that call this, or globally.
-    // Example:
-    // if (!serverGoogleDrive.isInitialized()) { // Add an isInitialized method to the service
-    //    const keyPath = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH;
-    //    if (!keyPath) return res.status(500).json({ success: false, message: "Google Drive service not configured on server."});
-    //    await serverGoogleDrive.initialize(keyPath);
-    // }
 
     try {
         console.log(`[SERVER /list-google-drive-folder] Fetching contents for Google Drive folder ID: ${folderId}`);

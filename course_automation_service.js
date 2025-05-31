@@ -165,7 +165,7 @@ async function automateNewCourseCreation(params) {
         // IMPORTANT: Replace 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json' with the actual path to your service account key file.
         // This file should be kept secure and not publicly accessible.
         // It's recommended to use environment variables to store the path.
-        const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_APP_SERVICE_ACCOUNT || 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json';
+        const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_KEY_PATH || 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json';
 
         // Initialize the server-side Google Drive service with the service account key.
         // This should ideally be done once when the application server starts,
