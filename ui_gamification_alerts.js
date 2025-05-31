@@ -104,7 +104,7 @@ export function checkAndShowMegaMigrationAlert() {
             migrateButton.addEventListener('click', () => {
                 playUiSound?.('button_click_confirm');
                 if (window.showMegaMigrationDashboard) {
-                    window.showMegaMigrationDashboard();
+                    window.showAdminSection('driveTools');
                 } else {
                     console.error("showMegaMigrationDashboard function not found on window object.");
                     alert("Error: Could not navigate to MEGA migration dashboard.");

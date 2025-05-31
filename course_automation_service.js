@@ -345,7 +345,6 @@ async function automateNewCourseCreation(params) {
                 const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures';
 
                 let srtDriveLink = lecture.srtDriveLink; // Assuming field name changes from srtMegaLink
-                // const chapterKeyForLecture = lecture.associatedChapterKey || 'general_lectures'; // Removed duplicate declaration
 
                 if (!srtDriveLink) {
                     if (!lecture.filePath && !lecture.youtubeUrl) {

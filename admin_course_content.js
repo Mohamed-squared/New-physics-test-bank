@@ -3,7 +3,7 @@ import { currentUser, globalCourseDataMap, updateGlobalCourseData } from './stat
 import { approveCourse } from './firebase_firestore.js'; // Import approveCourse
 
 // Import display functions from the new specialized modules
-import { displayMegaMigrationDashboard } from './admin_mega_service.js';
+import { displayDriveMigrationDashboard } from './admin_drive_service.js';
 import { displayLectureTranscriptionAutomator } from './admin_transcription_service.js';
 import { displayTextbookPdfProcessor } from './admin_pdf_processing_service.js';
 import { displayPdfMcqProblemGenerator, displayLectureMcqProblemGenerator } from './admin_question_generation_service.js';
@@ -45,7 +45,7 @@ function displayCourseManagementSection(containerElement) {
     const tabsConfig = [
         { id: 'fullCourseAutomation', name: 'Full Course Creator', renderFunc: displayFullCourseAutomationForm },
         { id: 'pendingCourses', name: 'Pending Review', renderFunc: displayPendingCoursesList }, // New Tab
-        { id: 'megaTools', name: 'MEGA Tools', renderFunc: displayMegaMigrationDashboard },
+        { id: 'driveTools', name: 'Google Drive Tools', renderFunc: displayDriveMigrationDashboard },
         { id: 'transcription', name: 'Transcription', renderFunc: displayLectureTranscriptionAutomator },
         { id: 'pdfProcessing', name: 'PDF Processing', renderFunc: displayTextbookPdfProcessor },
         { id: 'pdfQGenerator', name: 'PDF Q-Generator', renderFunc: displayPdfMcqProblemGenerator },
@@ -93,7 +93,6 @@ function displayCourseManagementSection(containerElement) {
 
 // Exports that are still needed by ui_admin_dashboard.js
 export { 
-    displayMegaMigrationDashboard,
     displayCourseManagementSection,
     loadCoursesForAdmin, // Keep if ui_admin_dashboard.js still imports and uses it
     displayPendingCoursesList, // Export the new function
