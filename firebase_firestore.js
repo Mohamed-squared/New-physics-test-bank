@@ -3257,6 +3257,19 @@ export async function adminAdjustUserCredits(targetUserId, amount, reason, admin
 
 // --- End Admin Testing Aid Functions ---
 
+// Add this for CommonJS compatibility if other services use require()
+// Ensure all functions that need to be required by CommonJS modules are listed here.
+// For now, only adding saveAutomatedCourseToFirestore as per current task.
+// Other functions are already individually exported using ES6 'export' keyword.
+// If a full switch to CommonJS exports is needed, each function would be added here.
+module.exports = {
+    // ... (other functions if they were previously module.exports-ed)
+    saveAutomatedCourseToFirestore: typeof saveAutomatedCourseToFirestore !== 'undefined' ? saveAutomatedCourseToFirestore : undefined,
+    // Add other functions here if they need to be accessible via require()
+    // For example, if addCourseToFirestore was also needed by a CommonJS module:
+    // addCourseToFirestore: typeof addCourseToFirestore !== 'undefined' ? addCourseToFirestore : undefined,
+};
+
 export async function getAdminOverviewStats() {
     if (!db) {
         console.error("Firestore DB not initialized for getAdminOverviewStats.");
@@ -3443,6 +3456,75 @@ export async function getCourseDetails(courseId) {
     } catch (error) {
         console.error(`[getCourseDetails] Error fetching course ${courseId} from Firestore:`, error);
         return null;
+    }
+}
+// --- END NEW FUNCTION ---
+
+// --- NEW FUNCTION: Save Automated Course to Firestore ---
+/**
+ * Saves or updates a course document in the 'courses' collection using courseData.courseDirName as the document ID.
+ * Handles 'createdAt' and 'updatedAt' fields, converting them to server timestamps if needed.
+ * @param {object} courseData - The course data object. Expected to have courseDirName.
+ * @returns {Promise<object>} - An object like { success: true, courseId: docId } or { success: false, message: error.message }.
+ */
+export async function saveAutomatedCourseToFirestore(courseData) {
+    if (!db) {
+        console.error("[saveAutomatedCourseToFirestore] Firestore DB not initialized.");
+        return { success: false, message: "Database not initialized." };
+    }
+    if (!courseData || !courseData.courseDirName) {
+        console.error("[saveAutomatedCourseToFirestore] courseData or courseData.courseDirName is missing.");
+        return { success: false, message: "Course data or course directory name is missing." };
+    }
+
+    const courseId = courseData.courseDirName;
+    const courseRef = db.collection('courses').doc(courseId);
+
+    let dataToSave = { ...courseData };
+
+    // Handle createdAt timestamp
+    if (dataToSave.createdAt) {
+        if (typeof dataToSave.createdAt === 'string') {
+            try {
+                const date = new Date(dataToSave.createdAt);
+                if (!isNaN(date)) {
+                    dataToSave.createdAt = firebase.firestore.Timestamp.fromDate(date);
+                } else {
+                    console.warn(`[saveAutomatedCourseToFirestore] Invalid date string for createdAt: ${dataToSave.createdAt}. Setting to server timestamp.`);
+                    dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                }
+            } catch (e) {
+                console.warn(`[saveAutomatedCourseToFirestore] Error parsing createdAt string: ${e}. Setting to server timestamp.`);
+                dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+        } else if (!(dataToSave.createdAt instanceof firebase.firestore.Timestamp) &&
+                   !(typeof dataToSave.createdAt === 'object' && dataToSave.createdAt._methodName === 'FieldValue.serverTimestamp')) {
+            // If it's an object but not a Firestore Timestamp or FieldValue.serverTimestamp (e.g. from JSON.parse of a serverTimestamp placeholder)
+            // This case might be complex if SDK versions differ in how serverTimestamp placeholders are serialized/deserialized.
+            // For robustness, if it's not a recognized valid type, default to server timestamp.
+            console.warn(`[saveAutomatedCourseToFirestore] createdAt is not a string or Firestore Timestamp. Type: ${typeof dataToSave.createdAt}. Setting to server timestamp.`);
+            dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        }
+        // If it's already a Firestore Timestamp or FieldValue.serverTimestamp, it's fine.
+    } else {
+        // If createdAt is not provided at all
+        dataToSave.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+
+    // Always set/update updatedAt to server timestamp
+    dataToSave.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+
+    try {
+        await courseRef.set(dataToSave, { merge: true }); // Use merge:true to allow updates if doc exists
+        console.log(`[saveAutomatedCourseToFirestore] Course data successfully saved/updated for document ID: ${courseId}`);
+        return { success: true, courseId: courseId };
+    } catch (error) {
+        console.error(`[saveAutomatedCourseToFirestore] Error saving course data for document ID ${courseId}:`, error);
+        let message = `Failed to save course data: ${error.message}`;
+        if (error.code === 'permission-denied' || (error.message && error.message.toLowerCase().includes('permission'))) {
+            message = `Failed to save course data: Permission Denied. Check Firestore rules. Details: ${error.message}`;
+        }
+        return { success: false, message: message, error: error };
     }
 }
 // --- END NEW FUNCTION ---

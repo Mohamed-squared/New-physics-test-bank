@@ -8,6 +8,7 @@ const { transcribeLecture } = require('./lecture_transcription_service.js');
 const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.js');
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js');
 const { GEMINI_API_KEY } = require('./server_config.js');
+const { saveAutomatedCourseToFirestore } = require('./firebase_firestore.js');
 
 let courseServiceApiKeyIndex = 0;
 
@@ -350,12 +351,28 @@ async function automateNewCourseCreation(params) {
         if (results.firestoreDataPreview && results.firestoreDataPreview.status) {
             logProgress(`Course data prepared with status: '${results.firestoreDataPreview.status}'. Check for manual approval/publishing steps if not visible to users.`, results);
         }
-        results.success = true;
-        results.message = "Course automation tasks completed successfully. Firestore data preview logged.";
-        results.firestoreDataPreview.currentAutomationStep = "Completed Successfully";
+        results.firestoreDataPreview.currentAutomationStep = "Attempting to Save Course to Firestore";
+        logProgress('Attempting to save final course data to Firestore...', results);
+
+        const firestoreSaveResult = await saveAutomatedCourseToFirestore(results.firestoreDataPreview);
+
+        if (firestoreSaveResult.success) {
+            logProgress(`Firestore write successful for course: ${firestoreSaveResult.courseId}`, results);
+            results.success = true;
+            results.message = `Course automation tasks completed successfully. Course ID: ${firestoreSaveResult.courseId} saved to Firestore.`;
+            results.firestoreDataPreview.currentAutomationStep = "Course Saved to Firestore";
+            results.firestoreDataPreview.courseId = firestoreSaveResult.courseId; // Add courseId to preview
+        } else {
+            logProgress(`Firestore write FAILED: ${firestoreSaveResult.message}`, results, 'error');
+            results.success = false;
+            results.message = `Course automation completed with errors. Firestore save FAILED: ${firestoreSaveResult.message}`;
+            // Include more detailed error if available, truncate if too long
+            const detailedError = firestoreSaveResult.error ? String(firestoreSaveResult.error).substring(0, 200) : firestoreSaveResult.message;
+            results.firestoreDataPreview.currentAutomationStep = `Failed: Firestore Save Error - ${detailedError}`;
+        }
 
     } catch (error) {
-        logProgress(error, results, 'error'); 
+        logProgress(error, results, 'error');
         results.success = false;
         results.message = `Course automation failed: ${error.message || String(error)}`;
         results.firestoreDataPreview.currentAutomationStep = `Failed: ${error.message || String(error)}`;

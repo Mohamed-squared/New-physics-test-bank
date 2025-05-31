@@ -264,9 +264,10 @@ Generate problems now.
         }
 
         // --- 6. Update Firestore ---
-        logQGen(logContext, `Firestore update SKIPPED.`); // Keep this logic as Firestore is out of scope for this change
+        // logQGen(logContext, `Firestore update SKIPPED.`); // Removed as per request
         const chapterResources = {}; 
         if (!chapterResources[chapterKey]) {
+            // This warning is still relevant if chapterKey is unexpectedly missing from a local/mock structure.
             logQGen(logContext, `Chapter key "${chapterKey}" not found in placeholder chapterResources. Initializing.`, 'warn');
             chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] }; 
         }

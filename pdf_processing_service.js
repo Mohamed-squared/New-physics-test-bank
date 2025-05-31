@@ -95,7 +95,7 @@ async function processTextbookPdf(
         if (!uploadedFullPdf || !uploadedFullPdf.id) throw new Error('Failed to upload full PDF to Google Drive or ID not returned.');
         fullPdfGoogleDriveDetails = { id: uploadedFullPdf.id, link: uploadedFullPdf.webViewLink };
         logPdfProcess(courseId, `Full textbook PDF uploaded to Google Drive: ID ${fullPdfGoogleDriveDetails.id}, Link: ${fullPdfGoogleDriveDetails.link}`);
-        logPdfProcess(courseId, `Firestore update for full textbook link SKIPPED.`);
+        // logPdfProcess(courseId, `Firestore update for full textbook link SKIPPED.`); // Removed
 
         // --- 3. AI Table of Contents Analysis (Code for image extraction and AI call remains largely the same) ---
         logPdfProcess(courseId, 'Starting Table of Contents (ToC) analysis...');
@@ -208,11 +208,15 @@ async function processTextbookPdf(
             });
         }
         
-        if (chapterFirestoreData.length > 0) {
-            logPdfProcess(courseId, `Firestore update for chapter PDF details SKIPPED.`);
-        } else {
-            logPdfProcess(courseId, "No chapters processed/uploaded. Firestore not updated.", 'warn');
+        // if (chapterFirestoreData.length > 0) {
+            // logPdfProcess(courseId, `Firestore update for chapter PDF details SKIPPED.`); // Removed
+        // } else {
+            // logPdfProcess(courseId, "No chapters processed/uploaded. Firestore not updated.", 'warn'); // Kept this warning as it's relevant
+        // }
+        if (chapterFirestoreData.length === 0) {
+            logPdfProcess(courseId, "No chapters processed/uploaded. This might indicate an issue or an empty/short PDF.", 'warn');
         }
+
 
         return {
             success: true, message: "Textbook PDF processed, split, and uploaded to Google Drive.",
