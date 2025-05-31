@@ -162,10 +162,21 @@ async function automateNewCourseCreation(params) {
 
     try {
         results.firestoreDataPreview.currentAutomationStep = "Initializing Google Drive Service";
-        // Assuming serverGoogleDrive is already initialized (e.g., on server startup using env vars for keys)
-        // If not, serverGoogleDrive.initialize(API_KEY, SERVICE_ACCOUNT_PATH) would be called here.
-        // For this script, we'll proceed as if it's ready.
-        logProgress('Google Drive service assumed to be initialized.', results);
+        // IMPORTANT: Replace 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json' with the actual path to your service account key file.
+        // This file should be kept secure and not publicly accessible.
+        // It's recommended to use environment variables to store the path.
+        const SERVICE_ACCOUNT_KEY_PATH = process.env.GOOGLE_APP_SERVICE_ACCOUNT || 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json';
+
+        // Initialize the server-side Google Drive service with the service account key.
+        // This should ideally be done once when the application server starts,
+        // but if this service is run as a standalone script or different entry point,
+        // initializing here is necessary. Ensure it's not re-initialized unnecessarily if it's a singleton.
+        if (SERVICE_ACCOUNT_KEY_PATH === 'YOUR_SERVICE_ACCOUNT_KEY_PATH_HERE.json') {
+            logProgress('CRITICAL: Service Account Key Path not configured. Google Drive operations will fail.', results, 'error');
+            throw new Error('Google Drive Service Account Key Path not configured.');
+        }
+        await serverGoogleDrive.initialize(SERVICE_ACCOUNT_KEY_PATH);
+        logProgress('Google Drive service initialized with Service Account for automation.', results);
 
         results.firestoreDataPreview.currentAutomationStep = "Creating Google Drive Folder Structure";
         logProgress(`Creating base Google Drive folder structure for ${courseIdPlaceholder}...`, results);

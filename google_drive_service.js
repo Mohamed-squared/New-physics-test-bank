@@ -1,20 +1,21 @@
 // Google Drive API Client Library
-const GDRIVE_API_KEY = 'AIzaSyBkBeXMuIsUJb-gGDAf7nLeOJk3var_uww'; // Replace with your actual API key
-const GDRIVE_CLIENT_ID = 'YOUR_CLIENT_ID'; // Replace with your actual Client ID for OAuth
+const GDRIVE_API_KEY = 'AIzaSyBkBeXMuIsUJb-gGDAf7nLeOJk3var_uww'; // For discovery and non-OAuth calls
+const GDRIVE_CLIENT_ID = '989482145642-8kglr8m87djth2o3iu81kh8ui70uv6kk.apps.googleusercontent.com'; // Provided Client ID
 const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-const SCOPES = 'https://www.googleapis.com/auth/drive'; // Adjust scopes as needed
+const SCOPES = 'https://www.googleapis.com/auth/drive'; // Adjust scopes as needed (e.g., drive.file, drive.readonly)
 
 let gapiLoaded = false;
 let gisLoaded = false;
 let tokenClient;
+let currentAccessToken = null; // To store the current access token object { access_token, expires_in, scope, ... }
+let accessTokenExpiry = 0; // Timestamp when the current access token expires
 
 /**
  * Loads the Google API client library and Google Identity Services.
  * Initializes the API client and token client for OAuth2.
- * Note: API Key usage with Drive API is very limited. Most operations
- * that involve user data or creating/modifying content require OAuth2.
  */
 export async function initialize() {
+    console.log('Initializing Google Drive Service...');
     return new Promise((resolve, reject) => {
         const scriptGapi = document.createElement('script');
         scriptGapi.src = 'https://apis.google.com/js/api.js';
@@ -24,14 +25,19 @@ export async function initialize() {
             gapiLoaded = true;
             gapi.load('client', async () => {
                 try {
+                    // Initialize GAPI client for API discovery and non-token calls
                     await gapi.client.init({
                         apiKey: GDRIVE_API_KEY,
                         discoveryDocs: DISCOVERY_DOCS,
                     });
-                    console.log('Google API client initialized.');
-                    if (gisLoaded) resolveService();
+                    console.log('GAPI client initialized (for discovery).');
+                    if (gisLoaded && tokenClient) resolveService();
+                    else if (gisLoaded && !tokenClient) { // GIS loaded but token client init failed or pending
+                        console.warn("GAPI client loaded, GIS loaded, but tokenClient might not be ready. Attempting to initialize token client again if needed.");
+                        initializeTokenClient(resolve, reject, resolveService); // Try to init token client
+                    }
                 } catch (error) {
-                    console.error('Error initializing Google API client:', error);
+                    console.error('Error initializing GAPI client:', error);
                     reject(error);
                 }
             });
@@ -45,122 +51,122 @@ export async function initialize() {
         scriptGis.defer = true;
         scriptGis.onload = () => {
             gisLoaded = true;
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GDRIVE_CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // Callback will be handled by individual function calls
-            });
-            console.log('Google Identity Services initialized.');
-            if (gapiLoaded) resolveService();
+            console.log('Google Identity Services (GIS) script loaded.');
+            initializeTokenClient(resolve, reject, resolveService);
         };
         scriptGis.onerror = () => reject(new Error('Failed to load GIS script.'));
         document.body.appendChild(scriptGis);
 
         const resolveService = () => {
-            console.log('Google Drive service ready.');
+            console.log('Google Drive service ready (GAPI & GIS initialized).');
             resolve();
         };
     });
 }
 
-/**
- * Helper function to ensure GAPI client is loaded and authenticated.
- * This version uses API Key. For operations requiring OAuth, this needs modification.
- * For OAuth, it would typically check for an existing token or request one.
- */
-async function ensureClientReady() {
-    if (!gapiLoaded || !gapi.client) {
-        throw new Error('Google API client not loaded. Call initialize() first.');
+function initializeTokenClient(resolve, reject, resolveServiceCallback) {
+    if (!gisLoaded) {
+        console.warn("GIS not loaded, cannot initialize token client yet.");
+        return;
     }
-    // For API Key, no explicit per-operation auth needed beyond initial gapi.client.init
-    // If OAuth were used, this is where token check/refresh would happen.
-    // Example:
-    // if (!gapi.client.getToken()) {
-    //     await requestUserToken(); // This would trigger OAuth flow
-    // }
+    if (tokenClient) { // Already initialized
+         if (gapiLoaded) resolveServiceCallback();
+        return;
+    }
+    try {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GDRIVE_CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => { // This callback handles the response from requestAccessToken
+                if (tokenResponse && tokenResponse.access_token) {
+                    console.log('Access token received via initTokenClient callback.');
+                    currentAccessToken = tokenResponse;
+                    accessTokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+                    gapi.client.setToken(tokenResponse); // Set token for GAPI client
+                    // If there was a pending promise from requestUserToken, it should be resolved here.
+                    // This callback is primarily for the implicit flow of initTokenClient.
+                } else if (tokenResponse && tokenResponse.error) {
+                    console.error('Error in token response (initTokenClient callback):', tokenResponse.error);
+                    // This error will be caught by the requestAccessToken promise if it was explicit.
+                }
+            },
+        });
+        console.log('Google Identity Services (GIS) token client initialized.');
+        if (gapiLoaded) resolveServiceCallback();
+    } catch (error) {
+        console.error('Error initializing GIS token client:', error);
+        reject(new Error('Failed to initialize GIS token client.'));
+    }
 }
 
+
 /**
- * Prompts the user for OAuth2 token if not already granted.
- * This is a placeholder for a full OAuth flow.
+ * Requests an OAuth2 token from the user if a valid one is not already available.
+ * Stores the token and its expiry time.
+ * @returns {Promise<string>} The access token string.
+ * @throws {Error} If token acquisition fails or client is not initialized.
  */
-async function requestUserToken() {
+export async function requestUserToken() {
+    if (!gapiLoaded || !gisLoaded || !tokenClient) {
+        console.error('Google Drive service or token client not initialized. Call initialize() first.');
+        await initialize(); // Try to initialize if not already
+        if (!gapiLoaded || !gisLoaded || !tokenClient) { // Check again after attempt
+             throw new Error('Google Drive service or token client failed to initialize.');
+        }
+    }
+
+    if (currentAccessToken && accessTokenExpiry > Date.now() + 60000) { // Check if token exists and not expiring in next minute
+        console.log('Using existing valid access token.');
+        // Ensure GAPI client has the token (it should if currentAccessToken is set via the callback)
+        if (gapi.client.getToken() === null && currentAccessToken) {
+            gapi.client.setToken(currentAccessToken);
+        }
+        return currentAccessToken.access_token;
+    }
+
+    console.log('Requesting new access token...');
     return new Promise((resolve, reject) => {
-        if (!tokenClient) {
-            return reject(new Error("Token client not initialized."));
-        }
-        tokenClient.callback = (resp) => {
-            if (resp.error) {
-                console.error('Google OAuth Error:', resp.error);
-                return reject(resp);
+        tokenClient.callback = (tokenResponse) => { // Override callback for this specific request
+            if (tokenResponse && tokenResponse.access_token) {
+                console.log('New access token acquired successfully.');
+                currentAccessToken = tokenResponse;
+                accessTokenExpiry = Date.now() + (tokenResponse.expires_in * 1000);
+                gapi.client.setToken(tokenResponse); // Set token for GAPI client usage
+                resolve(tokenResponse.access_token);
+            } else {
+                const errorMsg = tokenResponse.error || 'Unknown error during token acquisition.';
+                console.error('Failed to acquire access token:', errorMsg, tokenResponse);
+                currentAccessToken = null;
+                accessTokenExpiry = 0;
+                reject(new Error(`Failed to acquire access token: ${errorMsg}`));
             }
-            console.log('OAuth token acquired.');
-            gapi.client.setToken(resp);
-            resolve(resp);
         };
-        // Check if we have a token, if not, request one.
-        // This is a simplified check. Robust applications manage token expiry.
-        if (gapi.client.getToken() === null) {
-            // Prompt the user to select an account and grant access
-            tokenClient.requestAccessToken({prompt: 'consent'});
-        } else {
-            // Token already exists
-            resolve(gapi.client.getToken());
-        }
+        tokenClient.requestAccessToken({ prompt: 'consent' }); // Force consent screen for explicit request
     });
 }
 
-/**
- * Finds a folder by name within a specific parent folder.
- * @param {string} folderName The name of the folder to find.
- * @param {string} parentFolderId The ID of the parent folder. Defaults to 'root'.
- * @returns {Promise<object|null>} The folder object if found, otherwise null.
- * Requires OAuth2. API Key cannot be used for searching user's Drive.
- */
 export async function findFolder(folderName, parentFolderId = 'root') {
-    console.warn("findFolder typically requires OAuth2. API Key access to user's Drive is restricted.");
-    await ensureClientReady();
-    // This is a placeholder: actual user authentication (OAuth2) is needed here.
-    // await requestUserToken(); // Uncomment and implement for OAuth
-
+    await requestUserToken(); // Ensures token is available and set for gapi.client
+    console.log(`Searching for folder "${folderName}" in parent ID "${parentFolderId}" using OAuth token.`);
     try {
         const response = await gapi.client.drive.files.list({
             q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentFolderId}' in parents and trashed=false`,
             fields: 'files(id, name, webViewLink, parents)',
-            // Use corpora = 'user' for user's files; requires OAuth.
-            // corpora: 'user',
-            // For API key, you might only be able to search publicly shared files or files owned by the service account.
-            // This example assumes a context where API key might work (e.g., public data) or serves as a structure for OAuth.
+            spaces: 'drive',
         });
         if (response.result.files && response.result.files.length > 0) {
-            console.log(`Folder "${folderName}" found:`, response.result.files[0]);
             return response.result.files[0];
-        } else {
-            console.log(`Folder "${folderName}" not found in parent "${parentFolderId}".`);
-            return null;
         }
+        return null;
     } catch (error) {
         console.error(`Error finding folder "${folderName}":`, error);
-        if (error.result && error.result.error && error.result.error.message.includes("insufficientPermissions")) {
-            console.error("This operation likely requires OAuth2 authentication for user-specific data.");
-        }
         throw error;
     }
 }
 
-/**
- * Creates a folder with the given name under a specific parent folder.
- * @param {string} folderName The name for the new folder.
- * @param {string} parentFolderId The ID of the parent folder. Defaults to 'root'.
- * @returns {Promise<object>} The created folder object.
- * Requires OAuth2. API Key cannot create folders in user's Drive.
- */
 export async function createFolder(folderName, parentFolderId = 'root') {
-    console.warn("createFolder requires OAuth2. API Key cannot create folders in user's Drive.");
-    await ensureClientReady();
-    // This is a placeholder: actual user authentication (OAuth2) is needed here.
-    // await requestUserToken(); // Uncomment and implement for OAuth
-
+    await requestUserToken();
+    console.log(`Creating folder "${folderName}" in parent ID "${parentFolderId}" using OAuth token.`);
     try {
         const fileMetadata = {
             name: folderName,
@@ -171,35 +177,18 @@ export async function createFolder(folderName, parentFolderId = 'root') {
             resource: fileMetadata,
             fields: 'id, name, webViewLink, parents'
         });
-        console.log(`Folder "${folderName}" created successfully:`, response.result);
         return response.result;
     } catch (error) {
         console.error(`Error creating folder "${folderName}":`, error);
-        if (error.result && error.result.error && error.result.error.message.includes("insufficientPermissions")) {
-            console.error("This operation likely requires OAuth2 authentication.");
-        }
         throw error;
     }
 }
 
-/**
- * Uploads a file to a specific folder.
- * @param {File} fileObject The file object to upload.
- * @param {string} remoteFileName Optional. The name for the file on Google Drive. Defaults to fileObject.name.
- * @param {string} targetFolderId The ID of the folder where the file should be uploaded. Defaults to 'root'.
- * @returns {Promise<object>} The uploaded file object from Google Drive.
- * Requires OAuth2. API Key cannot upload files to user's Drive.
- */
 export async function uploadFile(fileObject, remoteFileName, targetFolderId = 'root') {
-    console.warn("uploadFile requires OAuth2. API Key cannot upload files to user's Drive.");
-    await ensureClientReady();
-    // This is a placeholder: actual user authentication (OAuth2) is needed here.
-    // await requestUserToken(); // Uncomment and implement for OAuth
+    const token = await requestUserToken(); // Get token for fetch
+    console.log(`Uploading file "${remoteFileName || fileObject.name}" to folder ID "${targetFolderId}" using OAuth token.`);
 
-    if (!fileObject) {
-        throw new Error('File object is required for uploading a file.');
-    }
-
+    if (!fileObject) throw new Error('File object is required.');
     const actualRemoteFileName = remoteFileName || fileObject.name;
 
     try {
@@ -211,198 +200,80 @@ export async function uploadFile(fileObject, remoteFileName, targetFolderId = 'r
         })], { type: 'application/json' }));
         form.append('file', fileObject);
 
-        // Use fetch for multipart upload as gapi.client.drive.files.create with media body
-        // can be tricky for browser environments directly without more complex setup.
-        // The 'uploadType=multipart' is standard for Google API direct uploads.
-        const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&key=${GDRIVE_API_KEY}`, {
+        const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, { // API Key removed from URL
             method: 'POST',
             headers: new Headers({
-                // The Authorization header is set by gapi.client if using OAuth.
-                // For API key uploads (if supported for specific scenarios, e.g. to a service account owned resource),
-                // the key is in the URL. If using OAuth, gapi.client provides the token.
-                'Authorization': `Bearer ${gapi.client.getToken() ? gapi.client.getToken().access_token : ''}`,
+                'Authorization': `Bearer ${token}`, // Use obtained token
             }),
             body: form
         });
-
         if (!response.ok) {
             const errorData = await response.json();
-            console.error('Error uploading file:', errorData);
             throw new Error(`Upload failed: ${errorData.error.message}`);
         }
-
-        const result = await response.json();
-        console.log(`File "${actualRemoteFileName}" uploaded successfully:`, result);
-        return result;
-
+        return await response.json();
     } catch (error) {
         console.error(`Error uploading file "${actualRemoteFileName}":`, error);
-        if (error.message && (error.message.includes("insufficientPermissions") || error.message.includes("authError"))) {
-            console.error("This operation likely requires OAuth2 authentication.");
-        }
         throw error;
     }
 }
 
-
-/**
- * Downloads a file from Google Drive.
- * @param {string} fileId The ID of the file to download.
- * @returns {Promise<Blob>} A Blob containing the file data.
- * Requires OAuth2 or that the file is publicly accessible or accessible to the API key.
- */
 export async function downloadFile(fileId, desiredFileName) {
-    await ensureClientReady();
-    // If file is not public, OAuth2 is likely needed.
-    // await requestUserToken(); // Uncomment and implement for OAuth if needed.
-
-    if (!fileId) {
-        throw new Error('File ID is required for download.');
-    }
+    await requestUserToken();
+    if (!fileId) throw new Error('File ID is required.');
+    console.log(`Downloading file ID "${fileId}" as "${desiredFileName || 'unknown'}" using OAuth token.`);
 
     try {
-        // Get file metadata to ascertain name if desiredFileName is not provided
-        const metadataResponse = await gapi.client.drive.files.get({
-            fileId: fileId,
-            fields: 'name, mimeType, size'
-        });
+        const metadataResponse = await gapi.client.drive.files.get({ fileId, fields: 'name, mimeType' });
         const fileMetadata = metadataResponse.result;
         const fileName = desiredFileName || fileMetadata.name;
 
-        console.log(`Starting download of "${fileName}" (ID: ${fileId})`);
+        const response = await gapi.client.drive.files.get({ fileId, alt: 'media' });
 
-        // The alt=media parameter is crucial for direct file download.
-        const response = await gapi.client.drive.files.get({
-            fileId: fileId,
-            alt: 'media'
-        });
-
-        // response.body contains the file content directly for non-Google Docs types.
-        // For Google Docs, use files.export method. This example assumes direct download.
-        if (response.body && typeof response.body === 'string') { // Check if body is string (binary data)
-             // Convert base64 string or similar to Blob, depending on gapi.client behavior for binary
-            // For simplicity, assuming it's raw data that can be blobbed.
-            // Actual conversion might be needed if gapi returns it in a specific format.
+        if (response.body && typeof response.body === 'string') {
             const blob = new Blob([response.body], { type: response.headers['Content-Type'] || fileMetadata.mimeType });
-
-            // Create a link and trigger download
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = fileName;
-
-            document.body.appendChild(a);
-            a.click();
-
-            document.body.removeChild(a);
+            a.style.display = 'none'; a.href = url; a.download = fileName;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
             URL.revokeObjectURL(url);
-
-            console.log(`File "${fileName}" download initiated in browser.`);
             return { name: fileName, size: blob.size, mimeType: blob.type };
-
-        } else if (response.result && response.result.error) { // Check for explicit error in result
-            console.error(`Error in download response for "${fileName}":`, response.result.error);
+        } else if (response.result && response.result.error) {
             throw new Error(response.result.error.message);
-        } else if (!response.body && !response.status) { // No body and no status might mean it's a Google Doc type
-             console.warn(`File "${fileName}" might be a Google Workspace document. Standard download via alt=media is not applicable. Use files.export instead.`);
-             throw new Error(`Cannot directly download Google Workspace file type: "${fileMetadata.mimeType}". Use export method.`);
-        } else { // Fallback for unexpected response structure
-            console.error(`Unexpected response structure during download of "${fileName}":`, response);
-            throw new Error('Failed to download file due to unexpected response.');
+        } else if (!response.body && response.status !== 200 && response.status !== 204) { // GDocs often return 204 with no body for alt=media if not exportable this way
+             throw new Error(`Cannot directly download Google Workspace file type: "${fileMetadata.mimeType}". Use export method or check permissions.`);
+        } else {
+             throw new Error('Failed to download file due to unexpected response or empty body for non-GDocs file.');
         }
-
     } catch (error) {
         console.error(`Error downloading file ID "${fileId}":`, error);
-        if (error.result && error.result.error && error.result.error.message.includes("notFound")) {
-            console.error("File not found or you may not have permission to access it.");
-        } else if (error.message && error.message.includes("insufficientPermissions")) {
-            console.error("This operation might require OAuth2 or the file isn't shared appropriately.");
-        }
         throw error;
     }
 }
 
-
-/**
- * Lists the contents of a folder.
- * @param {string} folderId The ID of the folder. Defaults to 'root'.
- * @returns {Promise<Array<object>>} An array of file/folder objects.
- * Requires OAuth2 or that the folder/files are publicly accessible.
- */
 export async function getFolderContents(folderId = 'root') {
-    console.warn("getFolderContents typically requires OAuth2 for user-specific folders. API Key access is limited.");
-    await ensureClientReady();
-    // This is a placeholder: actual user authentication (OAuth2) is needed here.
-    // await requestUserToken(); // Uncomment and implement for OAuth
-
+    await requestUserToken();
+    console.log(`Listing contents for folder ID "${folderId}" using OAuth token.`);
     try {
         const response = await gapi.client.drive.files.list({
             q: `'${folderId}' in parents and trashed=false`,
             fields: 'files(id, name, mimeType, webViewLink, size, modifiedTime, iconLink)',
-            // corpora: 'user', // if using OAuth for user's files
             orderBy: 'folder,name'
         });
-        console.log(`Contents of folder ID "${folderId}":`, response.result.files);
         return response.result.files.map(f => ({
-            id: f.id,
-            name: f.name,
+            id: f.id, name: f.name,
             type: f.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file',
-            link: f.webViewLink,
-            size: f.size, // Size might not be available for folders or Google Docs
-            modifiedTime: f.modifiedTime,
-            iconLink: f.iconLink
+            link: f.webViewLink, size: f.size, modifiedTime: f.modifiedTime, iconLink: f.iconLink
         }));
     } catch (error) {
         console.error(`Error listing folder contents for ID "${folderId}":`, error);
-        if (error.result && error.result.error && error.result.error.message.includes("insufficientPermissions")) {
-            console.error("This operation likely requires OAuth2 authentication for this folder.");
-        }
         throw error;
     }
 }
 
-// Placeholder for any other utility functions that might be needed,
-// e.g., deleting files, renaming, etc.
-// Remember to maintain generic export names if they were used previously.
-
-// --- Removed MEGA specific exports ---
-// export { MEGA_EMAIL, MEGA_PASSWORD }; // These are removed
-// export function getMegaStorage() { return megaStorage; } // This is removed
-// ------------------------------------
-
-console.log('google_drive_service.js loaded - Call initialize() to start.');
-
-// Example of how to handle OAuth2 token expiration or initial request:
-// This is conceptual and would be integrated into ensureClientReady or similar logic.
-/*
-async function handleAuthClick() {
-    if (gapi.client.getToken() === null) {
-        // Prompt the user to select an Google Account and asked for consent to share their data
-        // when establishing a new session.
-        tokenClient.requestAccessToken({prompt: 'consent'});
-    } else {
-        // User is already authenticated, proceed with API call or token revocation.
-        // For example, to revoke a token: google.accounts.oauth2.revoke(gapi.client.getToken().access_token, () => {console.log('Token revoked')});
-        console.log("Already authenticated.");
-        // Potentially refresh token if it's expired, though gapi client library might handle some of this.
-    }
-}
-*/
-// It's good practice to provide a way for users to sign out or disconnect the app.
-/*
-export async function signOut() {
-    const token = gapi.client.getToken();
-    if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token, () => {
-            gapi.client.setToken('');
-            console.log('User signed out, token revoked.');
-            // Update UI accordingly
-        });
-    }
-}
-*/
-
+console.log('google_drive_service.js loaded with OAuth 2.0 enhancements - Call initialize() to start.');
+// --- Removed previous handleAuthClick and signOut examples as requestUserToken serves the auth purpose now ---
+// --- Upload queue logic comment remains valid ---
 // The UPLOAD_DELAY_MS and queue processing logic (previously used when this service managed Mega)
 // has been removed as Google Drive API uploads are typically single operations
 // and don't have the same type of rate limiting by default that would necessitate

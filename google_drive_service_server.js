@@ -5,76 +5,59 @@ const path = require('path');
 const { Readable } = require('stream');
 
 let drive;
-let driveApiKey;
-// const SERVICE_ACCOUNT_KEY_PATH = './path-to-your-service-account-key.json'; // Placeholder
+const SERVICE_ACCOUNT_EMAIL = 'lyceum@lyceum-461414.iam.gserviceaccount.com'; // For reference
+const DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive'];
 
 /**
- * Initializes the Google Drive service.
- * @param {string} apiKey - Google API Key.
- * @param {string} [serviceAccountPath] - Optional path to Google Service Account JSON key file.
- *                                      Recommended for server-side operations.
+ * Initializes the Google Drive service using a Service Account.
+ * @param {string} serviceAccountKeyPath - Path to Google Service Account JSON key file.
  * @returns {Promise<void>}
+ * @throws {Error} If initialization fails.
  */
-async function initialize(apiKey, serviceAccountPath = null) {
-  console.log('Initializing Google Drive service (server-side)...');
-  driveApiKey = apiKey; // Store for potential direct use if no service account
+async function initialize(serviceAccountKeyPath) {
+  console.log('Initializing Google Drive service (server-side) with Service Account...');
+
+  if (!serviceAccountKeyPath) {
+    throw new Error('Service Account Key Path is required for server-side Google Drive initialization.');
+  }
 
   try {
-    if (serviceAccountPath) {
-      // TODO: Uncomment and configure if using a service account
-      // const auth = new google.auth.GoogleAuth({
-      //   keyFile: serviceAccountPath || SERVICE_ACCOUNT_KEY_PATH,
-      //   scopes: ['https://www.googleapis.com/auth/drive'],
-      // });
-      // const authClient = await auth.getClient();
-      // drive = google.drive({ version: 'v3', auth: authClient });
-      // console.log('Google Drive service initialized with Service Account.');
+    const auth = new google.auth.GoogleAuth({
+      keyFilename: serviceAccountKeyPath,
+      scopes: DRIVE_SCOPES,
+    });
 
-      // For now, as service account path is optional and might not be provided/configured:
-      // Fallback or warning if service account is expected but not provided.
-      // Using API Key for server-to-server is very limited and generally not for user data.
-      // This setup primarily supports API key for public data access or specific scenarios.
-      // For full capabilities (accessing/modifying user data, acting on behalf of users),
-      // a service account or OAuth2 flow (for user consent) is necessary.
-      console.warn('Service Account path not provided. Attempting to initialize with API Key. Operations will be limited.');
-       drive = google.drive({ version: 'v3', auth: driveApiKey });
-       console.log('Google Drive service initialized with API Key (limited functionality).');
+    const authClient = await auth.getClient();
+    drive = google.drive({ version: 'v3', auth: authClient });
+    console.log('Google Drive service initialized successfully with Service Account:', SERVICE_ACCOUNT_EMAIL);
 
-    } else if (apiKey) {
-      // Initialize with API key directly (limited for many Drive operations)
-      drive = google.drive({ version: 'v3', auth: apiKey });
-      console.log('Google Drive service initialized with API Key (limited functionality).');
-    } else {
-      throw new Error('Google Drive API Key or Service Account Path is required for initialization.');
+    if (!drive) { // Should not happen if getClient() succeeds
+        throw new Error('Google Drive client could not be initialized even after auth.');
     }
-    if (!drive) {
-        throw new Error('Google Drive client could not be initialized.');
-    }
+
   } catch (error) {
-    console.error(`Google Drive service initialization failed: ${error.message}`, error);
-    drive = null;
-    throw new Error(`Google Drive service initialization failed: ${error.message}`);
+    console.error(`Google Drive service initialization with Service Account failed: ${error.message}`, error);
+    drive = null; // Reset on failure
+    throw new Error(`Google Drive service (Service Account) initialization failed: ${error.message}`);
   }
 }
-
 
 /**
  * Finds a folder by name within a specific parent folder.
  * @param {string} folderName - The name of the folder to find.
  * @param {string} [parentFolderId='root'] - The ID of the parent folder.
  * @returns {Promise<object|null>} The folder object if found, otherwise null.
- * Note: Requires appropriate authentication (API Key for public, Service Account/OAuth for private).
  */
 async function findFolder(folderName, parentFolderId = 'root') {
-  if (!drive) throw new Error('Google Drive service not initialized.');
+  if (!drive) throw new Error('Google Drive service not initialized. Call initialize(serviceAccountKeyPath) first.');
   console.log(`Searching for folder "${folderName}" in parent ID "${parentFolderId}"...`);
   try {
     const res = await drive.files.list({
       q: `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and '${parentFolderId}' in parents and trashed=false`,
       fields: 'files(id, name, webViewLink, parents)',
       spaces: 'drive',
-      // For API Key, might need: corpora: 'allDrives', includeItemsFromAllDrives: true, supportsAllDrives: true
-      // depending on where the folder is. User-specific searches usually need OAuth/Service Account.
+      supportsAllDrives: true, // Recommended for service accounts that might access Shared Drives
+      includeItemsFromAllDrives: true,
     });
     if (res.data.files && res.data.files.length > 0) {
       console.log(`Folder "${folderName}" found with ID: ${res.data.files[0].id}.`);
@@ -85,7 +68,6 @@ async function findFolder(folderName, parentFolderId = 'root') {
     }
   } catch (error) {
     console.error(`Error finding folder "${folderName}": ${error.message}`, error.response?.data?.error);
-    // Consider specific error handling, e.g., for 401/403 (auth issues) vs. 404 (not found logically handled by empty list)
     throw error;
   }
 }
@@ -95,10 +77,9 @@ async function findFolder(folderName, parentFolderId = 'root') {
  * @param {string} folderName - The name of the folder to create.
  * @param {string} [parentFolderId='root'] - The ID of the parent folder.
  * @returns {Promise<object>} The new or existing folder object.
- * Note: Typically requires Service Account or OAuth for write operations.
  */
 async function createFolder(folderName, parentFolderId = 'root') {
-  if (!drive) throw new Error('Google Drive service not initialized.');
+  if (!drive) throw new Error('Google Drive service not initialized. Call initialize(serviceAccountKeyPath) first.');
   console.log(`Attempting to create or find folder "${folderName}" in parent ID "${parentFolderId}"...`);
 
   const existingFolder = await findFolder(folderName, parentFolderId);
@@ -117,7 +98,7 @@ async function createFolder(folderName, parentFolderId = 'root') {
     const res = await drive.files.create({
       resource: fileMetadata,
       fields: 'id, name, webViewLink, parents',
-      supportsAllDrives: true, // Important if working with Shared Drives
+      supportsAllDrives: true,
     });
     console.log(`Folder "${folderName}" created successfully. ID: ${res.data.id}`);
     return res.data;
@@ -133,23 +114,21 @@ async function createFolder(folderName, parentFolderId = 'root') {
  * @param {string} remoteFileName - Name for the file on Google Drive.
  * @param {string} [targetFolderId='root'] - Google Drive folder ID to upload to.
  * @returns {Promise<object>} Details of the uploaded file from Google Drive API.
- * Note: Typically requires Service Account or OAuth for write operations.
  */
 async function uploadFile(localFilePath, remoteFileName, targetFolderId = 'root') {
-  if (!drive) throw new Error('Google Drive service not initialized.');
+  if (!drive) throw new Error('Google Drive service not initialized. Call initialize(serviceAccountKeyPath) first.');
   console.log(`Uploading local file "${localFilePath}" as "${remoteFileName}" to Drive folder ID "${targetFolderId}"...`);
 
   if (!fs.existsSync(localFilePath)) {
     throw new Error(`Local file not found: ${localFilePath}`);
   }
 
-  const fileSize = fs.statSync(localFilePath).size;
   const fileMetadata = {
     name: remoteFileName,
     parents: [targetFolderId],
   };
   const media = {
-    mimeType: 'application/octet-stream', // Or detect dynamically: const mime = require('mime-types'); mime.lookup(localFilePath) || 'application/octet-stream';
+    mimeType: 'application/octet-stream', // Consider using 'mime-types' package for dynamic detection
     body: fs.createReadStream(localFilePath),
   };
 
@@ -159,15 +138,7 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderId = 'root'
       media: media,
       fields: 'id, name, webViewLink, size, parents',
       supportsAllDrives: true,
-      // Implement resumable uploads for large files if necessary
-      // onUploadProgress: evt => {
-      //   const progress = (evt.bytesRead / fileSize) * 100;
-      //   console.log(`Upload progress for "${remoteFileName}": ${Math.round(progress)}%`);
-      // }
-    }
-    // For resumable, you'd use a different approach with uploadType=resumable
-    // and handle the upload session. For simplicity, direct upload is used here.
-    );
+    });
     console.log(`File "${remoteFileName}" uploaded successfully to Google Drive. ID: ${res.data.id}, Size: ${res.data.size}`);
     return res.data;
   } catch (error) {
@@ -184,23 +155,16 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderId = 'root'
  * @returns {Promise<string>} Full path to the downloaded local file.
  */
 async function downloadFile(fileId, localDirectoryPath, desiredFileName = null) {
-  if (!drive) throw new Error('Google Drive service not initialized.');
+  if (!drive) throw new Error('Google Drive service not initialized. Call initialize(serviceAccountKeyPath) first.');
   console.log(`Attempting to download Drive file ID "${fileId}" to directory "${localDirectoryPath}"...`);
 
   try {
-    // Get file metadata first to get the name if not provided
     let fileName = desiredFileName;
     if (!fileName) {
       const fileMetadata = await drive.files.get({ fileId: fileId, fields: 'name, mimeType', supportsAllDrives: true });
       fileName = fileMetadata.data.name;
-      // Handle potential Google Docs export if mimeType indicates it
       if (fileMetadata.data.mimeType.includes('google-apps')) {
-         console.warn(`File ${fileName} (ID: ${fileId}) is a Google Workspace document. Standard download (alt=media) may not work or may download a conversion. For specific export formats (e.g., PDF for Docs), use drive.files.export() instead.`);
-         // Example: If it's a Google Doc and you want PDF:
-         // const dest = fs.createWriteStream(path.join(localDirectoryPath, `${fileName}.pdf`));
-         // const res = await drive.files.export({ fileId: fileId, mimeType: 'application/pdf' }, { responseType: 'stream' });
-         // res.data.pipe(dest); ... return promise for finish/error
-         // This example will proceed with generic alt=media download.
+         console.warn(`File ${fileName} (ID: ${fileId}) is a Google Workspace document. Standard download (alt=media) may produce a conversion (e.g., PDF for Docs). For specific export formats, use drive.files.export().`);
       }
     }
 
@@ -227,7 +191,7 @@ async function downloadFile(fileId, localDirectoryPath, desiredFileName = null) 
         })
         .on('error', err => {
           console.error(`Error downloading file "${fileName}" from Drive:`, err);
-          fs.unlink(localFilePath, () => {}); // Attempt to delete partial file
+          fs.unlink(localFilePath, () => {});
           reject(err);
         })
         .pipe(dest);
@@ -244,7 +208,7 @@ async function downloadFile(fileId, localDirectoryPath, desiredFileName = null) 
  * @returns {Promise<Array<object>>} Array of objects representing folder contents.
  */
 async function getFolderContents(folderId = 'root') {
-  if (!drive) throw new Error('Google Drive service not initialized.');
+  if (!drive) throw new Error('Google Drive service not initialized. Call initialize(serviceAccountKeyPath) first.');
   console.log(`Fetching contents for Drive folder ID "${folderId}"...`);
   try {
     const res = await drive.files.list({
@@ -253,18 +217,18 @@ async function getFolderContents(folderId = 'root') {
       orderBy: 'folder, name',
       spaces: 'drive',
       supportsAllDrives: true,
-      includeItemsFromAllDrives: true, // Important for shared drives or items shared with service account
+      includeItemsFromAllDrives: true,
     });
 
     const contents = res.data.files.map(file => ({
       id: file.id,
       name: file.name,
       type: file.mimeType === 'application/vnd.google-apps.folder' ? 'folder' : 'file',
-      size: file.size ? parseInt(file.size, 10) : undefined, // Size is string, convert to int. Not present for folders.
+      size: file.size ? parseInt(file.size, 10) : undefined,
       modifiedTime: file.modifiedTime,
-      link: file.webViewLink, // User-friendly link to view in browser
-      iconLink: file.iconLink, // Link to item's icon
-      parents: file.parents, // Array of parent folder IDs
+      link: file.webViewLink,
+      iconLink: file.iconLink,
+      parents: file.parents,
     }));
 
     console.log(`Found ${contents.length} items in Drive folder ID "${folderId}".`);
@@ -282,6 +246,5 @@ module.exports = {
   uploadFile,
   downloadFile,
   getFolderContents,
-  // getDriveInstance: () => drive, // Optionally expose the drive instance if needed for direct advanced use
 };
-console.log('google_drive_service_server.js loaded.');
+console.log('google_drive_service_server.js loaded (now uses Service Account Auth).');
