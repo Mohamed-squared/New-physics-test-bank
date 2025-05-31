@@ -1,4 +1,5 @@
 const { PDFDocument } = require('pdf-lib');
+const { pathToFileURL } = require('url');
 let firestoreService;
 const fs = require('fs-extra');
 const path = require('path');
@@ -102,7 +103,7 @@ async function processTextbookPdf(
 
         if (!firestoreService) {
             try {
-                firestoreService = await import(firestoreModulePath);
+                firestoreService = await import(pathToFileURL(path.resolve(__dirname, firestoreModulePath)).href);
                 logPdfProcess(courseId, 'Firestore service dynamically imported successfully for full textbook update.', 'info');
             } catch (e) {
                 logPdfProcess(courseId, `Error during dynamic import for full textbook update: ${e.message}. Stack: ${e.stack}`, 'error');
@@ -244,7 +245,7 @@ async function processTextbookPdf(
 
         if (!firestoreService) {
             try {
-                firestoreService = await import(firestoreModulePathForChapters);
+                firestoreService = await import(pathToFileURL(path.resolve(__dirname, firestoreModulePathForChapters)).href);
                 logPdfProcess(courseId, 'Firestore service dynamically imported successfully for chapter PDF details.', 'info');
             } catch (e) {
                 logPdfProcess(courseId, `Error during dynamic import for chapter PDF details: ${e.message}. Stack: ${e.stack}`, 'error');

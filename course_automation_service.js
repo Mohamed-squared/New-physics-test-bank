@@ -1,5 +1,6 @@
 // course_automation_service.js
 let firestoreService;
+const { pathToFileURL } = require('url');
 const fs = require('fs-extra');
 const path = require('path');
 const serverGoogleDrive = require('./google_drive_service_server.js'); // RENAMED_IMPORT
@@ -365,7 +366,7 @@ async function automateNewCourseCreation(params) {
 
                 if (!firestoreService) {
                     try {
-                        firestoreService = await import(firestoreModulePath);
+                        firestoreService = await import(pathToFileURL(path.resolve(__dirname, firestoreModulePath)).href);
                         logProgress('Firestore service for final save dynamically imported successfully.', results, 'info');
                     } catch (e) {
                         logProgress(new Error(`Error during dynamic import for final save: ${e.message}. Stack: ${e.stack}`), results, 'error');
