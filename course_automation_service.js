@@ -360,7 +360,18 @@ async function automateNewCourseCreation(params) {
             results.firestoreDataPreview.currentAutomationStep = "Saving to Firestore";
             logProgress('Attempting to save final course data to Firestore...', results);
             try {
-                if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+                const firestoreModulePath = './firebase_firestore.js';
+                logProgress(`Attempting to dynamically import Firestore service for final save. Relative path: '${firestoreModulePath}'. Resolved path: '${path.resolve(__dirname, firestoreModulePath)}'`, results, 'info');
+
+                if (!firestoreService) {
+                    try {
+                        firestoreService = await import(firestoreModulePath);
+                        logProgress('Firestore service for final save dynamically imported successfully.', results, 'info');
+                    } catch (e) {
+                        logProgress(new Error(`Error during dynamic import for final save: ${e.message}. Stack: ${e.stack}`), results, 'error');
+                        throw e; // Re-throw to ensure the error propagates
+                    }
+                }
 
                 // The updateCourseDefinition function should ideally handle setting
                 // server timestamps for createdAt (on create) and updatedAt (on update).

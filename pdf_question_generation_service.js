@@ -268,7 +268,19 @@ Generate problems now.
         // --- 6. Update Firestore ---
         try {
             logQGen(logContext, 'Attempting to update Firestore with generated question links...');
-            if (!firestoreService) firestoreService = await import('./firebase_firestore.js'); // Ensure it's initialized
+
+            const firestoreModulePath = './firebase_firestore.js';
+            logQGen(logContext, `Attempting to dynamically import Firestore service. Relative path: '${firestoreModulePath}'. Resolved path: '${path.resolve(__dirname, firestoreModulePath)}'`, 'info');
+
+            if (!firestoreService) {
+                try {
+                    firestoreService = await import(firestoreModulePath);
+                    logQGen(logContext, 'Firestore service dynamically imported successfully.', 'info');
+                } catch (e) {
+                    logQGen(logContext, `Error during dynamic import: ${e.message}. Stack: ${e.stack}`, 'error');
+                    throw e; // Re-throw to ensure the error propagates
+                }
+            }
 
             const courseDetails = await firestoreService.getCourseDetails(courseId); // Assuming courseId is the document ID in 'courses' collection
             if (!courseDetails) {

@@ -97,7 +97,18 @@ async function processTextbookPdf(
         fullPdfGoogleDriveDetails = { id: uploadedFullPdf.id, link: uploadedFullPdf.webViewLink };
         logPdfProcess(courseId, `Full textbook PDF uploaded to Google Drive: ID ${fullPdfGoogleDriveDetails.id}, Link: ${fullPdfGoogleDriveDetails.link}`);
 
-        if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+        const firestoreModulePath = './firebase_firestore.js';
+        logPdfProcess(courseId, `Attempting to dynamically import Firestore service for full textbook update. Relative path: '${firestoreModulePath}'. Resolved path: '${path.resolve(__dirname, firestoreModulePath)}'`, 'info');
+
+        if (!firestoreService) {
+            try {
+                firestoreService = await import(firestoreModulePath);
+                logPdfProcess(courseId, 'Firestore service dynamically imported successfully for full textbook update.', 'info');
+            } catch (e) {
+                logPdfProcess(courseId, `Error during dynamic import for full textbook update: ${e.message}. Stack: ${e.stack}`, 'error');
+                throw e; // Re-throw to ensure the error propagates
+            }
+        }
 
         if (fullPdfGoogleDriveDetails && firestoreService) {
             try {
@@ -227,7 +238,19 @@ async function processTextbookPdf(
         }
         
         // Ensure firestoreService is initialized (it might have been by the full textbook update)
-        if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+        // Add diagnostic logging for chapter PDF details update
+        const firestoreModulePathForChapters = './firebase_firestore.js';
+        logPdfProcess(courseId, `Attempting to dynamically import Firestore service for chapter PDF details. Relative path: '${firestoreModulePathForChapters}'. Resolved path: '${path.resolve(__dirname, firestoreModulePathForChapters)}'`, 'info');
+
+        if (!firestoreService) {
+            try {
+                firestoreService = await import(firestoreModulePathForChapters);
+                logPdfProcess(courseId, 'Firestore service dynamically imported successfully for chapter PDF details.', 'info');
+            } catch (e) {
+                logPdfProcess(courseId, `Error during dynamic import for chapter PDF details: ${e.message}. Stack: ${e.stack}`, 'error');
+                throw e; // Re-throw to ensure the error propagates
+            }
+        }
 
         if (chapterFirestoreData && chapterFirestoreData.length > 0 && firestoreService) {
             try {
