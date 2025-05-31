@@ -2,7 +2,7 @@ const fs = require('fs-extra');
 const path = require('path');
 // const { initialize: gDriveInitialize, findFolder: gDriveFindFolder, createFolder: gDriveCreateFolder, uploadFile: gDriveUploadFile } = require('./google_drive_service.js'); // Client-side, not for server
 const serverGoogleDrive = require('./google_drive_service_server.js'); // Use the server-side Google Drive service
-// const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled
+const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled -> ENABLED
 const aiServer = require('./ai_integration_server.js');
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
@@ -120,15 +120,56 @@ async function generateQuestionsFromPdf(
         // --- 2. Extract Text from PDF ---
         logQGen(logContext, `Extracting text from PDF: ${downloadedPdfPath}`);
         const extractedPdfText = await aiServer.getAllPdfTextForAI(downloadedPdfPath); 
-        if (!extractedPdfText || extractedPdfText.trim().length < 100) { 
-            throw new Error(`Extracted text from PDF is too short or empty. Min 100 chars required. Length: ${extractedPdfText.trim().length}`);
+
+        if (!extractedPdfText || extractedPdfText.trim().length === 0) {
+            logQGen(logContext, `Skipping question generation for chapter "${chapterTitle}" (PDF ID: ${chapterPdfGoogleDriveId}) due to PDF text extraction failure or empty text.`, 'warn');
+            // Ensure Firestore is updated with PDF link but null for question links for this chapter
+            // This will happen naturally if uploadedFileDetails for MCQ/Problems remain null
+            // The function should return a specific status that course_automation_service can handle
+            // without halting the entire batch.
+
+            // Update Firestore with available GDrive PDF link, even if Q-gen fails
+            const courseDetails = await getCourseDetails(courseId);
+            if (courseDetails) {
+                const chapterResources = courseDetails.chapterResources || {};
+                if (!chapterResources[chapterKey]) {
+                    chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] };
+                }
+                if (!chapterResources[chapterKey].otherResources) {
+                    chapterResources[chapterKey].otherResources = [];
+                }
+                 // Add/update the PDF resource link if it was downloaded (it must have been to reach here)
+                 // This part might be redundant if the PDF link is already added by another process,
+                 // but ensures it's there if this service is the one responsible for initially noting the PDF.
+                 // For now, this service focuses on Q-gen, assuming PDF link is handled elsewhere or if not,
+                 // this won't add it. The primary goal is to ensure question links are null.
+            } else {
+                 logQGen(logContext, `Could not retrieve course details for ${courseId} to mark chapter PDF link during Q-Gen skip.`, 'warn');
+            }
+            // The existing Firestore update logic later in the function will handle setting MCQ/Problem links to null
+            // because the generation steps for them will be skipped.
+            // We need to let the function proceed to the Firestore update section, but without attempting to generate Qs.
+            // To do this, we'll effectively bypass the generation loops by setting textChunks to empty.
+             logQGen(logContext, `Text extracted successfully but was empty or failed extraction. Length: ${extractedPdfText ? extractedPdfText.length : 'null'}. Proceeding to Firestore update stage with no new questions.`, 'info');
+
+        } else if (extractedPdfText.trim().length < 100) {
+            logQGen(logContext, `Extracted text from PDF for chapter "${chapterTitle}" (PDF ID: ${chapterPdfGoogleDriveId}) is too short (length: ${extractedPdfText.trim().length}). Min 100 chars required. Skipping Q-Gen.`, 'warn');
+            // Similar to above, proceed to Firestore update stage with no new questions.
+        } else {
+            logQGen(logContext, `Text extracted successfully. Length: ${extractedPdfText.length} characters.`);
         }
-        logQGen(logContext, `Text extracted successfully. Length: ${extractedPdfText.length} characters.`);
 
         // --- 3. Chunk Text and Generate TextMCQ.md ---
         logQGen(logContext, `Splitting extracted text into chunks. Max chars: ${MAX_CHAR_PER_CHUNK}, Overlap: ${OVERLAP_CHAR_COUNT}`);
-        const textChunks = splitTextIntoChunks(extractedPdfText, MAX_CHAR_PER_CHUNK, OVERLAP_CHAR_COUNT);
-        logQGen(logContext, `Text split into ${textChunks.length} chunks.`);
+        const textChunks = (!extractedPdfText || extractedPdfText.trim().length < 100)
+            ? []
+            : splitTextIntoChunks(extractedPdfText, MAX_CHAR_PER_CHUNK, OVERLAP_CHAR_COUNT);
+
+        if (textChunks.length > 0) {
+            logQGen(logContext, `Text split into ${textChunks.length} chunks.`);
+        } else {
+            logQGen(logContext, `No text chunks to process for chapter "${chapterTitle}". Question generation will be skipped.`, 'info');
+        }
 
         let allMcqContent = "";
         const exampleMcqSyntax = await fs.readFile('example_TextMCQ.md', 'utf-8');
@@ -264,40 +305,101 @@ Generate problems now.
         }
 
         // --- 6. Update Firestore ---
-        logQGen(logContext, `Firestore update SKIPPED.`); // Keep this logic as Firestore is out of scope for this change
-        const chapterResources = {}; 
+        logQGen(logContext, `Preparing to update Firestore for course ${courseId}, chapter ${chapterKey} with generated question data (if any).`);
+
+        const courseDetails = await getCourseDetails(courseId);
+        if (!courseDetails) {
+            // If course details cannot be fetched, we cannot update. This is a more critical error.
+            logQGen(logContext, `Failed to retrieve course details for ${courseId}. Cannot update Firestore for chapter ${chapterKey}.`, 'error');
+            // Return a failure that indicates this specific chapter's Firestore update part failed.
+            // The overall success of Q-gen might be true if files were uploaded to GDrive, but Firestore part is problematic.
+            return {
+                success: false, // Indicate overall failure for this chapter's processing if FS update is critical
+                message: `Question generation for chapter ${chapterTitle} completed for GDrive, but failed to retrieve course details for Firestore update. GDrive MCQ ID: ${uploadedFileDetails['generated_mcq_markdown']?.id}, Problems ID: ${uploadedFileDetails['generated_problems_markdown']?.id}`,
+                mcqGoogleDriveId: uploadedFileDetails['generated_mcq_markdown']?.id || null,
+                mcqGoogleDriveLink: uploadedFileDetails['generated_mcq_markdown']?.link || null,
+                problemsGoogleDriveId: uploadedFileDetails['generated_problems_markdown']?.id || null,
+                problemsGoogleDriveLink: uploadedFileDetails['generated_problems_markdown']?.link || null,
+                error: `Failed to retrieve course details for ${courseId}.`
+            };
+        }
+
+        const chapterResources = courseDetails.chapterResources || {};
+
         if (!chapterResources[chapterKey]) {
-            logQGen(logContext, `Chapter key "${chapterKey}" not found in placeholder chapterResources. Initializing.`, 'warn');
-            chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] }; 
+            logQGen(logContext, `Chapter key "${chapterKey}" not found in existing course resources. Initializing structure.`);
+            chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] };
         }
-        if (!chapterResources[chapterKey].otherResources) { 
-            chapterResources[chapterKey].otherResources = []; 
+        if (!chapterResources[chapterKey].otherResources) {
+            chapterResources[chapterKey].otherResources = [];
         }
+
+        // Remove any old generated files of the same type for this chapter
         chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources.filter(
             res => !(res.type === 'generated_mcq_markdown' || res.type === 'generated_problems_markdown')
         );
-        if (uploadedFileDetails['generated_mcq_markdown']) {
+
+        let firestoreMessageSuffix = "Firestore updated.";
+        // Add MCQ and Problem links only if they were generated and uploaded
+        if (uploadedFileDetails['generated_mcq_markdown']?.id) { // Check for ID, as link might be null
             chapterResources[chapterKey].otherResources.push({
                 title: `MCQs for ${chapterTitle}`,
-                gdriveId: uploadedFileDetails['generated_mcq_markdown'].id, // Store GDrive ID
-                gdriveLink: uploadedFileDetails['generated_mcq_markdown'].link, // Store GDrive webViewLink
+                gdriveId: uploadedFileDetails['generated_mcq_markdown'].id,
+                gdriveLink: uploadedFileDetails['generated_mcq_markdown'].link,
                 type: 'generated_mcq_markdown',
                 generatedAt: new Date().toISOString()
             });
+        } else {
+            logQGen(logContext, `No MCQ file details to add to Firestore for chapter ${chapterKey}.`, 'info');
         }
-        if (uploadedFileDetails['generated_problems_markdown']) {
+
+        if (uploadedFileDetails['generated_problems_markdown']?.id) { // Check for ID
             chapterResources[chapterKey].otherResources.push({
                 title: `Problems for ${chapterTitle}`,
-                gdriveId: uploadedFileDetails['generated_problems_markdown'].id, // Store GDrive ID
-                gdriveLink: uploadedFileDetails['generated_problems_markdown'].link, // Store GDrive webViewLink
+                gdriveId: uploadedFileDetails['generated_problems_markdown'].id,
+                gdriveLink: uploadedFileDetails['generated_problems_markdown'].link,
                 type: 'generated_problems_markdown',
                 generatedAt: new Date().toISOString()
             });
+        } else {
+            logQGen(logContext, `No Problems file details to add to Firestore for chapter ${chapterKey}.`, 'info');
         }
 
+        // Ensure the original PDF link is present if this service is responsible for it.
+        // (Assuming it's added elsewhere, but if not, this would be the place)
+        // Example: Add PDF link if not already present by another process
+        // const existingPdfResource = chapterResources[chapterKey].otherResources.find(r => r.type === 'textbook_chapter_pdf' && r.gdriveId === chapterPdfGoogleDriveId);
+        // if (!existingPdfResource && chapterPdfGoogleDriveId) {
+        //     chapterResources[chapterKey].otherResources.push({
+        //         title: `Textbook PDF: ${chapterTitle}`,
+        //         gdriveId: chapterPdfGoogleDriveId,
+        //         // gdriveLink: chapterPdfGoogleDriveLink, // Need this link if available
+        //         type: 'textbook_chapter_pdf',
+        //         processedAt: new Date().toISOString()
+        //     });
+        // }
+
+
+        const firestoreUpdateSuccess = await updateCourseDefinition(courseId, { chapterResources });
+
+        if (!firestoreUpdateSuccess) {
+            logQGen(logContext, `Firestore update failed for course ${courseId}, chapter ${chapterKey}. Check logs from updateCourseDefinition.`, 'warn');
+            firestoreMessageSuffix = "Firestore update attempt failed.";
+            // Do not throw an error, but the message should reflect this.
+            // The success status of the function will primarily depend on GDrive uploads.
+        } else {
+            logQGen(logContext, `Firestore updated successfully for course ${courseId} with new/updated resources for chapter ${chapterKey}.`);
+        }
+
+        const finalMessage = (textChunks.length === 0 && (!extractedPdfText || extractedPdfText.trim().length === 0))
+            ? `PDF text extraction failed for chapter ${chapterTitle}; questions not generated. ${firestoreMessageSuffix}`
+            : (textChunks.length === 0 && extractedPdfText.trim().length < 100)
+            ? `Text extracted for chapter ${chapterTitle} was too short; questions not generated. ${firestoreMessageSuffix}`
+            : `MCQs and Problems generated, saved to Google Drive for chapter: ${chapterTitle}. ${firestoreMessageSuffix}`;
+
         return {
-            success: true,
-            message: `MCQs and Problems generated and saved to Google Drive for chapter: ${chapterTitle} (Firestore update skipped).`,
+            success: true, // Overall operation considered successful if GDrive uploads happened and FS was attempted.
+            message: finalMessage,
             mcqGoogleDriveId: uploadedFileDetails['generated_mcq_markdown']?.id || null,
             mcqGoogleDriveLink: uploadedFileDetails['generated_mcq_markdown']?.link || null,
             problemsGoogleDriveId: uploadedFileDetails['generated_problems_markdown']?.id || null,

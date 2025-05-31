@@ -101,6 +101,8 @@ async function createFolder(folderName, parentFolderId = 'root') {
       supportsAllDrives: true,
     });
     console.log(`Folder "${folderName}" created successfully. ID: ${res.data.id}`);
+    // Set permission to anyone with link can read
+    await setFilePermissionAnyoneWithLinkReader(res.data.id);
     return res.data;
   } catch (error) {
     console.error(`Error creating folder "${folderName}": ${error.message}`, error.response?.data?.error);
@@ -140,8 +142,10 @@ async function uploadFile(localFilePath, remoteFileName, targetFolderId = 'root'
       supportsAllDrives: true,
     });
     console.log(`File "${remoteFileName}" uploaded successfully to Google Drive. ID: ${res.data.id}, Size: ${res.data.size}`);
+    // Set permission to anyone with link can read
+    await setFilePermissionAnyoneWithLinkReader(res.data.id);
     return res.data;
-  } catch (error) {
+  } catch (error)
     console.error(`Error uploading file "${remoteFileName}" to Google Drive: ${error.message}`, error.response?.data?.error);
     throw error;
   }
@@ -246,5 +250,33 @@ module.exports = {
   uploadFile,
   downloadFile,
   getFolderContents,
+  setFilePermissionAnyoneWithLinkReader, // Export the new function
 };
+
+/**
+ * Sets the permission for a file or folder to 'anyone with the link can read'.
+ * @param {string} fileId - The ID of the file or folder.
+ * @returns {Promise<void>}
+ * @throws {Error} If permission setting fails.
+ */
+async function setFilePermissionAnyoneWithLinkReader(fileId) {
+  if (!drive) throw new Error('Google Drive service not initialized.');
+  console.log(`Setting 'anyoneWithLink' (reader) permission for file/folder ID "${fileId}"...`);
+  try {
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+      supportsAllDrives: true, // Important if the file/folder is on a Shared Drive
+    });
+    console.log(`Permission 'anyoneWithLink' (reader) set successfully for ID "${fileId}".`);
+  } catch (error) {
+    console.error(`Error setting permission for file/folder ID "${fileId}": ${error.message}`, error.response?.data?.error);
+    // Not re-throwing the error to allow the calling operation (createFolder/uploadFile) to succeed
+    // even if permission setting fails. Depending on requirements, this could be changed.
+    // For critical permissions, you might want to throw: throw error;
+  }
+}
 console.log('google_drive_service_server.js loaded (now uses Service Account Auth).');

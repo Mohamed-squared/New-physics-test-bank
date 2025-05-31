@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
+const { PDFDocument } = require('pdf-lib'); // Added for fallback PDF processing
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
 const DEFAULT_API_KEYS_ARRAY = [
@@ -31,31 +32,60 @@ function getApiKeySnippet(apiKey) {
 }
 
 /**
- * Extracts text content from all pages of a PDF file.
- * @param {string} pdfPath - Path to the PDF file on the local server filesystem.
- * @returns {Promise<string>} The extracted text content.
- * @throws {Error} If the file is not found or if PDF parsing fails.
+ * Extracts text content from all pages of a PDF file or buffer.
+ * Includes a fallback mechanism using pdf-lib to try and repair/re-save the PDF if initial parsing fails.
+ * @param {string|Buffer} pdfPathOrBuffer - Path to the PDF file or a Buffer containing the PDF data.
+ * @returns {Promise<string|null>} The extracted text content, or null if parsing fails even after fallback.
  */
-async function getAllPdfTextForAI(pdfPath) {
-  console.log(`Starting PDF text extraction for: ${pdfPath}`);
+async function getAllPdfTextForAI(pdfPathOrBuffer) {
+  let dataBuffer;
+  let sourceDescription = '';
+
+  if (Buffer.isBuffer(pdfPathOrBuffer)) {
+    dataBuffer = pdfPathOrBuffer;
+    sourceDescription = 'Buffer';
+    console.log(`Starting PDF text extraction from buffer.`);
+  } else if (typeof pdfPathOrBuffer === 'string') {
+    sourceDescription = pdfPathOrBuffer;
+    console.log(`Starting PDF text extraction for: ${sourceDescription}`);
+    if (!fs.existsSync(sourceDescription)) {
+      console.error(`PDF file not found: ${sourceDescription}`);
+      // For consistency, return null instead of throwing, as per subtask goal for parsing failures.
+      // The caller (pdf_question_generation_service) will handle null.
+      return null;
+    }
+    dataBuffer = fs.readFileSync(sourceDescription);
+    console.log(`PDF file read successfully: ${sourceDescription}`);
+  } else {
+    console.error('Invalid input: pdfPathOrBuffer must be a file path (string) or a Buffer.');
+    return null;
+  }
+
   try {
-    if (!fs.existsSync(pdfPath)) {
-      console.error(`PDF file not found: ${pdfPath}`);
-      throw new Error(`PDF file not found: ${pdfPath}`);
-    }
-
-    const dataBuffer = fs.readFileSync(pdfPath);
-    console.log(`PDF file read successfully: ${pdfPath}`);
-
+    // Initial attempt to parse the PDF
     const data = await pdfParse(dataBuffer);
-    console.log(`PDF parsed successfully. Extracted ${data.text.length} characters.`);
+    console.log(`PDF (initial attempt) parsed successfully for ${sourceDescription}. Extracted ${data.text.length} characters.`);
     return data.text;
-  } catch (error) {
-    console.error(`Error during PDF processing for ${pdfPath}:`, error);
-    if (error instanceof Error && error.message.includes('PDF file not found')) {
-        throw error;
+  } catch (initialError) {
+    console.warn(`Initial PDF parsing failed for ${sourceDescription}. Error: ${initialError.message}. Attempting fallback strategy...`);
+
+    try {
+      // Fallback strategy: Load with pdf-lib, re-save, then try pdfParse again
+      console.log(`[Fallback] Loading PDF with pdf-lib for ${sourceDescription}...`);
+      const pdfDoc = await PDFDocument.load(dataBuffer, { ignoreEncryption: true });
+      console.log(`[Fallback] PDF loaded with pdf-lib. Page count: ${pdfDoc.getPageCount()}. Re-saving...`);
+
+      const newPdfBytes = await pdfDoc.save();
+      console.log(`[Fallback] PDF re-saved to new buffer (length: ${newPdfBytes.length}). Attempting pdfParse again for ${sourceDescription}...`);
+
+      const fallbackData = await pdfParse(newPdfBytes);
+      console.log(`PDF (fallback attempt) parsed successfully for ${sourceDescription}. Extracted ${fallbackData.text.length} characters.`);
+      return fallbackData.text;
+    } catch (fallbackError) {
+      console.error(`PDF parsing fallback strategy also failed for ${sourceDescription}. Fallback Error: ${fallbackError.message}`);
+      console.error(`Initial Error for ${sourceDescription} was: ${initialError.message}`); // Log initial error again for context
+      return null; // Indicate failure after fallback
     }
-    throw new Error(`Failed to extract text from PDF ${pdfPath}: ${error.message}`);
   }
 }
 

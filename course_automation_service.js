@@ -8,6 +8,7 @@ const { transcribeLecture } = require('./lecture_transcription_service.js');
 const { generateQuestionsFromPdf } = require('./pdf_question_generation_service.js');
 const { generateQuestionsFromLectures } = require('./lecture_question_generation_service.js');
 const { GEMINI_API_KEY } = require('./server_config.js');
+const { addCourseToFirestore } = require('./firebase_firestore.js'); // Added for Firestore update
 
 let courseServiceApiKeyIndex = 0;
 
@@ -350,9 +351,147 @@ async function automateNewCourseCreation(params) {
         if (results.firestoreDataPreview && results.firestoreDataPreview.status) {
             logProgress(`Course data prepared with status: '${results.firestoreDataPreview.status}'. Check for manual approval/publishing steps if not visible to users.`, results);
         }
-        results.success = true;
-        results.message = "Course automation tasks completed successfully. Firestore data preview logged.";
-        results.firestoreDataPreview.currentAutomationStep = "Completed Successfully";
+        results.firestoreDataPreview.currentAutomationStep = "Saving to Firestore";
+        logProgress('Attempting to save compiled course data to Firestore...', results);
+
+        // Transform firestoreDataPreview to the structure expected by addCourseToFirestore
+        const courseDataForFirestore = {
+            name: results.firestoreDataPreview.courseTitle,
+            description: results.firestoreDataPreview.aiGeneratedDescription,
+            majorTag: results.firestoreDataPreview.majorTag,
+            subjectTag: results.firestoreDataPreview.subjectTag,
+            courseDirName: results.firestoreDataPreview.courseDirName,
+            prerequisites: results.firestoreDataPreview.prerequisites || [],
+            corequisites: results.firestoreDataPreview.corequisites || [], // Assuming this might be added later
+            imageUrl: results.firestoreDataPreview.bannerPicUrl, // Mapping bannerPicUrl to imageUrl
+            coverUrl: results.firestoreDataPreview.coursePicUrl,   // Mapping coursePicUrl to coverUrl
+            status: results.firestoreDataPreview.status || 'pending_review', // Default if not set
+
+            // Add GDrive links for full textbook
+            gdriveTextbookFullPdfId: results.firestoreDataPreview.gdriveTextbookFullPdfId,
+            gdriveTextbookFullPdfWebLink: results.firestoreDataPreview.gdriveTextbookFullPdfWebLink,
+
+            // Construct chapterResources from firestoreDataPreview.chapters and other link arrays
+            chapterResources: {}, // Initialize
+            // youtubePlaylistUrls: results.firestoreDataPreview.youtubePlaylistUrls || [], // If available
+        };
+
+        // Populate chapterResources
+        if (results.firestoreDataPreview.chapters && Array.isArray(results.firestoreDataPreview.chapters)) {
+            results.firestoreDataPreview.chapters.forEach(previewChapter => {
+                const chapterKey = previewChapter.key; // e.g., "textbook_chapter_1"
+                courseDataForFirestore.chapterResources[chapterKey] = {
+                    title: previewChapter.title,
+                    otherResources: [],
+                    lectureUrls: [] // Assuming lecture URLs might be processed differently or added later
+                };
+                // Add textbook PDF for the chapter
+                if (previewChapter.gdrivePdfId || previewChapter.gdrivePdfLink) {
+                    courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                        type: 'textbook_chapter_pdf',
+                        title: `Chapter PDF: ${previewChapter.title}`,
+                        gdriveId: previewChapter.gdrivePdfId,
+                        gdriveLink: previewChapter.gdrivePdfLink,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+                // Add generated PDF MCQs for the chapter
+                if (previewChapter.gdrivePdfMcqId || previewChapter.gdrivePdfMcqLink) {
+                     courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                        type: 'generated_mcq_markdown', // Matches type in pdf_question_generation_service
+                        title: `MCQs for ${previewChapter.title}`,
+                        gdriveId: previewChapter.gdrivePdfMcqId,
+                        gdriveLink: previewChapter.gdrivePdfMcqLink,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+                // Add generated PDF Problems for the chapter
+                if (previewChapter.gdrivePdfProblemsId || previewChapter.gdrivePdfProblemsLink) {
+                     courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                        type: 'generated_problems_markdown', // Matches type in pdf_question_generation_service
+                        title: `Problems for ${previewChapter.title}`,
+                        gdriveId: previewChapter.gdrivePdfProblemsId,
+                        gdriveLink: previewChapter.gdrivePdfProblemsLink,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+            });
+        }
+
+        // Add lecture-based questions (these are chapter-keyed differently in preview)
+        if (results.firestoreDataPreview.lectureQuestionSets && Array.isArray(results.firestoreDataPreview.lectureQuestionSets)) {
+            results.firestoreDataPreview.lectureQuestionSets.forEach(lqSet => {
+                const chapterKey = lqSet.key; // This key might be like "lecture_set_1_..."
+                if (!courseDataForFirestore.chapterResources[chapterKey]) {
+                    courseDataForFirestore.chapterResources[chapterKey] = { title: chapterKey.replace(/_/g, ' '), otherResources: [], lectureUrls: [] };
+                }
+                 if (lqSet.gdriveMcqId || lqSet.gdriveMcqLink) {
+                    courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                        type: 'lecture_mcq_markdown', // Distinct type
+                        title: `Lecture MCQs for ${chapterKey.replace(/_/g, ' ')}`,
+                        gdriveId: lqSet.gdriveMcqId,
+                        gdriveLink: lqSet.gdriveMcqLink,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+                if (lqSet.gdriveProblemsId || lqSet.gdriveProblemsLink) {
+                     courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                        type: 'lecture_problems_markdown', // Distinct type
+                        title: `Lecture Problems for ${chapterKey.replace(/_/g, ' ')}`,
+                        gdriveId: lqSet.gdriveProblemsId,
+                        gdriveLink: lqSet.gdriveProblemsLink,
+                        generatedAt: new Date().toISOString()
+                    });
+                }
+            });
+        }
+
+        // Add transcriptions to chapterResources (if not already handled by chapter mapping)
+        // This assumes transcriptions are also chapter-keyed.
+        if (results.firestoreDataPreview.transcriptionLinks && Array.isArray(results.firestoreDataPreview.transcriptionLinks)) {
+            results.firestoreDataPreview.transcriptionLinks.forEach(transcription => {
+                const chapterKey = transcription.chapterKey; // e.g., "textbook_chapter_1" or custom
+                if (!courseDataForFirestore.chapterResources[chapterKey]) {
+                     // If the chapter key from transcription doesn't exist yet, create it
+                    courseDataForFirestore.chapterResources[chapterKey] = { title: transcription.title || chapterKey.replace(/_/g, ' '), otherResources: [], lectureUrls: [] };
+                }
+                 // Assuming transcriptions are a type of "otherResource" for now
+                courseDataForFirestore.chapterResources[chapterKey].otherResources.push({
+                    type: 'transcription_srt',
+                    title: `Transcription: ${transcription.title}`,
+                    gdriveId: transcription.gdriveSrtId,
+                    gdriveLink: transcription.gdriveSrtLink,
+                    generatedAt: new Date().toISOString()
+                });
+            });
+        }
+
+        // Calculate totalChapters (count of keys in chapterResources that seem like main chapters)
+        courseDataForFirestore.totalChapters = Object.keys(courseDataForFirestore.chapterResources)
+            .filter(key => key.startsWith('textbook_chapter_')).length;
+
+        // Ensure `chapters` array (list of chapter titles) is populated based on `chapterResources` keys
+        courseDataForFirestore.chapters = Array.from({ length: courseDataForFirestore.totalChapters }, (_, i) => {
+            const key = `textbook_chapter_${i + 1}`;
+            return courseDataForFirestore.chapterResources[key]?.title || `Chapter ${i + 1}`;
+        });
+
+
+        logProgress(`Transformed data for Firestore: ${JSON.stringify(courseDataForFirestore, null, 2)}`, results, 'info');
+        const firestoreResult = await addCourseToFirestore(courseDataForFirestore);
+
+        if (firestoreResult.success) {
+            logProgress(`Course data successfully saved to Firestore with ID: ${firestoreResult.id}. Status: ${firestoreResult.status}`, results);
+            results.success = true;
+            results.message = "Course automation tasks completed and data saved to Firestore.";
+            results.firestoreDataPreview.currentAutomationStep = "Completed and Saved to Firestore";
+            results.firestoreCourseId = firestoreResult.id; // Store the actual Firestore ID
+        } else {
+            logProgress(`Failed to save course data to Firestore: ${firestoreResult.message}`, results, 'error');
+            results.success = false;
+            results.message = `Course automation tasks completed, but Firestore save failed: ${firestoreResult.message}`;
+            results.firestoreDataPreview.currentAutomationStep = "Completed with Firestore Save Error";
+        }
 
     } catch (error) {
         logProgress(error, results, 'error'); 
