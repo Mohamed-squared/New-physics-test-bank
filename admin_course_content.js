@@ -584,7 +584,7 @@ export function displayFullCourseAutomationForm(containerElement) {
 
 I need to ensure that `ui_admin_dashboard.js` correctly imports `displayCourseManagementSection` and `loadCoursesForAdmin` (if still used) from the refactored `admin_course_content.js`.
 
-Let's read `ui_admin_dashboard.js`.*/
+Let's read `ui_admin_dashboard.js`.
                     </div>
                     <div>
                         <label for="geminiApiKey" class="label">Google Gemini API Key (Optional):</label>
