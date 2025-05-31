@@ -1,6 +1,6 @@
-# Lyceum Course Automation & MEGA Integration: New Features Guide
+# Lyceum Course Automation & Google Drive Integration: New Features Guide
 
-This document provides an overview of the new course content automation features and MEGA cloud storage integration for the Lyceum platform. It covers feature descriptions, configuration requirements, and important considerations for administrators.
+This document provides an overview of the new course content automation features and Google Drive cloud storage integration for the Lyceum platform. It covers feature descriptions, configuration requirements, and important considerations for administrators.
 
 ## 1. Feature Summaries
 
@@ -16,34 +16,34 @@ The following sections detail the five main automation features implemented:
     *   YouTube Lecture URL.
     *   Target Course and Chapter for associating the transcript.
     *   AssemblyAI API Key (prompted in UI).
-    *   MEGA Email & Password (prompted in UI, for storing the transcript).
+    *   Google Drive is used for storage; authentication is handled server-side (API Key/Service Account).
 *   **Expected Output & Storage**:
     *   An SRT transcript file (e.g., `VideoTitle_TranscriptID.srt`) is generated.
-    *   This SRT file is uploaded to MEGA in the course-specific folder: `LyceumCourses_Test/<courseDirName>/Transcriptions/`.
-    *   A link to this MEGA SRT file, along with the video title and other metadata, is saved in the course's Firestore document under `chapterResources.[chapterId].lectureUrls`.
+    *   This SRT file is uploaded to Google Drive in the course-specific folder: `LyceumCourses_GoogleDrive_Test/<courseDirName>/Transcriptions_Archive/`.
+    *   A link/ID to this Google Drive SRT file, along with the video title and other metadata, is saved in the course's Firestore document under `chapterResources.[chapterId].lectureUrls`.
 *   **Considerations**:
     *   Requires a valid AssemblyAI API key with credits.
     *   Transcription accuracy depends on audio quality and AssemblyAI's service.
     *   The process involves downloading audio, uploading to AssemblyAI, and polling for results, which can take several minutes per lecture.
-    *   MEGA credentials are required for storage.
+    *   Google Drive is used for storage, configured on the server.
 
 ### 1.2. Textbook PDF Addition and Splitting
 
-*   **Purpose**: To upload a full textbook PDF, process its Table of Contents (ToC) using AI, split it into chapter-based PDFs, and store both the full textbook and individual chapters on MEGA.
+*   **Purpose**: To upload a full textbook PDF, process its Table of Contents (ToC) using AI, split it into chapter-based PDFs, and store both the full textbook and individual chapters on Google Drive.
 *   **Access & Use**:
     *   In the Admin Panel, find the section titled "**PDF Alchemist's Bench**".
 *   **Admin Inputs**:
     *   Full Textbook PDF file.
     *   Target Course for association.
     *   "Actual Page 1 Number": The PDF page number that corresponds to page '1' of the actual textbook content (to calibrate ToC page numbers).
-    *   MEGA Email & Password (prompted).
     *   Google Gemini API Key (prompted, for ToC analysis).
+    *   Google Drive is used for storage, configured on the server.
 *   **Expected Output & Storage**:
-    *   The full textbook PDF is uploaded to MEGA: `LyceumCourses_Test/<courseDirName>/Textbook_Full/textbook_full_FILENAME.pdf`.
-    *   Individual chapter PDFs are created and uploaded to MEGA: `LyceumCourses_Test/<courseDirName>/Textbook_Chapters/Ch_X_ChapterTitle.pdf`.
+    *   The full textbook PDF is uploaded to Google Drive: `LyceumCourses_GoogleDrive_Test/<courseDirName>/Textbook_Full/textbook_full_FILENAME.pdf`.
+    *   Individual chapter PDFs are created and uploaded to Google Drive: `LyceumCourses_GoogleDrive_Test/<courseDirName>/Textbook_Chapters/Ch_X_ChapterTitle.pdf`.
     *   Firestore Updates:
-        *   The course document is updated with `megaTextbookFullPdfLink`.
-        *   `chapterResources` for the course is updated. Each chapter identified gets an entry (e.g., `textbook_chapter_X`) in `chapterResources`, and within its `otherResources` array, a link to its specific chapter PDF on MEGA is stored with `type: 'textbook_chapter_segment'`.
+        *   The course document is updated with `gdriveTextbookFullPdfId` and/or `gdriveTextbookFullPdfWebLink`.
+        *   `chapterResources` for the course is updated. Each chapter identified gets an entry (e.g., `textbook_chapter_X`) in `chapterResources`, and within its `otherResources` array, a link/ID to its specific chapter PDF on Google Drive is stored with `type: 'textbook_chapter_segment'`.
 *   **Considerations**:
     *   Requires a Google Gemini API Key.
     *   The accuracy of ToC extraction and chapter splitting depends on the PDF's structure and Gemini's ability to interpret the ToC images. `pdf-image` (which wraps `pdftoppm` or Ghostscript) is used for converting PDF pages to images for AI analysis; this means **ImageMagick or Ghostscript must be installed on the server environment where `pdf_processing_service.js` runs.**
@@ -57,18 +57,18 @@ The following sections detail the five main automation features implemented:
 *   **Admin Inputs**:
     *   Target Course.
     *   Target Chapter (selected from a dropdown populated with chapters that have an associated `textbook_chapter_segment` PDF, generated by the "Textbook PDF Addition and Splitting" feature).
-    *   The MEGA link to the chapter PDF is automatically retrieved.
-    *   MEGA Email & Password (prompted).
+    *   The Google Drive link/ID to the chapter PDF is automatically retrieved.
     *   Google Gemini API Key (prompted).
+    *   Google Drive is used for storage, configured on the server.
 *   **Expected Output & Storage**:
     *   Two Markdown files are generated: `TextMCQ.md` and `TextProblems.md`.
-    *   These files are uploaded to MEGA: `LyceumCourses_Test/<courseDirName>/Generated_Questions/<chapterKey>/`. (`<chapterKey>` is like `textbook_chapter_1`).
-    *   Firestore Updates: The course's `chapterResources.[chapterKey].otherResources` array is updated with links to these generated Markdown files on MEGA, using types `generated_mcq_markdown` and `generated_problems_markdown`.
+    *   These files are uploaded to Google Drive: `LyceumCourses_GoogleDrive_Test/<courseDirName>/Generated_Assessments/<chapterKey>/`. (`<chapterKey>` is like `textbook_chapter_1`).
+    *   Firestore Updates: The course's `chapterResources.[chapterKey].otherResources` array is updated with links/IDs to these generated Markdown files on Google Drive, using types `generated_mcq_markdown` and `generated_problems_markdown`.
 *   **Considerations**:
     *   Requires a Google Gemini API Key.
     *   The quality and relevance of generated questions depend on the clarity of the chapter PDF text and Gemini's capabilities.
     *   The AI uses `example_TextMCQ.md` and `example_TextProblems.md` as syntax guides.
-    *   Requires the target chapter PDF to have been previously processed and stored on MEGA by the "Textbook PDF Addition and Splitting" feature.
+    *   Requires the target chapter PDF to have been previously processed and stored on Google Drive by the "Textbook PDF Addition and Splitting" feature.
 
 ### 1.4. Lecture MCQ and Problems Generation
 
@@ -78,131 +78,129 @@ The following sections detail the five main automation features implemented:
 *   **Admin Inputs**:
     *   Target Course.
     *   "Chapter Name / Topic": A user-defined name for the collection of questions being generated (this will form a new "chapter-like" entry in Firestore).
-    *   Selection of one or more lecture SRT transcripts (from a list populated with available transcripts for the chosen course).
-    *   MEGA Email & Password (prompted).
+    *   Selection of one or more lecture SRT transcripts (from a list populated with available transcripts for the chosen course, now from Google Drive).
     *   Google Gemini API Key (prompted).
+    *   Google Drive is used for storage, configured on the server.
 *   **Expected Output & Storage**:
     *   Two Markdown files are generated: `LecturesMCQ.md` and `LecturesProblems.md`.
     *   A new unique key (e.g., `SanitizedTopicName_lecture_topic_uuid`) is generated for this content.
-    *   Files are uploaded to MEGA: `LyceumCourses_Test/<courseDirName>/Generated_Questions/<new_chapter_key>/`.
-    *   Firestore Updates: A new entry using `new_chapter_key` is added to the course's `chapterResources`. This entry stores the provided topic name, `contentType: 'lecture_derived'`, references to the source lecture SRTs, and links to the generated Markdown files in its `otherResources` array (types `generated_lecture_mcq_markdown`, `generated_lecture_problems_markdown`).
+    *   Files are uploaded to Google Drive: `LyceumCourses_GoogleDrive_Test/<courseDirName>/Generated_Assessments/<new_chapter_key>/`.
+    *   Firestore Updates: A new entry using `new_chapter_key` is added to the course's `chapterResources`. This entry stores the provided topic name, `contentType: 'lecture_derived'`, references to the source lecture SRTs (their Google Drive IDs/links), and links/IDs to the generated Markdown files in its `otherResources` array (types `generated_lecture_mcq_markdown`, `generated_lecture_problems_markdown`).
 *   **Considerations**:
     *   Requires a Google Gemini API Key.
     *   Quality depends on the accuracy and completeness of the lecture SRT transcripts.
     *   The AI uses `example_TextMCQ.md` and `example_TextProblems.md` as syntax guides, but prompts are tailored for lecture content.
 
-### 1.5. MEGA Database Management UI & Migration
+### 1.5. Google Drive Database Management UI & Migration
 
-*   **Purpose**: To provide a unified interface for managing course migration to MEGA, establishing a standard folder structure, and browsing/interacting with files stored on MEGA.
+*   **Purpose**: To provide a unified interface for managing course migration to Google Drive, establishing a standard folder structure, and browsing/interacting with files stored on Google Drive.
 *   **Access & Use**:
-    *   In the Admin Panel, this is the main section titled "**MEGA Cloud Command Center**".
-    *   **Course Migration**: Lists all courses, showing their MEGA migration status. Admins can initiate migration for courses not yet fully migrated. This creates a standard folder structure on MEGA (`LyceumCourses_Test/<courseDirName>/` with subfolders `Transcriptions_Archive`, `Textbook_Chapter_Vault`, `Generated_Assessments`) and uploads placeholder README files. Links to these folders are saved in Firestore.
-    *   **File Explorer**: Integrated within the same UI section, titled "**MEGA Cloud Navigator**". Admins can:
-        *   Enter a MEGA folder link to load its contents (or leave blank for root).
-        *   Navigate through folders ("Open Sector", "Warp Upstream" (Up button), clickable path breadcrumbs).
-        *   View file/folder names, types, and sizes.
-        *   Download files (simplified browser download via new tab).
+    *   In the Admin Panel, this is the main section titled "**Google Drive Cloud Command Center**".
+    *   **Course Migration**: Lists all courses, showing their Google Drive migration status. Admins can initiate migration for courses not yet fully migrated. This creates a standard folder structure on Google Drive (`LyceumCourses_GoogleDrive_Test/<courseDirName>/` with subfolders `Transcriptions_Archive`, `Textbook_Chapter_Vault`, `Generated_Assessments`) and uploads placeholder README files. Links/IDs to these folders are saved in Firestore.
+    *   **File Explorer**: Integrated within the same UI section, titled "**Google Drive Cloud Navigator**". Admins can:
+        *   Enter a Google Drive folder ID to load its contents (or leave blank for root).
+        *   Navigate through folders ("Open Folder", "Parent Folder" (Up button), clickable path breadcrumbs).
+        *   View file/folder names, types, and sizes (where available from API).
+        *   Download files (initiates browser download via `google_drive_service.js`).
         *   Upload files to the currently viewed folder.
 *   **Admin Inputs**:
-    *   For Migration: MEGA Email & Password (prompted per migration).
-    *   For File Explorer: MEGA Email & Password (prompted if not already initialized for the session), MEGA folder link (optional, defaults to root). File for upload.
+    *   For Migration & File Explorer: Google Drive authentication is handled by `google_drive_service.js` using API Key for initialization and OAuth for operations if needed (user interaction might be required for OAuth consent). No direct email/password prompts for Google Drive itself in the UI.
+    *   For File Explorer: Google Drive folder ID (optional, defaults to root). File for upload.
 *   **Expected Output & Storage**:
-    *   Migration: Standardized course folder structure on MEGA, updated Firestore links (`megaCourseRootFolderLink`, `megaTranscriptionsFolderLink`, `megaPdfFolderLink`, `megaMcqFolderLink`).
-    *   File Explorer: Display of folder contents, file downloads, file uploads to specified MEGA locations.
+    *   Migration: Standardized course folder structure on Google Drive, updated Firestore links/IDs (`gdriveCourseRootFolderId`, `gdriveTranscriptionsFolderId`, etc.).
+    *   File Explorer: Display of folder contents, file downloads, file uploads to specified Google Drive locations.
 *   **Considerations**:
-    *   The "Migrate to MEGA" process standardizes the main folder structure. Content from other automation features (like specific SRTs or chapter PDFs) populates these folders.
-    *   The file explorer's download functionality is simplified; for robust, direct client-side downloads, `mega_service.js`'s `downloadFile` would need adaptation to stream to a Blob.
-    *   The file explorer's upload functionality assumes `mega_service.js`'s `uploadFile` can handle browser `File` objects.
-    *   The migration status check is based on the presence of the four key MEGA links in Firestore.
-    *   The gamified alert "🚀 Blast off to the future!" encourages migration of remaining courses.
+    *   The "Migrate to Google Drive" process standardizes the main folder structure. Content from other automation features (like specific SRTs or chapter PDFs) populates these folders.
+    *   The file explorer's download functionality is handled by `google_drive_service.js`.
+    *   The file explorer's upload functionality assumes `google_drive_service.js`'s `uploadFile` can handle browser `File` objects.
+    *   The migration status check is based on the presence of the key Google Drive folder IDs in Firestore.
+    *   The gamified alert "🚀 Blast off to the future!" encourages migration of remaining courses to Google Drive.
 
 ## 2. Configuration and Setup Guide
 
 For these new features to operate correctly, the following configurations and setups are essential:
 
-*   **MEGA Credentials**:
-    *   Used by: `mega_service.js` and all server-side services that interact with MEGA (`lecture_transcription_service.js`, `pdf_processing_service.js`, `pdf_question_generation_service.js`, `lecture_question_generation_service.js`). Also used by client-side features in `admin_course_content.js` that directly initialize MEGA (Migration, File Explorer).
-    *   How: Prompted directly in the admin UI when an operation requiring MEGA access is initiated. These are not stored long-term by the client but passed per operation or session. Server-side functions receive them as parameters from the client-initiated API call.
+*   **Google Drive API Key & Service Account (Server-Side)**:
+    *   Used by: `google_drive_service_server.js` and all server-side services that interact with Google Drive (`lecture_transcription_service.js`, `pdf_processing_service.js`, `pdf_question_generation_service.js`, `lecture_question_generation_service.js`).
+    *   How: The `google_drive_service_server.js` should be initialized with a Google API Key and ideally a path to a Service Account JSON key file. This is typically configured on the server via environment variables or a secure configuration file. Client-side admin actions trigger server endpoints that then use this pre-configured Google Drive service.
+
+*   **Google Drive API Key & OAuth Client ID (Client-Side)**:
+    *   Used by: `google_drive_service.js` for client-side operations like the File Explorer or direct-to-Drive features in the admin panel.
+    *   How: The `google_drive_service.js` is initialized with an API Key. For operations requiring user-specific permissions, an OAuth 2.0 flow would be initiated, requiring a Client ID configured in the Google Cloud Console and in `google_drive_service.js`.
 
 *   **AssemblyAI API Key**:
-    *   Used by: `lecture_transcription_service.js` (via an API call from `pdf-server.js`).
+    *   Used by: `lecture_transcription_service.js` (via an API call from `pdf-server.js` or equivalent).
     *   How: Prompted in the "Lecture Transcription Automator" UI and passed to the server endpoint. The server then uses this key to communicate with the AssemblyAI API.
 
 *   **Google Gemini API Key**:
-    *   Used by: `ai_integration.js`, which is called by `pdf_processing_service.js` (for ToC analysis from PDF images) and both `pdf_question_generation_service.js` and `lecture_question_generation_service.js` (for generating MCQs/problems).
-    *   How: Prompted in the relevant admin UIs (Textbook PDF Processor, PDF Q-Gen, Lecture Q-Gen) and passed to the server endpoints. The server-side services then use this key.
+    *   Used by: `ai_integration_server.js` (if called from server-side services like `pdf_processing_service.js`, etc.).
+    *   How: Can be prompted in admin UIs and passed to server endpoints, or the server can use a globally configured Gemini API key.
 
 *   **Server Setup (`pdf-server.js` or equivalent main server file)**:
-    *   **Running Server**: The Express server defined in `pdf-server.js` (or your main application server if integrated differently) **must be running**. It hosts the local API endpoints (`/transcribe-lecture`, `/process-textbook-pdf`, `/generate-questions-from-pdf`, `/generate-questions-from-lectures`) that the admin panel calls.
-    *   **`multer` Configuration**: The `/process-textbook-pdf` endpoint uses `multer` for handling PDF file uploads. `multer` is configured in `pdf-server.js` to save these files temporarily to a `./temp_uploads/` directory (relative to `pdf-server.js`). This directory should be writable by the server process. Uploaded files are deleted after processing.
-    *   **Body Parsers**: `express.json()` (or `bodyParser.json()`) is used for parsing JSON request bodies. `express.urlencoded()` might be needed for other types of form data if used.
+    *   **Running Server**: The Express server must be running. It hosts the local API endpoints.
+    *   **`multer` Configuration**: If file uploads are passed through the server before going to Google Drive (e.g., lecture files for transcription), `multer` in `pdf-server.js` handles temporary storage.
+    *   **Body Parsers**: `express.json()` is used.
 
 *   **External System Dependencies for PDF Processing**:
-    *   The `pdf_processing_service.js` uses the `pdf-image` npm package to convert PDF pages (specifically the Table of Contents) into images for AI analysis.
-    *   `pdf-image` is a wrapper around `pdftoppm` (from the Poppler utils suite) or Ghostscript's `gs` command.
-    *   Therefore, **either ImageMagick (which includes `convert`) or Ghostscript (providing `gs`) along with Poppler utilities (`pdftoppm`) must be installed and accessible in the PATH of the server environment** where `pdf-server.js` and its services are run. Failure to have these will cause the ToC image extraction step in PDF processing to fail.
+    *   `pdf_processing_service.js` uses `pdf-image` (requires **ImageMagick or Ghostscript + Poppler** on the server).
 
 *   **Firestore Rules**:
-    *   While no direct changes to Firestore rules were made in this set of tasks, it's crucial that your Firestore security rules are configured to:
-        *   Allow authenticated admin users to read course data (`globalCourseDataMap`).
-        *   Allow authenticated admin users (or the server acting on their behalf, if using admin SDKs with a service account) to write/update course documents in Firestore (e.g., saving MEGA links, adding new chapter resources).
-        *   Specifically, paths like `courses/{courseId}` and sub-collections/maps like `chapterResources` need appropriate write access for the admin functionalities.
+    *   Ensure rules allow admin users or the server (with admin privileges/service account) to write/update course documents with Google Drive links/IDs (e.g., `gdriveCourseRootFolderId`, `chapterResources.[key].otherResources[...].gdriveId`).
 
 *   **Example Markdown Files for AI Prompts**:
-    *   `example_TextMCQ.md`
-    *   `example_TextProblems.md`
-    *   These files are located in the project root. They are read by `pdf_question_generation_service.js` and `lecture_question_generation_service.js` to provide syntax guidance to the Gemini AI when generating MCQs and problems. Ensure these files are present and correctly formatted for the desired output.
+    *   `example_TextMCQ.md`, `example_TextProblems.md` remain essential for guiding AI question generation.
 
 ## 3. Legacy Course Compatibility
 
-The introduction of MEGA cloud storage for new and migrated courses is designed to enhance performance and scalability. However, it's understood that existing "legacy" courses (those with content primarily stored locally or linked via other means) must remain functional.
+The introduction of Google Drive cloud storage for new and migrated courses is designed to enhance performance and scalability. Legacy courses must remain functional.
 
-*   **Student-Facing Content Fetching**: The primary responsibility for ensuring legacy compatibility lies in the student-facing part of the Lyceum application (e.g., how courses and their resources are displayed to students). This part of the application was **outside the scope of these admin panel and backend service modifications**.
-*   **Recommended Fallback Logic**: To support both legacy and MEGA-hosted content, the student-facing application should implement a fallback logic when fetching course resources:
-    1.  **Check for MEGA Links**: First, check if a specific resource (e.g., transcription, chapter PDF, MCQ file) has a corresponding MEGA link in the Firestore course data (e.g., `megaTranscriptionsFolderLink`, `megaPdfFolderLink`, `chapterResources.[key].otherResources[...].url`).
-    2.  **Use MEGA Link if Available**: If a MEGA link exists and is valid, the application should use this link to serve the content.
-    3.  **Fallback to Legacy Path**: If a MEGA link is not found or is invalid, the application should then attempt to load the resource using the previous (legacy) local file path or method.
-*   **Data Structure Consistency**: The new automation features aim to populate Firestore with clear link structures. Legacy courses might have different or missing fields for these MEGA links. The content fetching logic must gracefully handle both scenarios.
+*   **Student-Facing Content Fetching**: This was **outside the scope of these admin panel and backend service modifications**.
+*   **Recommended Fallback Logic**:
+    1.  **Check for Google Drive Links/IDs**: First, check for Google Drive specific fields (e.g., `gdriveTranscriptionsFolderId`, `chapterResources.[key].otherResources[...].gdriveId`).
+    2.  **Use Google Drive Asset if Available**: If a Google Drive asset exists, use it.
+    3.  **Fallback to Legacy Path**: If not found, attempt to load via the legacy method.
+*   **Data Structure Consistency**: New features populate Firestore with Google Drive structures. Fetching logic must handle both.
 
-This dual-check approach ensures that students can access content regardless of whether a course has been fully migrated to MEGA, partially migrated, or remains in its original legacy state.
+This dual-check approach ensures access regardless of migration status.
 
 ## 4. Code File Overview
 
-The following key JavaScript files were created or significantly modified to implement these new features:
+The following key JavaScript files were created or significantly modified:
 
 *   **`admin_course_content.js`**:
-    *   **Role**: Central hub for all admin panel UI related to the new automation features.
-    *   **Contains**: UI rendering functions (`display...`), event handlers, and client-side logic for initiating operations (e.g., `startMegaMigration`, `startLectureTranscription`) by calling local server endpoints or directly interacting with `mega_service.js` for client-side MEGA operations (like the File Explorer).
+    *   **Role**: Central hub for admin panel UI related to course automation.
+    *   **Contains**: UI rendering, event handlers, client-side logic for initiating operations by calling server endpoints or directly interacting with `google_drive_service.js` for client-side Google Drive operations.
 
-*   **`mega_service.js`**:
-    *   **Role**: Client-side service for interacting with the MEGA API via the `megajs` library.
-    *   **Contains**: Functions for initializing MEGA connection, finding/creating folders, uploading/downloading files, and listing folder contents (`getFolderContents`). Used by both admin UI directly and by server-side services if they were to run in a context where client-side MEGA interaction is preferred (though currently, server-side services receive credentials and initialize their own MEGA instances).
+*   **`google_drive_service.js`**:
+    *   **Role**: Client-side service for interacting with Google Drive API via GAPI.
+    *   **Contains**: Functions for `initialize` (API Key, OAuth setup), `findFolder`, `createFolder`, `uploadFile` (browser `File` object), `downloadFile`, `getFolderContents`.
+
+*   **`google_drive_service_server.js`**:
+    *   **Role**: Server-side service for Node.js interaction with Google Drive API.
+    *   **Contains**: Functions for `initialize` (API Key, Service Account), `findFolder`, `createFolder`, `uploadFile` (local path), `downloadFile` (local path), `getFolderContents`.
 
 *   **`lecture_transcription_service.js`** (Server-side):
-    *   **Role**: Handles the entire process of transcribing YouTube lectures.
-    *   **Contains**: Logic to download YouTube audio (`ytdl-core`), send it to AssemblyAI for transcription, poll for results, generate SRT content, upload the SRT to MEGA, and prepare data for Firestore updates.
+    *   **Role**: Handles transcription of YouTube lectures.
+    *   **Contains**: Logic to download audio, use AssemblyAI, generate SRT, upload SRT to Google Drive (via `google_drive_service_server.js`).
 
 *   **`pdf_processing_service.js`** (Server-side):
-    *   **Role**: Manages the processing of full textbook PDFs.
-    *   **Contains**: Logic to upload the full PDF to MEGA, extract Table of Contents pages as images (using `pdf-image`), send images to Gemini for ToC analysis, split the PDF into chapters using `pdf-lib` based on AI-parsed ToC, upload chapter PDFs to MEGA, and prepare data for Firestore updates.
+    *   **Role**: Manages processing of full textbook PDFs.
+    *   **Contains**: Logic to upload full PDF to Google Drive, extract ToC (using `pdf-image` & AI), split PDF, upload chapters to Google Drive.
 
 *   **`pdf_question_generation_service.js`** (Server-side):
-    *   **Role**: Generates MCQs and problems from chapter PDF text.
-    *   **Contains**: Logic to download a chapter PDF from MEGA, extract its text content, construct prompts (using example Markdown syntax and extracted text) for Gemini, generate MCQs and problems, and upload the resulting Markdown files to MEGA, preparing data for Firestore.
+    *   **Role**: Generates MCQs/problems from chapter PDF text.
+    *   **Contains**: Logic to download PDF from Google Drive, extract text, use AI (Gemini) for questions, upload Markdowns to Google Drive.
 
 *   **`lecture_question_generation_service.js`** (Server-side):
-    *   **Role**: Generates MCQs and problems from lecture SRT transcript content.
-    *   **Contains**: Logic to download multiple SRT files from MEGA, parse and concatenate their text, construct prompts for Gemini (using example Markdown syntax), generate MCQs and problems, upload Markdown files to MEGA, and create/update Firestore entries for this new "lecture-derived" chapter.
+    *   **Role**: Generates MCQs/problems from lecture SRTs.
+    *   **Contains**: Logic to download SRTs from Google Drive, use AI for questions, upload Markdowns to Google Drive.
 
 *   **`pdf-server.js`** (or main server file):
-    *   **Role**: Express.js server that hosts the local API endpoints.
-    *   **Contains**: Routes that receive requests from `admin_course_content.js` and call the appropriate server-side service functions (e.g., `/transcribe-lecture` calls `transcribeLecture`). Handles HTTP request/response, parameter parsing, and basic error handling for endpoints. Uses `multer` for file uploads.
+    *   **Role**: Express.js server hosting API endpoints.
+    *   **Contains**: Routes calling server-side service functions. Handles HTTP, parameters, `multer`.
 
-*   **`ai_integration.js`**:
-    *   **Role**: Centralizes interactions with the Google Gemini AI API.
-    *   **Contains**: Functions like `generateTextContentResponse` and `generateImageContentResponse` (and potentially `getAllPdfTextForAI` if PDF text extraction for AI is solely here) that format requests to Gemini and return the AI's responses.
+*   **`ai_integration_server.js`** (Formerly `ai_integration.js` if it was refactored to be server-focused for these tasks):
+    *   **Role**: Centralizes interactions with Google Gemini AI API (server-side context).
+    *   **Contains**: Functions to format requests and return AI responses.
 
-*   **`ai_prompts.js`** (Conceptual or Actual):
-    *   **Role**: While not explicitly created as a separate, actively used file in the provided tasks (prompts were often built dynamically or inline), this file *would be* the ideal place to store and manage complex AI prompt templates if the system scales. Currently, prompt structures (especially for question generation) are guided by the `example_*.md` files.
-
-This guide should help administrators understand, configure, and utilize the new automation capabilities of the Lyceum platform.
+This guide should help administrators understand, configure, and utilize the new automation capabilities of the Lyceum platform with Google Drive integration.

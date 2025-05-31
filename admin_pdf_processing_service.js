@@ -1,7 +1,7 @@
 // admin_pdf_processing_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
-import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js'; // Added import
+// Removed: import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js';
 // Note: No direct Firestore writes in these functions, they call a backend service.
 
 export async function startPdfProcessing(file, courseId, actualFirstPageNumber) {
@@ -15,32 +15,50 @@ export async function startPdfProcessing(file, courseId, actualFirstPageNumber) 
     if (parseInt(actualFirstPageNumber, 10) < 1) {
         feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: "Actual Page 1 Number" must be 1 or greater.</p>`; return;
     }
-    // Removed MEGA Email and Password prompts
-    const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token for ToC):");
+
+    const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token for ToC analysis):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
     showLoading(`Initiating PDF transformation for ${file.name}...`);
     startButton.disabled = true;
     feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400">Transmitting ${file.name} to the Alchemist's workshop... This may take a moment.</p>`;
+
     const formData = new FormData();
     formData.append('pdfFile', file);
     formData.append('courseId', courseId);
     formData.append('actualFirstPageNumber', actualFirstPageNumber);
-    formData.append('megaEmail', MEGA_EMAIL); // Using imported constant
-    formData.append('megaPassword', MEGA_PASSWORD); // Using imported constant
+    // megaEmail and megaPassword removed - Google Drive auth is server-side via service account or preconfigured API key
     formData.append('geminiApiKey', geminiApiKey);
+
     try {
+        // The backend endpoint /process-textbook-pdf needs to be updated
+        // to use google_drive_service_server.js for its cloud storage operations.
         const response = await fetch('http://localhost:3001/process-textbook-pdf', { method: 'POST', body: formData });
-        feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400">The PDF is now in the Alchemist's hands. Analyzing Table of Contents, splitting into scrolls, and archiving to MEGA. This is a lengthy ritual...</p>`;
+
+        feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400">The PDF is now in the Alchemist's hands. Analyzing Table of Contents, splitting into scrolls, and archiving to Google Drive. This is a lengthy ritual...</p>`; // Updated text
         const result = await response.json();
         hideLoading();
+
         if (response.ok && result.success) {
+            // Assuming the backend now returns Google Drive links/IDs
+            const fullTextbookDisplay = result.gdriveFullTextbookWebLink ?
+                `<a href="${result.gdriveFullTextbookWebLink}" target="_blank" class="link">${result.gdriveFullTextbookWebLink}</a> (ID: ${result.gdriveFullTextbookId || 'N/A'})` :
+                `ID: ${result.gdriveFullTextbookId || 'N/A (Link not available)'}`;
+
+            const chapterLinksHtml = (result.processedChapterDetails && result.processedChapterDetails.length > 0) ?
+                result.processedChapterDetails.map(ch =>
+                    `<li>Chapter ${ch.chapterNumber} (${ch.title || 'N/A'}):
+                     <a href="${ch.gdrivePdfLink || '#'}" target="_blank" class="link">View Chapter PDF</a> (ID: ${ch.gdrivePdfId || 'N/A'})
+                     </li>`).join('') :
+                '<li>No chapter scrolls were separated.</li>';
+
             feedbackArea.innerHTML = `
                 <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>📚 The Tome is Transformed!</p>
-                <p class="ml-8"><strong>Full Tome Archived:</strong> <a href="${result.fullPdfLink}" target="_blank" class="link">${result.fullPdfLink}</a></p>
+                <p class="ml-8"><strong>Full Tome Archived (Google Drive):</strong> ${fullTextbookDisplay}</p>
                 <p class="ml-8"><strong>Scrolls (Chapters) Created:</strong> ${result.chaptersProcessed || 0}</p>
-                <ul class="list-disc list-inside ml-10 text-sm">${(result.chapterLinks && result.chapterLinks.length > 0) ? result.chapterLinks.map(link => `<li><a href="${link}" target="_blank" class="link">${link}</a></li>`).join('') : '<li>No chapter scrolls were separated.</li>'}</ul>
-                <p class="ml-8 mt-2"><strong>Alchemist's Note:</strong> ${result.message || 'Completed.'}</p>`;
+                <ul class="list-disc list-inside ml-10 text-sm">${chapterLinksHtml}</ul>
+                <p class="ml-8 mt-2"><strong>Alchemist's Note:</strong> ${result.message || 'Completed.'}</p>
+                <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Course data in Firestore also updated with these Google Drive links/IDs.</p>`;
         } else {
             throw new Error(result.message || `HTTP error ${response.status}`);
         }
@@ -56,11 +74,17 @@ export async function startPdfProcessing(file, courseId, actualFirstPageNumber) 
 export function displayTextbookPdfProcessor(containerElement) {
     if (!currentUser || !currentUser.isAdmin) { containerElement.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">Access Denied. Admin privileges required.</div>`; return; }
     let courseOptions = '<option value="">Select Course Chronicle</option>';
-    globalCourseDataMap.forEach((course, courseId) => { courseOptions += `<option value="${courseId}">${course.name}</option>`; });
+    if (globalCourseDataMap && globalCourseDataMap.size > 0) {
+        globalCourseDataMap.forEach((course, courseId) => {
+            courseOptions += `<option value="${courseId}">${course.name || course.courseTitle || `Course ID: ${courseId}`}</option>`;
+        });
+    } else {
+        courseOptions = '<option value="">No courses loaded or available</option>';
+    }
     containerElement.innerHTML = `
         <div class="content-card p-6">
             <h2 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v1.586M12 12.253v1.586M12 18.253v1.586M7.5 12.253h1.586M13.5 12.253h1.586M16.732 7.96a4.5 4.5 0 010 6.364M5.268 7.96a4.5 4.5 0 000 6.364m11.464-6.364a4.5 4.5 0 00-6.364 0m6.364 0a4.5 4.5 0 010 6.364m-6.364-6.364L12 12.253" /></svg>PDF Alchemist's Bench</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Transmute monolithic PDF Tomes into chapter-scrolls, ready for study and archiving.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Transmute monolithic PDF Tomes into chapter-scrolls, ready for study and archiving to Google Drive.</p>
             <div class="space-y-5">
                 <div>
                     <label for="pdf-file-upload" class="label">Upload Tome (Full Textbook PDF):</label>

@@ -2,13 +2,13 @@
 import { globalCourseDataMap } from './state.js';
 import { playUiSound } from './audio_service.js'; // Optional: for button clicks
 
-const MODAL_ID = 'mega-migration-alert-modal';
-const PROGRESS_TEXT_ID = 'mega-migration-progress-text';
-const PROGRESS_BAR_ID = 'mega-migration-progress-bar';
-const MIGRATE_BTN_ID = 'mega-alert-migrate-btn';
-const REMIND_BTN_ID = 'mega-alert-remind-btn';
-const CLOSE_BTN_ID = 'mega-alert-close-btn';
-const REMINDER_STORAGE_KEY = 'megaMigrationAlertRemindTimestamp';
+const MODAL_ID = 'gdrive-migration-alert-modal'; // RENAMED_ID
+const PROGRESS_TEXT_ID = 'gdrive-migration-progress-text'; // RENAMED_ID
+const PROGRESS_BAR_ID = 'gdrive-migration-progress-bar'; // RENAMED_ID
+const MIGRATE_BTN_ID = 'gdrive-alert-migrate-btn'; // RENAMED_ID
+const REMIND_BTN_ID = 'gdrive-alert-remind-btn'; // RENAMED_ID
+const CLOSE_BTN_ID = 'gdrive-alert-close-btn'; // RENAMED_ID
+const REMINDER_STORAGE_KEY = 'googleDriveMigrationAlertRemindTimestamp'; // RENAMED_KEY
 const REMINDER_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 let modalElement = null;
@@ -27,7 +27,7 @@ function initializeModalElements() {
     if (!closeButton) closeButton = document.getElementById(CLOSE_BTN_ID);
 }
 
-export function hideMegaMigrationAlert() {
+export function hideGoogleDriveMigrationAlert() { // RENAMED_FUNCTION
     initializeModalElements();
     if (modalElement) {
         modalElement.classList.add('opacity-0', 'scale-95');
@@ -47,18 +47,18 @@ function showModal() {
     }
 }
 
-export function checkAndShowMegaMigrationAlert() {
+export function checkAndShowGoogleDriveMigrationAlert() { // RENAMED_FUNCTION
     initializeModalElements();
 
     if (!modalElement || !progressTextElement || !migrateButton || !remindButton || !closeButton || !progressBarElement) {
-        console.warn("MEGA Migration Alert: Modal elements not found. Skipping alert.");
+        console.warn("Google Drive Migration Alert: Modal elements not found. Skipping alert."); // RENAMED_TEXT
         return;
     }
 
     const reminderTimestamp = localStorage.getItem(REMINDER_STORAGE_KEY);
     if (reminderTimestamp && (Date.now() - parseInt(reminderTimestamp)) < REMINDER_DURATION_MS) {
-        console.log("MEGA Migration Alert: Remind later period is active. Skipping alert.");
-        hideMegaMigrationAlert(); // Ensure it's hidden if previously shown
+        console.log("Google Drive Migration Alert: Remind later period is active. Skipping alert."); // RENAMED_TEXT
+        hideGoogleDriveMigrationAlert(); // RENAMED_CALL: Ensure it's hidden if previously shown
         return;
     }
 
@@ -68,16 +68,18 @@ export function checkAndShowMegaMigrationAlert() {
     if (globalCourseDataMap && globalCourseDataMap.size > 0) {
         totalCourses = globalCourseDataMap.size;
         globalCourseDataMap.forEach(course => {
-            const isMigrated = course.megaTranscriptionsFolderLink &&
-                               course.megaPdfFolderLink &&
-                               course.megaMcqFolderLink;
+            // UPDATED_FIELDS: Check for Google Drive specific fields (e.g., gdriveFolderId)
+            const isMigrated = course.gdriveTranscriptionsFolderId &&
+                               course.gdrivePdfFolderId &&
+                               course.gdriveMcqFolderId &&
+                               course.gdriveCourseRootFolderId; // Assuming root folder ID also indicates migration
             if (!isMigrated) {
                 unmigratedCourses++;
             }
         });
     } else {
-        console.log("MEGA Migration Alert: No courses loaded in globalCourseDataMap. Skipping alert.");
-        hideMegaMigrationAlert();
+        console.log("Google Drive Migration Alert: No courses loaded in globalCourseDataMap. Skipping alert."); // RENAMED_TEXT
+        hideGoogleDriveMigrationAlert(); // RENAMED_CALL
         return;
     }
     
@@ -103,13 +105,13 @@ export function checkAndShowMegaMigrationAlert() {
         if (!migrateButton.dataset.listenerAttached) {
             migrateButton.addEventListener('click', () => {
                 playUiSound?.('button_click_confirm');
-                if (window.showMegaMigrationDashboard) {
-                    window.showMegaMigrationDashboard();
+                if (window.showGoogleDriveMigrationDashboard) { // RENAMED_WINDOW_FUNCTION
+                    window.showGoogleDriveMigrationDashboard(); // RENAMED_WINDOW_FUNCTION
                 } else {
-                    console.error("showMegaMigrationDashboard function not found on window object.");
-                    alert("Error: Could not navigate to MEGA migration dashboard.");
+                    console.error("showGoogleDriveMigrationDashboard function not found on window object."); // RENAMED_TEXT
+                    alert("Error: Could not navigate to Google Drive migration dashboard."); // RENAMED_TEXT
                 }
-                hideMegaMigrationAlert();
+                hideGoogleDriveMigrationAlert(); // RENAMED_CALL
             });
             migrateButton.dataset.listenerAttached = 'true';
         }
@@ -118,8 +120,8 @@ export function checkAndShowMegaMigrationAlert() {
             remindButton.addEventListener('click', () => {
                 playUiSound?.('button_click_cancel');
                 localStorage.setItem(REMINDER_STORAGE_KEY, Date.now().toString());
-                hideMegaMigrationAlert();
-                alert("Okay, we'll remind you about MEGA migration later!");
+                hideGoogleDriveMigrationAlert(); // RENAMED_CALL
+                alert("Okay, we'll remind you about Google Drive migration later!"); // RENAMED_TEXT
             });
             remindButton.dataset.listenerAttached = 'true';
         }
@@ -127,11 +129,11 @@ export function checkAndShowMegaMigrationAlert() {
         if (!closeButton.dataset.listenerAttached) {
             closeButton.addEventListener('click', () => {
                 playUiSound?.('button_click_cancel');
-                hideMegaMigrationAlert();
+                hideGoogleDriveMigrationAlert(); // RENAMED_CALL
             });
             closeButton.dataset.listenerAttached = 'true';
         }
     } else {
-        hideMegaMigrationAlert(); // Hide if all courses are migrated
+        hideGoogleDriveMigrationAlert(); // RENAMED_CALL: Hide if all courses are migrated
     }
 }

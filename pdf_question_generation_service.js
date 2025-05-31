@@ -1,10 +1,9 @@
 const fs = require('fs-extra');
 const path = require('path');
-// const { initialize: megaInitialize, findFolder: megaFindFolder, createFolder: megaCreateFolder, uploadFile: megaUploadFile, megaStorage } = require('./mega_service.js');
-const serverMega = require('./mega_service_server.js'); // MODIFIED for server-side
+// const { initialize: gDriveInitialize, findFolder: gDriveFindFolder, createFolder: gDriveCreateFolder, uploadFile: gDriveUploadFile } = require('./google_drive_service.js'); // Client-side, not for server
+const serverGoogleDrive = require('./google_drive_service_server.js'); // Use the server-side Google Drive service
 // const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled
-// import { getAllPdfTextForAI, callGeminiTextAPI as generateTextContentResponse } from './ai_integration.js'; // MODIFIED for ES Import and aliasing
-const aiServer = require('./ai_integration_server.js'); // MODIFIED for server-side
+const aiServer = require('./ai_integration_server.js');
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 
@@ -89,11 +88,10 @@ const logQGen = (context, messageOrError, level = 'info') => {
 async function generateQuestionsFromPdf(
     courseId,
     chapterKey, // e.g., "textbook_chapter_1"
-    chapterPdfMegaLink,
+    chapterPdfGoogleDriveId, // Changed from Link to ID for Google Drive
     chapterTitle,
-    megaEmail,
-    megaPassword,
-    initializedServerMega, // Added: initialized serverMega instance from the caller
+    // megaEmail and megaPassword removed
+    initializedServerGoogleDrive, // Renamed instance
     geminiApiKey // Expected to be an array of keys or a single key string
 ) {
     const processingTimestamp = Date.now();
@@ -101,7 +99,7 @@ async function generateQuestionsFromPdf(
     const logContext = { courseId, chapterKey };
     let qGenApiKeyIndex = 0; // Index for cycling through API keys for AI calls
 
-    logQGen(logContext, `Starting PDF Question Generation for chapter ${chapterTitle}. Temp dir: ${TEMP_PROCESSING_DIR}`);
+    logQGen(logContext, `Starting PDF Question Generation for chapter ${chapterTitle} using Google Drive. Temp dir: ${TEMP_PROCESSING_DIR}`);
 
     let downloadedPdfPath = null;
     const generatedFilesToUpload = []; 
@@ -109,18 +107,14 @@ async function generateQuestionsFromPdf(
     try {
         await fs.ensureDir(TEMP_PROCESSING_DIR);
 
-        // --- 1. Download Chapter PDF from MEGA ---
-        // Mega service is now initialized by the caller and passed as 'initializedServerMega'
-        // We will use 'initializedServerMega' directly for operations.
-        // logQGen(logContext, 'Initializing MEGA service for PDF download...'); // No longer initializing here
-        // await serverMega.initialize(megaEmail, megaPassword); // REMOVED
-        // const megaStorage = serverMega.getMegaStorage(); // REMOVED - serverMega functions will use internal state
-        // if (!megaStorage || !megaStorage.root) throw new Error('MEGA service initialization failed or root directory not accessible.'); // REMOVED
+        // --- 1. Download Chapter PDF from Google Drive ---
+        // Google Drive service is initialized by the caller and passed as 'initializedServerGoogleDrive'
         
-        logQGen(logContext, `Downloading PDF from MEGA link: ${chapterPdfMegaLink} using provided Mega instance.`);
+        logQGen(logContext, `Downloading PDF from Google Drive ID: ${chapterPdfGoogleDriveId} using provided Google Drive instance.`);
         const tempPdfName = sanitizeFilename(`${chapterKey}_temp.pdf`); 
-        // Use the passed-in initializedServerMega for operations
-        downloadedPdfPath = await initializedServerMega.downloadFile(chapterPdfMegaLink, TEMP_PROCESSING_DIR, tempPdfName); 
+        // Use the passed-in initializedServerGoogleDrive for operations
+        // downloadFile in google_drive_service_server.js takes fileId, destinationPath, desiredFileName
+        downloadedPdfPath = await initializedServerGoogleDrive.downloadFile(chapterPdfGoogleDriveId, TEMP_PROCESSING_DIR, tempPdfName);
         logQGen(logContext, `Chapter PDF downloaded to: ${downloadedPdfPath}`);
 
         // --- 2. Extract Text from PDF ---
@@ -231,48 +225,46 @@ Generate problems now.
         generatedFilesToUpload.push({ path: tempProblemsPath, name: 'TextProblems.md', type: 'generated_problems_markdown' });
         logQGen(logContext, `Aggregated TextProblems.md generated and saved to: ${tempProblemsPath}. Total length: ${allProblemsContent.length}`);
         
-        // --- 5. Upload Markdown Files to MEGA ---
-        const courseDirName = `CourseDir_${courseId}`; 
-        logQGen(logContext, `Using placeholder courseDirName for MEGA upload: ${courseDirName}`);
+        // --- 5. Upload Markdown Files to Google Drive ---
+        const courseDirName = `CourseDir_${courseId}`; // This might need to be course ID directly or a sanitized name
+        logQGen(logContext, `Using course identifier for Google Drive upload: ${courseDirName}`);
 
-        const lyceumRootFolderName = "LyceumCourses_Test";
+        const lyceumRootFolderName = "LyceumCourses_GoogleDrive_Test"; // Updated name for GDrive
         const generatedQuestionsFolderName = "Generated_Questions"; 
 
-        // Use initializedServerMega for all Mega operations
-        // Note: serverMega.getMegaStorage() will be called *inside* these functions if they need the storage.root
-        // And because serverMega was initialized by the caller, getMegaStorage() will return the correct, ready storage.
-        const megaStorageForRoot = initializedServerMega.getMegaStorage(); // Or rely on functions to call it. Let's be explicit for root.
+        // Use initializedServerGoogleDrive for all Google Drive operations
+        // Parent ID for root is 'root'
+        let lyceumRootNode = await initializedServerGoogleDrive.findFolder(lyceumRootFolderName, 'root');
+        if (!lyceumRootNode) lyceumRootNode = await initializedServerGoogleDrive.createFolder(lyceumRootFolderName, 'root');
+        if (!lyceumRootNode || !lyceumRootNode.id) throw new Error(`Failed to find/create Lyceum root folder in Google Drive: ${lyceumRootFolderName}`);
 
-        let lyceumRootNode = await initializedServerMega.findFolder(lyceumRootFolderName, megaStorageForRoot.root); 
-        if (!lyceumRootNode) lyceumRootNode = await initializedServerMega.createFolder(lyceumRootFolderName, megaStorageForRoot.root); 
-        if (!lyceumRootNode) throw new Error(`Failed to find/create Lyceum root folder: ${lyceumRootFolderName}`);
-
-        let courseMegaFolderNode = await initializedServerMega.findFolder(courseDirName, lyceumRootNode); 
-        if (!courseMegaFolderNode) courseMegaFolderNode = await initializedServerMega.createFolder(courseDirName, lyceumRootNode); 
-        if (!courseMegaFolderNode) throw new Error(`Failed to find/create course folder: ${courseDirName}`);
+        let courseDriveFolderNode = await initializedServerGoogleDrive.findFolder(courseDirName, lyceumRootNode.id);
+        if (!courseDriveFolderNode) courseDriveFolderNode = await initializedServerGoogleDrive.createFolder(courseDirName, lyceumRootNode.id);
+        if (!courseDriveFolderNode || !courseDriveFolderNode.id) throw new Error(`Failed to find/create course folder in Google Drive: ${courseDirName}`);
         
-        let genQuestionsCourseNode = await initializedServerMega.findFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
-        if(!genQuestionsCourseNode) genQuestionsCourseNode = await initializedServerMega.createFolder(generatedQuestionsFolderName, courseMegaFolderNode); 
-        if(!genQuestionsCourseNode) throw new Error(`Failed to find/create Generated_Questions folder for course: ${generatedQuestionsFolderName}`);
+        let genQuestionsCourseNode = await initializedServerGoogleDrive.findFolder(generatedQuestionsFolderName, courseDriveFolderNode.id);
+        if(!genQuestionsCourseNode) genQuestionsCourseNode = await initializedServerGoogleDrive.createFolder(generatedQuestionsFolderName, courseDriveFolderNode.id);
+        if(!genQuestionsCourseNode || !genQuestionsCourseNode.id) throw new Error(`Failed to find/create Generated_Questions folder for course in Google Drive: ${generatedQuestionsFolderName}`);
 
-        let chapterQuestionsNode = await initializedServerMega.findFolder(chapterKey, genQuestionsCourseNode); 
-        if (!chapterQuestionsNode) chapterQuestionsNode = await initializedServerMega.createFolder(chapterKey, genQuestionsCourseNode); 
-        if (!chapterQuestionsNode) throw new Error(`Failed to find/create chapter-specific questions folder: ${chapterKey}`);
+        let chapterQuestionsNode = await initializedServerGoogleDrive.findFolder(chapterKey, genQuestionsCourseNode.id);
+        if (!chapterQuestionsNode) chapterQuestionsNode = await initializedServerGoogleDrive.createFolder(chapterKey, genQuestionsCourseNode.id);
+        if (!chapterQuestionsNode || !chapterQuestionsNode.id) throw new Error(`Failed to find/create chapter-specific questions folder in Google Drive: ${chapterKey}`);
         
-        const uploadedFileLinks = {};
+        const uploadedFileDetails = {}; // Store ID and webViewLink
 
         for (const fileToUpload of generatedFilesToUpload) {
-            logQGen(logContext, `Uploading ${fileToUpload.name} to MEGA folder: ${chapterQuestionsNode.name}`);
-            const uploadedFile = await initializedServerMega.uploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode); 
-            if (!uploadedFile || !uploadedFile.link) {
-                throw new Error(`Failed to upload ${fileToUpload.name} to MEGA or link not returned.`);
+            logQGen(logContext, `Uploading ${fileToUpload.name} to Google Drive folder: ${chapterQuestionsNode.name} (ID: ${chapterQuestionsNode.id})`);
+            // uploadFile for google_drive_service_server.js: uploadFile(localFilePath, remoteFileName, targetFolderId)
+            const uploadedFile = await initializedServerGoogleDrive.uploadFile(fileToUpload.path, fileToUpload.name, chapterQuestionsNode.id);
+            if (!uploadedFile || !uploadedFile.id) { // Check for ID for Google Drive
+                throw new Error(`Failed to upload ${fileToUpload.name} to Google Drive or ID not returned.`);
             }
-            uploadedFileLinks[fileToUpload.type] = uploadedFile.link; 
-            logQGen(logContext, `${fileToUpload.name} uploaded successfully: ${uploadedFile.link}`);
+            uploadedFileDetails[fileToUpload.type] = { id: uploadedFile.id, link: uploadedFile.webViewLink };
+            logQGen(logContext, `${fileToUpload.name} uploaded successfully to Google Drive: ID ${uploadedFile.id}, Link: ${uploadedFile.webViewLink}`);
         }
 
         // --- 6. Update Firestore ---
-        logQGen(logContext, `Firestore update SKIPPED.`);
+        logQGen(logContext, `Firestore update SKIPPED.`); // Keep this logic as Firestore is out of scope for this change
         const chapterResources = {}; 
         if (!chapterResources[chapterKey]) {
             logQGen(logContext, `Chapter key "${chapterKey}" not found in placeholder chapterResources. Initializing.`, 'warn');
@@ -284,18 +276,20 @@ Generate problems now.
         chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources.filter(
             res => !(res.type === 'generated_mcq_markdown' || res.type === 'generated_problems_markdown')
         );
-        if (uploadedFileLinks['generated_mcq_markdown']) {
+        if (uploadedFileDetails['generated_mcq_markdown']) {
             chapterResources[chapterKey].otherResources.push({
                 title: `MCQs for ${chapterTitle}`,
-                url: uploadedFileLinks['generated_mcq_markdown'],
+                gdriveId: uploadedFileDetails['generated_mcq_markdown'].id, // Store GDrive ID
+                gdriveLink: uploadedFileDetails['generated_mcq_markdown'].link, // Store GDrive webViewLink
                 type: 'generated_mcq_markdown',
                 generatedAt: new Date().toISOString()
             });
         }
-        if (uploadedFileLinks['generated_problems_markdown']) {
+        if (uploadedFileDetails['generated_problems_markdown']) {
             chapterResources[chapterKey].otherResources.push({
                 title: `Problems for ${chapterTitle}`,
-                url: uploadedFileLinks['generated_problems_markdown'],
+                gdriveId: uploadedFileDetails['generated_problems_markdown'].id, // Store GDrive ID
+                gdriveLink: uploadedFileDetails['generated_problems_markdown'].link, // Store GDrive webViewLink
                 type: 'generated_problems_markdown',
                 generatedAt: new Date().toISOString()
             });
@@ -303,16 +297,18 @@ Generate problems now.
 
         return {
             success: true,
-            message: `MCQs and Problems generated and saved for chapter: ${chapterTitle} (Firestore update skipped).`,
-            mcqMegaLink: uploadedFileLinks['generated_mcq_markdown'] || null,
-            problemsMegaLink: uploadedFileLinks['generated_problems_markdown'] || null,
+            message: `MCQs and Problems generated and saved to Google Drive for chapter: ${chapterTitle} (Firestore update skipped).`,
+            mcqGoogleDriveId: uploadedFileDetails['generated_mcq_markdown']?.id || null,
+            mcqGoogleDriveLink: uploadedFileDetails['generated_mcq_markdown']?.link || null,
+            problemsGoogleDriveId: uploadedFileDetails['generated_problems_markdown']?.id || null,
+            problemsGoogleDriveLink: uploadedFileDetails['generated_problems_markdown']?.link || null,
         };
 
     } catch (error) {
         logQGen(logContext, error, 'error');
         return {
             success: false,
-            message: `PDF Question Generation failed: ${error.message}`,
+            message: `PDF Question Generation with Google Drive failed: ${error.message}`,
             error: error.stack,
         };
     } finally {
@@ -328,10 +324,12 @@ Generate problems now.
     }
 }
 
-// Helper to sanitize MEGA node names (basic version)
+// Helper to sanitize Google Drive filenames (Google Drive is more permissive but good practice)
 function sanitizeFilename(name) {
     if (!name) return 'untitled';
-    return name.replace(/[\\/*?"<>|:]/g, '_').replace(/\s+/g, '_');
+    // Google Drive allows most characters, but replacing / and \ is good for compatibility.
+    // Other problematic OS chars like : * ? " < > | might also be worth replacing if files are locally synced.
+    return name.replace(/[\\/]/g, '_').replace(/\s+/g, '_');
 }
 
 

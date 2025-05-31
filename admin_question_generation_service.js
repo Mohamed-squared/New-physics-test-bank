@@ -1,7 +1,7 @@
 // admin_question_generation_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
-import { showLoading, hideLoading, escapeHtml } from './utils.js'; // Added unescape
-import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js'; // Added import
+import { showLoading, hideLoading, escapeHtml } from './utils.js';
+// Removed: import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js';
 // Note: No direct Firestore writes in these functions, they call a backend service.
 
 function unescape(htmlStr) {
@@ -11,15 +11,15 @@ function unescape(htmlStr) {
 }
 
 // --- PDF MCQ & Problem Generator ---
-export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapterPdfMegaLink, chapterTitle) {
+export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapterPdfGoogleDriveId, chapterTitle) { // Renamed parameter
     const feedbackArea = document.getElementById('mcq-problem-generator-feedback');
     const startButton = document.getElementById('start-mcq-problem-generation-btn');
     if (!feedbackArea || !startButton) { alert("Error: UI components missing."); return; }
     feedbackArea.innerHTML = ''; 
-    if (!courseId || !chapterKey || !chapterPdfMegaLink || !chapterTitle) {
-        feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: Course, Chapter, Chapter Title, and PDF Link must be available.</p>`; return;
+    if (!courseId || !chapterKey || !chapterPdfGoogleDriveId || !chapterTitle) { // Check new param name
+        feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: Course, Chapter, Chapter Title, and Google Drive PDF ID must be available.</p>`; return;
     }
-    // Removed MEGA Email and Password prompts
+
     const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
@@ -27,26 +27,29 @@ export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapter
     startButton.disabled = true;
     feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Consulting the Oracle for chapter "${chapterTitle}". This may take a few moments...</p>`;
     try {
+        // Backend /generate-questions-from-pdf needs to be updated for Google Drive
         const response = await fetch('http://localhost:3001/generate-questions-from-pdf', {
             method: 'POST', headers: { 'Content-Type': 'application/json', },
             body: JSON.stringify({ 
                 courseId, 
                 chapterKey, 
-                chapterPdfMegaLink, 
+                chapterPdfGoogleDriveId, // Pass GDrive ID
                 chapterTitle, 
-                megaEmail: MEGA_EMAIL, // Using imported constant
-                megaPassword: MEGA_PASSWORD, // Using imported constant
+                // megaEmail, megaPassword removed
                 geminiApiKey 
             }),
         });
         hideLoading();
         const result = await response.json();
         if (response.ok && result.success) {
+            const mcqDisplay = result.mcqGoogleDriveLink ? `<a href="${result.mcqGoogleDriveLink}" target="_blank" class="link">${result.mcqGoogleDriveLink}</a> (ID: ${result.mcqGoogleDriveId || 'N/A'})` : (result.mcqGoogleDriveId ? `ID: ${result.mcqGoogleDriveId}` : 'Not forged or link missing.');
+            const problemsDisplay = result.problemsGoogleDriveLink ? `<a href="${result.problemsGoogleDriveLink}" target="_blank" class="link">${result.problemsGoogleDriveLink}</a> (ID: ${result.problemsGoogleDriveId || 'N/A'})` : (result.problemsGoogleDriveId ? `ID: ${result.problemsGoogleDriveId}` : 'Not forged or link missing.');
+
             feedbackArea.innerHTML = `
                 <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>📚 Wisdom Extracted!</p>
                 <p class="ml-8"><strong>Chapter:</strong> ${chapterTitle}</p>
-                ${result.mcqMegaLink ? `<p class="ml-8"><strong>MCQ Scroll:</strong> <a href="${result.mcqMegaLink}" target="_blank" class="link">${result.mcqMegaLink}</a></p>` : '<p class="ml-8">MCQ Scroll: Not forged or link missing.</p>'}
-                ${result.problemsMegaLink ? `<p class="ml-8"><strong>Problem Parchment:</strong> <a href="${result.problemsMegaLink}" target="_blank" class="link">${result.problemsMegaLink}</a></p>` : '<p class="ml-8">Problem Parchment: Not forged or link missing.</p>'}
+                <p class="ml-8"><strong>MCQ Scroll (Google Drive):</strong> ${mcqDisplay}</p>
+                <p class="ml-8"><strong>Problem Parchment (Google Drive):</strong> ${problemsDisplay}</p>
                 <p class="ml-8 mt-2"><strong>Oracle's Message:</strong> ${result.message || 'Completed.'}</p>`;
         } else {
             throw new Error(result.message || `HTTP error ${response.status}`);
@@ -63,22 +66,22 @@ export async function startPdfMcqProblemGeneration(courseId, chapterKey, chapter
 export function displayPdfMcqProblemGenerator(containerElement) {
     if (!currentUser || !currentUser.isAdmin) { containerElement.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">Access Denied. Admin privileges required.</div>`; return; }
     let courseOptionsHtml = '<option value="">Select Course Chronicle</option>';
-    globalCourseDataMap.forEach((course, courseId) => { courseOptionsHtml += `<option value="${courseId}">${course.name}</option>`; });
+    globalCourseDataMap.forEach((course, courseId) => { courseOptionsHtml += `<option value="${courseId}">${course.name || course.courseTitle}</option>`; }); // Added courseTitle
     containerElement.innerHTML = `
         <div class="content-card p-6">
             <h2 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.79 4 4s-1.79 4-4 4c-1.742 0-3.223-.835-3.772-2M10 13l4-4m0 0l-4 4m4-4v12"></path></svg>Oracle's Forge (Chapter PDF Q-Gen)</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Forge MCQs and Problems from the sacred texts of chapter PDFs.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Forge MCQs and Problems from the sacred texts of chapter PDFs stored on Google Drive.</p>
             <div class="space-y-5">
                 <div>
                     <label for="mcq-course-select" class="label">Target Course Chronicle:</label>
                     <select id="mcq-course-select" name="mcq-course-select" class="select-dropdown mt-1">${courseOptionsHtml}</select>
                 </div>
                 <div>
-                    <label for="mcq-chapter-select" class="label">Target Chapter Scroll (with PDF):</label>
+                    <label for="mcq-chapter-select" class="label">Target Chapter Scroll (with PDF on Google Drive):</label>
                     <select id="mcq-chapter-select" name="mcq-chapter-select" class="select-dropdown mt-1" disabled><option value="">Select Course Chronicle First</option></select>
                 </div>
                 <div class="mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
-                    <p class="text-sm text-gray-600 dark:text-gray-300">Selected Scroll's Location (MEGA PDF Link):</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">Selected Scroll's Location (Google Drive PDF ID/Link):</p>
                     <p id="selected-chapter-pdf-link" class="text-xs font-mono text-gray-700 dark:text-gray-200 break-all">N/A</p>
                 </div>
                 <button id="start-mcq-problem-generation-btn" class="btn-primary w-full flex items-center justify-center py-2.5" disabled>
@@ -104,10 +107,13 @@ export function displayPdfMcqProblemGenerator(containerElement) {
                 for (const chapterKey in course.chapterResources) {
                     const chapterData = course.chapterResources[chapterKey];
                     if (chapterData.otherResources && Array.isArray(chapterData.otherResources)) {
-                        const pdfResource = chapterData.otherResources.find(res => res.type === 'textbook_chapter_segment' && res.url);
+                        // Check for gdrivePdfId or gdrivePdfLink
+                        const pdfResource = chapterData.otherResources.find(res => res.type === 'textbook_chapter_segment' && (res.gdriveId || res.gdriveLink));
                         if (pdfResource) {
                             const displayTitle = pdfResource.title || chapterKey.replace(/_/g, ' ');
-                            chapterOptionsHtml += `<option value="${chapterKey}" data-pdf-link="${pdfResource.url}" data-chapter-title="${escape(displayTitle)}">${displayTitle}</option>`;
+                            // Store gdriveId if available, otherwise the link. Prefer ID.
+                            const driveIdentifier = pdfResource.gdriveId || pdfResource.gdriveLink;
+                            chapterOptionsHtml += `<option value="${chapterKey}" data-gdrive-identifier="${driveIdentifier}" data-chapter-title="${escape(displayTitle)}">${displayTitle}</option>`;
                             chaptersWithPdfsFound++;
                         }
                     }
@@ -116,7 +122,7 @@ export function displayPdfMcqProblemGenerator(containerElement) {
             if (chaptersWithPdfsFound > 0) {
                 chapterSelectElem.innerHTML = chapterOptionsHtml; chapterSelectElem.disabled = false;
             } else {
-                chapterSelectElem.innerHTML = '<option value="">No Chapter Scrolls with PDF found</option>';
+                chapterSelectElem.innerHTML = '<option value="">No Chapter Scrolls with PDF found on Google Drive</option>';
             }
         } else {
             chapterSelectElem.innerHTML = '<option value="">Select Course Chronicle First</option>';
@@ -125,8 +131,8 @@ export function displayPdfMcqProblemGenerator(containerElement) {
     chapterSelectElem.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         if (selectedOption && selectedOption.value) {
-            const pdfLink = selectedOption.getAttribute('data-pdf-link');
-            pdfLinkDisplayElem.textContent = pdfLink || 'N/A'; startButtonElem.disabled = !pdfLink;
+            const driveIdentifier = selectedOption.getAttribute('data-gdrive-identifier');
+            pdfLinkDisplayElem.textContent = driveIdentifier || 'N/A'; startButtonElem.disabled = !driveIdentifier;
         } else {
             pdfLinkDisplayElem.textContent = 'N/A'; startButtonElem.disabled = true;
         }
@@ -134,9 +140,9 @@ export function displayPdfMcqProblemGenerator(containerElement) {
     startButtonElem.addEventListener('click', () => {
         const selectedChapterOption = chapterSelectElem.options[chapterSelectElem.selectedIndex];
         if (courseSelectElem.value && selectedChapterOption && selectedChapterOption.value) {
-            startPdfMcqProblemGeneration(courseSelectElem.value, selectedChapterOption.value, selectedChapterOption.getAttribute('data-pdf-link'), unescape(selectedChapterOption.getAttribute('data-chapter-title')));
+            startPdfMcqProblemGeneration(courseSelectElem.value, selectedChapterOption.value, selectedChapterOption.getAttribute('data-gdrive-identifier'), unescape(selectedChapterOption.getAttribute('data-chapter-title')));
         } else {
-            document.getElementById('mcq-problem-generator-feedback').innerHTML = `<p class="text-red-600 dark:text-red-400">Please select a Course and a Chapter with a valid PDF link.</p>`;
+            document.getElementById('mcq-problem-generator-feedback').innerHTML = `<p class="text-red-600 dark:text-red-400">Please select a Course and a Chapter with a valid Google Drive PDF ID/Link.</p>`;
         }
     });
 }
@@ -150,7 +156,7 @@ export async function startLectureMcqProblemGeneration(courseId, selectedLecture
     if (!courseId || !selectedLectures || selectedLectures.length === 0 || !chapterNameForLectures) {
         feedbackArea.innerHTML = `<p class="text-red-600 dark:text-red-400">Error: Course, "Chapter Name/Topic", and at least one lecture must be selected.</p>`; return;
     }
-    // Removed MEGA Email and Password prompts
+
     const geminiApiKey = prompt("Enter your Gemini API Key (The Oracle's Token):");
     if (!geminiApiKey) { feedbackArea.innerHTML = `<p class="text-yellow-600 dark:text-yellow-400">Gemini API Key is required.</p>`; return; }
 
@@ -158,25 +164,28 @@ export async function startLectureMcqProblemGeneration(courseId, selectedLecture
     startButton.disabled = true;
     feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Consulting the Oracle with ${selectedLectures.length} lecture scroll(s) for topic "${chapterNameForLectures}". This may take time...</p>`;
     try {
+        // Backend /generate-questions-from-lectures needs to be updated for Google Drive
         const response = await fetch('http://localhost:3001/generate-questions-from-lectures', {
             method: 'POST', headers: { 'Content-Type': 'application/json', },
             body: JSON.stringify({ 
                 courseId, 
-                selectedLectures, 
+                selectedLectures, // Ensure this array contains gdriveSrtId/gdriveSrtLink
                 chapterNameForLectures, 
-                megaEmail: MEGA_EMAIL, // Using imported constant
-                megaPassword: MEGA_PASSWORD, // Using imported constant
+                // megaEmail, megaPassword removed
                 geminiApiKey 
             }),
         });
         hideLoading();
         const result = await response.json();
         if (response.ok && result.success) {
+            const mcqDisplay = result.mcqGoogleDriveLink ? `<a href="${result.mcqGoogleDriveLink}" target="_blank" class="link">${result.mcqGoogleDriveLink}</a> (ID: ${result.mcqGoogleDriveId || 'N/A'})` : (result.mcqGoogleDriveId ? `ID: ${result.mcqGoogleDriveId}` : 'Not forged or link missing.');
+            const problemsDisplay = result.problemsGoogleDriveLink ? `<a href="${result.problemsGoogleDriveLink}" target="_blank" class="link">${result.problemsGoogleDriveLink}</a> (ID: ${result.problemsGoogleDriveId || 'N/A'})` : (result.problemsGoogleDriveId ? `ID: ${result.problemsGoogleDriveId}` : 'Not forged or link missing.');
+
             feedbackArea.innerHTML = `
                 <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>🎙️ Echoes of Knowledge Transformed!</p>
                 <p class="ml-8"><strong>Topic / New Chapter Key:</strong> ${result.newChapterKey || chapterNameForLectures}</p>
-                ${result.mcqMegaLink ? `<p class="ml-8"><strong>MCQ Scroll:</strong> <a href="${result.mcqMegaLink}" target="_blank" class="link">${result.mcqMegaLink}</a></p>` : '<p class="ml-8">MCQ Scroll: Not forged or link missing.</p>'}
-                ${result.problemsMegaLink ? `<p class="ml-8"><strong>Problem Parchment:</strong> <a href="${result.problemsMegaLink}" target="_blank" class="link">${result.problemsMegaLink}</a></p>` : '<p class="ml-8">Problem Parchment: Not forged or link missing.</p>'}
+                <p class="ml-8"><strong>MCQ Scroll (Google Drive):</strong> ${mcqDisplay}</p>
+                <p class="ml-8"><strong>Problem Parchment (Google Drive):</strong> ${problemsDisplay}</p>
                 <p class="ml-8 mt-2"><strong>Oracle's Message:</strong> ${result.message || 'Completed.'}</p>`;
         } else {
             throw new Error(result.message || `HTTP error ${response.status}`);
@@ -193,11 +202,11 @@ export async function startLectureMcqProblemGeneration(courseId, selectedLecture
 export function displayLectureMcqProblemGenerator(containerElement) {
     if (!currentUser || !currentUser.isAdmin) { containerElement.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">Access Denied. Admin privileges required.</div>`; return; }
     let courseOptionsHtml = '<option value="">Select Course Chronicle</option>';
-    globalCourseDataMap.forEach((course, courseId) => { courseOptionsHtml += `<option value="${courseId}">${course.name}</option>`; });
+    globalCourseDataMap.forEach((course, courseId) => { courseOptionsHtml += `<option value="${courseId}">${course.name || course.courseTitle}</option>`; }); // Added courseTitle
     containerElement.innerHTML = `
         <div class="content-card p-6">
             <h2 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>Oracle's Forge (Lecture Q-Gen)</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Distill MCQs and Problems from the spoken words of lecture transcripts (SRT scrolls).</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Distill MCQs and Problems from the spoken words of lecture transcripts (SRT scrolls from Google Drive).</p>
             <div class="space-y-5">
                 <div>
                     <label for="lecture-mcq-course-select" class="label">Target Course Chronicle:</label>
@@ -208,7 +217,7 @@ export function displayLectureMcqProblemGenerator(containerElement) {
                     <input type="text" id="lecture-mcq-topic-name" name="lecture-mcq-topic-name" class="input-field mt-1" placeholder="e.g., Week 1 Insights, Quantum Entanglement Musings">
                 </div>
                 <div>
-                    <label class="label">Select Lecture Scrolls (SRT Transcripts):</label>
+                    <label class="label">Select Lecture Scrolls (SRT Transcripts from Google Drive):</label>
                     <div id="lecture-selection-area" class="mt-1 p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700/50 min-h-[100px] max-h-[250px] overflow-y-auto space-y-2">
                         <p class="text-gray-500 dark:text-gray-400">Select a Course Chronicle to list available lecture scrolls.</p>
                     </div>
@@ -236,17 +245,21 @@ export function displayLectureMcqProblemGenerator(containerElement) {
                     const chapterData = course.chapterResources[chapterKey];
                     if (chapterData.lectureUrls && Array.isArray(chapterData.lectureUrls)) {
                         chapterData.lectureUrls.forEach((lecture, index) => {
-                            const srtLink = lecture.url; const lectureType = lecture.type;
-                            if (srtLink && lectureType === 'transcription') {
+                            // Check for gdriveSrtId or gdriveSrtLink
+                            const srtIdentifier = lecture.gdriveSrtId || lecture.gdriveSrtLink;
+                            const lectureType = lecture.type;
+                            if (srtIdentifier && lectureType === 'transcription') {
                                 const lectureId = `lec-sel-${chapterKey}-${index}`;
-                                lecturesHtml += `<div class="flex items-center p-1.5 hover:bg-primary-50 dark:hover:bg-primary-800/30 rounded-md"><input type="checkbox" id="${lectureId}" name="selectedLecture" value="${srtLink}" data-lecture-title="${escape(lecture.title || `Scroll from ${chapterKey}`)}" class="form-checkbox h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"><label for="${lectureId}" class="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">${lecture.title || `Scroll from ${chapterKey}`}</label></div>`;
+                                // Store gdriveSrtId if available, else the link itself for the value
+                                const valueToStore = lecture.gdriveSrtId || lecture.gdriveSrtLink;
+                                lecturesHtml += `<div class="flex items-center p-1.5 hover:bg-primary-50 dark:hover:bg-primary-800/30 rounded-md"><input type="checkbox" id="${lectureId}" name="selectedLecture" value="${valueToStore}" data-gdrive-id="${lecture.gdriveSrtId || ''}" data-gdrive-link="${lecture.gdriveSrtLink || ''}" data-lecture-title="${escape(lecture.title || `Scroll from ${chapterKey}`)}" class="form-checkbox h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"><label for="${lectureId}" class="ml-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">${lecture.title || `Scroll from ${chapterKey}`}</label></div>`;
                                 lecturesFound++;
                             }
                         });
                     }
                 }
             }
-            lectureSelectionAreaElem.innerHTML = lecturesFound > 0 ? lecturesHtml : '<p class="text-gray-500 dark:text-gray-400 p-2">No lecture scrolls with SRT transcripts found for this Chronicle.</p>';
+            lectureSelectionAreaElem.innerHTML = lecturesFound > 0 ? lecturesHtml : '<p class="text-gray-500 dark:text-gray-400 p-2">No lecture scrolls with SRT transcripts found on Google Drive for this Chronicle.</p>';
             startButtonElem.disabled = lecturesFound === 0;
         } else {
             lectureSelectionAreaElem.innerHTML = '<p class="text-gray-500 dark:text-gray-400 p-2">Select a Course Chronicle to list available lecture scrolls.</p>';
@@ -257,7 +270,13 @@ export function displayLectureMcqProblemGenerator(containerElement) {
         const chapterNameForLectures = topicNameInputElem.value.trim();
         const selectedLectureCheckboxes = lectureSelectionAreaElem.querySelectorAll('input[name="selectedLecture"]:checked');
         let selectedLectures = [];
-        selectedLectureCheckboxes.forEach(checkbox => { selectedLectures.push({ title: unescape(checkbox.getAttribute('data-lecture-title')), megaSrtLink: checkbox.value }); });
+        selectedLectureCheckboxes.forEach(checkbox => {
+            selectedLectures.push({
+                title: unescape(checkbox.getAttribute('data-lecture-title')),
+                gdriveSrtId: checkbox.getAttribute('data-gdrive-id') || checkbox.value, // Prefer ID, fallback to value (which might be link)
+                gdriveSrtLink: checkbox.getAttribute('data-gdrive-link') // Explicitly store link if available
+            });
+        });
         if (!courseId || selectedLectures.length === 0 || !chapterNameForLectures) {
             document.getElementById('lecture-mcq-problem-generator-feedback').innerHTML = `<p class="text-red-600 dark:text-red-400">Please select a Course, provide a Topic Name, and choose at least one Lecture Scroll.</p>`; return;
         }

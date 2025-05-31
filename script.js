@@ -54,7 +54,7 @@ import { showGlobalChat, sendChatMessage, deleteChatMessage as deleteGlobalChatM
 import { showLeaderboard, showMarketplacePlaceholder } from './ui_leaderboard.js';
 
 // --- Gamification Alerts Import ---
-import { checkAndShowMegaMigrationAlert } from './ui_gamification_alerts.js';
+import { checkAndShowGoogleDriveMigrationAlert } from './ui_gamification_alerts.js'; // RENAMED_FUNCTION
 
 // --- AI Chat Studio Import ---
 import { showAiChatStudio } from './ui_ai_chat_studio.js';

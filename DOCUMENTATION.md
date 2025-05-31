@@ -345,18 +345,18 @@
 
 **Key Functions/Variables:**
 
-*   `displayCourseManagementSection(containerElement)`: Renders the main UI for course content management, including tabs for different functionalities like "Full Course Creator," "Pending Review," "MEGA Tools," "Transcription," "PDF Processing," and "Question Generators." It dynamically loads content for the selected tab.
+*   `displayCourseManagementSection(containerElement)`: Renders the main UI for course content management, including tabs for different functionalities like "Full Course Creator," "Pending Review," "Google Drive Tools," "Transcription," "PDF Processing," and "Question Generators." It dynamically loads content for the selected tab.
 *   `displayPendingCoursesList(containerElement)`: Fetches and displays a list of courses that have a "pending_review" status from the `globalCourseDataMap`. Allows admins to preview and approve these courses.
-*   `window.previewAndApproveCourse(courseId)`: (Attached to window) Displays a modal with detailed information about a pending course, including its title, tags, AI-generated description, MEGA links for assets (textbook, chapter PDFs, transcriptions, generated questions), and allows the admin to approve it.
+*   `window.previewAndApproveCourse(courseId)`: (Attached to window) Displays a modal with detailed information about a pending course, including its title, tags, AI-generated description, Google Drive links/IDs for assets (textbook, chapter PDFs, transcriptions, generated questions), and allows the admin to approve it.
 *   `window.approveCourseInFirestore(courseId)`: (Attached to window) Called when an admin approves a course. It uses the `approveCourse` function (from `firebase_firestore.js`) to update the course's status in Firestore and refreshes the local `globalCourseDataMap` and the pending courses list UI.
-*   `displayFullCourseAutomationForm(containerElement)`: Renders a comprehensive form for automating the creation of a new course. This form collects details like course title, textbook PDF (or Mega link), page numbering, subject tags, optional metadata (prerequisites, banner/course pictures), lecture information (titles, files/links, SRT links, associated chapter keys), and credentials for external services (MEGA, AssemblyAI, Gemini).
+*   `displayFullCourseAutomationForm(containerElement)`: Renders a comprehensive form for automating the creation of a new course. This form collects details like course title, textbook PDF (or Google Drive link/ID), page numbering, subject tags, optional metadata (prerequisites, banner/course pictures), lecture information (titles, files/links, SRT links, associated chapter keys), and credentials for external services (Google Drive, AssemblyAI, Gemini).
 *   Event Listener for Full Course Automation Form: Handles the submission of the "Full Course Creator" form. It collects all input data, including file uploads and lecture metadata, constructs a `FormData` object, and sends it to a backend service (`/automate-full-course`) for processing. It then displays feedback from the backend, including progress logs and links to created assets.
 *   `loadCoursesForAdmin()`: A function that was likely used to ensure `globalCourseDataMap` was populated for older versions of the admin panel sections. With the refactoring, its direct necessity might be reduced if data is loaded globally, but it's kept for potential external calls.
 
 **Role within the Application:** `admin_course_content.js` is a central administrative tool for overseeing the lifecycle of course content. It enables admins to:
 1.  Initiate fully automated course creation processes by providing raw materials and metadata.
 2.  Review and approve courses submitted through these automated processes or by other users.
-3.  Access specialized sub-modules for managing MEGA cloud storage (`admin_mega_service.js`), transcribing lectures (`admin_transcription_service.js`), processing textbook PDFs (`admin_pdf_processing_service.js`), and generating questions from these materials (`admin_question_generation_service.js`).
+3.  Access specialized sub-modules for managing Google Drive cloud storage (`admin_google_drive_service.js`), transcribing lectures (`admin_transcription_service.js`), processing textbook PDFs (`admin_pdf_processing_service.js`), and generating questions from these materials (`admin_question_generation_service.js`).
 It acts as a high-level interface that orchestrates calls to backend services and updates Firestore through imported functions, while also managing the UI for these complex administrative tasks.
 
 ---
@@ -388,39 +388,39 @@ It acts as a high-level interface that orchestrates calls to backend services an
 
 ---
 
-### `admin_mega_service.js`
+### `admin_google_drive_service.js` (Formerly `admin_mega_service.js`)
 
-**Purpose:** This file provides administrative functionalities related to managing course content stored on MEGA.nz. It includes features for migrating courses to MEGA, browsing MEGA folders, uploading/downloading files, and potentially selecting assets from MEGA for course creation.
+**Purpose:** This file provides administrative functionalities related to managing course content stored on Google Drive. It includes features for migrating courses to Google Drive, browsing Google Drive folders, uploading/downloading files, and potentially selecting assets from Google Drive for course creation.
 
 **Key Functions/Variables:**
 
-*   `createPlaceholderFile(fileName, content)`: A helper function to create a client-side Blob object, typically used for uploading placeholder files (like READMEs) to MEGA.
-*   `displayMegaMigrationDashboard(containerElement)`: Renders the main UI for MEGA cloud management. This includes:
-    *   A section to list courses and their MEGA migration status (Not Migrated, Partially Migrated, Fully Migrated).
-    *   Buttons to initiate migration for unmigrated courses or explore already migrated course vaults.
-    *   An embedded MEGA File Explorer.
-*   `loadCoursesForMegaMigration()`: Fetches course data from `globalCourseDataMap` and renders the list of courses, showing their MEGA migration status and providing action buttons. It also displays a "gamified alert" if unmigrated courses exist.
-*   `startMegaMigration(courseId)`:
-    *   Initiates the migration process for a given course.
-    *   Connects to MEGA using credentials (now expected to be available via `mega_service.js`'s initialization, not prompted here).
-    *   Creates a standard folder structure for the course on MEGA (e.g., main course folder, subfolders for Transcriptions, Textbook PDFs, Generated Assessments).
+*   `createPlaceholderFile(fileName, content)`: A helper function to create a client-side File object, typically used for uploading placeholder files (like READMEs) to Google Drive.
+*   `displayGoogleDriveMigrationDashboard(containerElement)`: Renders the main UI for Google Drive cloud management. This includes:
+    *   A section to list courses and their Google Drive migration status (Not Migrated, Partially Migrated, Fully Migrated).
+    *   Buttons to initiate migration for unmigrated courses or explore already migrated course vaults (using Google Drive folder IDs/links).
+    *   An embedded Google Drive File Explorer.
+*   `loadCoursesForGoogleDriveMigration()`: Fetches course data from `globalCourseDataMap` and renders the list of courses, showing their Google Drive migration status and providing action buttons. It also displays a "gamified alert" if unmigrated courses exist.
+*   `startGoogleDriveMigration(courseId)`:
+    *   Initiates the migration process for a given course to Google Drive.
+    *   Connects to Google Drive using the `google_drive_service.js` initialization (API key, with OAuth flow needed for user-specific write access typically).
+    *   Creates a standard folder structure for the course on Google Drive (e.g., main course folder, subfolders for Transcriptions, Textbook PDFs, Generated Assessments).
     *   Uploads placeholder README files to these folders.
-    *   Updates the course definition in Firestore (via `updateCourseDefinition`) with the new MEGA folder links.
+    *   Updates the course definition in Firestore (via `updateCourseDefinition`) with the new Google Drive folder IDs and web view links.
     *   Updates the local `globalCourseDataMap` and refreshes the course list UI.
-*   `displayMegaFileExplorer(containerElement, initialFolderLink)`: Renders a UI for browsing MEGA folders. It includes:
-    *   An input field to load a specific MEGA folder link.
+*   `displayGoogleDriveFileExplorer(containerElement, initialFolderId)`: Renders a UI for browsing Google Drive folders. It includes:
+    *   An input field to load a specific Google Drive folder ID (or blank for root).
     *   Navigation controls (Parent Folder, breadcrumbs).
     *   A list to display folder contents (files and subfolders).
-    *   An upload section to add files to the currently viewed MEGA folder.
-*   `loadMegaFolderByLink(folderLink, folderName, folderNodeId)`: Loads and displays the contents of a MEGA folder specified by its link (or defaults to the MEGA root if no link is provided). It interacts with `mega_service.js` to fetch folder contents.
-*   `renderMegaFolderContents(folderNode, folderLinkForPath)`: Renders the list of files and folders within the given MEGA `folderNode`. It displays names, sizes, and provides "Open Sector" buttons for subfolders and "Download" buttons for files.
-*   `navigateToMegaPathIndex(index)`: Handles navigation within the MEGA explorer using breadcrumbs.
-*   `navigateToMegaParentFolder()`: Navigates to the parent folder in the MEGA explorer.
-*   `handleMegaFileDownload(fileName, fileLink)`: Initiates a download of a file from MEGA.
-*   `handleMegaFileUpload(event)`: Handles file uploads from the user's computer to the currently selected MEGA folder in the explorer.
-*   `setupCourseAssetSelection()`: (Appears to be a newer, potentially separate feature within this module) Initializes a UI section where an admin can provide a MEGA folder link, view its contents, and select files/folders to be used as assets for creating a new course. This is distinct from the main file explorer and seems geared towards asset gathering.
+    *   An upload section to add files to the currently viewed Google Drive folder.
+*   `loadGoogleDriveFolderById(folderId, folderName)`: Loads and displays the contents of a Google Drive folder specified by its ID (or defaults to 'root'). It interacts with `google_drive_service.js` to fetch folder contents.
+*   `renderGoogleDriveFolderContents(folderId, newPathSegment)`: Renders the list of files and folders within the given Google Drive folder ID. It displays names, sizes (where applicable), and provides "Open Folder" buttons for subfolders and "Download" buttons for files.
+*   `navigateToGoogleDrivePathIndex(index)`: Handles navigation within the Google Drive explorer using breadcrumbs.
+*   `navigateToGoogleDriveParentFolder()`: Navigates to the parent folder in the Google Drive explorer.
+*   `handleGoogleDriveFileDownload(fileId, fileName)`: Initiates a download of a file from Google Drive.
+*   `handleGoogleDriveFileUpload(event)`: Handles file uploads from the user's computer to the currently selected Google Drive folder.
+*   `setupCourseAssetSelectionGoogleDrive()`: Initializes a UI section where an admin can provide a Google Drive folder ID, view its contents, and select files/folders to be used as assets for creating a new course.
 
-**Role within the Application:** `admin_mega_service.js` acts as the bridge between the application and MEGA cloud storage for course materials. It automates the process of creating a standardized, cloud-backed folder structure for courses, facilitating better organization and potentially larger file storage. The embedded file explorer provides admins with direct visibility and control over these cloud assets from within the application.
+**Role within the Application:** `admin_google_drive_service.js` acts as the bridge between the application and Google Drive cloud storage for course materials. It automates the process of creating a standardized, cloud-backed folder structure for courses, facilitating better organization and potentially larger file storage. The embedded file explorer provides admins with direct visibility and control over these cloud assets from within the application.
 
 ---
 
@@ -481,7 +481,7 @@ It acts as a high-level interface that orchestrates calls to backend services an
 
 ### `admin_pdf_processing_service.js`
 
-**Purpose:** This file provides an administrative interface for processing textbook PDF files. The primary goal is to take a full textbook PDF, analyze its table of contents (using AI), split it into individual chapter PDFs, and archive these assets (the full textbook and individual chapters) to MEGA.nz.
+**Purpose:** This file provides an administrative interface for processing textbook PDF files. The primary goal is to take a full textbook PDF, analyze its table of contents (using AI), split it into individual chapter PDFs, and archive these assets (the full textbook and individual chapters) to Google Drive.
 
 **Key Functions/Variables:**
 
@@ -491,8 +491,8 @@ It acts as a high-level interface that orchestrates calls to backend services an
     *   It prompts the admin for a Gemini API Key (used by the backend for Table of Contents analysis).
     *   It constructs a `FormData` object containing the PDF file and other details.
     *   It sends this data to a backend service endpoint (`http://localhost:3001/process-textbook-pdf`).
-    *   It updates a feedback area in the UI with the status of the processing and the results (links to the full PDF and chapter PDFs on MEGA).
-    *   The actual PDF parsing, splitting, and MEGA interaction happen on the backend server.
+    *   It updates a feedback area in the UI with the status of the processing and the results (links/IDs to the full PDF and chapter PDFs on Google Drive).
+    *   The actual PDF parsing, splitting, and Google Drive interaction happen on the backend server.
 *   `displayTextbookPdfProcessor(containerElement)`:
     *   Renders the UI for the "PDF Alchemist's Bench."
     *   This UI includes:
@@ -503,7 +503,7 @@ It acts as a high-level interface that orchestrates calls to backend services an
         *   A feedback area to display results or errors.
     *   It attaches an event listener to the "Start Transmutation" button to call `startPdfProcessing`.
 
-**Role within the Application:** `admin_pdf_processing_service.js` (in conjunction with its backend counterpart) is a key tool for course content preparation. It automates the laborious task of breaking down large textbook PDFs into more manageable chapter-specific PDFs. These chapter PDFs can then be used as study materials within the courses or as input for further AI-driven question generation. By integrating with MEGA, it ensures these processed assets are stored in the cloud. The `MEGA_EMAIL` and `MEGA_PASSWORD` constants are imported from `mega_service.js` (or `config.js` indirectly) and sent to the backend, indicating the backend service handles the MEGA authentication and uploads.
+**Role within the Application:** `admin_pdf_processing_service.js` (in conjunction with its backend counterpart) is a key tool for course content preparation. It automates the laborious task of breaking down large textbook PDFs into more manageable chapter-specific PDFs. These chapter PDFs can then be used as study materials within the courses or as input for further AI-driven question generation. By integrating with Google Drive, it ensures these processed assets are stored in the cloud. The Google Drive API key and potentially service account credentials (configured on the backend) are used by the backend service for authentication and uploads.
 
 ---
 
@@ -541,38 +541,38 @@ The functions related to playlist management are typically part of the "Course C
 
 ### `admin_question_generation_service.js`
 
-**Purpose:** This file provides administrative interfaces for generating multiple-choice questions (MCQs) and open-ended problems from course materials, specifically from chapter PDFs and lecture transcripts (SRT files). It relies on a backend service to perform the actual AI-driven question generation and interaction with MEGA for storing the generated content.
+**Purpose:** This file provides administrative interfaces for generating multiple-choice questions (MCQs) and open-ended problems from course materials, specifically from chapter PDFs and lecture transcripts (SRT files). It relies on a backend service to perform the actual AI-driven question generation and interaction with Google Drive for storing the generated content.
 
 **Key Functions/Variables:**
 
 *   `unescape(htmlStr)`: A utility function to decode HTML entities, likely used for correctly displaying titles or other text retrieved from attributes.
 *   **PDF Question Generation:**
-    *   `startPdfMcqProblemGeneration(courseId, chapterKey, chapterPdfMegaLink, chapterTitle)`:
+    *   `startPdfMcqProblemGeneration(courseId, chapterKey, chapterPdfGoogleDriveLink, chapterTitle)`:
         *   Triggered when an admin wants to generate questions from a specific chapter PDF.
-        *   Takes the course ID, a unique key for the chapter (e.g., `chapter_1`), the MEGA link to the chapter's PDF, and the chapter title.
+        *   Takes the course ID, a unique key for the chapter (e.g., `chapter_1`), the Google Drive link/ID to the chapter's PDF, and the chapter title.
         *   Prompts the admin for a Gemini API Key.
-        *   Sends a request to a backend service endpoint (`http://localhost:3001/generate-questions-from-pdf`) with these details, including MEGA credentials (imported constants `MEGA_EMAIL`, `MEGA_PASSWORD`) for the backend to access the PDF.
-        *   Displays feedback from the backend, including links to the generated MCQ and problem files on MEGA.
+        *   Sends a request to a backend service endpoint (`http://localhost:3001/generate-questions-from-pdf`) with these details. The backend would use its Google Drive credentials to access the PDF.
+        *   Displays feedback from the backend, including links/IDs to the generated MCQ and problem files on Google Drive.
     *   `displayPdfMcqProblemGenerator(containerElement)`:
         *   Renders the UI for the "Oracle's Forge (Chapter PDF Q-Gen)."
-        *   Allows admins to select a course, then a chapter within that course (dynamically populated if the chapter has an associated PDF link in `chapterResources`).
-        *   Displays the MEGA PDF link for the selected chapter.
+        *   Allows admins to select a course, then a chapter within that course (dynamically populated if the chapter has an associated PDF link/ID in `chapterResources`).
+        *   Displays the Google Drive PDF link/ID for the selected chapter.
         *   Provides a button to initiate the question generation process by calling `startPdfMcqProblemGeneration`.
 *   **Lecture Transcript Question Generation:**
     *   `startLectureMcqProblemGeneration(courseId, selectedLectures, chapterNameForLectures)`:
         *   Triggered for generating questions from lecture transcripts.
-        *   Takes the course ID, an array of selected lecture objects (each containing a `title` and `megaSrtLink`), and a name for the topic/chapter these lectures pertain to.
+        *   Takes the course ID, an array of selected lecture objects (each containing a `title` and `gdriveSrtId` or `gdriveSrtLink`), and a name for the topic/chapter these lectures pertain to.
         *   Prompts for a Gemini API Key.
-        *   Sends a request to a backend service endpoint (`http://localhost:3001/generate-questions-from-lectures`) with these details and MEGA credentials.
-        *   Displays feedback, including links to the generated MCQ and problem files on MEGA, and the new chapter/topic key created for these questions.
+        *   Sends a request to a backend service endpoint (`http://localhost:3001/generate-questions-from-lectures`) with these details. The backend uses its Google Drive credentials.
+        *   Displays feedback, including links/IDs to the generated MCQ and problem files on Google Drive, and the new chapter/topic key created for these questions.
     *   `displayLectureMcqProblemGenerator(containerElement)`:
         *   Renders the UI for the "Oracle's Forge (Lecture Q-Gen)."
         *   Allows admins to select a course.
-        *   Dynamically lists available lecture transcripts (SRT files linked in `chapterResources.lectureUrls` with `type: 'transcription'`) for the selected course, allowing multiple selections.
+        *   Dynamically lists available lecture transcripts (SRT files linked in `chapterResources.lectureUrls` with `type: 'transcription'`, now pointing to Google Drive IDs/links) for the selected course, allowing multiple selections.
         *   Requires the admin to provide a name for the collection of questions (e.g., "Week 1 Insights").
         *   Provides a button to initiate generation by calling `startLectureMcqProblemGeneration`.
 
-**Role within the Application:** `admin_question_generation_service.js` is a powerful administrative tool that leverages AI to automate the creation of assessment materials. By integrating with backend services that handle the complex AI processing and MEGA file operations, it allows admins to easily generate questions from existing course content (PDFs and lecture transcripts). This significantly aids in building up question banks for quizzes, exams, and practice exercises. The `MEGA_EMAIL` and `MEGA_PASSWORD` constants are used to authorize the backend service to access content on MEGA and save the generated question files there.
+**Role within the Application:** `admin_question_generation_service.js` is a powerful administrative tool that leverages AI to automate the creation of assessment materials. By integrating with backend services that handle the complex AI processing and Google Drive file operations, it allows admins to easily generate questions from existing course content (PDFs and lecture transcripts). This significantly aids in building up question banks for quizzes, exams, and practice exercises. The backend service handles Google Drive authentication for accessing content and saving generated files.
 
 ---
 
@@ -639,7 +639,7 @@ The functions related to playlist management are typically part of the "Course C
 
 ### `admin_transcription_service.js`
 
-**Purpose:** This file provides an administrative interface for transcribing YouTube lectures into SRT (SubRip Text) subtitle files. It interacts with a backend service that handles the actual transcription process (likely using AssemblyAI) and archiving the resulting SRT file to MEGA.nz.
+**Purpose:** This file provides an administrative interface for transcribing YouTube lectures into SRT (SubRip Text) subtitle files. It interacts with a backend service that handles the actual transcription process (likely using AssemblyAI) and archiving the resulting SRT file to Google Drive.
 
 **Key Functions/Variables:**
 
@@ -648,9 +648,9 @@ The functions related to playlist management are typically part of the "Course C
     *   This is the core function triggered when an admin initiates a transcription.
     *   It takes a YouTube video URL, the ID of the course it belongs to, and the ID/key of the chapter it's associated with.
     *   It sends a request to a backend service endpoint (`http://localhost:3001/transcribe-lecture`).
-    *   The request includes the YouTube URL, course/chapter context, the AssemblyAI API key, and MEGA credentials (imported constants `MEGA_EMAIL`, `MEGA_PASSWORD`) for the backend to use.
-    *   It updates a feedback area in the UI with the status of the transcription and the results (video title, SRT filename, MEGA link to the SRT file, AssemblyAI transcript ID, and Firestore update status).
-    *   The actual audio downloading, transcription via AssemblyAI, SRT file generation, and MEGA upload happen on the backend server.
+    *   The request includes the YouTube URL, course/chapter context, and the AssemblyAI API key. The backend uses its Google Drive credentials for storage.
+    *   It updates a feedback area in the UI with the status of the transcription and the results (video title, SRT filename, Google Drive link/ID to the SRT file, AssemblyAI transcript ID, and Firestore update status).
+    *   The actual audio downloading, transcription via AssemblyAI, SRT file generation, and Google Drive upload happen on the backend server.
 *   `displayLectureTranscriptionAutomator(containerElement)`:
     *   Renders the UI for the "Lecture Transcription" tool.
     *   This UI includes:
@@ -666,7 +666,7 @@ The functions related to playlist management are typically part of the "Course C
 1.  Accessibility: Providing text alternatives for hearing-impaired users.
 2.  Searchability: Making video content searchable.
 3.  Content Repurposing: Transcripts can be used as a base for creating summaries, notes, or even further AI-driven question generation (as seen in `admin_question_generation_service.js`).
-By integrating with MEGA, it ensures these generated SRT files are stored in the cloud alongside other course assets. The use of `MEGA_EMAIL` and `MEGA_PASSWORD` constants indicates the backend service handles MEGA authentication for file uploads.
+By integrating with Google Drive, it ensures these generated SRT files are stored in the cloud alongside other course assets. The backend service handles Google Drive authentication for file uploads.
 
 ---
 
@@ -1146,7 +1146,7 @@ By integrating with MEGA, it ensures these generated SRT files are stored in the
     *   `#loading-overlay`: Global loading indicator.
     *   **Firebase Initialization:** Inline script to initialize Firebase with the provided configuration.
     *   **Main Application Script:** `<script type="module" src="script.js"></script>`.
-    *   `#mega-migration-alert-modal`: A modal for MEGA migration alerts.
+    *   `#gdrive-migration-alert-modal`: A modal for Google Drive migration alerts. (Assuming this ID would be updated if the corresponding `ui_gamification_alerts.js` is updated)
 
 **JavaScript & CSS Usage:**
 

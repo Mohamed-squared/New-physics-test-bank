@@ -3,7 +3,7 @@ import { currentUser, globalCourseDataMap, updateGlobalCourseData } from './stat
 import { approveCourse } from './firebase_firestore.js'; // Import approveCourse
 
 // Import display functions from the new specialized modules
-import { displayMegaMigrationDashboard } from './admin_mega_service.js';
+import { displayGoogleDriveMigrationDashboard } from './admin_google_drive_service.js'; // RENAMED_IMPORT
 import { displayLectureTranscriptionAutomator } from './admin_transcription_service.js';
 import { displayTextbookPdfProcessor } from './admin_pdf_processing_service.js';
 import { displayPdfMcqProblemGenerator, displayLectureMcqProblemGenerator } from './admin_question_generation_service.js';
@@ -45,7 +45,7 @@ function displayCourseManagementSection(containerElement) {
     const tabsConfig = [
         { id: 'fullCourseAutomation', name: 'Full Course Creator', renderFunc: displayFullCourseAutomationForm },
         { id: 'pendingCourses', name: 'Pending Review', renderFunc: displayPendingCoursesList }, // New Tab
-        { id: 'megaTools', name: 'MEGA Tools', renderFunc: displayMegaMigrationDashboard },
+        { id: 'googleDriveTools', name: 'Google Drive Tools', renderFunc: displayGoogleDriveMigrationDashboard }, // RENAMED_TAB
         { id: 'transcription', name: 'Transcription', renderFunc: displayLectureTranscriptionAutomator },
         { id: 'pdfProcessing', name: 'PDF Processing', renderFunc: displayTextbookPdfProcessor },
         { id: 'pdfQGenerator', name: 'PDF Q-Generator', renderFunc: displayPdfMcqProblemGenerator },
@@ -93,7 +93,7 @@ function displayCourseManagementSection(containerElement) {
 
 // Exports that are still needed by ui_admin_dashboard.js
 export { 
-    displayMegaMigrationDashboard,
+    // displayMegaMigrationDashboard, // This is now imported and used directly from admin_google_drive_service.js in the tab config
     displayCourseManagementSection,
     loadCoursesForAdmin, // Keep if ui_admin_dashboard.js still imports and uses it
     displayPendingCoursesList, // Export the new function
@@ -183,19 +183,23 @@ window.previewAndApproveCourse = async (courseId) => {
     modalContentHtml += `<p><strong>Subject Tag:</strong> ${details.subjectTag || 'N/A'}</p>`;
     modalContentHtml += `<p><strong>AI Description:</strong> ${details.aiGeneratedDescription || 'N/A'}</p>`;
     
-    // Mega Links
-    modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Mega Links:</h4>`;
-    modalContentHtml += `<p>Main Folder: ${details.megaMainFolderLink ? `<a href="${details.megaMainFolderLink}" target="_blank" class="link">View Folder</a>` : 'N/A'}</p>`;
-    modalContentHtml += `<p>Original Textbook PDF: ${details.megaTextbookFullPdfLink ? `<a href="${details.megaTextbookFullPdfLink}" target="_blank" class="link">View PDF</a>` : 'N/A'}</p>`;
+    // Google Drive Links/IDs
+    modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Google Drive Assets:</h4>`;
+    modalContentHtml += `<p>Main Folder: ${details.gdriveCourseRootWebLink ? `<a href="${details.gdriveCourseRootWebLink}" target="_blank" class="link">View Folder</a>` : (details.gdriveCourseRootFolderId || 'N/A')}</p>`;
+    modalContentHtml += `<p>Original Textbook PDF: ${details.gdriveTextbookFullPdfWebLink ? `<a href="${details.gdriveTextbookFullPdfWebLink}" target="_blank" class="link">View PDF</a>` : (details.gdriveTextbookFullPdfId || 'N/A')}</p>`;
 
     // Chapters
     if (details.chapters && details.chapters.length > 0) {
         modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Chapters:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
         details.chapters.forEach(chap => {
+            // Assuming chapter links will now be gdriveLink or gdriveId
+            const pdfLink = chap.gdrivePdfLink || chap.pdfLink; // Fallback for temporary compatibility
+            const mcqLink = chap.gdrivePdfMcqLink || chap.pdfMcqLink;
+            const problemsLink = chap.gdrivePdfProblemsLink || chap.pdfProblemsLink;
             modalContentHtml += `<li><strong>${chap.title || `Chapter ${chap.key}`}</strong>: 
-                ${chap.pdfLink ? `<a href="${chap.pdfLink}" target="_blank" class="link">PDF</a>` : 'No PDF'}
-                ${chap.pdfMcqLink ? ` | <a href="${chap.pdfMcqLink}" target="_blank" class="link">MCQs</a>` : ''}
-                ${chap.pdfProblemsLink ? ` | <a href="${chap.pdfProblemsLink}" target="_blank" class="link">Problems</a>` : ''}
+                ${pdfLink ? `<a href="${pdfLink}" target="_blank" class="link">PDF</a>` : 'No PDF'}
+                ${mcqLink ? ` | <a href="${mcqLink}" target="_blank" class="link">MCQs</a>` : ''}
+                ${problemsLink ? ` | <a href="${problemsLink}" target="_blank" class="link">Problems</a>` : ''}
             </li>`;
         });
         modalContentHtml += `</ul>`;
@@ -205,8 +209,9 @@ window.previewAndApproveCourse = async (courseId) => {
     if (details.transcriptionLinks && details.transcriptionLinks.length > 0) {
         modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Transcriptions:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
         details.transcriptionLinks.forEach(trans => {
+            const srtLink = trans.gdriveSrtLink || trans.srtLink; // Fallback
             modalContentHtml += `<li><strong>${trans.title}</strong> (Chapter Key: ${trans.chapterKey}): 
-                ${trans.srtLink ? `<a href="${trans.srtLink}" target="_blank" class="link">SRT</a>` : 'No SRT'}
+                ${srtLink ? `<a href="${srtLink}" target="_blank" class="link">SRT</a>` : 'No SRT'}
             </li>`;
         });
         modalContentHtml += `</ul>`;
@@ -216,9 +221,11 @@ window.previewAndApproveCourse = async (courseId) => {
     if (details.lectureQuestionSets && details.lectureQuestionSets.length > 0) {
         modalContentHtml += `<h4 class="text-md font-semibold mt-3 mb-1">Lecture Question Sets:</h4><ul class="list-disc list-inside pl-2 space-y-1">`;
         details.lectureQuestionSets.forEach(lqs => {
+            const mcqLink = lqs.gdriveMcqLink || lqs.mcqLink;
+            const problemsLink = lqs.gdriveProblemsLink || lqs.problemsLink;
             modalContentHtml += `<li>Topic Key: <strong>${lqs.key}</strong>: 
-                ${lqs.mcqLink ? `<a href="${lqs.mcqLink}" target="_blank" class="link">MCQs</a>` : 'No MCQs'}
-                ${lqs.problemsLink ? ` | <a href="${lqs.problemsLink}" target="_blank" class="link">Problems</a>` : ''}
+                ${mcqLink ? `<a href="${mcqLink}" target="_blank" class="link">MCQs</a>` : 'No MCQs'}
+                ${problemsLink ? ` | <a href="${problemsLink}" target="_blank" class="link">Problems</a>` : ''}
             </li>`;
         });
         modalContentHtml += `</ul>`;
@@ -295,7 +302,7 @@ export function displayFullCourseAutomationForm(containerElement) {
             <h2 class="text-2xl font-bold text-primary-700 dark:text-primary-300 mb-6">Full Course Creator</h2>
             <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Automate the creation of a new course by providing a textbook, lecture materials, and other details.
-                The system will process these assets, generate supplementary materials, and set up the course structure on MEGA.
+                The system will process these assets, generate supplementary materials, and set up the course structure on Google Drive.
             </p>
             <form id="full-course-automation-form" class="space-y-6">
                 
@@ -310,9 +317,9 @@ export function displayFullCourseAutomationForm(containerElement) {
                         <input type="file" id="textbookPdfFile" name="textbookPdf" class="input-field file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 dark:file:bg-primary-700 file:text-primary-700 dark:file:text-primary-100 hover:file:bg-primary-100 dark:hover:file:bg-primary-600" accept=".pdf">
                     </div>
                     <div>
-                        <label for="textbookMegaLink" class="label">Textbook PDF Mega Link (Optional):</label>
-                        <input type="text" id="textbookMegaLink" name="textbookMegaLink" class="input-field" placeholder="Or provide a Mega link to the textbook PDF">
-                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Note: If a Mega link is provided, the file upload will be ignored. This feature is for future use; currently, local PDF upload is primary.</p>
+                        <label for="textbookGoogleDriveLink" class="label">Textbook PDF Google Drive Link/ID (Optional):</label> <!-- RENAMED_TEXT -->
+                        <input type="text" id="textbookGoogleDriveLink" name="textbookGoogleDriveLink" class="input-field" placeholder="Or provide a Google Drive link/ID to the textbook PDF"> <!-- RENAMED_ID & TEXT -->
+                         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Note: If a Google Drive link/ID is provided, the file upload will be ignored.</p> <!-- RENAMED_TEXT -->
                     </div>
                 </div>
 
@@ -355,20 +362,229 @@ export function displayFullCourseAutomationForm(containerElement) {
                 <button type="button" id="add-lecture-btn" class="btn-secondary-small">+ Add Lecture</button>
 
                 <hr class="my-6 border-gray-300 dark:border-gray-600">
-                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">Credentials & API Keys</h3>
-                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">These are required for interacting with external services like MEGA and AI for processing.</p>
+                <h3 class="text-lg font-semibold text-gray-700 dark:text-gray-300">API Keys for External Services</h3>
+                 <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">Cloud storage (Google Drive) is typically handled by server-side configuration (API Key / Service Account). Provide other keys as needed.</p> <!-- RENAMED_TEXT -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="megaEmail" class="label">Mega Email:</label>
-                        <input type="email" id="megaEmail" name="megaEmail" class="input-field" required>
-                    </div>
-                    <div>
-                        <label for="megaPassword" class="label">Mega Password:</label>
-                        <input type="password" id="megaPassword" name="megaPassword" class="input-field" required>
-                    </div>
                     <div>
                         <label for="assemblyAiApiKey" class="label">AssemblyAI API Key (for Transcription):</label>
                         <input type="text" id="assemblyAiApiKey" name="assemblyAiApiKey" class="input-field">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Required if lectures need transcription.</p>
+                    </div>
+                    <div>
+                        <label for="geminiApiKey" class="label">Google Gemini API Key (Optional):</label>
+                        <input type="text" id="geminiApiKey" name="geminiApiKey" class="input-field">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">If blank, the server's default key will be attempted for AI tasks.</p>
+                    </div>
+                </div>
+
+                <button type="submit" id="submit-course-automation-btn" class="btn-primary w-full py-3 mt-8">Start Full Course Automation</button>
+            </form>
+            <div id="course-automation-feedback" class="mt-6 p-4 rounded-md bg-gray-50 dark:bg-gray-700/50 min-h-[50px]">
+                <p class="text-sm text-gray-500 dark:text-gray-400">Automation status will appear here.</p>
+            </div>
+        </div>
+    `;
+
+    const lecturesArea = containerElement.querySelector('#lectures-input-area');
+    const addLectureButton = containerElement.querySelector('#add-lecture-btn');
+    const form = containerElement.querySelector('#full-course-automation-form');
+    const feedbackDiv = containerElement.querySelector('#course-automation-feedback');
+
+    let lectureRowCount = 0;
+
+    function addLectureRow() {
+        lectureRowCount++;
+        const lectureRow = document.createElement('div');
+        lectureRow.classList.add('lecture-row', 'p-4', 'border', 'border-gray-200', 'dark:border-gray-600', 'rounded-lg', 'space-y-3');
+        lectureRow.innerHTML = `
+            <h4 class="text-md font-medium text-gray-700 dark:text-gray-300">Lecture ${lectureRowCount}</h4>
+            <div>
+                <label for="lectureTitle-${lectureRowCount}" class="label text-sm">Lecture Title:</label>
+                <input type="text" id="lectureTitle-${lectureRowCount}" name="lectureTitle" class="input-field input-field-sm" required>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="lectureFile-${lectureRowCount}" class="label text-sm">Lecture Audio/Video File (Optional):</label>
+                    <input type="file" id="lectureFile-${lectureRowCount}" name="lectureFiles" class="input-field input-field-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 dark:file:bg-gray-600 file:text-gray-700 dark:file:text-gray-200 hover:file:bg-gray-200 dark:hover:file:bg-gray-500">
+                </div>
+                <div>
+                    <label for="lectureLink-${lectureRowCount}" class="label text-sm">YouTube or Google Drive Link/ID (Optional):</label> <!-- RENAMED_TEXT -->
+                    <input type="text" id="lectureLink-${lectureRowCount}" name="lectureLink" class="input-field input-field-sm" placeholder="YouTube URL or Google Drive File Link/ID"> <!-- RENAMED_TEXT -->
+                </div>
+            </div>
+            <div>
+                <label for="srtGoogleDriveLink-${lectureRowCount}" class="label text-sm">SRT Google Drive Link/ID (Optional, if pre-transcribed):</label> <!-- RENAMED_TEXT -->
+                <input type="text" id="srtGoogleDriveLink-${lectureRowCount}" name="srtGoogleDriveLink" class="input-field input-field-sm" placeholder="Google Drive link/ID to .srt file"> <!-- RENAMED_ID & TEXT -->
+            </div>
+            <div>
+                <label for="associatedChapterKey-${lectureRowCount}" class="label text-sm">Associated Chapter Key/Topic (e.g., textbook_chapter_1):</label>
+                <input type="text" id="associatedChapterKey-${lectureRowCount}" name="associatedChapterKey" class="input-field input-field-sm" placeholder="Leave blank if general">
+            </div>
+        `;
+        lecturesArea.appendChild(lectureRow);
+    }
+
+    addLectureButton.addEventListener('click', addLectureRow);
+    // Add one lecture row by default
+    addLectureRow();
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        feedbackDiv.innerHTML = '<p class="text-blue-600 dark:text-blue-400">Processing... Please wait.</p>';
+        // showLoading('Starting full course automation...'); // Assuming showLoading is available globally or imported
+
+        const formData = new FormData();
+        // Removed megaEmail, megaPassword from required. Backend will use configured GDrive auth.
+        const requiredTextFields = ['courseTitle', 'trueFirstPageNumber', 'majorTag', 'subjectTag'];
+        let allRequiredFilled = true;
+
+        requiredTextFields.forEach(fieldName => {
+            const input = form.querySelector(`#${fieldName}`);
+            if (input && input.value.trim()) {
+                formData.append(fieldName, input.value.trim());
+            } else {
+                // Check if it's an optional field that was removed (like megaEmail)
+                if (document.getElementById(fieldName)) { // Only if element still exists
+                    allRequiredFilled = false;
+                }
+            }
+        });
+
+        // Optional text fields
+        ['textbookGoogleDriveLink', 'assemblyAiApiKey', 'geminiApiKey', 'prerequisites', 'bannerPicUrl', 'coursePicUrl'].forEach(fieldName => {
+             const input = form.querySelector(`#${fieldName}`);
+             if (input && input.value.trim()) formData.append(fieldName, input.value.trim());
+        });
+
+
+        const textbookPdfInput = form.querySelector('#textbookPdfFile');
+        if (textbookPdfInput.files.length > 0) {
+            formData.append('textbookPdf', textbookPdfInput.files[0]);
+        } else if (!form.querySelector('#textbookGoogleDriveLink').value.trim()) { // RENAMED_ID
+            // If no Google Drive link is provided either, then textbook PDF is required.
+            // Server will validate if at least one textbook source is present
+        }
+
+
+        const textbookGoogleDriveLinkInput = form.querySelector('#textbookGoogleDriveLink'); // RENAMED_ID
+        if (textbookPdfInput.files.length === 0 && !textbookGoogleDriveLinkInput.value.trim()) {
+            // This condition means neither a file nor a GDrive link was provided.
+            // Depending on backend logic, this might be an error.
+            // For now, we let the backend decide if one is strictly required.
+            // To make it a client-side error: allRequiredFilled = false;
+        }
+
+        if (!allRequiredFilled) {
+            feedbackDiv.innerHTML = '<p class="text-red-500">Please fill in all required fields: Course Title, True First Page Number, Major Tag, Subject Tag. Also ensure either a Textbook PDF is uploaded or a Google Drive link is provided.</p>'; // RENAMED_TEXT
+            // hideLoading();
+            return;
+        }
+
+
+        const lecturesData = [];
+        lecturesArea.querySelectorAll('.lecture-row').forEach((row, index) => {
+            const titleInput = row.querySelector('input[name="lectureTitle"]');
+            if (!titleInput || !titleInput.value.trim()) return; // Skip if no title
+
+            const lectureLinkInput = row.querySelector('input[name="lectureLink"]').value.trim();
+            const srtLinkInput = row.querySelector('input[name="srtGoogleDriveLink"]').value.trim(); // RENAMED_ID
+
+            const lecture = {
+                title: titleInput.value.trim(),
+                youtubeUrl: lectureLinkInput.startsWith('https://www.youtube.com') ? lectureLinkInput : undefined,
+                googleDriveLink: lectureLinkInput.includes('drive.google.com') ? lectureLinkInput : undefined, // Simple check for GDrive link
+                srtGoogleDriveLink: srtLinkInput || undefined, // RENAMED_FIELD
+                associatedChapterKey: row.querySelector('input[name="associatedChapterKey"]').value.trim() || `lecture_topic_${index + 1}`,
+                originalFileName: undefined
+            };
+
+            const fileInput = row.querySelector('input[name="lectureFiles"]');
+            if (fileInput.files.length > 0) {
+                formData.append('lectureFiles', fileInput.files[0]);
+                lecture.originalFileName = fileInput.files[0].name;
+            }
+            lecturesData.push(lecture);
+        });
+        formData.append('lecturesMetadata', JSON.stringify(lecturesData));
+
+        try {
+            const response = await fetch('http://localhost:3001/automate-full-course', {
+                method: 'POST',
+                body: formData // No 'Content-Type' header for FormData with files; browser sets it
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                let progressLogsHtml = '';
+                if (result.progressLogs && Array.isArray(result.progressLogs)) {
+                    progressLogsHtml = result.progressLogs.map(log =>
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+
+                feedbackDiv.innerHTML = `
+                    <p class="text-green-600 dark:text-green-400 font-semibold">Course Automation Successful!</p>
+                    <p><strong>Final Automation Step:</strong> ${result.firestoreDataPreview?.currentAutomationStep || 'N/A'}</p>
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs:</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${progressLogsHtml || '<p class="text-xs text-gray-500 dark:text-gray-400">No progress logs available.</p>'}
+                        </div>
+                    </div>
+                    <hr class="my-3 border-gray-300 dark:border-gray-600">
+                    <p><strong>Course Title:</strong> ${result.courseTitle || 'N/A'}</p>
+                    <p><strong>Course Directory Name (Google Drive):</strong> ${result.courseDirName || 'N/A'}</p> <!-- RENAMED_TEXT -->
+                    <p><strong>AI Description:</strong> ${result.aiGeneratedDescription ? result.aiGeneratedDescription.substring(0, 150) + '...' : 'N/A'}</p>
+                    <p class="mt-2"><strong>Firestore Data Preview:</strong></p>
+                    <pre class="text-xs bg-gray-100 dark:bg-gray-800 p-2 rounded overflow-x-auto">${JSON.stringify(result.firestoreDataPreview, null, 2)}</pre>
+                `;
+                form.reset();
+                lecturesArea.innerHTML = '';
+                addLectureRow();
+            } else {
+                // Handle server-side failure where result might still contain logs
+                let errorProgressLogsHtml = '';
+                if (result && result.progressLogs && Array.isArray(result.progressLogs)) {
+                    errorProgressLogsHtml = result.progressLogs.map(log =>
+                        `<p class="text-xs text-gray-500 dark:text-gray-400">${new Date(log.timestamp).toLocaleTimeString()} - ${log.message}</p>`
+                    ).join('');
+                }
+                const finalStepMessage = result?.firestoreDataPreview?.currentAutomationStep || "Unknown step";
+                feedbackDiv.innerHTML = `
+                    <p class="text-red-500 font-semibold">Course Automation Failed at step: ${finalStepMessage}</p>
+                    <p class="text-red-400">${result.message || `Server error: ${response.status}`}</p>
+                    ${errorProgressLogsHtml ? `
+                    <div class="mt-2">
+                        <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Progress Logs (up to failure):</h4>
+                        <div class="max-h-40 overflow-y-auto p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs">
+                            ${errorProgressLogsHtml}
+                        </div>
+                    </div>` : ''}
+                `;
+                // Not throwing error here as we want to display the partial logs from result
+            }
+        } catch (error) { // Network error or error during fetch/parsing
+            console.error('Error submitting course automation form:', error);
+            feedbackDiv.innerHTML = `<p class="text-red-500">Submission failed: ${error.message}. Check the console for more details.</p>`;
+        } finally {
+            // hideLoading(); // Assuming hideLoading is available globally or imported
+        }
+    });
+}
+
+// Removed all window assignments as functions are now modular and imported where needed,
+// or their internal event handlers are set up within their respective modules.
+// The Mega File Explorer helper functions (handleMegaFileDownload, etc.) were moved to admin_mega_service.js
+// and are exported from there if needed, or used via event listeners set up in displayMegaFileExplorer.```
+/* File `admin_course_content.js` overwritten successfully.
+```
+
+**Step 3: Verify Imports in `ui_admin_dashboard.js`**
+
+I need to ensure that `ui_admin_dashboard.js` correctly imports `displayCourseManagementSection` and `loadCoursesForAdmin` (if still used) from the refactored `admin_course_content.js`.
+
+Let's read `ui_admin_dashboard.js`.*/
                     </div>
                     <div>
                         <label for="geminiApiKey" class="label">Google Gemini API Key (Optional):</label>
@@ -572,8 +788,8 @@ export function displayFullCourseAutomationForm(containerElement) {
 
 // Removed all window assignments as functions are now modular and imported where needed,
 // or their internal event handlers are set up within their respective modules.
-// The Mega File Explorer helper functions (handleMegaFileDownload, etc.) were moved to admin_mega_service.js
-// and are exported from there if needed, or used via event listeners set up in displayMegaFileExplorer.```
+// The Google Drive File Explorer helper functions (handleGoogleDriveFileDownload, etc.) were moved to admin_google_drive_service.js
+// and are exported from there if needed, or used via event listeners set up in displayGoogleDriveFileExplorer.
 /* File `admin_course_content.js` overwritten successfully.
 ```
 

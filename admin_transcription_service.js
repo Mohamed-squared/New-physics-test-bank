@@ -1,10 +1,12 @@
 // admin_transcription_service.js
 import { globalCourseDataMap, currentUser } from './state.js';
 import { showLoading, hideLoading } from './utils.js';
-import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js'; // Added import
+// Removed: import { MEGA_EMAIL, MEGA_PASSWORD } from './mega_service.js';
 
 // Note: No direct Firestore writes in these functions, they call a backend service.
 
+// WARNING: Storing API keys client-side is insecure for production.
+// This should be handled via a backend proxy or server-side configuration.
 const ASSEMBLYAI_API_KEY = '2a9868144d104a559466a77be8fc213b';
 
 export async function startLectureTranscription(youtubeUrl, courseId, chapterId) {
@@ -25,15 +27,16 @@ export async function startLectureTranscription(youtubeUrl, courseId, chapterId)
         return;
     }
 
-    // Removed AssemblyAI API Key prompt (it's a global constant)
-    // Removed megaEmail prompt
-    // Removed megaPassword prompt
+    // Note: ASSEMBLYAI_API_KEY is used from constant.
+    // Google Drive authentication is handled server-side by the /transcribe-lecture endpoint.
 
     showLoading(`Starting transcription for: ${youtubeUrl}...`);
     startButton.disabled = true;
     feedbackArea.innerHTML = `<p class="text-blue-600 dark:text-blue-400"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>Starting transcription... This may take a few moments.</p>`;
 
     try {
+        // The backend endpoint /transcribe-lecture needs to be updated
+        // to use google_drive_service_server.js for its cloud storage operations.
         const response = await fetch('http://localhost:3001/transcribe-lecture', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', },
@@ -41,19 +44,23 @@ export async function startLectureTranscription(youtubeUrl, courseId, chapterId)
                 youtubeUrl, 
                 courseId, 
                 chapterId, 
-                assemblyAiApiKey: ASSEMBLYAI_API_KEY, // Using the constant
-                megaEmail: MEGA_EMAIL, // Using imported constant
-                megaPassword: MEGA_PASSWORD // Using imported constant
+                assemblyAiApiKey: ASSEMBLYAI_API_KEY,
+                // megaEmail and megaPassword removed
             }),
         });
         hideLoading();
         const result = await response.json();
         if (response.ok && result.success) {
+            // Assuming backend returns Google Drive link/ID
+            const srtDisplayLink = result.gdriveSrtLink ?
+                `<a href="${result.gdriveSrtLink}" target="_blank" class="link">${result.gdriveSrtLink}</a> (ID: ${result.gdriveSrtId || 'N/A'})` :
+                (result.gdriveSrtId ? `ID: ${result.gdriveSrtId}` : 'N/A (Link not available)');
+
             feedbackArea.innerHTML = `
                 <p class="text-green-600 dark:text-green-400 font-semibold flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>Transcription Complete.</p>
                 <p class="ml-8"><strong>Video Title:</strong> ${result.videoTitle || 'N/A'}</p>
                 <p class="ml-8"><strong>SRT Filename:</strong> ${result.srtFileName || 'N/A'}</p>
-                <p class="ml-8"><strong>MEGA Link:</strong> <a href="${result.srtMegaLink}" target="_blank" class="link">${result.srtMegaLink}</a></p>
+                <p class="ml-8"><strong>Google Drive Link/ID:</strong> ${srtDisplayLink}</p>
                 <p class="ml-8"><strong>AssemblyAI Transcript ID:</strong> ${result.transcriptId || 'N/A'}</p>
                 <p class="ml-8"><strong>Firestore Record Updated:</strong> ${result.firestoreUpdateStatus || 'N/A'}</p>
             `;
@@ -74,13 +81,18 @@ export function displayLectureTranscriptionAutomator(containerElement) {
         containerElement.innerHTML = `<div class="p-4 text-red-700 bg-red-100 rounded-lg dark:bg-red-200 dark:text-red-800">Access Denied. Admin privileges required.</div>`; return;
     }
     let courseOptions = '<option value="">Select Course an Ancient Scroll</option>';
-    globalCourseDataMap.forEach((course, courseId) => {
-        courseOptions += `<option value="${courseId}">${course.name}</option>`;
-    });
+    if (globalCourseDataMap && globalCourseDataMap.size > 0) { // Check if map has entries
+        globalCourseDataMap.forEach((course, courseId) => {
+            courseOptions += `<option value="${courseId}">${course.name || course.courseTitle}</option>`; // Added courseTitle fallback
+        });
+    } else {
+        courseOptions = '<option value="">No courses loaded</option>';
+    }
+
     containerElement.innerHTML = `
         <div class="content-card p-6">
             <h2 class="text-xl font-semibold text-primary-700 dark:text-primary-300 mb-4 flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v1.586M12 12.253v1.586M12 18.253v1.586M7.5 12.253h1.586M13.5 12.253h1.586M16.732 7.96a4.5 4.5 0 010 6.364M5.268 7.96a4.5 4.5 0 000 6.364m11.464-6.364a4.5 4.5 0 00-6.364 0m6.364 0a4.5 4.5 0 010 6.364m-6.364-6.364L12 12.253" /></svg>Lecture Transcription</h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Transcribe YouTube lectures to SRT files and archive them to MEGA.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Transcribe YouTube lectures to SRT files and archive them to Google Drive.</p>
             <div class="space-y-5">
                 <div>
                     <label for="youtube-url" class="label">YouTube Lecture URL:</label>
@@ -114,13 +126,19 @@ export function displayLectureTranscriptionAutomator(containerElement) {
         chapterSelectElem.disabled = true;
         if (selectedCourseId && globalCourseDataMap.has(selectedCourseId)) {
             const course = globalCourseDataMap.get(selectedCourseId);
-            if (course.chapters && course.chapters.length > 0) {
+            // Ensure course.chapters exists and is an array before trying to use forEach
+            if (course.chapters && Array.isArray(course.chapters) && course.chapters.length > 0) {
                 let chapterOptions = '<option value="">Select Chapter</option>';
-                course.chapters.forEach(chapter => { chapterOptions += `<option value="${chapter.id}">${chapter.title}</option>`; });
+                course.chapters.forEach(chapter => {
+                    // Ensure chapter.id and chapter.title exist
+                    const chapterId = chapter.id || chapter.key || `chapter_${chapter.chapterNumber}`; // Fallback for chapter identifier
+                    const chapterTitle = chapter.title || `Chapter ${chapter.chapterNumber}`; // Fallback for chapter title
+                    chapterOptions += `<option value="${chapterId}">${chapterTitle}</option>`;
+                });
                 chapterSelectElem.innerHTML = chapterOptions;
                 chapterSelectElem.disabled = false;
             } else {
-                chapterSelectElem.innerHTML = '<option value="">No Chapters Available</option>';
+                chapterSelectElem.innerHTML = '<option value="">No Chapters Available for this Course</option>';
             }
         } else {
             chapterSelectElem.innerHTML = '<option value="">Select Course First</option>';
