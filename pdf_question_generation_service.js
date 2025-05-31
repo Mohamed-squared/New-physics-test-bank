@@ -305,10 +305,29 @@ Generate problems now.
         };
 
     } catch (error) {
-        logQGen(logContext, error, 'error');
+        logQGen(logContext, error, 'error'); // Original logging
+        let errorType = 'GENERAL_ERROR';
+        let specificMessage = `PDF Question Generation with Google Drive failed: ${error.message}`;
+
+        // Check for PDF parsing specific errors (adjust conditions as needed)
+        if (error.name === 'InvalidPDFException' ||
+            (error.message &&
+             (error.message.includes('InvalidPDFExceptionClosure') ||
+              error.message.toLowerCase().includes('pdfpars') || // Catches "pdfparsererror", "pdf parsing error"
+              error.message.toLowerCase().includes('pdf extraction error')
+             )
+            )
+           ) {
+            errorType = 'PDF_PARSING_ERROR';
+            specificMessage = `PDF parsing/extraction failed for chapter ${chapterTitle}: ${error.message}`;
+            // Log the specific error detection
+            logQGen(logContext, `Specific PDF Parsing Error detected for chapter ${chapterTitle}: ${error.message}`, 'error');
+        }
+
         return {
             success: false,
-            message: `PDF Question Generation with Google Drive failed: ${error.message}`,
+            message: specificMessage,
+            errorType: errorType, // Add this
             error: error.stack,
         };
     } finally {

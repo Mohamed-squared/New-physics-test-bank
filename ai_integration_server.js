@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
+const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
 const { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } = require('@google/generative-ai');
 
 const DEFAULT_API_KEYS_ARRAY = [
@@ -38,24 +39,48 @@ function getApiKeySnippet(apiKey) {
  */
 async function getAllPdfTextForAI(pdfPath) {
   console.log(`Starting PDF text extraction for: ${pdfPath}`);
-  try {
-    if (!fs.existsSync(pdfPath)) {
+  if (!fs.existsSync(pdfPath)) {
       console.error(`PDF file not found: ${pdfPath}`);
       throw new Error(`PDF file not found: ${pdfPath}`);
-    }
+  }
+  const dataBuffer = fs.readFileSync(pdfPath);
+  console.log(`PDF file read successfully: ${pdfPath}`);
 
-    const dataBuffer = fs.readFileSync(pdfPath);
-    console.log(`PDF file read successfully: ${pdfPath}`);
+  // Attempt 1: pdf-parse
+  try {
+      console.log(`Attempting PDF parsing with 'pdf-parse' for ${pdfPath}`);
+      const data = await pdfParse(dataBuffer);
+      console.log(`'pdf-parse' successful. Extracted ${data.text.length} characters from ${pdfPath}.`);
+      return data.text;
+  } catch (pdfParseError) {
+      console.warn(`'pdf-parse' failed for ${pdfPath}: ${pdfParseError.message}. Attempting fallback with 'pdfjs-dist'.`);
 
-    const data = await pdfParse(dataBuffer);
-    console.log(`PDF parsed successfully. Extracted ${data.text.length} characters.`);
-    return data.text;
-  } catch (error) {
-    console.error(`Error during PDF processing for ${pdfPath}:`, error);
-    if (error instanceof Error && error.message.includes('PDF file not found')) {
-        throw error;
-    }
-    throw new Error(`Failed to extract text from PDF ${pdfPath}: ${error.message}`);
+      // Attempt 2: pdfjs-dist
+      try {
+          console.log(`Attempting PDF parsing with 'pdfjs-dist' for ${pdfPath}`);
+          // Note: pdfjsLib.getDocument expects an ArrayBuffer or TypedArray. dataBuffer from readFileSync is a Buffer.
+          // .buffer property of a Node.js Buffer provides access to the underlying ArrayBuffer.
+          const doc = await pdfjsLib.getDocument({ data: dataBuffer.buffer }).promise;
+          let fullText = '';
+          for (let i = 1; i <= doc.numPages; i++) {
+              const page = await doc.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map(item => item.str).join(' ');
+              fullText += pageText + (i < doc.numPages ? '\n' : ''); // Add newline between pages, but not after the last page.
+          }
+          console.log(`'pdfjs-dist' successful. Extracted ${fullText.length} characters from ${pdfPath}.`);
+          return fullText;
+      } catch (pdfjsDistError) {
+          console.error(`Both 'pdf-parse' and 'pdfjs-dist' failed for ${pdfPath}.`);
+          console.error(`pdf-parse error: ${pdfParseError.message}`);
+          console.error(`pdfjs-dist error: ${pdfjsDistError.message}`);
+          // Create a new error that aggregates information from both attempts
+          const combinedError = new Error(`Failed to extract text from PDF ${pdfPath} with all available parsers. ` +
+                                          `pdf-parse error: ${pdfParseError.message}; ` +
+                                          `pdfjs-dist error: ${pdfjsDistError.message}`);
+          combinedError.cause = { pdfParseError, pdfjsDistError }; // Optionally attach original errors
+          throw combinedError;
+      }
   }
 }
 
