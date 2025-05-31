@@ -1,4 +1,5 @@
 // course_automation_service.js
+let firestoreService;
 const fs = require('fs-extra');
 const path = require('path');
 const serverGoogleDrive = require('./google_drive_service_server.js'); // RENAMED_IMPORT
@@ -353,6 +354,30 @@ async function automateNewCourseCreation(params) {
         results.success = true;
         results.message = "Course automation tasks completed successfully. Firestore data preview logged.";
         results.firestoreDataPreview.currentAutomationStep = "Completed Successfully";
+
+        // Attempt to save to Firestore
+        if (results.success) { // Only attempt to write if previous steps were generally successful
+            results.firestoreDataPreview.currentAutomationStep = "Saving to Firestore";
+            logProgress('Attempting to save final course data to Firestore...', results);
+            try {
+                if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+
+                // The updateCourseDefinition function should ideally handle setting
+                // server timestamps for createdAt (on create) and updatedAt (on update).
+                // We pass the data as prepared.
+                await firestoreService.updateCourseDefinition(courseIdPlaceholder, results.firestoreDataPreview);
+
+                logProgress(`Firestore update SUCCESSFUL for main course data: ${courseIdPlaceholder}`, results);
+                results.message = "Course automation tasks completed successfully, and main course data saved to Firestore.";
+                results.firestoreDataPreview.currentAutomationStep = "Completed and Saved to Firestore";
+                results.firestoreDataPreview.updatedAt = new Date().toISOString(); // Reflect that it was just updated
+            } catch (firestoreError) {
+                logProgress(new Error(`FINAL Firestore save FAILED for course ${courseIdPlaceholder}: ${firestoreError.message}`), results, 'error');
+                results.success = false; // Mark as overall failure if final save fails
+                results.message = `Course automation tasks completed, but final save to Firestore FAILED: ${firestoreError.message}`;
+                results.firestoreDataPreview.currentAutomationStep = `Failed: Firestore Save Error`;
+            }
+        }
 
     } catch (error) {
         logProgress(error, results, 'error'); 

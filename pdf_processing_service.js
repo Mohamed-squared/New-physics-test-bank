@@ -1,4 +1,5 @@
 const { PDFDocument } = require('pdf-lib');
+let firestoreService;
 const fs = require('fs-extra');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -95,7 +96,24 @@ async function processTextbookPdf(
         if (!uploadedFullPdf || !uploadedFullPdf.id) throw new Error('Failed to upload full PDF to Google Drive or ID not returned.');
         fullPdfGoogleDriveDetails = { id: uploadedFullPdf.id, link: uploadedFullPdf.webViewLink };
         logPdfProcess(courseId, `Full textbook PDF uploaded to Google Drive: ID ${fullPdfGoogleDriveDetails.id}, Link: ${fullPdfGoogleDriveDetails.link}`);
-        logPdfProcess(courseId, `Firestore update for full textbook link SKIPPED.`);
+
+        if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+
+        if (fullPdfGoogleDriveDetails && firestoreService) {
+            try {
+                logPdfProcess(courseId, 'Attempting to update Firestore with full textbook GDrive link...');
+                const updateData = {
+                    gdriveTextbookFullPdfId: fullPdfGoogleDriveDetails.id,
+                    gdriveTextbookFullPdfWebLink: fullPdfGoogleDriveDetails.link,
+                    lastTextbookProcessDate: new Date().toISOString()
+                };
+                await firestoreService.updateCourseDefinition(courseId, updateData);
+                logPdfProcess(courseId, `Firestore update SUCCESSFUL for full textbook link. ID: ${fullPdfGoogleDriveDetails.id}`);
+            } catch (firestoreError) {
+                logPdfProcess(courseId, new Error(`Firestore update FAILED for full textbook link: ${firestoreError.message}`), 'error');
+                // Decide if this should be a critical failure. For now, just log.
+            }
+        }
 
         // --- 3. AI Table of Contents Analysis (Code for image extraction and AI call remains largely the same) ---
         logPdfProcess(courseId, 'Starting Table of Contents (ToC) analysis...');
@@ -208,11 +226,58 @@ async function processTextbookPdf(
             });
         }
         
-        if (chapterFirestoreData.length > 0) {
-            logPdfProcess(courseId, `Firestore update for chapter PDF details SKIPPED.`);
-        } else {
-            logPdfProcess(courseId, "No chapters processed/uploaded. Firestore not updated.", 'warn');
+        // Ensure firestoreService is initialized (it might have been by the full textbook update)
+        if (!firestoreService) firestoreService = await import('./firebase_firestore.js');
+
+        if (chapterFirestoreData && chapterFirestoreData.length > 0 && firestoreService) {
+            try {
+                logPdfProcess(courseId, `Attempting to update Firestore with details for ${chapterFirestoreData.length} chapter PDFs...`);
+
+                // Fetch existing course details to safely update chapterResources
+                const courseDetails = await firestoreService.getCourseDetails(courseId);
+                if (!courseDetails) {
+                    throw new Error(`Course details not found in Firestore for courseId: ${courseId} when trying to update chapter PDF links.`);
+                }
+
+                const updates = {};
+                let chapterResources = courseDetails.chapterResources || {};
+
+                chapterFirestoreData.forEach(chDetail => { // chapterFirestoreData is already populated with gdrive IDs and links as processedChapterDetails
+                    const chapterKey = `textbook_chapter_${chDetail.chapterNumber}`;
+                    if (!chapterResources[chapterKey]) {
+                        chapterResources[chapterKey] = { title: chDetail.title, otherResources: [] };
+                    } else {
+                        chapterResources[chapterKey].title = chDetail.title; // Update title just in case
+                        chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources || [];
+                    }
+                    // Update or add the PDF resource link
+                    // Remove old one if exists to avoid duplicates
+                    chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources.filter(r => r.type !== 'textbook_chapter_pdf');
+                    chapterResources[chapterKey].otherResources.push({
+                        type: 'textbook_chapter_pdf',
+                        title: `Chapter ${chDetail.chapterNumber} PDF - ${chDetail.title}`,
+                        gdriveId: chDetail.gdrivePdfId,
+                        gdriveLink: chDetail.gdrivePdfLink,
+                        generatedAt: new Date().toISOString() // or use a specific processing date
+                    });
+                    chapterResources[chapterKey].gdrivePdfId = chDetail.gdrivePdfId; // Also save directly on chapter key for easier access
+                    chapterResources[chapterKey].gdrivePdfLink = chDetail.gdrivePdfLink;
+                    chapterResources[chapterKey].lastUpdated = new Date().toISOString();
+                });
+
+                updates['chapterResources'] = chapterResources;
+                updates['lastTextbookProcessDate'] = new Date().toISOString(); // Update overall processing date
+
+                await firestoreService.updateCourseDefinition(courseId, updates);
+                logPdfProcess(courseId, `Firestore update SUCCESSFUL for ${chapterFirestoreData.length} chapter PDF details.`);
+
+            } catch (firestoreError) {
+                logPdfProcess(courseId, new Error(`Firestore update FAILED for chapter PDF details: ${firestoreError.message}`), 'error');
+            }
+        } else if (firestoreService) { // Only log if firestoreService was available but no chapters to update
+          logPdfProcess(courseId, "No processed chapter PDF details to update in Firestore (chapterFirestoreData was empty or firestore service issue).", 'warn');
         }
+
 
         return {
             success: true, message: "Textbook PDF processed, split, and uploaded to Google Drive.",

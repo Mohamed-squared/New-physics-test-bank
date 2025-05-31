@@ -1,8 +1,10 @@
+let firestoreService; // Define at the top of the file or relevant scope
 const fs = require('fs-extra');
 const path = require('path');
 // const { initialize: gDriveInitialize, findFolder: gDriveFindFolder, createFolder: gDriveCreateFolder, uploadFile: gDriveUploadFile } = require('./google_drive_service.js'); // Client-side, not for server
 const serverGoogleDrive = require('./google_drive_service_server.js'); // Use the server-side Google Drive service
 // const { getCourseDetails, updateCourseDefinition } = require('./firebase_firestore.js'); // MODIFIED: Firestore temporarily disabled
+// Line above is replaced by dynamic import logic later
 const aiServer = require('./ai_integration_server.js');
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
@@ -85,7 +87,7 @@ const logQGen = (context, messageOrError, level = 'info') => {
     }
 };
 
-async function generateQuestionsFromPdf(
+async function generateQuestionsFromPdf( // Ensure function is async
     courseId,
     chapterKey, // e.g., "textbook_chapter_1"
     chapterPdfGoogleDriveId, // Changed from Link to ID for Google Drive
@@ -264,40 +266,81 @@ Generate problems now.
         }
 
         // --- 6. Update Firestore ---
-        logQGen(logContext, `Firestore update SKIPPED.`); // Keep this logic as Firestore is out of scope for this change
-        const chapterResources = {}; 
-        if (!chapterResources[chapterKey]) {
-            logQGen(logContext, `Chapter key "${chapterKey}" not found in placeholder chapterResources. Initializing.`, 'warn');
-            chapterResources[chapterKey] = { lectureUrls: [], otherResources: [] }; 
-        }
-        if (!chapterResources[chapterKey].otherResources) { 
-            chapterResources[chapterKey].otherResources = []; 
-        }
-        chapterResources[chapterKey].otherResources = chapterResources[chapterKey].otherResources.filter(
-            res => !(res.type === 'generated_mcq_markdown' || res.type === 'generated_problems_markdown')
-        );
-        if (uploadedFileDetails['generated_mcq_markdown']) {
-            chapterResources[chapterKey].otherResources.push({
-                title: `MCQs for ${chapterTitle}`,
-                gdriveId: uploadedFileDetails['generated_mcq_markdown'].id, // Store GDrive ID
-                gdriveLink: uploadedFileDetails['generated_mcq_markdown'].link, // Store GDrive webViewLink
-                type: 'generated_mcq_markdown',
-                generatedAt: new Date().toISOString()
-            });
-        }
-        if (uploadedFileDetails['generated_problems_markdown']) {
-            chapterResources[chapterKey].otherResources.push({
-                title: `Problems for ${chapterTitle}`,
-                gdriveId: uploadedFileDetails['generated_problems_markdown'].id, // Store GDrive ID
-                gdriveLink: uploadedFileDetails['generated_problems_markdown'].link, // Store GDrive webViewLink
-                type: 'generated_problems_markdown',
-                generatedAt: new Date().toISOString()
-            });
+        try {
+            logQGen(logContext, 'Attempting to update Firestore with generated question links...');
+            if (!firestoreService) firestoreService = await import('./firebase_firestore.js'); // Ensure it's initialized
+
+            const courseDetails = await firestoreService.getCourseDetails(courseId); // Assuming courseId is the document ID in 'courses' collection
+            if (!courseDetails) {
+                throw new Error(`Course details not found in Firestore for courseId: ${courseId}`);
+            }
+
+            // Prepare the update object
+            // The exact structure depends on how chapter resources are stored.
+            // Assuming 'chapterResources' is a map within the course document,
+            // and each chapterKey (e.g., 'textbook_chapter_1') has an 'otherResources' array.
+            const updates = {};
+            const chapterResourcePath = `chapterResources.${chapterKey}.otherResources`; // Path for FieldValue.arrayUnion/arrayRemove or direct set
+
+            // It's generally safer to read the existing array, modify it, and then set it,
+            // or use FieldValue.arrayUnion if items are guaranteed unique and structure is simple.
+            // For this case, let's assume we want to update specific links if they exist or add them.
+
+            let existingOtherResources = courseDetails.chapterResources?.[chapterKey]?.otherResources || [];
+
+            // Remove any old versions of these generated files first to avoid duplicates if re-running
+            existingOtherResources = existingOtherResources.filter(
+                res => !(res.type === 'generated_mcq_markdown' || res.type === 'generated_problems_markdown')
+            );
+
+            if (uploadedFileDetails['generated_mcq_markdown']) {
+                existingOtherResources.push({
+                    title: `MCQs for ${chapterTitle}`,
+                    gdriveId: uploadedFileDetails['generated_mcq_markdown'].id,
+                    gdriveLink: uploadedFileDetails['generated_mcq_markdown'].link,
+                    type: 'generated_mcq_markdown',
+                    generatedAt: new Date().toISOString()
+                });
+            }
+            if (uploadedFileDetails['generated_problems_markdown']) {
+                existingOtherResources.push({
+                    title: `Problems for ${chapterTitle}`,
+                    gdriveId: uploadedFileDetails['generated_problems_markdown'].id,
+                    gdriveLink: uploadedFileDetails['generated_problems_markdown'].link,
+                    type: 'generated_problems_markdown',
+                    generatedAt: new Date().toISOString()
+                });
+            }
+
+            updates[chapterResourcePath] = existingOtherResources;
+
+            // Ensure chapterResources and the specific chapter key path exist if setting directly
+            // This might be needed if the chapterKey path itself is not guaranteed to exist
+            if (!courseDetails.chapterResources) {
+                updates['chapterResources'] = {};
+            }
+            if (!courseDetails.chapterResources?.[chapterKey]) {
+                updates[`chapterResources.${chapterKey}`] = { otherResources: [] }; // Initialize if chapterKey part is missing
+            }
+            updates[`chapterResources.${chapterKey}.lastUpdated`] = new Date().toISOString();
+
+
+            await firestoreService.updateCourseDefinition(courseId, updates);
+            logQGen(logContext, `Firestore update SUCCESSFUL for chapter ${chapterKey} with question links.`);
+
+        } catch (firestoreError) {
+            logQGen(logContext, new Error(`Firestore update FAILED for chapter ${chapterKey}: ${firestoreError.message}`), 'error');
+            // Decide if this should throw and fail the whole process or just log.
+            // For now, let it be part of the returned error message if it fails.
+            // The main function already has a try-catch that will return success:false.
+            // We can append to the error message there or just log here.
+            // Let's ensure the error is propagated to the main try-catch in generateQuestionsFromPdf
+            throw firestoreError; // Re-throw to be caught by the main try-catch
         }
 
         return {
             success: true,
-            message: `MCQs and Problems generated and saved to Google Drive for chapter: ${chapterTitle} (Firestore update skipped).`,
+            message: `MCQs and Problems generated, saved to Google Drive, and Firestore updated for chapter: ${chapterTitle}.`,
             mcqGoogleDriveId: uploadedFileDetails['generated_mcq_markdown']?.id || null,
             mcqGoogleDriveLink: uploadedFileDetails['generated_mcq_markdown']?.link || null,
             problemsGoogleDriveId: uploadedFileDetails['generated_problems_markdown']?.id || null,
