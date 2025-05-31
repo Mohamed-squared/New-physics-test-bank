@@ -7,8 +7,8 @@ const aiServer = require('./ai_integration_server.js');
 
 const TEMP_PROCESSING_DIR_BASE = path.join(__dirname, 'temp_question_gen');
 
-const MAX_CHAR_PER_CHUNK = 8000; // Max characters per chunk for AI processing (Reduced from 12000)
-const OVERLAP_CHAR_COUNT = 500;   // Overlap characters between chunks
+const MAX_CHAR_PER_CHUNK = 60000; // Max characters per chunk for AI processing (Reduced from 12000)
+const OVERLAP_CHAR_COUNT = 3000;   // Overlap characters between chunks
 
 // Helper function to sanitize filenames (though for TextMCQ.md and TextProblems.md, names are fixed)
 // function sanitizeFilename(name) {
